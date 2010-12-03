@@ -35,7 +35,7 @@ import java.util.StringTokenizer;
 import liblinearbinary.Linear;
 import liblinearbinary.SolverType;
 
-import srl.SRLModel.Feature;
+import clearsrl.SRLModel.Feature;
 
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.IDictionary;

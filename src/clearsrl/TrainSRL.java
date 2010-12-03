@@ -24,8 +24,8 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import srl.SRLModel.Feature;
-import srl.SRLModel.PredicateFeature;
+import clearsrl.SRLModel.Feature;
+import clearsrl.SRLModel.PredicateFeature;
 
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.morph.WordnetStemmer;
