@@ -77,8 +77,8 @@ public class RunSRL {
 		if (dataFormat.equals("default"))
 		{		
 			String testRegex = props.getProperty("test.regex");
-			Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), testRegex, treeBank, false);
+			//Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
+			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), testRegex, props.getProperty("tbdir"), false);
 			Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), testRegex);
 			
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())

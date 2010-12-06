@@ -144,8 +144,8 @@ public class TrainSRL {
 		if (dataFormat.equals("default"))
 		{
 			String trainRegex = props.getProperty("train.regex");
-			Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
-			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), trainRegex, treeBank, false);
+			//Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
+			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), trainRegex, props.getProperty("tbdir"), false);
 			Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), trainRegex);
 			
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
