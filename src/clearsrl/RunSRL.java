@@ -94,11 +94,11 @@ public class RunSRL {
                     {
     					ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
     					ArrayList<TObjectFloatHashMap<String>> labels = new ArrayList<TObjectFloatHashMap<String>>();
-    					if (pbInstance.tree.getTokenCount()== parsedTreeBank.get(entry.getKey())[pbInstance.treeIndex].getTokenCount())
-    						SRLUtil.getSamplesFromParse(new SRInstance(pbInstance), parsedTreeBank.get(entry.getKey())[pbInstance.treeIndex], 
+    					if (pbInstance.tree.getTokenCount()== parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()].getTokenCount())
+    						SRLUtil.getSamplesFromParse(new SRInstance(pbInstance), parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], 
     							THRESHOLD, argNodes, labels);
     					
-    					SRInstance trainInstance = new SRInstance(pbInstance.predicateNode, parsedTreeBank.get(entry.getKey())[pbInstance.treeIndex]);
+    					SRInstance trainInstance = new SRInstance(pbInstance.predicateNode, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()]);
     					for (int i=0; i<labels.size(); ++i)
     					{
     						if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG)) continue;
@@ -132,10 +132,10 @@ public class RunSRL {
                     {
     					iter.advance();
     					SRInstance pInstance = null;
-    					if (pbInstance.tree.getTokenCount()==trees[pbInstance.treeIndex].getTokenCount())
-    						pInstance = new SRInstance(trees[pbInstance.treeIndex].getRootNode().getTokenNodes().get(pbInstance.predicateNode.tokenIndex), trees[pbInstance.treeIndex]);
+    					if (pbInstance.tree.getTokenCount()==trees[pbInstance.tree.getTreeIndex()].getTokenCount())
+    						pInstance = new SRInstance(trees[pbInstance.tree.getTreeIndex()].getRootNode().getTokenNodes().get(pbInstance.predicateNode.tokenIndex), trees[pbInstance.tree.getTreeIndex()]);
     					else
-    						pInstance = new SRInstance(pbInstance.predicateNode, trees[pbInstance.treeIndex]);
+    						pInstance = new SRInstance(pbInstance.predicateNode, trees[pbInstance.tree.getTreeIndex()]);
     					SRInstance instance = new SRInstance(pbInstance);
     					cCount += model.predict(pInstance, instance, null);
     					pCount += pInstance.getArgs().size()-1;

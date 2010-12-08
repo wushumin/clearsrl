@@ -5,12 +5,17 @@ import gnu.trove.TIntObjectIterator;
 import gnu.trove.TObjectFloatHashMap;
 import harvest.propbank.PBInstance;
 import harvest.propbank.PBUtil;
+import harvest.treebank.OntoNoteTreeFileResolver;
 import harvest.treebank.TBHeadRules;
 import harvest.treebank.TBNode;
+import harvest.treebank.TBReader;
 import harvest.treebank.TBTree;
 import harvest.treebank.TBUtil;
+import harvest.treebank.TBReader.TreeException;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectOutputStream;
@@ -141,12 +146,36 @@ public class TrainSRL {
 		int hCnt = 0;
 		int tCnt = 0;
 		
-		if (dataFormat.equals("default"))
+		if (!dataFormat.equals("conll"))
 		{
 			String trainRegex = props.getProperty("train.regex");
 			//Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
-			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), trainRegex, props.getProperty("tbdir"), false);
-			Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), trainRegex);
+			Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = 
+			    PBUtil.readPBDir(props.getProperty("pbdir"), 
+			                     trainRegex, 
+			                     props.getProperty("tbdir"), 
+			                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null, 
+			                     false);
+			
+			System.out.println(propBank.size());
+			
+			Map<String, TBTree[]> parsedTreeBank = new TreeMap<String, TBTree[]>();
+			for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
+			{
+			    try {
+	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+	                TBReader tbreader    = new TBReader(props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
+	                TBTree tree;
+	                while ((tree = tbreader.nextTree()) != null)
+	                    a_tree.add(tree);
+	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
+	            } catch (FileNotFoundException e) {
+	                e.printStackTrace();
+	            } catch (TreeException e) {
+	                e.printStackTrace();
+	            }
+			}
 			
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
 				for (TBTree tree: entry.getValue())
@@ -154,15 +183,24 @@ public class TrainSRL {
 			
 			model.initDictionary();
 			for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
+			{
+                System.out.println("Processing "+entry.getKey());
 				for(TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
 				{
 					iter.advance();
+					System.out.println(" "+iter.key());
+					System.out.println(parsedTreeBank.get(entry.getKey())[iter.key()].getRootNode());
+					System.out.println(parsedTreeBank.get(entry.getKey())[iter.key()]);
+					
 					for (PBInstance pbInstance:iter.value())
 					{
+					    System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
 					    SRInstance instance = new SRInstance(pbInstance);
-					    addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.treeIndex], null, THRESHOLD, true);
+					    addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, true);
 					}
+					//System.out.print("\n");
 				}
+			}
 			model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
 			
 			model.initScore();
@@ -174,7 +212,7 @@ public class TrainSRL {
                     {
     					SRInstance instance = new SRInstance(pbInstance);
     					
-    					SRInstance trainInstance = addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.treeIndex], null, THRESHOLD, false);
+    					SRInstance trainInstance = addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, false);
     					tCount += trainInstance.args.size()-1;
     					gCount += instance.args.size()-1;
     				

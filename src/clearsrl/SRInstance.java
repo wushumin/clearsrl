@@ -83,7 +83,6 @@ public class SRInstance {
 	public String toString()
 	{
 		StringBuilder buffer = new StringBuilder();
-		tree.moveToRoot();
 		ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
 		String[] tokens = new String[nodes.size()];
 		for (int i=0; i<tokens.length; ++i)

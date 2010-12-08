@@ -616,6 +616,7 @@ public class SRLModel implements Serializable {
 				}
 				case NAMEDENTITIES:
 				{
+				    if (namedEntities==null) break;
 					Set<String> neSet = new TreeSet<String>();
 					for (TBNode node:tnodes)
 					{

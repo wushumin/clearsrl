@@ -117,16 +117,20 @@ public class ParseCorpus {
 		    	String line = "";
 		    	while((line=inputData.readLine()) != null){
 		    		List<String> sentence = Arrays.asList(line.split(" "));
-	
+		    		if (sentence.isEmpty())
+		    		{
+		    		    outputData.write(makeDefaultParse(sentence));
+		    		    continue;
+		    		}
 		    		if (sentence.size()>=250) { 
 		    			outputData.write(makeDefaultParse(sentence));
 		    			System.err.println("Skipping sentence with "+sentence.size()+" words since it is too long.");
 		    			continue; 
 		    		}
-	    			
+		    		    
 					Tree<String> parsedTree = parser.getBestConstrainedParse(sentence,null,null);
 	
-					if (!parsedTree.getChildren().isEmpty())
+					if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
 					{
 			        	removeUselessNodes(parsedTree.getChildren().get(0));
 						outputData.write("( "+parsedTree.getChildren().get(0)+" )\n");
