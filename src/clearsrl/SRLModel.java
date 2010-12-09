@@ -276,6 +276,7 @@ public class SRLModel implements Serializable {
         }
         
         ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
             if (node.pos.startsWith("VB"))
@@ -770,7 +771,7 @@ public class SRLModel implements Serializable {
     }
     
     public void train(Properties prop)
-    {
+    {   
         if (predicateFeatureSet!=null && !predicateTrainingFeatures.isEmpty())
         {
             TObjectIntHashMap<String> predicateLabelMap = new TObjectIntHashMap<String>();

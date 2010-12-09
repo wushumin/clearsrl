@@ -146,6 +146,8 @@ public class TrainSRL {
 		int hCnt = 0;
 		int tCnt = 0;
 		
+        boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
+				
 		if (!dataFormat.equals("conll"))
 		{
 			String trainRegex = props.getProperty("train.regex");
@@ -177,32 +179,64 @@ public class TrainSRL {
 	            }
 			}
 			
+            model.initDictionary();
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-				for (TBTree tree: entry.getValue())
-					TBUtil.findHeads(tree.getRootNode(), headrules);
-			
-			model.initDictionary();
-			for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
 			{
-                System.out.println("Processing "+entry.getKey());
-				for(TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
-				{
-					iter.advance();
-					System.out.println(" "+iter.key());
-					System.out.println(parsedTreeBank.get(entry.getKey())[iter.key()].getRootNode());
-					System.out.println(parsedTreeBank.get(entry.getKey())[iter.key()]);
-					
-					for (PBInstance pbInstance:iter.value())
-					{
-					    System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
-					    SRInstance instance = new SRInstance(pbInstance);
-					    addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, true);
-					}
-					//System.out.print("\n");
-				}
+			    TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+			    TBTree[] trees = entry.getValue(); 
+			    for (int i=0; i<trees.length; ++i)
+			    {
+			        TBUtil.findHeads(trees[i].getRootNode(), headrules);
+			        List<PBInstance> pbInstances = pbFileMap.get(i);
+			        if (modelPredicate)
+                    {
+                        SRInstance[] srls = new SRInstance[pbInstances==null?0:pbInstances.size()];
+                        for (int s=0; s<srls.length; ++s)
+                            srls[s] = new SRInstance(pbInstances.get(s));
+                        
+                        addTrainingSentence(model, srls, trees[i], null, THRESHOLD, true);
+                    }
+			        else if (pbInstances!=null)
+			        {
+			            for (PBInstance pbInstance:pbInstances)
+                        {
+                            //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
+                            SRInstance instance = new SRInstance(pbInstance);
+                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, true);
+                        }
+			        }
+			    }
 			}
-			model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
+            model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
 			
+            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
+            {
+                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+                TBTree[] trees = entry.getValue(); 
+                for (int i=0; i<trees.length; ++i)
+                {
+                    TBUtil.findHeads(trees[i].getRootNode(), headrules);
+                    List<PBInstance> pbInstances = pbFileMap.get(i);
+                    if (modelPredicate)
+                    {
+                        SRInstance[] srls = new SRInstance[pbInstances==null?0:pbInstances.size()];
+                        for (int s=0; s<srls.length; ++s)
+                            srls[s] = new SRInstance(pbInstances.get(s));
+                        
+                        addTrainingSentence(model, srls, trees[i], null, THRESHOLD, false);
+                    }
+                    else if (pbInstances!=null)
+                    {
+                        for (PBInstance pbInstance:pbInstances)
+                        {
+                            //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
+                            SRInstance instance = new SRInstance(pbInstance);
+                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, false);
+                        }
+                    }
+                }
+            }
+            /*
 			model.initScore();
 			for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
                 for(TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
@@ -230,6 +264,7 @@ public class TrainSRL {
                     }
 				}
 			model.score.printResults(System.out);
+			*/
 		}
 		/*
 		else if (dataFormat.equals("conll"))
