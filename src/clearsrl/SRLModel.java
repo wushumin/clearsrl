@@ -101,14 +101,16 @@ public class SRLModel implements Serializable {
 	    PARENTPOS,
 	    PREDICATE_PARENTPOS,
 	    PREDICATE_PREDICATEPOS_PARENTPOS,
-	    RIGHTWORD,
-	    RIGHTWORDPOS,
-	    RIGHTWORD2,
-	    RIGHTWORD2POS,
-	    PREDICATE_RIGHTWORD,
-	    PREDICATE_RIGHTWORDPOS,
-	    PREDICATE_RIGHTWORD_RIGHTWORD2POS,
-        PREDICATE_RIGHTWORDPOS_RIGHTWORD2POS,
+	    LEFTWORD,
+	    LEFTWORDPOS,
+	    LEFTWORD_PREDICATE,
+	    LEFTWORDPOS_PREDICATE,
+	    RIGHTHEADWORD,
+	    RIGHTHEADWORDPOS,
+	    RIGHTPHASETYPE,
+	    PREDICATE_RIGHTHEADWORD,
+	    PREDICATE_RIGHTHEADWORDPOS,
+	    PREDICATE_RIGHTPHASETYPE
 	};
 	
 	public static String UP_CHAR = "^";
@@ -432,15 +434,21 @@ public class SRLModel implements Serializable {
 			// compute head
 			TBNode head = argNode.head;
 			if (argNode.pos.matches("PP.*"))
-				for (TBNode child:argNode.getChildren())
+			{
+			    int i = argNode.getChildren().size()-1;
+				for (; i>=0; --i)
 				{
-					if (child.pos.matches("NP.*"))
+					if (argNode.getChildren().get(i).pos.matches("NP.*"))
 					{
-						if (child.head!=null && child.head.word!=null)
-							head = child.head;
+						if (argNode.getChildren().get(i).head!=null && argNode.getChildren().get(i).head.word!=null)
+							head = argNode.getChildren().get(i).head;
 						break;
 					}
 				}
+				if (i<0 && argNode.getChildren().get(argNode.getChildren().size()-1).head!=null && 
+				        argNode.getChildren().get(argNode.getChildren().size()-1).head.word!=null)
+				    head = argNode.getChildren().get(argNode.getChildren().size()-1).head;
+			}
 			
 			boolean isBefore = tnodes.get(0).tokenIndex < predicateNode.tokenIndex;
 			//System.out.println(predicateNode+" "+predicateNode.tokenIndex+": "+argNode.getParent()+" "+argToTopNodes.size());
@@ -678,8 +686,10 @@ public class SRLModel implements Serializable {
         }
 
         TBNode parent = predicateNode.getParent();
-        TBNode rightNode = predicateNode.tokenIndex<nodes.size()-1? nodes.get(predicateNode.tokenIndex+1):null;
-        TBNode right2Node = predicateNode.tokenIndex<nodes.size()-2? nodes.get(predicateNode.tokenIndex+2):null;
+        TBNode leftNode = predicateNode.tokenIndex>0? nodes.get(predicateNode.tokenIndex-1):null;
+        TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.childIndex<predicateNode.getParent().getChildren().size()-1)?
+                predicateNode.getParent().getChildren().get(predicateNode.childIndex+1):null;
+        TBNode rightHeadnode = (rightSibling==null||rightSibling.head==null)?null:rightSibling.head;
         
         for (PredicateFeature feature:predicateFeatureSet)
         {
@@ -706,37 +716,43 @@ public class SRLModel implements Serializable {
                 if (parent!=null)
                     sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(predicateNode.pos)+"_"+SRLUtil.removeTrace(parent.pos)));
                 break;
-            case RIGHTWORD:
-                if (rightNode!=null)
-                    sample.put(feature, Arrays.asList(rightNode.word));
+            case LEFTWORD:
+                if (leftNode!=null) sample.put(feature, Arrays.asList(leftNode.word));   
                 break;
-            case RIGHTWORDPOS:
-                if (rightNode!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(rightNode.pos)));
+            case LEFTWORDPOS:
+                if (leftNode!=null)
+                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(leftNode.pos)));
                 break;
-            case RIGHTWORD2:
-                if (right2Node!=null)
-                    sample.put(feature, Arrays.asList(right2Node.word));
+            case LEFTWORD_PREDICATE:
+                if (leftNode!=null)
+                    sample.put(feature, Arrays.asList(leftNode.word+"_"+predicateLemma));
                 break;
-            case RIGHTWORD2POS:
-                if (right2Node!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(right2Node.pos)));
+            case LEFTWORDPOS_PREDICATE:
+                if (leftNode!=null)
+                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(leftNode.pos)+"_"+predicateLemma));
                 break;
-            case PREDICATE_RIGHTWORD:
-                if (rightNode!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightNode.word));
+            case RIGHTHEADWORD:
+                if (rightHeadnode!=null) sample.put(feature, Arrays.asList(rightHeadnode.word));   
                 break;
-            case PREDICATE_RIGHTWORDPOS:
-                if (rightNode!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightNode.pos)));
+            case RIGHTHEADWORDPOS:
+                if (rightHeadnode!=null)
+                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(rightHeadnode.pos)));
                 break;
-            case PREDICATE_RIGHTWORD_RIGHTWORD2POS:
-                if (right2Node!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightNode.word+"_"+SRLUtil.removeTrace(right2Node.pos)));
+            case RIGHTPHASETYPE:
+                if (rightSibling!=null)
+                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(rightSibling.pos)));
                 break;
-            case PREDICATE_RIGHTWORDPOS_RIGHTWORD2POS:
-                if (right2Node!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightNode.pos)+"_"+SRLUtil.removeTrace(right2Node.pos)));
+            case PREDICATE_RIGHTHEADWORD:
+                if (rightHeadnode!=null) 
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.word));
+                break;
+            case PREDICATE_RIGHTHEADWORDPOS:
+                if (rightHeadnode!=null) 
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightHeadnode.pos)));
+                break;
+            case PREDICATE_RIGHTPHASETYPE:
+                if (rightSibling!=null)
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightSibling.pos)));
                 break;
             }
         }

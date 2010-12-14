@@ -74,6 +74,7 @@ public class RunSRL {
 		int cCount = 0;
 		int pCount = 0;
 		String dataFormat = props.getProperty("format", "default");
+		/*
 		if (dataFormat.equals("default"))
 		{		
 			String testRegex = props.getProperty("test.regex");
@@ -145,7 +146,31 @@ public class RunSRL {
 				} 
 			}
 		}
+		*/
+        boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 		
+        if (dataFormat.equals("default"))
+        {       
+            String testRegex = props.getProperty("train.regex");
+            //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
+            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), testRegex, props.getProperty("tbdir"), false);
+            Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), testRegex);
+            
+            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
+            {
+                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+                TBTree[] trees = entry.getValue(); 
+                for (int i=0; i<trees.length; ++i)
+                {
+                    TBUtil.findHeads(trees[i].getRootNode(), headrules);
+                    List<PBInstance> pbInstances = pbFileMap.get(i);
+                    if (modelPredicate)
+                    {
+                        List<SRInstance> predictions = model.predict(trees[i], null, null);
+                    }
+                }
+            }      
+        }		
 		else if (dataFormat.equals("conll"))
 		{
 			ArrayList<CoNLLSentence> testing = CoNLLSentence.read(new FileReader(props.getProperty("test.input")), false);
