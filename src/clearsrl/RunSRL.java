@@ -8,6 +8,7 @@ import harvest.alg.Classification.InstanceFormat;
 import harvest.propbank.PBArg;
 import harvest.propbank.PBInstance;
 import harvest.propbank.PBUtil;
+import harvest.treebank.OntoNoteTreeFileResolver;
 import harvest.treebank.TBHeadRules;
 import harvest.treebank.TBNode;
 import harvest.treebank.TBTree;
@@ -149,12 +150,17 @@ public class RunSRL {
 		*/
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 		
-        if (dataFormat.equals("default"))
+        if (!dataFormat.equals("conll"))
         {       
             String testRegex = props.getProperty("train.regex");
             //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), testRegex, props.getProperty("tbdir"), false);
-            Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), testRegex);
+            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = 
+                PBUtil.readPBDir(props.getProperty("pbdir"), 
+                                 testRegex, 
+                                 props.getProperty("tbdir"), 
+                                 dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null,
+                                 false);
+            Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
@@ -166,7 +172,36 @@ public class RunSRL {
                     List<PBInstance> pbInstances = pbFileMap.get(i);
                     if (modelPredicate)
                     {
-                        List<SRInstance> predictions = model.predict(trees[i], null, null);
+                        SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
+                        for (int j=0; j<goldInstances.length; ++j)
+                            goldInstances[j] = new SRInstance(pbInstances.get(j));
+                        List<SRInstance> predictions = model.predict(trees[i], goldInstances, null);
+                        
+                        BitSet goldPredicates = new BitSet();
+                        for (SRInstance instance:goldInstances)
+                            goldPredicates.set(instance.getPredicateNode().tokenIndex);
+                        
+                        BitSet predPredicates = new BitSet();
+                        for (SRInstance instance:predictions)
+                            predPredicates.set(instance.getPredicateNode().tokenIndex);
+                        
+                        if (!goldPredicates.equals(predPredicates))
+                        {
+                            System.out.print(entry.getKey()+","+i+": ");
+                            List<TBNode> nodes = trees[i].getRootNode().getTokenNodes();
+                            for (int j=0; j<nodes.size(); ++j)
+                            {
+                                if (goldPredicates.get(j)&& predPredicates.get(j))
+                                    System.out.print("["+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+"] ");
+                                else if (goldPredicates.get(j))
+                                    System.out.print("("+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+") ");
+                                else if (predPredicates.get(j))
+                                    System.out.print("{"+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+"} ");
+                                else
+                                    System.out.print(nodes.get(j).word+" ");
+                            }
+                            System.out.print("\n");
+                        }
                     }
                 }
             }      
