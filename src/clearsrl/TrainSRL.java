@@ -3,6 +3,8 @@ package clearsrl;
 import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TIntObjectIterator;
 import gnu.trove.TObjectFloatHashMap;
+import gnu.trove.TObjectIntHashMap;
+import gnu.trove.TObjectIntIterator;
 import harvest.propbank.PBInstance;
 import harvest.propbank.PBUtil;
 import harvest.treebank.OntoNoteTreeFileResolver;
@@ -147,7 +149,9 @@ public class TrainSRL {
 		int tCnt = 0;
 		
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
-				
+	
+        TObjectIntHashMap<String> rolesetEmpty = new TObjectIntHashMap<String>();
+        TObjectIntHashMap<String> rolesetArg = new TObjectIntHashMap<String>();
 		if (!dataFormat.equals("conll"))
 		{
 			String trainRegex = props.getProperty("train.regex");
@@ -189,12 +193,24 @@ public class TrainSRL {
 			        TBUtil.findHeads(trees[i].getRootNode(), headrules);
 			        List<PBInstance> pbInstances = pbFileMap.get(i);
 			        if (modelPredicate)
-                    {
-                        SRInstance[] srls = new SRInstance[pbInstances==null?0:pbInstances.size()];
-                        for (int s=0; s<srls.length; ++s)
-                            srls[s] = new SRInstance(pbInstances.get(s));
-                        
-                        addTrainingSentence(model, srls, trees[i], null, THRESHOLD, true);
+			        {
+			            ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
+			            if (pbInstances!=null)
+			            {
+    			            for (PBInstance instance:pbInstances)
+    			            {
+    			                if (instance.getArgs().size()>1)
+    			                {
+    			                    srls.add(new SRInstance(instance));
+    			                    rolesetArg.put(instance.rolesetId, rolesetArg.get(instance.rolesetId)+1);
+    			                }
+    			                else
+    			                {
+    			                    rolesetEmpty.put(instance.rolesetId, rolesetEmpty.get(instance.rolesetId)+1);
+    			                }
+    			            }
+			            }
+                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, true);
                     }
 			        else if (pbInstances!=null)
 			        {
@@ -209,6 +225,17 @@ public class TrainSRL {
 			}
             model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
 			
+            System.out.println("***************************************************");
+            for (TObjectIntIterator<String> iter = rolesetEmpty.iterator(); iter.hasNext(); )
+            {
+                iter.advance();
+                if (iter.value()<rolesetArg.get(iter.key())||iter.value()<2)
+                    iter.remove();
+                else
+                    System.out.println(iter.key()+": "+iter.value()+"/"+rolesetArg.get(iter.key()));
+            }
+            System.out.println("***************************************************");
+            
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
                 TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
@@ -219,11 +246,17 @@ public class TrainSRL {
                     List<PBInstance> pbInstances = pbFileMap.get(i);
                     if (modelPredicate)
                     {
-                        SRInstance[] srls = new SRInstance[pbInstances==null?0:pbInstances.size()];
-                        for (int s=0; s<srls.length; ++s)
-                            srls[s] = new SRInstance(pbInstances.get(s));
+                        ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
+                        if (pbInstances!=null)
+                        {
+                            for (PBInstance instance:pbInstances)
+                            {
+                                if (!rolesetEmpty.containsKey(instance.rolesetId))
+                                    srls.add(new SRInstance(instance));
+                            }
+                        }
                         
-                        addTrainingSentence(model, srls, trees[i], null, THRESHOLD, false);
+                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, false);
                     }
                     else if (pbInstances!=null)
                     {
