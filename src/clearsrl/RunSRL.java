@@ -15,8 +15,10 @@ import harvest.treebank.TBTree;
 import harvest.treebank.TBUtil;
 import harvest.util.JIO;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
@@ -49,6 +51,11 @@ import edu.mit.jwi.morph.WordnetStemmer;
 public class RunSRL {
 	static final float THRESHOLD=0.8f;
 	
+	enum OutputFormat {
+	    TEXT,
+	    PROPBANK
+	};
+	
 	public static void main(String[] args) throws Exception
 	{	
 		Properties props = new Properties();
@@ -74,7 +81,7 @@ public class RunSRL {
 		model.initScore();
 		int cCount = 0;
 		int pCount = 0;
-		String dataFormat = props.getProperty("format", "default");
+		String dataFormat = props.getProperty("data.format", "default");
 		/*
 		if (dataFormat.equals("default"))
 		{		
@@ -150,6 +157,14 @@ public class RunSRL {
 		*/
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 		
+        OutputFormat outputFormat = OutputFormat.valueOf(props.getProperty("output.format","TEXT"));
+        PrintStream output = null;
+        try {
+            output = new PrintStream(props.getProperty("output.file"));
+        } catch (Exception e){
+            output = System.out;
+        }
+        
         if (!dataFormat.equals("conll"))
         {       
             String testRegex = props.getProperty("train.regex");
@@ -169,13 +184,16 @@ public class RunSRL {
                 for (int i=0; i<trees.length; ++i)
                 {
                     TBUtil.findHeads(trees[i].getRootNode(), headrules);
-                    List<PBInstance> pbInstances = pbFileMap.get(i);
+                    List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
                     if (modelPredicate)
                     {
                         SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
                         for (int j=0; j<goldInstances.length; ++j)
                             goldInstances[j] = new SRInstance(pbInstances.get(j));
                         List<SRInstance> predictions = model.predict(trees[i], goldInstances, null);
+                        
+                        for (SRInstance instance:predictions)
+                            output.println(instance.toString());
                         
                         BitSet goldPredicates = new BitSet();
                         for (SRInstance instance:goldInstances)
@@ -232,14 +250,7 @@ public class RunSRL {
 				}				
 			}
 			model.score.printResults(System.out);
-			
-			PrintStream output = null;
-			
-			try {
-				output = new PrintStream(props.getProperty("test.output"));
-			} catch (Exception e){
-				output = System.out;
-			}
+
 			
 			model.initScore();
 			for (CoNLLSentence sentence:testing)
@@ -311,9 +322,10 @@ public class RunSRL {
 				}
 				output.print("\n");
 			}
-			if (output != System.out)
-				output.close();
+
 		}
+        if (output != System.out)
+            output.close();
 		/*
         else if (dataFormat.equals("conll"))
         {

@@ -2,6 +2,10 @@ package clearsrl;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Map.Entry;
 
 import harvest.propbank.PBArg;
@@ -80,9 +84,56 @@ public class SRInstance {
 		this.rolesetId = rolesetId;
 	}
 	
+	public String toPropbankString()
+	{
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(tree.getTreeFile()); buffer.append(' ');
+        buffer.append(tree.getTreeIndex()); buffer.append(' ');
+        buffer.append(predicateNode.terminalIndex); buffer.append(' ');
+        buffer.append("system "); buffer.append(predicateNode.word);
+        buffer.append(" ----- ");
+        
+        TreeMap<String, TreeSet<SRArg>> argMap = new TreeMap<String, TreeSet<SRArg>>();
+        
+        for (SRArg arg:args)
+        {
+           TreeSet<SRArg> argSet;
+           if ((argSet = argMap.get(arg.label))==null)
+           {
+               argSet = new TreeSet<SRArg>();
+               argMap.put(arg.label, argSet);
+           }
+           argSet.add(arg);
+        }
+        
+        for (Map.Entry<String, TreeSet<SRArg>> entry:argMap.entrySet())
+        {
+            String argStr = "";
+            for (SRArg arg:entry.getValue())
+            {
+                int depth=0;
+                TBNode node = arg.node;
+                while (!node.isTerminal())
+                {
+                    ++depth;
+                    node=node.getChildren().get(0);
+                }
+                argStr+=node.terminalIndex+":"+depth+"*";
+            }
+            buffer.append(argStr.substring(0,argStr.length()-1));
+            buffer.append('-');
+            buffer.append(entry.getKey()); buffer.append(' ');   
+        }
+        
+        return buffer.toString();
+	}
+	
 	public String toString()
 	{
 		StringBuilder buffer = new StringBuilder();
+		buffer.append(tree.getTreeFile()); buffer.append(" ");
+		buffer.append(tree.getTreeIndex()); buffer.append(" ");
+		
 		ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
 		String[] tokens = new String[nodes.size()];
 		for (int i=0; i<tokens.length; ++i)

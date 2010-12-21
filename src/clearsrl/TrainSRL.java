@@ -140,7 +140,7 @@ public class TrainSRL {
 		
 		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
 		
-		String dataFormat = props.getProperty("format", "default");
+		String dataFormat = props.getProperty("data.format", "default");
 		
 		int tCount = 0;
 		int gCount = 0;
