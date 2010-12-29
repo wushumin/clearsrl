@@ -6,6 +6,7 @@ import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Properties;
 
 public class PairWiseClassifier extends Classifier implements Serializable {
@@ -36,7 +37,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 	public int predictValues(int[] x, double[] values) {
 		//double[] prob = new double[probClassifier.getClassCnt()];
 		//probClassifier.predictProb(x, prob);
-		
+		Arrays.fill(values, 0);
 		for (int i=0; i<labels.length-1; ++i)
 			for (int j=i+1; j<labels.length; ++j)
 			{

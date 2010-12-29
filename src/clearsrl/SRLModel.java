@@ -327,7 +327,7 @@ public class SRLModel implements Serializable {
 			int c=0;
 			for (EnumMap<Feature,List<String>>sample:samples)
 			{
-				//if (!NOT_ARG.equals(labels.get(c)))
+				if (!NOT_ARG.equals(labels.get(c)))
 				{
 					for(Map.Entry<Feature,List<String>> entry:sample.entrySet())
 					{
@@ -874,30 +874,25 @@ public class SRLModel implements Serializable {
         return predictions;
     }
 
-    
     public int predict(SRInstance prediction, SRInstance goldSRL, String[] namedEntities)
     {
         ArrayList<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
-            
         ArrayList<EnumMap<Feature,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
         
         for (int i=0; i<samples.size(); ++i)
         {
             int labelIndex = classifier.predictValues(getFeatureVector(samples.get(i)), labelValues);
             double value = labelValues[classifier.getLabelIdxMap().get(labelIndex)];
-            
-             if (labeled)
-             {
-                 String label;http://denver.craigslist.org/bik/2055721557.html
-                 if (!(label = labelIndexMap.get(labelIndex)).equals(NOT_ARG))
-                     prediction.addArg(new SRArg(label, argNodes.get(i), value));
-             } 
+            if (labeled)
+            {
+                String label;
+                if (!(label = labelIndexMap.get(labelIndex)).equals(NOT_ARG))
+                    prediction.addArg(new SRArg(label, argNodes.get(i), value));
+            } 
         }
         
         prediction.addArg(new SRArg("rel", prediction.predicateNode));
-        
         SRLUtil.removeOverlap(prediction);
-        
         if (goldSRL!=null)
         {
             if (labeled)
