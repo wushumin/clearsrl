@@ -99,12 +99,9 @@ public class TrainSRL {
 		props.load(in);
 		in.close();
 		
-		URL url = new URL("file", null, props.getProperty("wordnet_dic"));
-		// construct the dictionary object and open it
-		Dictionary dict = new Dictionary(url);
-		dict.getCache().setMaximumCapacity(5000);
-		dict.open();
-		WordnetStemmer stemmer = new WordnetStemmer(dict);
+		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
+        if (!langUtil.init(props))
+            System.exit(-1);
 		
 		ArrayList<Feature> features = new ArrayList<Feature>();
 		{
@@ -134,11 +131,9 @@ public class TrainSRL {
         }
         System.out.println(EnumSet.copyOf(predicateFeatures));
 
-		SRLModel model = new SRLModel(SRLModel.Language.ENGLISH, EnumSet.copyOf(features), predicateFeatures.isEmpty()?null:EnumSet.copyOf(predicateFeatures));
+		SRLModel model = new SRLModel(EnumSet.copyOf(features), predicateFeatures.isEmpty()?null:EnumSet.copyOf(predicateFeatures));
 		//model.setLabeled(false);
-		model.setWordNetStemmer(stemmer);
-		
-		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
+		model.setLanguageUtil(langUtil);
 		
 		String dataFormat = props.getProperty("data.format", "default");
 		
@@ -190,7 +185,7 @@ public class TrainSRL {
 			    TBTree[] trees = entry.getValue(); 
 			    for (int i=0; i<trees.length; ++i)
 			    {
-			        TBUtil.findHeads(trees[i].getRootNode(), headrules);
+			        TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
 			        List<PBInstance> pbInstances = pbFileMap.get(i);
 			        if (modelPredicate)
 			        {
@@ -242,7 +237,6 @@ public class TrainSRL {
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
-                    TBUtil.findHeads(trees[i].getRootNode(), headrules);
                     List<PBInstance> pbInstances = pbFileMap.get(i);
                     if (modelPredicate)
                     {
@@ -345,7 +339,7 @@ public class TrainSRL {
             model.initDictionary();
             for (CoNLLSentence sentence:training)
             {
-                TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
+                TBUtil.findHeads(sentence.parse.getRootNode(), langUtil.getHeadRules());
                 addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, true);
             }
             model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));

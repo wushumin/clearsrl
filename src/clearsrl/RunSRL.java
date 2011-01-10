@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -51,34 +52,25 @@ import edu.mit.jwi.morph.WordnetStemmer;
 public class RunSRL {
 	static final float THRESHOLD=0.8f;
 	
-	enum OutputFormat {
-	    TEXT,
-	    PROPBANK
-	};
-	
 	public static void main(String[] args) throws Exception
 	{	
 		Properties props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		in.close();
-		
-		URL url = new URL("file", null, props.getProperty("wordnet_dic"));
-		// construct the dictionary object and open it
-		Dictionary dict = new Dictionary(url);
-		dict.getCache().setMaximumCapacity(5000);
-		dict.open();
-		WordnetStemmer stemmer = new WordnetStemmer(dict);
-		
-		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
+
+		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
+		if (!langUtil.init(props))
+		    System.exit(-1);
 
 		ObjectInputStream mIn = new ObjectInputStream(new FileInputStream(props.getProperty("model_file")));
 		SRLModel model = (SRLModel)mIn.readObject();
 		mIn.close();
 		System.out.println(model.featureSet);
 		
-		model.setWordNetStemmer(stemmer);
+		model.setLanguageUtil(langUtil);
 		model.initScore();
+		
 		int cCount = 0;
 		int pCount = 0;
 		String dataFormat = props.getProperty("data.format", "default");
@@ -157,7 +149,7 @@ public class RunSRL {
 		*/
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 		
-        OutputFormat outputFormat = OutputFormat.valueOf(props.getProperty("output.format","TEXT"));
+        SRInstance.OutputFormat outputFormat = SRInstance.OutputFormat.valueOf(props.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
         PrintStream output = null;
         try {
             output = new PrintStream(props.getProperty("output.file"));
@@ -167,23 +159,26 @@ public class RunSRL {
         
         if (!dataFormat.equals("conll"))
         {       
-            String testRegex = props.getProperty("train.regex");
-            //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = 
-                PBUtil.readPBDir(props.getProperty("pbdir"), 
-                                 testRegex, 
-                                 props.getProperty("tbdir"), 
-                                 dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null,
-                                 false);
+            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = null;
+            if (props.getProperty("pbdir")!=null)
+            {
+                String testRegex = props.getProperty("train.regex");
+                //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
+                propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
+                                     testRegex, 
+                                     props.getProperty("tbdir"), 
+                                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null,
+                                     false);
+            }
             Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
-                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
-                    TBUtil.findHeads(trees[i].getRootNode(), headrules);
+                    TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
                     if (modelPredicate)
                     {
@@ -193,7 +188,9 @@ public class RunSRL {
                         List<SRInstance> predictions = model.predict(trees[i], goldInstances, null);
                         
                         for (SRInstance instance:predictions)
-                            output.println(instance.toString());
+                            output.println(instance.toString(outputFormat));
+                        
+                        if (propBank==null) continue;
                         
                         BitSet goldPredicates = new BitSet();
                         for (SRInstance instance:goldInstances)
@@ -210,11 +207,11 @@ public class RunSRL {
                             for (int j=0; j<nodes.size(); ++j)
                             {
                                 if (goldPredicates.get(j)&& predPredicates.get(j))
-                                    System.out.print("["+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+"] ");
+                                    System.out.print("["+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+"] ");
                                 else if (goldPredicates.get(j))
-                                    System.out.print("("+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+") ");
+                                    System.out.print("("+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+") ");
                                 else if (predPredicates.get(j))
-                                    System.out.print("{"+nodes.get(j).word+" "+SRLUtil.removeTrace(nodes.get(j).pos)+"} ");
+                                    System.out.print("{"+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+"} ");
                                 else
                                     System.out.print(nodes.get(j).word+" ");
                             }
@@ -231,7 +228,7 @@ public class RunSRL {
 			model.initScore();
 			for (CoNLLSentence sentence:testing)
 			{
-			    TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
+			    TBUtil.findHeads(sentence.parse.getRootNode(), langUtil.getHeadRules());
 				for (SRInstance instance:sentence.srls)
 				{
 					ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
@@ -358,7 +355,6 @@ public class RunSRL {
 		model.score.printResults(System.out);
 		System.out.println("Constituents predicted: "+pCount);
 		System.out.println("Constituents considered: "+cCount);
-		dict.close();
 
 		//System.out.printf("%d/%d %.2f%%\n", count, y.length, count*100.0/y.length);
 		

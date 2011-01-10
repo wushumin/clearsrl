@@ -15,6 +15,11 @@ import harvest.treebank.TBTree;
 
 public class SRInstance {
 
+    enum OutputFormat {
+        TEXT,
+        PROPBANK
+    };
+    
 	TBNode predicateNode;
 	TBTree tree;
 	ArrayList<SRArg> args;
@@ -158,5 +163,16 @@ public class SRInstance {
 		
 		return buffer.toString();
 	}
+	
+    public String toString(OutputFormat outputFormat) {
+        switch (outputFormat)
+        {
+        case TEXT:
+            return toString();
+        case PROPBANK:
+            return toPropbankString();
+        }
+        return toString();
+    }
 	
 }

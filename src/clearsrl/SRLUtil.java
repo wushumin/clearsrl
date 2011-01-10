@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 
 public class SRLUtil {
 	
+    /*
 	static final Pattern TRACE_PATTERN = Pattern.compile("([A-Z]+(\\-[A-Z]+)*)(\\-\\d+)?+(=\\d+)?+");
 	public static String removeTrace(String pos)
 	{
@@ -34,7 +35,7 @@ public class SRLUtil {
 			return matcher.group(1);
 		else
 			return pos;
-	}
+	}*/
 	
 	static final Pattern ARG_PATTERN = Pattern.compile("([A-Z]+\\d)\\-[A-Za-z]+");
 	public static String removeArgModifier(String argType)

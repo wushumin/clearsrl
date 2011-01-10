@@ -11,6 +11,7 @@ import gnu.trove.TObjectIntIterator;
 import harvest.alg.Classification.InstanceFormat;
 import harvest.treebank.TBNode;
 import harvest.treebank.TBTree;
+import harvest.treebank.TBUtil;
 import harvest.util.JIO;
 
 import java.io.IOException;
@@ -41,13 +42,6 @@ public class SRLModel implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	
-	public enum Language
-	{
-		ENGLISH,
-		CHINESE,
-		OTHER
-	};
 	
 	public static final String NOT_ARG="!ARG";
 	public static final String IS_ARG="ARG";
@@ -126,7 +120,7 @@ public class SRLModel implements Serializable {
 		this.labeled = labeled;
 	}
 
-	Language                                          language;
+	transient LanguageUtil                            langUtil;
 	EnumSet<Feature>                                  featureSet;
 	EnumSet<PredicateFeature>                         predicateFeatureSet;
 	
@@ -152,16 +146,14 @@ public class SRLModel implements Serializable {
 	transient ArrayList<int[]>                        predicateTrainingFeatures;
 	transient TIntArrayList                           predicateTrainingLabels;
 
-	transient WordnetStemmer                          wnStemmer;
 	transient int                                     hit = 0;
 	transient int                                     total = 0;
 	
 	transient SRLScore                                score;
 	
-	public SRLModel (Language lang, EnumSet<Feature> featureSet, EnumSet<PredicateFeature> predicateFeatureSet)
+	public SRLModel (EnumSet<Feature> featureSet, EnumSet<PredicateFeature> predicateFeatureSet)
 	{
 		labeled       = true;
-		this.language = lang;
 		this.featureSet = featureSet;
 		this.predicateFeatureSet = predicateFeatureSet;
 		
@@ -172,9 +164,9 @@ public class SRLModel implements Serializable {
 		predicateTrainingLabels = new TIntArrayList();
 	}
 	
-	public void setWordNetStemmer(WordnetStemmer stemmer)
+	public void setLanguageUtil(LanguageUtil langUtil)
 	{
-		wnStemmer = stemmer;
+	    this.langUtil = langUtil;
 	}
 	
 	public void initDictionary()
@@ -281,7 +273,7 @@ public class SRLModel implements Serializable {
         
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
-            if (node.pos.startsWith("VB"))
+            if (node.pos.startsWith("V"))
                 predicateCandidates.add(node);
         
         // add predicate training samples
@@ -366,9 +358,8 @@ public class SRLModel implements Serializable {
 		
 		// find predicate lemma
 		String predicateLemma = predicateNode.word;
-		if (language==Language.ENGLISH)
 		{
-			List<String> stems = wnStemmer.findStems(predicateLemma, edu.mit.jwi.item.POS.VERB);
+			List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
 			if (!stems.isEmpty()) predicateLemma = stems.get(0);
 		}
 		
@@ -377,18 +368,15 @@ public class SRLModel implements Serializable {
 		{
 			StringBuilder builder = new StringBuilder();
 			TBNode predicateParentNode = predicateNode.getParent();
-			builder.append(SRLUtil.removeTrace(predicateParentNode.pos)+RIGHT_ARROW);
+			builder.append(TBUtil.removeTrace(predicateParentNode.pos)+RIGHT_ARROW);
 			for (TBNode node:predicateParentNode.getChildren())
-				builder.append(SRLUtil.removeTrace(node.pos)+"-");
+				builder.append(TBUtil.removeTrace(node.pos)+"-");
 			subCat = builder.toString();
 		}
 		
 		// figure out whether predicate is passive or not
-		boolean isPassive = false;
-		if (language==Language.ENGLISH)
-		{
-			isPassive = getPassive(predicateNode)>0;			
-		}
+		boolean isPassive = langUtil.getPassive(predicateNode)>0;			
+
 
 		EnumMap<Feature,List<String>> defaultMap = new EnumMap<Feature,List<String>>(Feature.class);
 		for (Feature feature:featureSet)
@@ -399,7 +387,7 @@ public class SRLModel implements Serializable {
 				break;
 			case PREDICATEPOS:
 				if (predicateNode.pos.matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(SRLUtil.removeTrace(predicateNode.pos)));
+					defaultMap.put(feature, Arrays.asList(TBUtil.removeTrace(predicateNode.pos)));
 				break;
 			case VOICE:
 				//if (isPassive) defaultMap.put(feature, Arrays.asList("Passive"));
@@ -410,7 +398,7 @@ public class SRLModel implements Serializable {
 				break;
 			case PREDICATE_PREDICATEPOS:
 				if (predicateNode.pos.matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+SRLUtil.removeTrace(predicateNode.pos)));
+					defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+TBUtil.removeTrace(predicateNode.pos)));
 				break;
 			case PREDICATE_VOICE:
 				defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+(isPassive?"Passive":"Active")));
@@ -452,7 +440,7 @@ public class SRLModel implements Serializable {
 			
 			boolean isBefore = tnodes.get(0).tokenIndex < predicateNode.tokenIndex;
 			//System.out.println(predicateNode+" "+predicateNode.tokenIndex+": "+argNode.getParent()+" "+argToTopNodes.size());
-			int cstDst = countConstituents(SRLUtil.removeTrace(argToTopNodes.get(0).pos), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
+			int cstDst = countConstituents(TBUtil.removeTrace(argToTopNodes.get(0).pos), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
 			//System.out.println(cstDst+" "+path);
 			
 			for (Feature feature:featureSet)
@@ -526,7 +514,7 @@ public class SRLModel implements Serializable {
 				
 				case PHRASETYPE:
 				{
-					String pos = SRLUtil.removeTrace(argNode.pos);
+					String pos = TBUtil.removeTrace(argNode.pos);
 					if (pos.matches("PP.*") && argNode.head!=null && argNode.head.word!=null)
 					{
 						ArrayList<String> list = new ArrayList<String>();
@@ -557,7 +545,7 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(head.word));
 					break;
 				case HEADWORDPOS:
-					sample.put(feature, Arrays.asList(SRLUtil.removeTrace(head.pos)));
+					sample.put(feature, Arrays.asList(TBUtil.removeTrace(head.pos)));
 					break;
 				case HEADWORDDUPE:
 				    if (argNode.getParent()!=null && argNode.head==argNode.getParent().head)
@@ -567,7 +555,7 @@ public class SRLModel implements Serializable {
                     break;
 				case HEADWORDDUPE_HEADWORDPOS:
                     if (argNode.getParent()!=null && argNode.head==argNode.getParent().head)
-                        sample.put(feature, Arrays.asList("HeadDupe_"+SRLUtil.removeTrace(argNode.head.pos)));
+                        sample.put(feature, Arrays.asList("HeadDupe_"+TBUtil.removeTrace(argNode.head.pos)));
                     //else
                     //    sample.put(feature, Arrays.asList("HeadUnique_"+SRLUtil.removeTrace(argNode.head.pos)));
                     break;
@@ -575,16 +563,16 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(tnodes.get(0).word));
 					break;
 				case FIRSTWORDPOS:
-					sample.put(feature, Arrays.asList(SRLUtil.removeTrace(tnodes.get(0).pos)));
+					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(0).pos)));
 					break;
 				case LASTWORD:
 					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).word));
 					break;
 				case LASTWORDPOS:
-					sample.put(feature, Arrays.asList(SRLUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
+					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
 					break;
 				case FIRSTWORDPOS_LASTWORDPOS:
-					sample.put(feature, Arrays.asList(SRLUtil.removeTrace(tnodes.get(0).pos)+"_"+SRLUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
+					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(0).pos)+"_"+TBUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
 					break;
 				case VOICE_POSITION:
 				{
@@ -616,9 +604,9 @@ public class SRLModel implements Serializable {
 					for (TBNode node:argNode.getParent().getChildren())
 					{
 						if (node != argNode)
-							builder.append(SRLUtil.removeTrace(node.pos.toLowerCase())+"-");
+							builder.append(TBUtil.removeTrace(node.pos.toLowerCase())+"-");
 						else
-							builder.append(SRLUtil.removeTrace(node.pos.toUpperCase())+"-");
+							builder.append(TBUtil.removeTrace(node.pos.toUpperCase())+"-");
 					}
 					sample.put(feature, Arrays.asList(builder.toString()));
 					break;
@@ -679,9 +667,8 @@ public class SRLModel implements Serializable {
         
         // find predicate lemma
         String predicateLemma = predicateNode.word;
-        if (language==Language.ENGLISH)
         {
-            List<String> stems = wnStemmer.findStems(predicateLemma, edu.mit.jwi.item.POS.VERB);
+            List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
             if (!stems.isEmpty()) predicateLemma = stems.get(0);
         }
 
@@ -699,29 +686,29 @@ public class SRLModel implements Serializable {
                 sample.put(feature, Arrays.asList(predicateLemma));
                 break;
             case PREDICATEPOS:
-                sample.put(feature, Arrays.asList(SRLUtil.removeTrace(predicateNode.pos)));
+                sample.put(feature, Arrays.asList(TBUtil.removeTrace(predicateNode.pos)));
                 break;
             case PREDICATE_PREDICATEPOS:
-                sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(predicateNode.pos)));
+                sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(predicateNode.pos)));
                 break;
             case PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(parent.pos)));
                 break;
             case PREDICATE_PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(parent.pos)));
                 break;
             case PREDICATE_PREDICATEPOS_PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(predicateNode.pos)+"_"+SRLUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(predicateNode.pos)+"_"+TBUtil.removeTrace(parent.pos)));
                 break;
             case LEFTWORD:
                 if (leftNode!=null) sample.put(feature, Arrays.asList(leftNode.word));   
                 break;
             case LEFTWORDPOS:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(leftNode.pos)));
+                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(leftNode.pos)));
                 break;
             case LEFTWORD_PREDICATE:
                 if (leftNode!=null)
@@ -729,18 +716,18 @@ public class SRLModel implements Serializable {
                 break;
             case LEFTWORDPOS_PREDICATE:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(leftNode.pos)+"_"+predicateLemma));
+                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(leftNode.pos)+"_"+predicateLemma));
                 break;
             case RIGHTHEADWORD:
                 if (rightHeadnode!=null) sample.put(feature, Arrays.asList(rightHeadnode.word));   
                 break;
             case RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(rightHeadnode.pos)));
+                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(rightHeadnode.pos)));
                 break;
             case RIGHTPHASETYPE:
                 if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(SRLUtil.removeTrace(rightSibling.pos)));
+                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(rightSibling.pos)));
                 break;
             case PREDICATE_RIGHTHEADWORD:
                 if (rightHeadnode!=null) 
@@ -748,11 +735,11 @@ public class SRLModel implements Serializable {
                 break;
             case PREDICATE_RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null) 
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightHeadnode.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(rightHeadnode.pos)));
                 break;
             case PREDICATE_RIGHTPHASETYPE:
                 if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+SRLUtil.removeTrace(rightSibling.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(rightSibling.pos)));
                 break;
             }
         }
@@ -857,7 +844,7 @@ public class SRLModel implements Serializable {
         
         List<TBNode> nodes = parseTree.getRootNode().getTokenNodes();
         for (TBNode node: nodes)
-            if (node.pos.startsWith("VB") &&
+            if (node.pos.startsWith("V") &&
                 predicateClassifier.predict(getPredicateFeatureVector(extractPredicateFeature(node, nodes)))==1)
             {
                 predictions.add(new SRInstance(node, parseTree));
@@ -1067,151 +1054,15 @@ public class SRLModel implements Serializable {
         
         for (TBNode node:argNodes)
         {
-            path.add(SRLUtil.removeTrace(node.pos));
+            path.add(TBUtil.removeTrace(node.pos));
             path.add(UP_CHAR);
         }
-        path.add(SRLUtil.removeTrace(joinNode.pos));
+        path.add(TBUtil.removeTrace(joinNode.pos));
         for (int i=predNodes.size()-1; i>=0; --i)
         {
             path.add(DOWN_CHAR);
-            path.add(SRLUtil.removeTrace(predNodes.get(i).pos));
+            path.add(TBUtil.removeTrace(predNodes.get(i).pos));
         }
         return path;
-    }   
-    
-    int getPassive(TBNode predicate)
-    {
-        if (!predicate.pos.matches("VBN.*"))
-            return 0;
-        
-        // Ordinary passive:
-        // 1. Parent is VP, closest verb sibling of any VP ancestor is passive auxiliary (be verb)
-        {
-            TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("VP.*"))
-            {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
-                
-                for (int i=currNode.childIndex-1; i>=0; --i)
-                {
-                    if (!children.get(i).isToken()) continue;
-                    
-                    // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).pos.matches("V.*") || children.get(i).pos.matches("AUX.*"))
-                    {
-                        List<String> stems = wnStemmer.findStems(children.get(i).word, edu.mit.jwi.item.POS.VERB);
-                        if (!stems.isEmpty() && (stems.get(0).equals("be")||stems.get(0).equals("get")))
-                            return 1;
-                        else
-                            break;
-                    }
-                }
-                currNode = currNode.getParent();
-            }
-        }
-        
-        // 2. ancestor path is (ADVP->)*VP, closest verb sibling of the VP is passive auxiliary (be verb)
-        {
-            TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("ADJP.*"))
-                currNode = currNode.getParent();
-            
-            if (currNode!=predicate && currNode.pos.matches("VP.*"))
-            {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
-                    
-                for (int i=currNode.childIndex-1; i>=0; --i)
-                {
-                    if (!children.get(i).isToken()) continue;
-                    
-                    // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).pos.matches("V.*") || children.get(i).pos.matches("AUX.*"))
-                    {
-                        List<String> stems = wnStemmer.findStems(children.get(i).word, edu.mit.jwi.item.POS.VERB);
-                        if (!stems.isEmpty() && (stems.get(0).equals("be")||stems.get(0).equals("get")))
-                            return 2;
-                        else
-                            break;
-                    }
-                }
-            }
-        }
-        
-        //Reduced Passive:
-        //1. Parent and nested ancestors are VP, 
-        //   none of VP ancestor's preceding siblings is verb
-        //   parent of oldest VP ancestor is NP
-        {
-            TBNode currNode = predicate;
-            boolean found = true;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("VP.*"))
-            {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
-
-                for (int i=currNode.childIndex-1; i>=0; --i)
-                {
-                    if (!children.get(i).isToken()) continue;
-                    if (children.get(i).pos.matches("V.*") || children.get(i).pos.matches("AUX.*"))
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-                if (!found) break;
-                currNode = currNode.getParent();
-            }
-                
-            if (found && currNode!=predicate && currNode.getParent()!=null && currNode.getParent().pos.matches("NP.*"))
-                return 3;
-        }
-        
-        //2. Parent is PP
-        {
-            if (predicate.getParent()!=null && predicate.getParent().pos.matches("PP.*"))
-                return 4;
-        }
-        
-        //3. Parent is VP, grandparent is clause, and great grandparent is clause, NP, VP or PP
-        {
-            if (predicate.getParent()!=null && predicate.getParent().pos.matches("VP.*") &&
-                predicate.getParent().getParent()!=null && predicate.getParent().getParent().pos.matches("S.*") &&
-                predicate.getParent().getParent().getParent()!=null && 
-                predicate.getParent().getParent().getParent().pos.matches("(S|NP|VP|PP).*"))
-                return 5;
-        }
-        
-        //4. ancestors are ADVP, no preceding siblings of oldest ancestor is DET,
-        //   no following siblings is a noun or NP
-        {
-            TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("ADJP.*"))
-                currNode = currNode.getParent();
-            if (currNode != predicate)
-            {
-                boolean found = true;
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
-                
-                for (int i=currNode.childIndex-1; i>=0; --i)
-                {
-                    if (children.get(i).pos.matches("DET.*"))
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-                for (int i=currNode.childIndex+1; i<children.size(); ++i)
-                {
-                    if (children.get(i).pos.matches("N.*"))
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-                if (found) return 6;
-            }
-        }
-        
-        return 0;
-    }
-    
+    }       
 }
