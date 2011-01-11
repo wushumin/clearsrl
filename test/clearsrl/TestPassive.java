@@ -36,12 +36,10 @@ public class TestPassive {
 		props.load(in);
 		in.close();
 		
-		URL url = new URL("file", null, props.getProperty("wordnet_dic"));
-		// construct the dictionary object and open it
-		Dictionary dict = new Dictionary(url);
-		dict.getCache().setMaximumCapacity(5000);
-		dict.open();
-		WordnetStemmer stemmer = new WordnetStemmer(dict);
+		LanguageUtil langUtil = (LanguageUtil) Class.forName("clearsrl.EnglishUtil").newInstance();
+        if (!langUtil.init(props))
+            System.exit(-1);
+		
 		
 		ArrayList<Feature> features = new ArrayList<Feature>();
 		StringTokenizer tokenizer = new StringTokenizer(props.getProperty("feature"),",");
@@ -54,9 +52,6 @@ public class TestPassive {
 			}
 		}
 		System.out.println(EnumSet.copyOf(features));
-		SRLModel model = new SRLModel(SRLModel.Language.ENGLISH, EnumSet.copyOf(features), null);
-		//model.setLabeled(false);
-		model.setWordNetStemmer(stemmer);
 		
 		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
 		
@@ -75,9 +70,9 @@ public class TestPassive {
 			TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
 			for (SRInstance instance:sentence.srls)
 			{
-				if (instance.getPredicateNode().pos.matches("VBN.*"))
+				if (instance.getPredicateNode().pos.matches("V.*"))
 				{
-					System.out.println(model.getPassive(instance.getPredicateNode())+": "+" "+instance);
+					System.out.println(langUtil.getPassive(instance.getPredicateNode())+": "+" "+instance);
 					System.out.println("   "+instance.tree.toString()+"\n");
 				}
 			}

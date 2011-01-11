@@ -1,5 +1,6 @@
 package clearsrl;
 
+import java.util.List;
 import java.util.Properties;
 
 import harvest.treebank.TBHeadRules;
@@ -17,6 +18,23 @@ public class ChineseUtil extends LanguageUtil {
     
     @Override
     public int getPassive(TBNode predicateNode) {
+        TBNode root = predicateNode.getRoot();
+        List<TBNode> nodes = root.getTokenNodes();
+
+        for (TBNode node:nodes)
+        {
+            if (node.pos.matches("(SB|LB).*"))
+            {
+                TBNode parent = node.getParent();
+                if (parent==null || !parent.pos.matches("VP.*"))
+                    continue;
+                if (predicateNode.isDecendentOf(parent))
+                {
+                }
+            }
+            
+        }
+        
         return 0;
     }
 
