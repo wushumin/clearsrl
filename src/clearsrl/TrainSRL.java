@@ -13,7 +13,7 @@ import harvest.treebank.TBNode;
 import harvest.treebank.TBReader;
 import harvest.treebank.TBTree;
 import harvest.treebank.TBUtil;
-import harvest.treebank.TBReader.TreeException;
+import harvest.treebank.ParseException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,7 +48,7 @@ public class TrainSRL {
 		if (instance.tree.getTokenCount() == parsedTree.getTokenCount())
 		{
 		    SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-		    SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.tokenIndex), parsedTree);
+		    SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree);
 		    for (int i=0; i<labels.size(); ++i)
                 trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
             trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
@@ -81,7 +81,7 @@ public class TrainSRL {
                 ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                 ArrayList<TObjectFloatHashMap<String>> labels = new ArrayList<TObjectFloatHashMap<String>>();
                 SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-                SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.tokenIndex), parsedTree);
+                SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree);
                 for (int i=0; i<labels.size(); ++i)
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
                 trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
@@ -155,8 +155,7 @@ public class TrainSRL {
 			    PBUtil.readPBDir(props.getProperty("pbdir"), 
 			                     trainRegex, 
 			                     props.getProperty("tbdir"), 
-			                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null, 
-			                     false);
+			                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
 			
 			System.out.println(propBank.size());
 			
@@ -173,7 +172,7 @@ public class TrainSRL {
 	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
 	            } catch (FileNotFoundException e) {
 	                e.printStackTrace();
-	            } catch (TreeException e) {
+	            } catch (ParseException e) {
 	                e.printStackTrace();
 	            }
 			}
@@ -197,11 +196,11 @@ public class TrainSRL {
     			                if (instance.getArgs().size()>1)
     			                {
     			                    srls.add(new SRInstance(instance));
-    			                    rolesetArg.put(instance.rolesetId, rolesetArg.get(instance.rolesetId)+1);
+    			                    rolesetArg.put(instance.getRoleset(), rolesetArg.get(instance.getRoleset())+1);
     			                }
     			                else
     			                {
-    			                    rolesetEmpty.put(instance.rolesetId, rolesetEmpty.get(instance.rolesetId)+1);
+    			                    rolesetEmpty.put(instance.getRoleset(), rolesetEmpty.get(instance.getRoleset())+1);
     			                }
     			            }
 			            }
@@ -213,7 +212,7 @@ public class TrainSRL {
                         {
                             //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
                             SRInstance instance = new SRInstance(pbInstance);
-                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, true);
+                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, true);
                         }
 			        }
 			    }
@@ -245,7 +244,7 @@ public class TrainSRL {
                         {
                             for (PBInstance instance:pbInstances)
                             {
-                                if (!rolesetEmpty.containsKey(instance.rolesetId))
+                                if (!rolesetEmpty.containsKey(instance.getRoleset()))
                                     srls.add(new SRInstance(instance));
                             }
                         }
@@ -258,7 +257,7 @@ public class TrainSRL {
                         {
                             //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
                             SRInstance instance = new SRInstance(pbInstance);
-                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, false);
+                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, false);
                         }
                     }
                 }

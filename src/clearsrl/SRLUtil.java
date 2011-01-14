@@ -165,7 +165,7 @@ public class SRLUtil {
 		for (int i=0; i<tmpNodes.size();++i)
 		{
 			BitSet tmp = convertToBitSet(tmpNodes.get(i),parsedTree.getTokenCount());
-			if (!tmp.get(instance.predicateNode.tokenIndex))
+			if (!tmp.get(instance.predicateNode.getTokenIndex()))
 			{
 				// initialize all candidates to not argument
 				candidateNodes.add(tmpNodes.get(i));
@@ -236,7 +236,7 @@ public class SRLUtil {
 	{
 		BitSet tokenSet = new BitSet(nbits);
 		for (TBNode aNode:node.getTokenNodes())
-			tokenSet.set(aNode.tokenIndex);
+			tokenSet.set(aNode.getTokenIndex());
 		return tokenSet;
 	}
 	
@@ -267,7 +267,7 @@ public class SRLUtil {
 		for (int i=0; i<argNodes.size();)
 		{
 			BitSet tmp = convertToBitSet(argNodes.get(i),tree.getTokenCount());
-			if (tmp.get(predicateNode.tokenIndex))
+			if (tmp.get(predicateNode.getTokenIndex()))
 				argNodes.remove(i);
 			else
 				++i;

@@ -3,7 +3,7 @@ package clearsrl;
 import harvest.treebank.TBNode;
 import harvest.treebank.TBReader;
 import harvest.treebank.TBTree;
-import harvest.treebank.TBReader.TreeException;
+import harvest.treebank.ParseException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -45,7 +45,7 @@ public class CoNLLSentence {
 		return buffer.toString();
 	}
 	
-	static CoNLLSentence buildSentence(ArrayList<String[]> sentenceTokens) throws TreeException
+	static CoNLLSentence buildSentence(ArrayList<String[]> sentenceTokens) throws ParseException
 	{
 		CoNLLSentence sentence = new CoNLLSentence();
 		
@@ -153,7 +153,7 @@ public class CoNLLSentence {
 				{
 					try {
 						sentences.add(buildSentence(sentenceTokens));
-					} catch (TreeException e) {
+					} catch (ParseException e) {
 						e.printStackTrace();
 					}
 					sentenceTokens.clear();
@@ -167,7 +167,7 @@ public class CoNLLSentence {
 		{
 			try {
 				sentences.add(buildSentence(sentenceTokens));
-			} catch (TreeException e) {
+			} catch (ParseException e) {
 				e.printStackTrace();
 			}
 			sentenceTokens.clear();

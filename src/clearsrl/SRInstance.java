@@ -46,14 +46,14 @@ public class SRInstance {
 	}
 	*/
 	public SRInstance(PBInstance instance) {
-		this(instance.predicateNode, instance.tree);
+		this(instance.getPredicate(), instance.getTree());
 		for (Entry<String, PBArg> entry : instance.getArgs().entrySet())
 		{
 			for (TBNode argNode:entry.getValue().getNodes())
 			{
 				BitSet tokenSet = new BitSet(tree.getTokenCount());
 				for (TBNode node:argNode.getTokenNodes())
-					if (node.tokenIndex>=0) tokenSet.set(node.tokenIndex);
+					if (node.getTokenIndex()>=0) tokenSet.set(node.getTokenIndex());
 				if (tokenSet.isEmpty()) continue;
 				addArg(new SRArg(SRLUtil.removeArgModifier(entry.getKey()), tokenSet));
 			}
@@ -92,10 +92,10 @@ public class SRInstance {
 	public String toPropbankString()
 	{
         StringBuilder buffer = new StringBuilder();
-        buffer.append(tree.getTreeFile()); buffer.append(' ');
-        buffer.append(tree.getTreeIndex()); buffer.append(' ');
-        buffer.append(predicateNode.terminalIndex); buffer.append(' ');
-        buffer.append("system "); buffer.append(predicateNode.word);
+        buffer.append(tree.getFilename()); buffer.append(' ');
+        buffer.append(tree.getIndex()); buffer.append(' ');
+        buffer.append(predicateNode.getTerminalIndex()); buffer.append(' ');
+        buffer.append("system "); buffer.append(predicateNode.getWord());
         buffer.append(" ----- ");
         
         TreeMap<String, TreeSet<SRArg>> argMap = new TreeMap<String, TreeSet<SRArg>>();
@@ -123,7 +123,7 @@ public class SRInstance {
                     ++depth;
                     node=node.getChildren().get(0);
                 }
-                argStr+=node.terminalIndex+":"+depth+"*";
+                argStr+=node.getTerminalIndex()+":"+depth+"*";
             }
             buffer.append(argStr.substring(0,argStr.length()-1));
             buffer.append('-');
@@ -136,13 +136,13 @@ public class SRInstance {
 	public String toString()
 	{
 		StringBuilder buffer = new StringBuilder();
-		buffer.append(tree.getTreeFile()); buffer.append(" ");
-		buffer.append(tree.getTreeIndex()); buffer.append(" ");
+		buffer.append(tree.getFilename()); buffer.append(" ");
+		buffer.append(tree.getIndex()); buffer.append(" ");
 		
 		ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
 		String[] tokens = new String[nodes.size()];
 		for (int i=0; i<tokens.length; ++i)
-			tokens[i] = nodes.get(i).word;
+			tokens[i] = nodes.get(i).getWord();
 		
 		for (SRArg arg:args)
 		{

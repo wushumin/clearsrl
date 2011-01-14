@@ -47,25 +47,25 @@ public class EnglishUtil extends LanguageUtil {
     
     @Override
     public int getPassive(TBNode predicate) {
-        if (!predicate.pos.matches("VBN.*"))
+        if (!predicate.getPOS().matches("VBN.*"))
             return 0;
         
         // Ordinary passive:
         // 1. Parent is VP, closest verb sibling of any VP ancestor is passive auxiliary (be verb)
         {
             TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("VP.*"))
+            while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("VP.*"))
             {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
+                List<TBNode> children = currNode.getParent().getChildren();
                 
-                for (int i=currNode.childIndex-1; i>=0; --i)
+                for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
                     if (!children.get(i).isToken()) continue;
                     
                     // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).pos.matches("V.*|AUX.*"))
+                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children.get(i).word, POS.VERB);
+                        List<String> stems = findStems(children.get(i).getWord(), POS.VERB);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 1;
                         else
@@ -79,21 +79,21 @@ public class EnglishUtil extends LanguageUtil {
         // 2. ancestor path is (ADVP->)*VP, closest verb sibling of the VP is passive auxiliary (be verb)
         {
             TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("ADJP.*"))
+            while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("ADJP.*"))
                 currNode = currNode.getParent();
             
-            if (currNode!=predicate && currNode.pos.matches("VP.*"))
+            if (currNode!=predicate && currNode.getPOS().matches("VP.*"))
             {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
+                List<TBNode> children = currNode.getParent().getChildren();
                     
-                for (int i=currNode.childIndex-1; i>=0; --i)
+                for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
                     if (!children.get(i).isToken()) continue;
                     
                     // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).pos.matches("V.*|AUX.*"))
+                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children.get(i).word, POS.VERB);
+                        List<String> stems = findStems(children.get(i).getWord(), POS.VERB);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 2;
                         else
@@ -110,14 +110,14 @@ public class EnglishUtil extends LanguageUtil {
         {
             TBNode currNode = predicate;
             boolean found = true;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("VP.*"))
+            while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("VP.*"))
             {
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
+                List<TBNode> children = currNode.getParent().getChildren();
 
-                for (int i=currNode.childIndex-1; i>=0; --i)
+                for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
                     if (!children.get(i).isToken()) continue;
-                    if (children.get(i).pos.matches("V.*|AUX.*"))
+                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
                     {
                         found = false;
                         break;
@@ -127,22 +127,22 @@ public class EnglishUtil extends LanguageUtil {
                 currNode = currNode.getParent();
             }
                 
-            if (found && currNode!=predicate && currNode.getParent()!=null && currNode.getParent().pos.matches("NP.*"))
+            if (found && currNode!=predicate && currNode.getParent()!=null && currNode.getParent().getPOS().matches("NP.*"))
                 return 3;
         }
         
         //2. Parent is PP
         {
-            if (predicate.getParent()!=null && predicate.getParent().pos.matches("PP.*"))
+            if (predicate.getParent()!=null && predicate.getParent().getPOS().matches("PP.*"))
                 return 4;
         }
         
         //3. Parent is VP, grandparent is clause, and great grandparent is clause, NP, VP or PP
         {
-            if (predicate.getParent()!=null && predicate.getParent().pos.matches("VP.*") &&
-                predicate.getParent().getParent()!=null && predicate.getParent().getParent().pos.matches("S.*") &&
+            if (predicate.getParent()!=null && predicate.getParent().getPOS().matches("VP.*") &&
+                predicate.getParent().getParent()!=null && predicate.getParent().getParent().getPOS().matches("S.*") &&
                 predicate.getParent().getParent().getParent()!=null && 
-                predicate.getParent().getParent().getParent().pos.matches("(S|NP|VP|PP).*"))
+                predicate.getParent().getParent().getParent().getPOS().matches("(S|NP|VP|PP).*"))
                 return 5;
         }
         
@@ -150,24 +150,24 @@ public class EnglishUtil extends LanguageUtil {
         //   no following siblings is a noun or NP
         {
             TBNode currNode = predicate;
-            while (currNode.getParent()!=null && currNode.getParent().pos.matches("ADJP.*"))
+            while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("ADJP.*"))
                 currNode = currNode.getParent();
             if (currNode != predicate)
             {
                 boolean found = true;
-                ArrayList<TBNode> children = currNode.getParent().getChildren();
+                List<TBNode> children = currNode.getParent().getChildren();
                 
-                for (int i=currNode.childIndex-1; i>=0; --i)
+                for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
-                    if (children.get(i).pos.matches("DT.*"))
+                    if (children.get(i).getPOS().matches("DT.*"))
                     {
                         found = false;
                         break;
                     }
                 }
-                for (int i=currNode.childIndex+1; i<children.size(); ++i)
+                for (int i=currNode.getChildIndex()+1; i<children.size(); ++i)
                 {
-                    if (children.get(i).pos.matches("N.*"))
+                    if (children.get(i).getPOS().matches("N.*"))
                     {
                         found = false;
                         break;

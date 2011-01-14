@@ -22,9 +22,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -266,14 +268,14 @@ public class SRLModel implements Serializable {
         for (SRInstance instance:instances)
         {
             addTrainingSamples(instance, namedEntities, buildDictionary);
-            isPredicate.set(instance.predicateNode.tokenIndex);
+            isPredicate.set(instance.predicateNode.getTokenIndex());
         }
         
         ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
         
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
-            if (node.pos.startsWith("V"))
+            if (node.getPOS().startsWith("V"))
                 predicateCandidates.add(node);
         
         // add predicate training samples
@@ -292,7 +294,7 @@ public class SRLModel implements Serializable {
             for (TBNode predicateCandidate:predicateCandidates)
             {
                 predicateTrainingFeatures.add(getPredicateFeatureVector(extractPredicateFeature(predicateCandidate, nodes)));
-                predicateTrainingLabels.add(isPredicate.get(predicateCandidate.tokenIndex)?1:2);
+                predicateTrainingLabels.add(isPredicate.get(predicateCandidate.getTokenIndex())?1:2);
             }
         }
     }
@@ -357,7 +359,7 @@ public class SRLModel implements Serializable {
 		//EnumMap<Feature,List<String>> defaultMap = new EnumMap<Feature,List<String>>(Feature.class);
 		
 		// find predicate lemma
-		String predicateLemma = predicateNode.word;
+		String predicateLemma = predicateNode.getWord();
 		{
 			List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
 			if (!stems.isEmpty()) predicateLemma = stems.get(0);
@@ -368,9 +370,9 @@ public class SRLModel implements Serializable {
 		{
 			StringBuilder builder = new StringBuilder();
 			TBNode predicateParentNode = predicateNode.getParent();
-			builder.append(TBUtil.removeTrace(predicateParentNode.pos)+RIGHT_ARROW);
+			builder.append(predicateParentNode.getPOS()+RIGHT_ARROW);
 			for (TBNode node:predicateParentNode.getChildren())
-				builder.append(TBUtil.removeTrace(node.pos)+"-");
+				builder.append(node.getPOS()+"-");
 			subCat = builder.toString();
 		}
 		
@@ -386,8 +388,8 @@ public class SRLModel implements Serializable {
 				defaultMap.put(feature, Arrays.asList(predicateLemma));
 				break;
 			case PREDICATEPOS:
-				if (predicateNode.pos.matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(TBUtil.removeTrace(predicateNode.pos)));
+				if (predicateNode.getPOS().matches("V.*"))
+					defaultMap.put(feature, Arrays.asList(predicateNode.getPOS()));
 				break;
 			case VOICE:
 				//if (isPassive) defaultMap.put(feature, Arrays.asList("Passive"));
@@ -397,8 +399,8 @@ public class SRLModel implements Serializable {
 				defaultMap.put(feature, Arrays.asList(subCat.toString()));
 				break;
 			case PREDICATE_PREDICATEPOS:
-				if (predicateNode.pos.matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+TBUtil.removeTrace(predicateNode.pos)));
+				if (predicateNode.getPOS().matches("V.*"))
+					defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+predicateNode.getPOS()));
 				break;
 			case PREDICATE_VOICE:
 				defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+(isPassive?"Passive":"Active")));
@@ -413,34 +415,34 @@ public class SRLModel implements Serializable {
 			EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(defaultMap);
 			ArrayList<TBNode> tnodes = argNode.getTokenNodes();
 			
-			ArrayList<TBNode> argToTopNodes = getPathToRoot(argNode);
-		    ArrayList<TBNode> predToTopNodes = getPathToRoot(predicateNode);
+			List<TBNode> argToTopNodes = argNode.getPathToRoot();
+		    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
 		    TBNode joinNode = trimPathNodes(argToTopNodes, predToTopNodes);
 			
 			List<String> path = getPath(argToTopNodes, predToTopNodes, joinNode);
 			
 			// compute head
-			TBNode head = argNode.head;
-			if (argNode.pos.matches("PP.*"))
+			TBNode head = argNode.getHead();
+			if (argNode.getPOS().matches("PP.*"))
 			{
 			    int i = argNode.getChildren().size()-1;
 				for (; i>=0; --i)
 				{
-					if (argNode.getChildren().get(i).pos.matches("NP.*"))
+					if (argNode.getChildren().get(i).getPOS().matches("NP.*"))
 					{
-						if (argNode.getChildren().get(i).head!=null && argNode.getChildren().get(i).head.word!=null)
-							head = argNode.getChildren().get(i).head;
+						if (argNode.getChildren().get(i).getHead()!=null && argNode.getChildren().get(i).getHeadword()!=null)
+							head = argNode.getChildren().get(i).getHead();
 						break;
 					}
 				}
-				if (i<0 && argNode.getChildren().get(argNode.getChildren().size()-1).head!=null && 
-				        argNode.getChildren().get(argNode.getChildren().size()-1).head.word!=null)
-				    head = argNode.getChildren().get(argNode.getChildren().size()-1).head;
+				if (i<0 && argNode.getChildren().get(argNode.getChildren().size()-1).getHead()!=null && 
+				        argNode.getChildren().get(argNode.getChildren().size()-1).getHeadword()!=null)
+				    head = argNode.getChildren().get(argNode.getChildren().size()-1).getHead();
 			}
 			
-			boolean isBefore = tnodes.get(0).tokenIndex < predicateNode.tokenIndex;
+			boolean isBefore = tnodes.get(0).getTokenIndex() < predicateNode.getTokenIndex();
 			//System.out.println(predicateNode+" "+predicateNode.tokenIndex+": "+argNode.getParent()+" "+argToTopNodes.size());
-			int cstDst = countConstituents(TBUtil.removeTrace(argToTopNodes.get(0).pos), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
+			int cstDst = countConstituents(argToTopNodes.get(0).getPOS(), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
 			//System.out.println(cstDst+" "+path);
 			
 			for (Feature feature:featureSet)
@@ -513,18 +515,15 @@ public class SRLModel implements Serializable {
 				}
 				
 				case PHRASETYPE:
-				{
-					String pos = TBUtil.removeTrace(argNode.pos);
-					if (pos.matches("PP.*") && argNode.head!=null && argNode.head.word!=null)
+					if (argNode.getPOS().matches("PP.*") && argNode.getHead()!=null && argNode.getHeadword()!=null)
 					{
 						ArrayList<String> list = new ArrayList<String>();
-						list.add("PP"); list.add("PP-"+argNode.head.word); 
+						list.add("PP"); list.add("PP-"+argNode.getHeadword()); 
 						sample.put(feature, list);
 					}
 					else
-						sample.put(feature, Arrays.asList(pos));
+						sample.put(feature, Arrays.asList(argNode.getPOS()));
 					break;
-				}
 				case POSITION:
 					//if (isBefore) sample.put(feature, Arrays.asList("before"));
 				    sample.put(feature, Arrays.asList(isBefore?"before":"after"));
@@ -542,37 +541,37 @@ public class SRLModel implements Serializable {
                     break;
 				}
 				case HEADWORD:
-					sample.put(feature, Arrays.asList(head.word));
+					sample.put(feature, Arrays.asList(head.getWord()));
 					break;
 				case HEADWORDPOS:
-					sample.put(feature, Arrays.asList(TBUtil.removeTrace(head.pos)));
+					sample.put(feature, Arrays.asList(head.getPOS()));
 					break;
 				case HEADWORDDUPE:
-				    if (argNode.getParent()!=null && argNode.head==argNode.getParent().head)
+				    if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
 				        sample.put(feature, Arrays.asList("HeadDupe"));
 				    //else
 				    //   sample.put(feature, Arrays.asList("HeadUnique"));
                     break;
 				case HEADWORDDUPE_HEADWORDPOS:
-                    if (argNode.getParent()!=null && argNode.head==argNode.getParent().head)
-                        sample.put(feature, Arrays.asList("HeadDupe_"+TBUtil.removeTrace(argNode.head.pos)));
+                    if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
+                        sample.put(feature, Arrays.asList("HeadDupe_"+argNode.getHead().getPOS()));
                     //else
                     //    sample.put(feature, Arrays.asList("HeadUnique_"+SRLUtil.removeTrace(argNode.head.pos)));
                     break;
 				case FIRSTWORD:
-					sample.put(feature, Arrays.asList(tnodes.get(0).word));
+					sample.put(feature, Arrays.asList(tnodes.get(0).getWord()));
 					break;
 				case FIRSTWORDPOS:
-					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(0).pos)));
+					sample.put(feature, Arrays.asList(tnodes.get(0).getPOS()));
 					break;
 				case LASTWORD:
-					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).word));
+					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).getWord()));
 					break;
 				case LASTWORDPOS:
-					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
+					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).getPOS()));
 					break;
 				case FIRSTWORDPOS_LASTWORDPOS:
-					sample.put(feature, Arrays.asList(TBUtil.removeTrace(tnodes.get(0).pos)+"_"+TBUtil.removeTrace(tnodes.get(tnodes.size()-1).pos)));
+					sample.put(feature, Arrays.asList(tnodes.get(0).getPOS()+"_"+tnodes.get(tnodes.size()-1).getPOS()));
 					break;
 				case VOICE_POSITION:
 				{
@@ -604,9 +603,9 @@ public class SRLModel implements Serializable {
 					for (TBNode node:argNode.getParent().getChildren())
 					{
 						if (node != argNode)
-							builder.append(TBUtil.removeTrace(node.pos.toLowerCase())+"-");
+							builder.append(node.getPOS().toLowerCase()+"-");
 						else
-							builder.append(TBUtil.removeTrace(node.pos.toUpperCase())+"-");
+							builder.append(node.getPOS().toUpperCase()+"-");
 					}
 					sample.put(feature, Arrays.asList(builder.toString()));
 					break;
@@ -617,8 +616,8 @@ public class SRLModel implements Serializable {
 					Set<String> neSet = new TreeSet<String>();
 					for (TBNode node:tnodes)
 					{
-						if (namedEntities[node.tokenIndex]!=null)
-							neSet.add(namedEntities[node.tokenIndex]);
+						if (namedEntities[node.getTokenIndex()]!=null)
+							neSet.add(namedEntities[node.getTokenIndex()]);
 					}
 					if (!neSet.isEmpty())
 					{
@@ -666,17 +665,17 @@ public class SRLModel implements Serializable {
         EnumMap<PredicateFeature,List<String>> sample = new EnumMap<PredicateFeature,List<String>>(PredicateFeature.class);
         
         // find predicate lemma
-        String predicateLemma = predicateNode.word;
+        String predicateLemma = predicateNode.getWord();
         {
             List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
             if (!stems.isEmpty()) predicateLemma = stems.get(0);
         }
 
         TBNode parent = predicateNode.getParent();
-        TBNode leftNode = predicateNode.tokenIndex>0? nodes.get(predicateNode.tokenIndex-1):null;
-        TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.childIndex<predicateNode.getParent().getChildren().size()-1)?
-                predicateNode.getParent().getChildren().get(predicateNode.childIndex+1):null;
-        TBNode rightHeadnode = (rightSibling==null||rightSibling.head==null)?null:rightSibling.head;
+        TBNode leftNode = predicateNode.getTokenIndex()>0? nodes.get(predicateNode.getTokenIndex()-1):null;
+        TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().size()-1)?
+                predicateNode.getParent().getChildren().get(predicateNode.getChildIndex()+1):null;
+        TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
         
         for (PredicateFeature feature:predicateFeatureSet)
         {
@@ -686,60 +685,60 @@ public class SRLModel implements Serializable {
                 sample.put(feature, Arrays.asList(predicateLemma));
                 break;
             case PREDICATEPOS:
-                sample.put(feature, Arrays.asList(TBUtil.removeTrace(predicateNode.pos)));
+                sample.put(feature, Arrays.asList(predicateNode.getPOS()));
                 break;
             case PREDICATE_PREDICATEPOS:
-                sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(predicateNode.pos)));
+                sample.put(feature, Arrays.asList(predicateLemma+"_"+predicateNode.getPOS()));
                 break;
             case PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(parent.getPOS()));
                 break;
             case PREDICATE_PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+parent.getPOS()));
                 break;
             case PREDICATE_PREDICATEPOS_PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(predicateNode.pos)+"_"+TBUtil.removeTrace(parent.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+predicateNode.getPOS()+"_"+parent.getPOS()));
                 break;
             case LEFTWORD:
-                if (leftNode!=null) sample.put(feature, Arrays.asList(leftNode.word));   
+                if (leftNode!=null) sample.put(feature, Arrays.asList(leftNode.getWord()));   
                 break;
             case LEFTWORDPOS:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(leftNode.pos)));
+                    sample.put(feature, Arrays.asList(leftNode.getPOS()));
                 break;
             case LEFTWORD_PREDICATE:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(leftNode.word+"_"+predicateLemma));
+                    sample.put(feature, Arrays.asList(leftNode.getWord()+"_"+predicateLemma));
                 break;
             case LEFTWORDPOS_PREDICATE:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(leftNode.pos)+"_"+predicateLemma));
+                    sample.put(feature, Arrays.asList(leftNode.getPOS()+"_"+predicateLemma));
                 break;
             case RIGHTHEADWORD:
-                if (rightHeadnode!=null) sample.put(feature, Arrays.asList(rightHeadnode.word));   
+                if (rightHeadnode!=null) sample.put(feature, Arrays.asList(rightHeadnode.getWord()));   
                 break;
             case RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null)
-                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(rightHeadnode.pos)));
+                    sample.put(feature, Arrays.asList(rightHeadnode.getPOS()));
                 break;
             case RIGHTPHASETYPE:
                 if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(TBUtil.removeTrace(rightSibling.pos)));
+                    sample.put(feature, Arrays.asList(rightSibling.getPOS()));
                 break;
             case PREDICATE_RIGHTHEADWORD:
                 if (rightHeadnode!=null) 
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.word));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.getWord()));
                 break;
             case PREDICATE_RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null) 
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(rightHeadnode.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.getPOS()));
                 break;
             case PREDICATE_RIGHTPHASETYPE:
                 if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+TBUtil.removeTrace(rightSibling.pos)));
+                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightSibling.getPOS()));
                 break;
             }
         }
@@ -844,13 +843,13 @@ public class SRLModel implements Serializable {
         
         List<TBNode> nodes = parseTree.getRootNode().getTokenNodes();
         for (TBNode node: nodes)
-            if (node.pos.startsWith("V") &&
+            if (node.getPOS().startsWith("V") &&
                 predicateClassifier.predict(getPredicateFeatureVector(extractPredicateFeature(node, nodes)))==1)
             {
                 predictions.add(new SRInstance(node, parseTree));
                 SRInstance goldSRL = null;
                 for (SRInstance srl:goldSRLs)
-                    if (node.tokenIndex==srl.predicateNode.tokenIndex)
+                    if (node.getTokenIndex()==srl.predicateNode.getTokenIndex())
                     {
                         goldSRL = srl;
                         break;
@@ -961,30 +960,21 @@ public class SRLModel implements Serializable {
 	{   
 	    int count = 0;
 	    
-	    Stack<TBNode> lStack = new Stack<TBNode>();
-	    for (int i=lnodes.size()-1; i>=0; --i)
-	        lStack.push(lnodes.get(i));
-	    
-	    count += countConstituents(label, lStack, true, 100);
-	    
-	    Stack<TBNode> rStack = new Stack<TBNode>();
-        for (int i=rnodes.size()-1; i>=0; --i)
-            rStack.push(rnodes.get(i));
-	    
-        count += countConstituents(label, rStack, false, 100);
+	    count += countConstituents(label, new LinkedList<TBNode>(lnodes), true, 100);
+        count += countConstituents(label, new LinkedList<TBNode>(rnodes), false, 100);
         
-        for (int i=lnodes.get(lnodes.size()-1).childIndex+1; i<rnodes.get(rnodes.size()-1).childIndex; ++i)
+        for (int i=lnodes.get(lnodes.size()-1).getChildIndex()+1; i<rnodes.get(rnodes.size()-1).getChildIndex(); ++i)
             count += countConstituents(label, joinNode.getChildren().get(i), lnodes.size()>rnodes.size()?lnodes.size():rnodes.size());
         
-        count += joinNode.pos.startsWith(label)?1:0;
+        count += joinNode.getPOS().startsWith(label)?1:0;
         
 	    return count;
 	}
 	
-    int countConstituents(String label, Stack<TBNode> nodes, boolean left, int depth)
+    int countConstituents(String label, Deque<TBNode> nodes, boolean left, int depth)
     {   
         TBNode node = nodes.pop();
-        int count = node.pos.startsWith(label)?1:0;
+        int count = node.getPOS().startsWith(label)?1:0;
 
         if (nodes.isEmpty())
             return count;
@@ -992,10 +982,10 @@ public class SRLModel implements Serializable {
         ++depth;
         
         if (left)
-            for (int i=node.childIndex+1; i<node.getParent().getChildren().size();++i)
+            for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().size();++i)
                 count += countConstituents(label, node.getParent().getChildren().get(i), depth);
         else
-            for (int i=0; i<node.childIndex-1;++i)
+            for (int i=0; i<node.getChildIndex()-1;++i)
                 count += countConstituents(label, node.getParent().getChildren().get(i), depth);
         
         return count + countConstituents(label, nodes, left, depth);
@@ -1003,7 +993,7 @@ public class SRLModel implements Serializable {
 	 
     int countConstituents(String label, TBNode node, int depth)
     {   
-        int count = node.pos.startsWith(label)?1:0;
+        int count = node.getPOS().startsWith(label)?1:0;
         
         if (node.isTerminal() || depth == 0)
             return count;
@@ -1014,17 +1004,7 @@ public class SRLModel implements Serializable {
         return count;
     }
     
-    protected ArrayList<TBNode> getPathToRoot(TBNode node)
-    {
-        ArrayList<TBNode> nodeList = new ArrayList<TBNode>();
-        do {
-            nodeList.add(node);
-        } while ((node = node.getParent())!=null);
-
-        return nodeList;
-    }
-    
-    protected TBNode trimPathNodes(ArrayList<TBNode> argNodes, ArrayList<TBNode> predNodes)
+    protected TBNode trimPathNodes(List<TBNode> argNodes, List<TBNode> predNodes)
     {
         TBNode joinNode = null;
         do
@@ -1033,15 +1013,15 @@ public class SRLModel implements Serializable {
             argNodes.remove(argNodes.size()-1);
             predNodes.remove(predNodes.size()-1);
         } while (!argNodes.isEmpty() && !predNodes.isEmpty() && 
-                argNodes.get(argNodes.size()-1).childIndex==predNodes.get(predNodes.size()-1).childIndex);
+                argNodes.get(argNodes.size()-1).getChildIndex()==predNodes.get(predNodes.size()-1).getChildIndex());
                 //argNodes.get(argNodes.size()-1).terminalIndex==predNodes.get(predNodes.size()-1).terminalIndex);
         return joinNode;
     }
     
     protected List<String> getPath(TBNode argNode, TBNode predNode)
     {
-        ArrayList<TBNode> argNodes = getPathToRoot(argNode);
-        ArrayList<TBNode> predNodes = getPathToRoot(predNode);
+        List<TBNode> argNodes = argNode.getPathToRoot();
+        List<TBNode> predNodes = predNode.getPathToRoot();
         
         TBNode joinNode = trimPathNodes(argNodes, predNodes);
     
@@ -1054,14 +1034,14 @@ public class SRLModel implements Serializable {
         
         for (TBNode node:argNodes)
         {
-            path.add(TBUtil.removeTrace(node.pos));
+            path.add(node.getPOS());
             path.add(UP_CHAR);
         }
-        path.add(TBUtil.removeTrace(joinNode.pos));
+        path.add(joinNode.getPOS());
         for (int i=predNodes.size()-1; i>=0; --i)
         {
             path.add(DOWN_CHAR);
-            path.add(TBUtil.removeTrace(predNodes.get(i).pos));
+            path.add(predNodes.get(i).getPOS());
         }
         return path;
     }       

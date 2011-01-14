@@ -1,30 +1,28 @@
 package clearsrl;
 
 import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
-import gnu.trove.TObjectFloatHashMap;
 import harvest.propbank.PBInstance;
 import harvest.propbank.PBUtil;
+import harvest.treebank.OntoNoteTreeFileResolver;
 import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
+import harvest.treebank.TBReader;
 import harvest.treebank.TBTree;
 import harvest.treebank.TBUtil;
+import harvest.treebank.ParseException;
 
+import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.ObjectOutputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 import clearsrl.SRLModel.Feature;
-
-import edu.mit.jwi.Dictionary;
-import edu.mit.jwi.morph.WordnetStemmer;
 
 public class TestPassive {
 	static final float THRESHOLD=0.8f;
@@ -36,7 +34,7 @@ public class TestPassive {
 		props.load(in);
 		in.close();
 		
-		LanguageUtil langUtil = (LanguageUtil) Class.forName("clearsrl.EnglishUtil").newInstance();
+		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
         if (!langUtil.init(props))
             System.exit(-1);
 		
@@ -55,27 +53,74 @@ public class TestPassive {
 		
 		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
 		
-		String dataFormat = props.getProperty("format", "default");
-		
-		int tCount = 0;
-		int gCount = 0;
+		String dataFormat = props.getProperty("data.format", "default");
 		
 		if (!dataFormat.equals("conll"))
-			return;
-		
-		ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
-		
-		for (CoNLLSentence sentence:training)
 		{
-			TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
-			for (SRInstance instance:sentence.srls)
-			{
-				if (instance.getPredicateNode().pos.matches("V.*"))
-				{
-					System.out.println(langUtil.getPassive(instance.getPredicateNode())+": "+" "+instance);
-					System.out.println("   "+instance.tree.toString()+"\n");
-				}
-			}
+		    String trainRegex = props.getProperty("train.regex");
+            //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
+            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = 
+                PBUtil.readPBDir(props.getProperty("pbdir"), 
+                                 trainRegex, 
+                                 props.getProperty("tbdir"), 
+                                 dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+            
+            System.out.println(propBank.size());
+            
+            Map<String, TBTree[]> parsedTreeBank = new TreeMap<String, TBTree[]>();
+            for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
+            {
+                try {
+                    System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+                    TBReader tbreader    = new TBReader(props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+                    ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
+                    TBTree tree;
+                    while ((tree = tbreader.nextTree()) != null)
+                        a_tree.add(tree);
+                    parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+            }
+            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
+            {
+                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+                TBTree[] trees = entry.getValue(); 
+                for (int i=0; i<trees.length; ++i)
+                {
+                    TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
+                    List<PBInstance> pbInstances = pbFileMap.get(i);
+                    if (pbInstances==null) continue;
+                    for (PBInstance instance:pbInstances)
+                    {
+                        int passive;
+                        if ((passive=langUtil.getPassive(instance.getPredicate()))!=0)
+                        {
+                            System.out.println(passive+": "+" "+new SRInstance(instance));
+                            System.out.println("   "+instance.getTree().toString()+"\n");
+                        }
+                    }
+                }
+            }
+		}
+		else
+		{		
+    		ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
+    		
+    		for (CoNLLSentence sentence:training)
+    		{
+    			TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
+    			for (SRInstance instance:sentence.srls)
+    			{
+    				if (instance.getPredicateNode().getPOS().matches("V.*"))
+    				{
+    					System.out.println(langUtil.getPassive(instance.getPredicateNode())+": "+" "+instance);
+    					System.out.println("   "+instance.tree.toString()+"\n");
+    				}
+    			}
+    		}
 		}
 	}
 

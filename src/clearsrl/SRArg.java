@@ -29,7 +29,7 @@ public class SRArg implements Comparable<SRArg>{
         this.node = node;
         tokenSet = new BitSet();
         for (TBNode aNode:node.getTokenNodes())
-            tokenSet.set(aNode.tokenIndex);
+            tokenSet.set(aNode.getTokenIndex());
         this.label = label;
         this.score = score;  
     }

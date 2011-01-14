@@ -4,7 +4,6 @@ import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TIntObjectIterator;
 import gnu.trove.TObjectFloatHashMap;
 import gnu.trove.TObjectIntIterator;
-import harvest.alg.Classification.InstanceFormat;
 import harvest.propbank.PBArg;
 import harvest.propbank.PBInstance;
 import harvest.propbank.PBUtil;
@@ -167,8 +166,7 @@ public class RunSRL {
                 propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
                                      testRegex, 
                                      props.getProperty("tbdir"), 
-                                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null,
-                                     false);
+                                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
             }
             Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
             
@@ -194,11 +192,11 @@ public class RunSRL {
                         
                         BitSet goldPredicates = new BitSet();
                         for (SRInstance instance:goldInstances)
-                            goldPredicates.set(instance.getPredicateNode().tokenIndex);
+                            goldPredicates.set(instance.getPredicateNode().getTokenIndex());
                         
                         BitSet predPredicates = new BitSet();
                         for (SRInstance instance:predictions)
-                            predPredicates.set(instance.getPredicateNode().tokenIndex);
+                            predPredicates.set(instance.getPredicateNode().getTokenIndex());
                         
                         if (!goldPredicates.equals(predPredicates))
                         {
@@ -207,13 +205,13 @@ public class RunSRL {
                             for (int j=0; j<nodes.size(); ++j)
                             {
                                 if (goldPredicates.get(j)&& predPredicates.get(j))
-                                    System.out.print("["+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+"] ");
+                                    System.out.print("["+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"] ");
                                 else if (goldPredicates.get(j))
-                                    System.out.print("("+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+") ");
+                                    System.out.print("("+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+") ");
                                 else if (predPredicates.get(j))
-                                    System.out.print("{"+nodes.get(j).word+" "+TBUtil.removeTrace(nodes.get(j).pos)+"} ");
+                                    System.out.print("{"+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"} ");
                                 else
-                                    System.out.print(nodes.get(j).word+" ");
+                                    System.out.print(nodes.get(j).getWord()+" ");
                             }
                             System.out.print("\n");
                         }
@@ -263,7 +261,7 @@ public class RunSRL {
 				//for (SRInstance instance:sentence.srls)
 				{
 					SRInstance instance = sentence.srls[j-1];
-					outStr[instance.predicateNode.tokenIndex][0] = instance.rolesetId;
+					outStr[instance.predicateNode.getTokenIndex()][0] = instance.rolesetId;
 					
 					Map<String, BitSet> argBitSet = new HashMap<String, BitSet>();
 					for (SRArg arg:instance.args)
