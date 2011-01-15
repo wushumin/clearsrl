@@ -5,6 +5,9 @@ import gnu.trove.TIntHashSet;
 import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
+import clearcommon.alg.Classifier;
+import clearcommon.alg.LinearClassifier;
+import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
@@ -823,7 +826,6 @@ public class SRLModel implements Serializable {
         }
         
         //liblinearbinary.Problem problem = LinearClassifier.convertToProblem(X, y, Double.parseDouble(prop.getProperty("liblinear.bias", "-1")));
-        http://denver.craigslist.org/bik/2055721557.html
         //classifier = new LinearClassifier(labelStringMap, prop);
         classifier = new PairWiseClassifier(labelStringMap, prop);
         //classifier = new TwoStageClassifier(labelStringMap, 0.95, prop);
