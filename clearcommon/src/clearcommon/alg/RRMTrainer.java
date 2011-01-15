@@ -23,7 +23,7 @@
 */
 package clearcommon.alg;
 
-import clearcommon.alg.Classification.InstanceFormat;
+import clearcommon.alg.Classifier.InstanceFormat;
 
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;

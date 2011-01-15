@@ -26,7 +26,7 @@ package clearcommon.alg;
 import gnu.trove.TIntArrayList;
 import gnu.trove.TShortArrayList;
 import gnu.trove.TShortHashSet;
-import clearcommon.alg.Classification.InstanceFormat;
+import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.util.JIO;
 import clearcommon.util.JArrays;
 import clearcommon.util.tuple.JShortDoubleArrayTuple;
