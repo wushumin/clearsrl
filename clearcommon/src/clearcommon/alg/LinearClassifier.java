@@ -1,4 +1,4 @@
-package clearsrl;
+package clearcommon.alg;
 
 import java.io.Serializable;
 import java.util.Properties;
