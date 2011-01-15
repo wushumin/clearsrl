@@ -1,52 +1,24 @@
 package clearsrl;
 
 import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
 import gnu.trove.TObjectFloatHashMap;
-import gnu.trove.TObjectIntIterator;
-import harvest.propbank.PBArg;
-import harvest.propbank.PBInstance;
-import harvest.propbank.PBUtil;
-import harvest.treebank.OntoNoteTreeFileResolver;
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
-import harvest.treebank.TBTree;
-import harvest.treebank.TBUtil;
-import harvest.util.JIO;
-
-import java.io.BufferedOutputStream;
-import java.io.File;
+import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBUtil;
+import clearcommon.treebank.OntoNoteTreeFileResolver;
+import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBTree;
+import clearcommon.treebank.TBUtil;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Constructor;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-
-import liblinearbinary.Linear;
-import liblinearbinary.SolverType;
-
-import clearsrl.SRLModel.Feature;
-
-import edu.mit.jwi.Dictionary;
-import edu.mit.jwi.IDictionary;
-import edu.mit.jwi.item.IIndexWord;
-import edu.mit.jwi.item.IWord;
-import edu.mit.jwi.item.IWordID;
-import edu.mit.jwi.item.POS;
-import edu.mit.jwi.morph.WordnetStemmer;
 
 public class RunSRL {
 	static final float THRESHOLD=0.8f;

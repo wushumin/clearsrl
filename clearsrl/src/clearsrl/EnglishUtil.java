@@ -10,8 +10,8 @@ import java.util.Properties;
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.morph.WordnetStemmer;
 
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
+import clearcommon.treebank.TBHeadRules;
+import clearcommon.treebank.TBNode;
 
 public class EnglishUtil extends LanguageUtil {
 

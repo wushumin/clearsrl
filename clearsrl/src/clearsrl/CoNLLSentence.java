@@ -1,9 +1,9 @@
 package clearsrl;
 
-import harvest.treebank.TBNode;
-import harvest.treebank.TBReader;
-import harvest.treebank.TBTree;
-import harvest.treebank.ParseException;
+import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBReader;
+import clearcommon.treebank.TBTree;
+import clearcommon.treebank.ParseException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

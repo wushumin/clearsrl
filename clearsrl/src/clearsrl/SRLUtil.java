@@ -2,24 +2,14 @@ package clearsrl;
 
 import gnu.trove.TObjectFloatHashMap;
 import gnu.trove.TObjectFloatIterator;
-import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
-import harvest.propbank.PBArg;
-import harvest.propbank.PBInstance;
-import harvest.treebank.TBHeadRule;
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
-import harvest.treebank.TBTree;
+import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBTree;
 
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Deque;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

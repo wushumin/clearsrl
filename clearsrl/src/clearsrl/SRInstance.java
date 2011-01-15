@@ -8,10 +8,10 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 
-import harvest.propbank.PBArg;
-import harvest.propbank.PBInstance;
-import harvest.treebank.TBNode;
-import harvest.treebank.TBTree;
+import clearcommon.propbank.PBArg;
+import clearcommon.propbank.PBInstance;
+import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBTree;
 
 public class SRInstance {
 

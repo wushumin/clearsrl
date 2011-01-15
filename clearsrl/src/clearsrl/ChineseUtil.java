@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Stack;
 
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
+import clearcommon.treebank.TBHeadRules;
+import clearcommon.treebank.TBNode;
 
 public class ChineseUtil extends LanguageUtil {
 

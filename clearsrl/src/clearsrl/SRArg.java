@@ -2,7 +2,7 @@ package clearsrl;
 
 import java.util.BitSet;
 
-import harvest.treebank.TBNode;
+import clearcommon.treebank.TBNode;
 
 public class SRArg implements Comparable<SRArg>{
 	boolean flat;

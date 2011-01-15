@@ -14,10 +14,10 @@ import edu.berkeley.nlp.io.PTBLineLexer;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import gnu.trove.TIntObjectHashMap;
-import harvest.propbank.PBInstance;
-import harvest.propbank.PBUtil;
-import harvest.treebank.TBTree;
-import harvest.treebank.TBUtil;
+import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBUtil;
+import clearcommon.treebank.TBTree;
+import clearcommon.treebank.TBUtil;
 
 import java.util.List;
 import java.io.BufferedReader;

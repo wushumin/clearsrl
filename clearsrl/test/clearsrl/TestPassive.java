@@ -1,14 +1,14 @@
 package clearsrl;
 
 import gnu.trove.TIntObjectHashMap;
-import harvest.propbank.PBInstance;
-import harvest.propbank.PBUtil;
-import harvest.treebank.OntoNoteTreeFileResolver;
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBReader;
-import harvest.treebank.TBTree;
-import harvest.treebank.TBUtil;
-import harvest.treebank.ParseException;
+import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBUtil;
+import clearcommon.treebank.OntoNoteTreeFileResolver;
+import clearcommon.treebank.TBHeadRules;
+import clearcommon.treebank.TBReader;
+import clearcommon.treebank.TBTree;
+import clearcommon.treebank.TBUtil;
+import clearcommon.treebank.ParseException;
 
 import java.io.File;
 import java.io.FileInputStream;

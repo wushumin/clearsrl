@@ -1,7 +1,7 @@
 package clearsrl;
 
-import harvest.treebank.TBHeadRules;
-import harvest.treebank.TBNode;
+import clearcommon.treebank.TBHeadRules;
+import clearcommon.treebank.TBNode;
 
 import java.util.Arrays;
 import java.util.List;

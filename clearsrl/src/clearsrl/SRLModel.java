@@ -1,18 +1,14 @@
 package clearsrl;
 
-import edu.mit.jwi.morph.WordnetStemmer;
 import gnu.trove.TIntArrayList;
 import gnu.trove.TIntHashSet;
 import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TObjectFloatHashMap;
-import gnu.trove.TObjectFloatIterator;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
-import harvest.alg.Classification.InstanceFormat;
-import harvest.treebank.TBNode;
-import harvest.treebank.TBTree;
-import harvest.treebank.TBUtil;
-import harvest.util.JIO;
+import clearcommon.alg.Classifier.InstanceFormat;
+import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBTree;
+import clearcommon.util.JIO;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
