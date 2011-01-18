@@ -1,5 +1,7 @@
 package clearcommon.propbank;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -7,14 +9,14 @@ import clearcommon.treebank.*;
 
 public class PBInstance implements Comparable<PBInstance>
 {
-	TBNode predicateNode;
-	String rolesetId;
-	SortedMap<String, PBArg> args;
-	TBTree tree;
+	TBNode      predicateNode;
+	String      rolesetId;
+	PBArg[]     args;
+	TBTree      tree;
 
 	public PBInstance()
 	{
-		args = new TreeMap<String, PBArg>();
+		args = null;
 	}
 	
 	public TBNode getPredicate()
@@ -32,20 +34,7 @@ public class PBInstance implements Comparable<PBInstance>
 	    return tree;
 	}
 	
-	public void addArg(PBArg arg)
-	{
-		PBArg cArg = args.get(arg.label);
-		if (cArg==null)
-			args.put(arg.label, arg);
-		else
-		{ // treat multiple args of same type as a single argument
-		    cArg.a_nodes.addAll(arg.a_nodes);
-		    cArg.a_locs.addAll(arg.a_locs);
-		}
-		
-	}
-	
-	public SortedMap<String, PBArg> getArgs()
+	public PBArg[] getArgs()
 	{
 		return args;
 	}
@@ -56,7 +45,7 @@ public class PBInstance implements Comparable<PBInstance>
 		
 		str.append(predicateNode.getWord()+"\n");
 		
-		for (PBArg arg: args.values())
+		for (PBArg arg: args)
 			str.append(arg+"\n");
 		
 		return str.toString();

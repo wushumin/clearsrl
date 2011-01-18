@@ -40,6 +40,9 @@ public class TestTBReader {
             e.printStackTrace();
         }
         assertFalse(tree==null);
+        System.out.println(tree.rootNode.toParse());
+        System.out.println(tree.rootNode.toString());
+        
         List<TBNode> nodes = new ArrayList<TBNode>();
         getNodes(tree.rootNode, nodes);
         

@@ -29,6 +29,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Stack;
 
 /**
  * TBReader reads a Treebank file, and returns each tree as TBTree format.
@@ -80,11 +84,10 @@ import java.io.Reader;
  */
 public class TBReader
 {
-	JFileTokenizer mb_scan;
-	int            mb_numTree;
+	JFileTokenizer scanner;
+	int            treeCount;
 	String         fileName;
 
-	
 	/**
 	 * Initializes the Treebank reader.
 	 * @param filename name of the Treebank file
@@ -93,16 +96,16 @@ public class TBReader
 	public TBReader(String fileName) throws FileNotFoundException
 	{
 		String delim  = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-		mb_scan       = new JFileTokenizer(new FileReader(fileName), delim, true);
-		mb_numTree    = 0;
+		scanner       = new JFileTokenizer(new FileReader(fileName), delim, true);
+		treeCount     = 0;
 		this.fileName = fileName;
 	}
 	
 	public TBReader(String dirName, String fileName) throws FileNotFoundException
     {
         String delim  = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-        mb_scan       = new JFileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
-        mb_numTree    = 0;
+        scanner       = new JFileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
+        treeCount     = 0;
         this.fileName = fileName;
     }
 	
@@ -110,8 +113,8 @@ public class TBReader
 	public TBReader(Reader reader)
 	{
 		String delim = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-		mb_scan      = new JFileTokenizer(reader, delim, true);
-		mb_numTree   = 0;
+		scanner      = new JFileTokenizer(reader, delim, true);
+		treeCount   = 0;
 		fileName     = null; 
 	}
 	
@@ -131,7 +134,9 @@ public class TBReader
 		}
 		while (!str.equals(TBLib.LRB));
 		
-		int numBracket    = 0;
+		Stack<List<TBNode>> childNodeStack = new Stack<List<TBNode>>();
+		childNodeStack.push(new ArrayList<TBNode>());
+		
 		int terminalIndex = 0;
 		int tokenIndex    = 0;
 		TBNode head       = new TBNode(null, "FRAG");		// dummy-head
@@ -141,34 +146,31 @@ public class TBReader
 		{
 			if ((str = nextToken()) == null)
 				throw new ParseException("more tokens needed");
+			System.out.println(str);
 			
 			if (str.equals(TBLib.LRB))
 			{
-				numBracket++;
+
 				if ((str = nextToken()) == null)		// str = pos-tag
 					throw new ParseException("POS-tag is missing");
 				if (!TBNode.POS_PATTERN.matcher(str).matches())
 				    throw new ParseException("Malformed POS tag: "+str);
-				if (str.equals(TBLib.RRB))
-				{
-					numBracket--;
-					continue;
-				}
 				
-				TBNode node = new TBNode(curr, str);	// add a child to 'curr'
-				curr.addChild(node);
-				node.childIndex = (short)(curr.getChildren().size()-1);
-				curr = node;							// move to child
+				TBNode childNode = new TBNode(curr, str, (short)(childNodeStack.peek().size()));
+				childNodeStack.peek().add(childNode);
+				
+				curr = childNode;                           // move to child
+				childNodeStack.push(new ArrayList<TBNode>());
 			}
 			else if (str.equals(TBLib.RRB))
 			{
-				numBracket--;
 				if (curr.terminalIndex<0)
 				{
 				    curr.terminalIndex = -(terminalIndex+1);
 	                curr.tokenIndex = -(tokenIndex+1);
 				}
-				if (curr.children!=null) curr.children.trimToSize();
+				
+				curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
 				curr = curr.getParent();				// move to parent
 				
 			}
@@ -185,25 +187,20 @@ public class TBReader
 				if (!curr.isEC())	curr.tokenIndex = tokenIndex++;
 			}
 		}
-		while (numBracket >= 0);
+		while (!childNodeStack.isEmpty());
 		
-		TBNode tmp = head.getChildren()==null?head:head.getChildren().get(0);
-		if (head.getChildren()!=null && head.getChildren().size()>1)
-		{
-			//System.err.println("Children trimmed: "+head.toParse());
-			//head.pos="FRAG";
-			tmp = head;
-		}
-			
+		// omit the dummy head
+		TBNode tmp = head.children.length==1?head.children[0]:head;
+		
 		tmp.parent=null;
-		return new TBTree(fileName, mb_numTree++, tmp, terminalIndex, tokenIndex);							// omit the dummy head
+		return new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
 	}
 	
 	private String nextToken()
 	{
-		while (mb_scan.hasMoreTokens())
+		while (scanner.hasMoreTokens())
 		{
-			String str = mb_scan.nextToken();
+			String str = scanner.nextToken();
 			
 			if (JFileTokenizer.WHITE.indexOf(str) == -1)
 				return str;

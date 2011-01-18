@@ -42,22 +42,23 @@ import java.util.regex.Pattern;
 public class TBNode
 {
     public static final Pattern WORD_PATTERN = Pattern.compile("\\A([^-]+)(-\\d+)?\\z");    
-    public static final Pattern POS_PATTERN = Pattern.compile("\\A([^\\-=]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)([\\-=]\\d+)?\\z");
+    public static final Pattern POS_PATTERN = Pattern.compile("\\A([^\\-=\\)]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)([\\-=]\\d+)?\\z");
   
+    static final TBNode[] NO_CHILDREN = new TBNode[0];
+    
     //public static final Pattern POS_PATTERN = Pattern.compile("([a-zA-Z]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)(\\-\\d+)?");    
     
+    TBNode            parent;
 	String            pos;
 	Set<String>       functionTags;
 	String            word;
+	short             childIndex;
 	int               terminalIndex;
 	int               tokenIndex;
-	short             childIndex;
 	TBNode            indexingNode;
 	TBNode            head;
+	TBNode[]          children;
 	
-	TBNode            parent;
-	ArrayList<TBNode> children;
-
 	/**
 	 * Initializes the node and sets its parent and pos-tag.
 	 * @param parent parent node.
@@ -65,12 +66,18 @@ public class TBNode
 	 */
 	public TBNode(TBNode parent, String pos)
 	{
-		this.pos      = pos;
-		terminalIndex = -1;
-		tokenIndex    = -1;
-		childIndex    = -1;
-		this.parent   = parent;
+	    this(parent, pos, (short)-1);
 	}
+	
+	public TBNode(TBNode parent, String pos, short childIndex)
+    {
+	    this.parent     = parent;
+        this.pos        = pos;
+        this.childIndex = childIndex;
+        terminalIndex   = -1;
+        tokenIndex      = -1;
+        children        = NO_CHILDREN;
+    }
 	
 	/** Returns true if the pos-tag of the node is <code>pos</code>. */
 	public boolean isPos(String pos)
@@ -91,7 +98,7 @@ public class TBNode
 	
 	public boolean isTerminal()
 	{
-		return children==null;
+		return terminalIndex>=0;
 	}
 	
 	public boolean isToken()
@@ -199,26 +206,12 @@ public class TBNode
 	
 
 	/** Returns the list of children nodes. */
-	public List<TBNode> getChildren()
+	public TBNode[] getChildren()
 	{
 		return children;
 	}
 	
-	/** Adds a child node. */
-	void addChild(TBNode child)
-	{
-		if (children == null)
-			children = new ArrayList<TBNode>();
-		
-		children.add(child);
-	}
-
-	public Iterator<TBNode> getChildrenIterator()
-	{
-		return children.iterator();
-	}
-	
-	public ArrayList<TBNode> getTerminalNodes()
+	public List<TBNode> getTerminalNodes()
 	{
 		ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
 		if (terminalIndex>=0)
@@ -280,7 +273,7 @@ public class TBNode
         return tIndices.toNativeArray();
 	}
 	
-	public ArrayList<TBNode> getTokenNodes()
+	public List<TBNode> getTokenNodes()
 	{
 		ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
 		if (tokenIndex>=0)
@@ -354,12 +347,12 @@ public class TBNode
 		if (functionTags!=null)
 		    for(String tag:functionTags)
 		        str.append('-'+tag);
-		if (children != null)
-			for (TBNode node : children)
-				str.append(node.toParse());
-		else if (word!=null)
-			str.append(' '+word);		
-		str.append(')');
+		if (word!=null) str.append(' '+word);
+		
+        for (TBNode node : children)
+            str.append(node.toParse());
+
+        str.append(')');
 		return str.toString();
 	}
 	
@@ -370,9 +363,9 @@ public class TBNode
 		    str.append("["+getTrace()+"] ");
 		else if (word!=null)
 			str.append(word+" ");
-		if (children != null)
-			for (TBNode node : children)
-				str.append(node);
+		
+		for (TBNode node : children)
+			str.append(node);
 		
 		return str.toString();
 	}

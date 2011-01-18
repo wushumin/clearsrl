@@ -33,7 +33,11 @@ import clearcommon.util.JIO;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.SortedMap;
@@ -67,10 +71,10 @@ import java.util.StringTokenizer;
 public class PBReader
 {
     String                annotationFile;
-	String                mb_treePath;
-	Scanner               mb_scan;
-	Map<String, TBTree[]> mb_trees;
-	TreeFileResolver      mb_resolver;
+	String                treePath;
+	Scanner               scanner;
+	Map<String, TBTree[]> treeMap;
+	TreeFileResolver      filenameResolver;
 	
 	/**
 	 * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
@@ -90,44 +94,44 @@ public class PBReader
 	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver)
     {
 	    this.annotationFile = annotationFile;
-        mb_treePath = treebankPath;
-        mb_scan     = JIO.createScanner(annotationFile);
-        mb_trees    = (trees==null?new HashMap<String, TBTree[]>():trees);
-        mb_resolver = resolver;
+        treePath            = treebankPath;
+        scanner             = JIO.createScanner(annotationFile);
+        treeMap             = (trees==null?new HashMap<String, TBTree[]>():trees);
+        filenameResolver    = resolver;
     }
 		
 	public Map<String, TBTree[]> getTrees()
 	{
-	    return mb_trees;
+	    return treeMap;
 	}
 	
 	public PBInstance nextProp()
 	{
-		if (!mb_scan.hasNextLine())	
+		if (!scanner.hasNextLine())	
 		{
-			mb_scan.close();
+			scanner.close();
 			return null;
 		}
-		StringTokenizer tok      = new StringTokenizer(mb_scan.nextLine());
-		PBInstance      instance = new PBInstance();
+		StringTokenizer tok = new StringTokenizer(scanner.nextLine());
+		PBInstance instance = new PBInstance();
 		
-		String treeFile         = (mb_resolver==null?tok.nextToken():mb_resolver.resolve(annotationFile, tok.nextToken()));
-		int treeIndex           = Integer.parseInt(tok.nextToken());
-		int predicateIndex      = Integer.parseInt(tok.nextToken());
-		TBTree[]   trees        = null;
+		String treeFile     = (filenameResolver==null?tok.nextToken():filenameResolver.resolve(annotationFile, tok.nextToken()));
+		int treeIndex       = Integer.parseInt(tok.nextToken());
+		int predicateIndex  = Integer.parseInt(tok.nextToken());
+		TBTree[] trees      = null;
 		
-		if ((trees = mb_trees.get(treeFile))==null)
+		if ((trees = treeMap.get(treeFile))==null)
 		{
 			try {
-			    System.out.println("Reading "+mb_treePath+File.separatorChar+treeFile);
-				TBReader tbreader    = new TBReader(mb_treePath, treeFile);
+			    System.out.println("Reading "+treePath+File.separatorChar+treeFile);
+				TBReader tbreader    = new TBReader(treePath, treeFile);
 				ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
 				TBTree tree;
 				while ((tree = tbreader.nextTree()) != null)
 					a_tree.add(tree);
 				trees = a_tree.toArray(new TBTree[a_tree.size()]);
 				
-				mb_trees.put(treeFile, trees);
+				treeMap.put(treeFile, trees);
 			} catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (ParseException e) {
@@ -147,75 +151,75 @@ public class PBReader
 		else if (instance.rolesetId.endsWith("-n"))
 		    return nextProp(); // skip nominalization for now
 		
+		List<PBArg> argList = new LinkedList<PBArg>();
+		
 		tok.nextToken();	            // skip "-----"
 		//System.out.print(instance.rolesetId+" ");
 		while (tok.hasMoreTokens())
 		{
-			String arg   = tok.nextToken();
-			int    idx   = arg.indexOf(PBLib.ARG_DELIM);
+			String argStr = tok.nextToken();
+			int    idx    = argStr.indexOf(PBLib.ARG_DELIM);
 			
-			PBArg  pbarg = new PBArg();
+			String label = argStr.substring(idx+1);
+			if (label.startsWith("ARGM") && !label.toUpperCase().equals(label)) continue;
+            if (label.equals("LINK-PCR")) continue;
 			
-			pbarg.label = arg.substring(idx+1);
-			if (pbarg.label.startsWith("ARGM") && !pbarg.label.toUpperCase().equals(pbarg.label)) continue;
-			if (pbarg.label.equals("LINK-PCR")) continue;
-			
-			String locs = arg.substring(0, idx);
+            List<TBNode> nodeList = new ArrayList<TBNode>();
+            
+			String locs = argStr.substring(0, idx);
 			
 			StringTokenizer tokLocs = new StringTokenizer(locs, PBLib.ARG_OP);
 			
 			while (tokLocs.hasMoreTokens())
 			{
-				String[]      loc = tokLocs.nextToken().split(":");
+				String[] loc      = tokLocs.nextToken().split(":");
 				int terminalIndex = Integer.parseInt(loc[0]);
 				int height        = Integer.parseInt(loc[1]);
 				
-				TBNode node = instance.tree.getRootNode().getNodeByTerminalIndex(terminalIndex).getAncestor(height);
-				
-				int[] aLoc = node.getTerminalIndices();
-				if (aLoc.length>0)
-				{
-					pbarg.a_locs.add(aLoc);
-					pbarg.a_nodes.add(node);
-				}
+				nodeList.add(instance.tree.getRootNode().getNodeByTerminalIndex(terminalIndex).getAncestor(height));
 			}
-			if (!pbarg.isEmpty())	instance.addArg(pbarg);
+			PBArg arg = new PBArg(label);
+			arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);	
+			argList.add(arg);
 		}
-	
-		PBArg linkArg = instance.getArgs().get("LINK-SLC");
-		if (linkArg!=null)
+		
+		PBArg linkArg;
+		for (int i=0; i<argList.size(); ++i)
 		{
-		    boolean done = false;
-	        for (SortedMap.Entry<String, PBArg> entry:instance.getArgs().entrySet())
-	        {
-	            if (linkArg==entry.getValue()) continue;
-	            for (int i=0; i<linkArg.a_nodes.size(); ++i)
-                {
-    	            for (TBNode node:entry.getValue().a_nodes)
-    	            {
-	                    if (node==linkArg.a_nodes.get(i))
-	                    {
-	                        linkArg.a_nodes.remove(i);
-	                        instance.getArgs().remove("LINK-SLC");
-	                        linkArg.label = "R-"+entry.getValue().label;
-	                        instance.addArg(linkArg);
-	                        done = true;
-	                        //System.out.println("Changed LINK-SLC to "+linkArg.label);
-	                        break;
-	                    }
-	                }
-    	            if (done) break;
-	            }
-	            if (done) break;
-	        }
-	        if (!done) System.err.println("LINK-SLC not resolved "+linkArg);
-		}
+		    if ((linkArg=argList.get(i)).isLabel("LINK-SLC"))
+            {
+		        if (linkArg.tokenNodes.length!=2) System.err.println("LINK-SLC size incorrect "+linkArg.tokenNodes);
 
+		        for (PBArg arg:argList)
+                {
+		            if (linkArg==arg) continue;
+		            for (TBNode node: arg.tokenNodes)
+		            {
+		                for (TBNode linkNode:linkArg.tokenNodes)
+		                {
+		                    if (node == linkNode)
+		                    {
+		                        linkArg.label = "R-"+arg.label;
+		                        linkArg.linkingArg = arg;
+		                        linkArg.node = linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0];
+		                        break;
+		                    }
+		                }
+		                if (linkArg.linkingArg!=null) break;
+		            }
+		            if (linkArg.linkingArg!=null) break;
+                }
+		        if (linkArg.linkingArg==null) System.err.println("LINK-SLC not resolved "+linkArg.tokenNodes);
+            }
+		    else
+		        ++i;
+		}
+		
 		return instance;
 	}
 	
 	public void close()
 	{
-	    mb_scan.close();
+	    scanner.close();
 	}
 }

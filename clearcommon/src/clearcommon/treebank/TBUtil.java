@@ -5,9 +5,9 @@ import clearcommon.util.JIO;
 import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class TBUtil {
@@ -22,7 +22,7 @@ public final class TBUtil {
             System.err.println(node.toParse());
             headrule = TBHeadRule.DEFAULT;
         }
-        ArrayList<TBNode> decendants = node.getTokenNodes();
+        List<TBNode> decendants = node.getTokenNodes();
        
         for (TBNode childNode: node.getChildren())
         	findHeads(childNode, headrules);
@@ -31,14 +31,14 @@ public final class TBUtil {
         {
             if (headrule.dirs[r] == TBHeadRule.Direction.LEFT)
             {
-                for (int i=0; i<node.getChildren().size(); i++)
-                    if ((node.head = findHeadsAux(node, node.getChildren().get(i), headrule.rules[r]))!=null)
+                for (int i=0; i<node.children.length; i++)
+                    if ((node.head = findHeadsAux(node, node.children[i], headrule.rules[r]))!=null)
                         return node.head;
             }
             else
             {
-                for (int i=node.getChildren().size()-1; i>=0; i--)
-                	if ((node.head = findHeadsAux(node, node.getChildren().get(i), headrule.rules[r]))!=null)
+                for (int i=node.children.length-1; i>=0; i--)
+                	if ((node.head = findHeadsAux(node, node.children[i], headrule.rules[r]))!=null)
                         return node.head;
             }
         }
@@ -104,8 +104,7 @@ public final class TBUtil {
 				PrintStream pStream = new PrintStream(file, "UTF-8");
 				for (TBTree tree:entry.getValue())
 				{
-					ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
-					for (TBNode node: nodes)
+					for (TBNode node: tree.getRootNode().getTokenNodes())
 						pStream.print(node.word+" ");
 					pStream.print('\n');
 				}
