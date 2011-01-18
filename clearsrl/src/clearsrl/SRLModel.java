@@ -270,7 +270,7 @@ public class SRLModel implements Serializable {
             isPredicate.set(instance.predicateNode.getTokenIndex());
         }
         
-        ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        List<TBNode> nodes = tree.getRootNode().getTokenNodes();
         
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
@@ -412,7 +412,7 @@ public class SRLModel implements Serializable {
 		for (TBNode argNode:argNodes)
 		{
 			EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(defaultMap);
-			ArrayList<TBNode> tnodes = argNode.getTokenNodes();
+			List<TBNode> tnodes = argNode.getTokenNodes();
 			
 			List<TBNode> argToTopNodes = argNode.getPathToRoot();
 		    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
@@ -424,19 +424,19 @@ public class SRLModel implements Serializable {
 			TBNode head = argNode.getHead();
 			if (argNode.getPOS().matches("PP.*"))
 			{
-			    int i = argNode.getChildren().size()-1;
+			    int i = argNode.getChildren().length-1;
 				for (; i>=0; --i)
 				{
-					if (argNode.getChildren().get(i).getPOS().matches("NP.*"))
+					if (argNode.getChildren()[i].getPOS().matches("NP.*"))
 					{
-						if (argNode.getChildren().get(i).getHead()!=null && argNode.getChildren().get(i).getHeadword()!=null)
-							head = argNode.getChildren().get(i).getHead();
+						if (argNode.getChildren()[i].getHead()!=null && argNode.getChildren()[i].getHeadword()!=null)
+							head = argNode.getChildren()[i].getHead();
 						break;
 					}
 				}
-				if (i<0 && argNode.getChildren().get(argNode.getChildren().size()-1).getHead()!=null && 
-				        argNode.getChildren().get(argNode.getChildren().size()-1).getHeadword()!=null)
-				    head = argNode.getChildren().get(argNode.getChildren().size()-1).getHead();
+				if (i<0 && argNode.getChildren()[argNode.getChildren().length-1].getHead()!=null && 
+				        argNode.getChildren()[argNode.getChildren().length-1].getHeadword()!=null)
+				    head = argNode.getChildren()[argNode.getChildren().length-1].getHead();
 			}
 			
 			boolean isBefore = tnodes.get(0).getTokenIndex() < predicateNode.getTokenIndex();
@@ -672,8 +672,8 @@ public class SRLModel implements Serializable {
 
         TBNode parent = predicateNode.getParent();
         TBNode leftNode = predicateNode.getTokenIndex()>0? nodes.get(predicateNode.getTokenIndex()-1):null;
-        TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().size()-1)?
-                predicateNode.getParent().getChildren().get(predicateNode.getChildIndex()+1):null;
+        TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().length-1)?
+                predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
         
         for (PredicateFeature feature:predicateFeatureSet)
@@ -962,7 +962,7 @@ public class SRLModel implements Serializable {
         count += countConstituents(label, new LinkedList<TBNode>(rnodes), false, 100);
         
         for (int i=lnodes.get(lnodes.size()-1).getChildIndex()+1; i<rnodes.get(rnodes.size()-1).getChildIndex(); ++i)
-            count += countConstituents(label, joinNode.getChildren().get(i), lnodes.size()>rnodes.size()?lnodes.size():rnodes.size());
+            count += countConstituents(label, joinNode.getChildren()[i], lnodes.size()>rnodes.size()?lnodes.size():rnodes.size());
         
         count += joinNode.getPOS().startsWith(label)?1:0;
         
@@ -980,11 +980,11 @@ public class SRLModel implements Serializable {
         ++depth;
         
         if (left)
-            for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().size();++i)
-                count += countConstituents(label, node.getParent().getChildren().get(i), depth);
+            for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().length;++i)
+                count += countConstituents(label, node.getParent().getChildren()[i], depth);
         else
             for (int i=0; i<node.getChildIndex()-1;++i)
-                count += countConstituents(label, node.getParent().getChildren().get(i), depth);
+                count += countConstituents(label, node.getParent().getChildren()[i], depth);
         
         return count + countConstituents(label, nodes, left, depth);
     }

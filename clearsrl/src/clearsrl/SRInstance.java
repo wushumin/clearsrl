@@ -47,16 +47,14 @@ public class SRInstance {
 	*/
 	public SRInstance(PBInstance instance) {
 		this(instance.getPredicate(), instance.getTree());
-		for (Entry<String, PBArg> entry : instance.getArgs().entrySet())
+		for (PBArg pbArg: instance.getArgs())
 		{
-			for (TBNode argNode:entry.getValue().getNodes())
-			{
-				BitSet tokenSet = new BitSet(tree.getTokenCount());
-				for (TBNode node:argNode.getTokenNodes())
-					if (node.getTokenIndex()>=0) tokenSet.set(node.getTokenIndex());
-				if (tokenSet.isEmpty()) continue;
-				addArg(new SRArg(SRLUtil.removeArgModifier(entry.getKey()), tokenSet));
-			}
+		    if (!pbArg.getTokenSet().isEmpty())
+		        addArg(new SRArg(SRLUtil.removeArgModifier(pbArg.getLabel()), pbArg.getNode()));
+
+			for (PBArg nestedArg:pbArg.getNestedArgs())
+			    if (!nestedArg.getTokenSet().isEmpty())
+	                addArg(new SRArg(SRLUtil.removeArgModifier(nestedArg.getLabel()), nestedArg.getNode()));
 		}
 	}
 
@@ -121,7 +119,7 @@ public class SRInstance {
                 while (!node.isTerminal())
                 {
                     ++depth;
-                    node=node.getChildren().get(0);
+                    node=node.getChildren()[0];
                 }
                 argStr+=node.getTerminalIndex()+":"+depth+"*";
             }
@@ -139,7 +137,7 @@ public class SRInstance {
 		buffer.append(tree.getFilename()); buffer.append(" ");
 		buffer.append(tree.getIndex()); buffer.append(" ");
 		
-		ArrayList<TBNode> nodes = tree.getRootNode().getTokenNodes();
+		List<TBNode> nodes = tree.getRootNode().getTokenNodes();
 		String[] tokens = new String[nodes.size()];
 		for (int i=0; i<tokens.length; ++i)
 			tokens[i] = nodes.get(i).getWord();

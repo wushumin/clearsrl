@@ -63,11 +63,11 @@ public class ChineseUtil extends LanguageUtil {
         ++depth;
         
         if (left)
-            for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().size();++i)
-                count += countConstituents(pos, node.getParent().getChildren().get(i), depth);
+            for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().length;++i)
+                count += countConstituents(pos, node.getParent().getChildren()[i], depth);
         else
             for (int i=0; i<node.getChildIndex()-1;++i)
-                count += countConstituents(pos, node.getParent().getChildren().get(i), depth);
+                count += countConstituents(pos, node.getParent().getChildren()[i], depth);
         
         return count + countConstituents(pos, nodes, left, depth);
     }

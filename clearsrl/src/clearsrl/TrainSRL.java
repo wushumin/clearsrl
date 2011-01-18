@@ -193,7 +193,7 @@ public class TrainSRL {
 			            {
     			            for (PBInstance instance:pbInstances)
     			            {
-    			                if (instance.getArgs().size()>1)
+    			                if (instance.getArgs().length>1)
     			                {
     			                    srls.add(new SRInstance(instance));
     			                    rolesetArg.put(instance.getRoleset(), rolesetArg.get(instance.getRoleset())+1);

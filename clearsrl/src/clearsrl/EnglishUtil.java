@@ -56,16 +56,16 @@ public class EnglishUtil extends LanguageUtil {
             TBNode currNode = predicate;
             while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("VP.*"))
             {
-                List<TBNode> children = currNode.getParent().getChildren();
+                TBNode[] children = currNode.getParent().getChildren();
                 
                 for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
-                    if (!children.get(i).isToken()) continue;
+                    if (!children[i].isToken()) continue;
                     
                     // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
+                    if (children[i].getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children.get(i).getWord(), POS.VERB);
+                        List<String> stems = findStems(children[i].getWord(), POS.VERB);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 1;
                         else
@@ -84,16 +84,16 @@ public class EnglishUtil extends LanguageUtil {
             
             if (currNode!=predicate && currNode.getPOS().matches("VP.*"))
             {
-                List<TBNode> children = currNode.getParent().getChildren();
+                TBNode[] children = currNode.getParent().getChildren();
                     
                 for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
-                    if (!children.get(i).isToken()) continue;
+                    if (!children[i].isToken()) continue;
                     
                     // find auxiliary verb if verb, if not, stop
-                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
+                    if (children[i].getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children.get(i).getWord(), POS.VERB);
+                        List<String> stems = findStems(children[i].getWord(), POS.VERB);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 2;
                         else
@@ -112,12 +112,12 @@ public class EnglishUtil extends LanguageUtil {
             boolean found = true;
             while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("VP.*"))
             {
-                List<TBNode> children = currNode.getParent().getChildren();
+                TBNode[] children = currNode.getParent().getChildren();
 
                 for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
-                    if (!children.get(i).isToken()) continue;
-                    if (children.get(i).getPOS().matches("V.*|AUX.*"))
+                    if (!children[i].isToken()) continue;
+                    if (children[i].getPOS().matches("V.*|AUX.*"))
                     {
                         found = false;
                         break;
@@ -155,19 +155,19 @@ public class EnglishUtil extends LanguageUtil {
             if (currNode != predicate)
             {
                 boolean found = true;
-                List<TBNode> children = currNode.getParent().getChildren();
+                TBNode[] children = currNode.getParent().getChildren();
                 
                 for (int i=currNode.getChildIndex()-1; i>=0; --i)
                 {
-                    if (children.get(i).getPOS().matches("DT.*"))
+                    if (children[i].getPOS().matches("DT.*"))
                     {
                         found = false;
                         break;
                     }
                 }
-                for (int i=currNode.getChildIndex()+1; i<children.size(); ++i)
+                for (int i=currNode.getChildIndex()+1; i<children.length; ++i)
                 {
-                    if (children.get(i).getPOS().matches("N.*"))
+                    if (children[i].getPOS().matches("N.*"))
                     {
                         found = false;
                         break;

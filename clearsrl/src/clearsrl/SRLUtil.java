@@ -27,14 +27,12 @@ public class SRLUtil {
 			return pos;
 	}*/
 	
-	static final Pattern ARG_PATTERN = Pattern.compile("([A-Z]+\\d)\\-[A-Za-z]+");
+	static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
 	public static String removeArgModifier(String argType)
 	{
 		Matcher matcher = ARG_PATTERN.matcher(argType);
-		if (matcher.matches())
-			return matcher.group(1);
-		else
-			return argType;
+		matcher.matches();
+		return matcher.group(1);
 	}
 	/*
 	public static void getSamplesFromPBInstance(PBInstance instance, ArrayList<TBNode> argNodes, ArrayList<String> labels)
@@ -233,7 +231,7 @@ public class SRLUtil {
 	public static ArrayList<TBNode> getArgumentCandidates(TBNode node)
 	{
 		ArrayList<TBNode> nodes = new ArrayList<TBNode>();
-		if (node.getChildren()==null)
+		if (node.isTerminal())
 			return nodes;
 		
 		for (TBNode childNode:node.getChildren())
@@ -243,7 +241,7 @@ public class SRLUtil {
 			else
 			{
 				ArrayList<TBNode> childNodes = getArgumentCandidates(childNode);
-				if (childNodes.size()>0 && node.getChildren().size()>1)
+				if (childNodes.size()>0 && node.getChildren().length>1)
 					nodes.add(childNode);
 				if (childNodes.size()>1)
 					nodes.addAll(childNodes);
