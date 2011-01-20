@@ -1,14 +1,12 @@
 package clearsrl;
 
 import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
 import gnu.trove.TObjectFloatHashMap;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
-import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -21,9 +19,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectOutputStream;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +29,6 @@ import java.util.TreeMap;
 
 import clearsrl.SRLModel.Feature;
 import clearsrl.SRLModel.PredicateFeature;
-
-import edu.mit.jwi.Dictionary;
-import edu.mit.jwi.morph.WordnetStemmer;
 
 public class TrainSRL {
 	static final float THRESHOLD=0.90f;

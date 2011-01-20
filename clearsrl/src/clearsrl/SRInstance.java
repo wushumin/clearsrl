@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;

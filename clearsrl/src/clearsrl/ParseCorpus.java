@@ -1,21 +1,13 @@
 package clearsrl;
 
-import edu.berkeley.nlp.PCFGLA.BerkeleyParser;
-import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser;
 import edu.berkeley.nlp.PCFGLA.CoarseToFineNBestParser;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Grammar;
 import edu.berkeley.nlp.PCFGLA.Lexicon;
-import edu.berkeley.nlp.PCFGLA.OptionParser;
 import edu.berkeley.nlp.PCFGLA.ParserData;
-import edu.berkeley.nlp.PCFGLA.BerkeleyParser.Options;
-import edu.berkeley.nlp.io.PTBLineLexer;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
-import gnu.trove.TIntObjectHashMap;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 

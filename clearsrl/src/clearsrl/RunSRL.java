@@ -251,11 +251,11 @@ public class RunSRL {
 					//pCount += instance.getArgs().size()-1;
 					//System.out.println(instance);
 					//System.out.println(pInstance+"\n");
-					String a = instance.toString().trim();
-					String b = pInstance.toString().trim();
+					//String a = instance.toString().trim();
+					//String b = pInstance.toString().trim();
 
 					Collections.sort(pInstance.args);
-					Map<String, SRArg> labelMap= new HashMap<String, SRArg>();
+					//Map<String, SRArg> labelMap= new HashMap<String, SRArg>();
 					for (SRArg arg:pInstance.args)
 					{
 						String label = arg.label;

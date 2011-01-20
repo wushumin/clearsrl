@@ -11,8 +11,9 @@ import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
-import clearcommon.util.JIO;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -31,12 +32,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Stack;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import liblinearbinary.Linear;
-import liblinearbinary.SolverType;
 
 public class SRLModel implements Serializable {
 	/**
@@ -927,9 +924,9 @@ public class SRLModel implements Serializable {
         out.print("\n");
     }
     
-    public void writeTrainingData(String filename, InstanceFormat format)
+    public void writeTrainingData(String filename, InstanceFormat format) throws FileNotFoundException
     {
-        PrintStream fout = JIO.createPrintFileOutputStream(filename);
+        PrintStream fout = new PrintStream(new FileOutputStream(filename));
         
         for (int i=0; i<trainingFeatures.size();++i)
             writeData(fout, trainingFeatures.get(i), labelStringMap.get(trainingLabels.get(i)), format);

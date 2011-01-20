@@ -1,11 +1,10 @@
 package clearsrl;
 
+import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
 
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.morph.WordnetStemmer;
@@ -31,6 +30,10 @@ public class EnglishUtil extends LanguageUtil {
             headRules = new TBHeadRules(props.getProperty("headrules"));
         } catch (MalformedURLException e)
         {
+            e.printStackTrace();
+            return false;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
             return false;
         }
         return true;

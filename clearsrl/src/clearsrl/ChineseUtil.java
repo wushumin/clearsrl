@@ -1,10 +1,10 @@
 package clearsrl;
 
+import java.io.FileNotFoundException;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.Stack;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
@@ -15,7 +15,12 @@ public class ChineseUtil extends LanguageUtil {
     
     @Override
     public boolean init(Properties props) {
-        headRules = new TBHeadRules(props.getProperty("headrules"));
+        try {
+            headRules = new TBHeadRules(props.getProperty("headrules"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
         return true;
     }
     
