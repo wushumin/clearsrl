@@ -1,17 +1,17 @@
 package clearcommon.propbank;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import gnu.trove.TIntArrayList;
 import clearcommon.treebank.*;
 
-public class PBArg
+public class PBArg implements Comparable<PBArg>
 {
-    public static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
+    static final String LABEL_PATTERN = "((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
+    static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Z].*";
     
     static final PBArg[] NO_ARGS = new PBArg[0];
     
@@ -32,16 +32,62 @@ public class PBArg
 	    nestedArgs = NO_ARGS;
 	}
 	
-	boolean processNodes(List<TBNode> nodeList)
-	{
-	    ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
-        tnodes.addAll(node.getTokenNodes());
+	void processNodes() throws PBFormatException
+	{  	    
+	    // link traces
+	    List<TBNode> mainNodes = Arrays.asList(tokenNodes);
+	    TBNode traceNode;
+	    boolean addedNodes;
+	    do {
+	        addedNodes = false;
+    	    for (int i=0; i<mainNodes.size();++i)
+    	        if ((traceNode=mainNodes.get(i).getTrace())!=null)
+    	        {
+    	            boolean found = false;
+    	            for (TBNode mainNode:mainNodes)
+    	                if (mainNode == traceNode)
+    	                {
+    	                    found = true;
+    	                    break;
+    	                }
+    	            if (!found)
+    	            {
+    	                mainNodes.add(traceNode);
+    	                addedNodes = true;
+    	                break;
+    	            }
+    	        }
+	    } while (addedNodes);
+	   
+	    // assign single node to represent this argument
+	    node = null;
+	    for (TBNode mainNode:mainNodes)
+	        if (!mainNode.isEC())
+	        {
+	            if (node!=null)
+	                throw new PBFormatException(label+": multiple non-EC node detected");
+	            node = mainNode;
+	        }
+	    
+	    // populate token nodes, etc
+        terminalSet = node.getTerminalSet();
+        tokenSet = node.getTokenSet();
         
         for (PBArg nestedArg:nestedArgs)
-            tnodes.addAll(nestedArg.node.getTokenNodes());
+        {
+            nestedArg.processNodes();
+            if (terminalSet.intersects(nestedArg.terminalSet))
+                throw new PBFormatException(label+": terminal overlap detected");
+            terminalSet.or(nestedArg.terminalSet);
+            tokenSet.or(nestedArg.tokenSet);
+        }
+        Arrays.sort(nestedArgs);
         
-        tokenNodes = tnodes.toArray(new TBNode[tnodes.size()]);
-        return true;
+	    List<TBNode>tNodes = node.getTokenNodes();
+        for (PBArg nestedArg:nestedArgs)
+            tNodes.addAll(Arrays.asList(nestedArg.tokenNodes));
+        
+        tokenNodes = tNodes.toArray(new TBNode[tNodes.size()]);
 	}
 
 	public boolean isLabel(String label)
@@ -100,11 +146,11 @@ public class PBArg
 	}
 
 	public BitSet getTerminalSet() {
-        return terminalSet;
+        return (BitSet)terminalSet.clone();
     }
 
     public BitSet getTokenSet() {
-        return tokenSet;
+        return (BitSet)tokenSet.clone();
     }
 
     public String toString()
@@ -128,4 +174,9 @@ public class PBArg
 	{
 		return tokenSet.isEmpty();
 	}
+
+    @Override
+    public int compareTo(PBArg o) {
+        return terminalSet.nextSetBit(0)-o.terminalSet.nextSetBit(0);
+    }
 }

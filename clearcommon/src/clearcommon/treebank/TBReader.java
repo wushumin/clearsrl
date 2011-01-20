@@ -23,14 +23,13 @@
 */
 package clearcommon.treebank;
 
-import clearcommon.util.JFileTokenizer;
+import clearcommon.util.FileTokenizer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
@@ -84,7 +83,7 @@ import java.util.Stack;
  */
 public class TBReader
 {
-	JFileTokenizer scanner;
+	FileTokenizer scanner;
 	int            treeCount;
 	String         fileName;
 
@@ -95,16 +94,16 @@ public class TBReader
 	 */
 	public TBReader(String fileName) throws FileNotFoundException
 	{
-		String delim  = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-		scanner       = new JFileTokenizer(new FileReader(fileName), delim, true);
+		String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
+		scanner       = new FileTokenizer(new FileReader(fileName), delim, true);
 		treeCount     = 0;
 		this.fileName = fileName;
 	}
 	
 	public TBReader(String dirName, String fileName) throws FileNotFoundException
     {
-        String delim  = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-        scanner       = new JFileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
+        String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
+        scanner       = new FileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
         treeCount     = 0;
         this.fileName = fileName;
     }
@@ -112,8 +111,8 @@ public class TBReader
 	
 	public TBReader(Reader reader)
 	{
-		String delim = TBLib.LRB + TBLib.RRB + JFileTokenizer.WHITE;
-		scanner      = new JFileTokenizer(reader, delim, true);
+		String delim = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
+		scanner      = new FileTokenizer(reader, delim, true);
 		treeCount   = 0;
 		fileName     = null; 
 	}
@@ -202,7 +201,7 @@ public class TBReader
 		{
 			String str = scanner.nextToken();
 			
-			if (JFileTokenizer.WHITE.indexOf(str) == -1)
+			if (FileTokenizer.WHITE.indexOf(str) == -1)
 				return str;
 		}
 		return null;

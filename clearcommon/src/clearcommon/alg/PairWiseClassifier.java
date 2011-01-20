@@ -1,9 +1,7 @@
 package clearcommon.alg;
 
 import gnu.trove.TIntArrayList;
-import gnu.trove.TIntIntHashMap;
 import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -43,9 +41,9 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 			{
 				double[] probs = new double[classifiers[i][j].getClassCnt()];
 				int label = classifiers[i][j].predictValues(x,probs);
-				double a = 1 / (1 + Math.exp(-probs[0]));
-				double b = 1 / (1 + Math.exp(-probs[1]));
-				double s = a+b;
+				//double a = 1 / (1 + Math.exp(-probs[0]));
+				//double b = 1 / (1 + Math.exp(-probs[1]));
+				//double s = a+b;
 				
 				//values[i]+= a/s;
 				//values[j]+= b/s;

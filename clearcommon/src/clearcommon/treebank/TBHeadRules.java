@@ -23,8 +23,9 @@
 */
 package clearcommon.treebank;
 
-import clearcommon.util.JIO;
-
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -40,9 +41,9 @@ public class TBHeadRules
 	
 	private HashMap<String, TBHeadRule> m_headrules;
 	
-	public TBHeadRules(String inputFile)
+	public TBHeadRules(String inputFile) throws FileNotFoundException
 	{
-		Scanner scan = JIO.createScanner(inputFile);
+		Scanner scan = new Scanner(new BufferedReader(new FileReader(inputFile)));
 		m_headrules  = new HashMap<String, TBHeadRule>();
 		
 		while (scan.hasNextLine())

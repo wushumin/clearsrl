@@ -23,10 +23,10 @@
 */
 package clearcommon.alg;
 
-import clearcommon.util.JIO;
 import clearcommon.util.tuple.JIntDoubleTuple;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -97,10 +97,11 @@ public class LinearDecoder
 	 * <code>priorFile</code> consists of one prior per line.
 	 * @param priorFile name of the file containing priors
 	 * @param numLabels total number of labels
+	 * @throws FileNotFoundException 
 	 */
-	public double[] getPriors(String priorFile, int numLabels)
+	public double[] getPriors(String priorFile, int numLabels) throws FileNotFoundException
 	{
-		Scanner  scan   = JIO.createScanner(priorFile);
+		Scanner  scan   = new Scanner(new BufferedReader(new FileReader(priorFile)));
 		double[] priors = new double[numLabels];
 		
 		while (scan.hasNextLine())

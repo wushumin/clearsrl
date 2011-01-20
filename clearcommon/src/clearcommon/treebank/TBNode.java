@@ -23,14 +23,11 @@
 */
 package clearcommon.treebank;
 
-import gnu.trove.TIntArrayList;
-
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -213,19 +210,31 @@ public class TBNode
 	
 	public List<TBNode> getTerminalNodes()
 	{
-		ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
-		if (terminalIndex>=0)
-		{
-			tnodes.add(this);
-			return tnodes;
-		}
-		if (children == null)
-			return tnodes;
-		for (TBNode child: children)
-			tnodes.addAll(child.getTerminalNodes());
+		List<TBNode> tnodes = new ArrayList<TBNode>();
+		getNestedNodes(true, tnodes);
 		return tnodes;
 	}
 	
+    public List<TBNode> getTokenNodes()
+    {
+        List<TBNode> tnodes = new ArrayList<TBNode>();
+        getNestedNodes(false, tnodes);
+        return tnodes;
+    }
+
+    void getNestedNodes(boolean onTerminal, List<TBNode> nodes)
+    {
+        if (onTerminal) {
+            if (terminalIndex>=0)
+                nodes.add(this);
+        } else {
+            if (tokenIndex>=0)
+                nodes.add(this);
+        }
+        for (TBNode child: children)
+            child.getNestedNodes(onTerminal, nodes);
+    }
+    
     public TBNode getNodeByTerminalIndex(int terminalIndex)
     {
         if (terminalIndex<0) return null;
@@ -258,50 +267,33 @@ public class TBNode
         return null;
     }
 	
-	public int[] getTerminalIndices()
+	public BitSet getTerminalSet()
 	{
-	    TIntArrayList tIndices = new TIntArrayList();
-        if (terminalIndex>=0)
-        {
-            tIndices.add(terminalIndex);
-            return tIndices.toNativeArray();
-        }
-        if (children == null)
-            return tIndices.toNativeArray();
-        for (TBNode child: children)
-            tIndices.add(child.getTerminalIndices());
-        return tIndices.toNativeArray();
+	    BitSet terminalSet = new BitSet(Math.abs(terminalIndex));
+	    getIndexSet(true, terminalSet);
+	    return terminalSet;
 	}
-	
-	public List<TBNode> getTokenNodes()
-	{
-		ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
-		if (tokenIndex>=0)
-		{
-			tnodes.add(this);
-			return tnodes;
-		}
-		if (children == null)
-			return tnodes;
-		for (TBNode child: children)
-			tnodes.addAll(child.getTokenNodes());
-		return tnodes;
-	}
-	
-    public int[] getTokenIndices()
+
+	public BitSet getTokenSet()
     {
-        TIntArrayList tIndices = new TIntArrayList();
-        if (tokenIndex>=0)
-        {
-            tIndices.add(tokenIndex);
-            return tIndices.toNativeArray();
-        }
-        if (children == null)
-            return tIndices.toNativeArray();
+        BitSet tokenSet = new BitSet(Math.abs(tokenIndex));
+        getIndexSet(false, tokenSet);
+        return tokenSet;
+    }
+
+	void getIndexSet(boolean onTerminal, BitSet indexSet)
+	{
+	    if (onTerminal) {
+	        if (terminalIndex>=0)
+	            indexSet.set(terminalIndex);
+	    } else {
+	        if (tokenIndex>=0)
+                indexSet.set(tokenIndex);
+	    }
+        
         for (TBNode child: children)
-            tIndices.add(child.getTokenIndices());
-        return tIndices.toNativeArray();
-    }	
+            child.getIndexSet(onTerminal, indexSet);
+	}
     
 	// this should only be called once when tree is read in
 	TBNode findIndexedNode(int idx)

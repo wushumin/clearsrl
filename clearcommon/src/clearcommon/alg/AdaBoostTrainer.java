@@ -25,6 +25,7 @@ package clearcommon.alg;
 
 import clearcommon.util.JArrays;
 
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,8 +52,9 @@ public class AdaBoostTrainer extends SuperTrainer
 	 * @param mu prior
 	 * @param eta learning rate
 	 * @param c regularization parameter
+	 * @throws FileNotFoundException 
 	 */
-	public AdaBoostTrainer(String instanceFile, String modelFile, int numThreads, double v)
+	public AdaBoostTrainer(String instanceFile, String modelFile, int numThreads, double v) throws FileNotFoundException
 	{
 		super(instanceFile);
 		
@@ -142,7 +144,11 @@ public class AdaBoostTrainer extends SuperTrainer
 			if (Math.abs(gAlpha) != 1)	normalize(gWeight, gAlpha);
 			
 			String filename = model_file + ".l"+curr_label + ".v"+v;
-			printWeight(filename, curr_label, gWeight);
+			try {
+                printWeight(filename, curr_label, gWeight);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
 		}
 		
 		/**

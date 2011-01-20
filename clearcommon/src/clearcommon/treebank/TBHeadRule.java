@@ -23,8 +23,6 @@
 */
 package clearcommon.treebank;
 
-import java.util.StringTokenizer;
-
 /**
  * Treebank headrule.
  * @author Jinho D. Choi

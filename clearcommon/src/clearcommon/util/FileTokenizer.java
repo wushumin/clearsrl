@@ -23,6 +23,7 @@
 */
 package clearcommon.util;
 
+import java.io.BufferedReader;
 import java.io.Reader;
 import java.util.Scanner;
 import java.util.StringTokenizer;
@@ -54,7 +55,7 @@ import java.util.StringTokenizer;
  * @author Jinho D. Choi
  * <b>Last update:</b> 02/05/2010
  */
-public class JFileTokenizer
+public class FileTokenizer
 {
 	/** White spaces such as " \t\n\r\f" */
 	static final public String WHITE = " \t\n\r\f";
@@ -67,10 +68,10 @@ public class JFileTokenizer
 	
 	/**
 	 * Initializes the file-tokenizer for a file <code>filename</code>.
-	 * The default delimiters are {@value JFileTokenizer#WHITE}.
+	 * The default delimiters are {@value FileTokenizer#WHITE}.
 	 * @param filename name of the file to parse
 	 */
-	public JFileTokenizer(Reader reader)
+	public FileTokenizer(Reader reader)
 	{
 		init(reader, WHITE, false);
 	}
@@ -81,7 +82,7 @@ public class JFileTokenizer
 	 * @param filename name of the file to parse
 	 * @param delim delimiters.
 	 */
-	public JFileTokenizer(Reader reader, String delim)
+	public FileTokenizer(Reader reader, String delim)
 	{
 		init(reader, delim, false);
 	}
@@ -94,7 +95,7 @@ public class JFileTokenizer
 	 * @param delim delimiters
 	 * @param returnDelims flag indicating whether to return the delimiters as tokens
 	 */
-	public JFileTokenizer(Reader reader,  String delim, boolean returnDelims)
+	public FileTokenizer(Reader reader,  String delim, boolean returnDelims)
 	{
 		init(reader, delim, returnDelims);
 	}
@@ -102,7 +103,7 @@ public class JFileTokenizer
 	/** initializes member variables. */
 	private void init(Reader reader, String delim, boolean returnDelims)
 	{
-		mb_scan         = JIO.createScanner(reader);
+		mb_scan         = new Scanner(new BufferedReader(reader));
 		mb_delim        = delim;
 		mb_returnDelims = returnDelims;
 		mb_numLines     = 0;

@@ -9,6 +9,11 @@ import java.util.Properties;
 
 public class TwoStageClassifier extends Classifier implements Serializable {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -3806477906565319097L;
+    
     Classifier stageOneClassifier;
     Classifier stageTwoClassifier;
     double cutoff;
@@ -20,7 +25,6 @@ public class TwoStageClassifier extends Classifier implements Serializable {
 
     @Override
     public void train(int[][] X, int[] Y, double[] weightY) {
-        // TODO Auto-generated method stub
         
         int[] Y1 = new int[Y.length];
         

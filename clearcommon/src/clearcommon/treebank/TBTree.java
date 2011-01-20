@@ -23,15 +23,8 @@
 */
 package clearcommon.treebank;
 
-import gnu.trove.TIntArrayList;
-
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Tree as in Penn Treebank.
@@ -40,11 +33,26 @@ import java.util.regex.Pattern;
  */
 public class TBTree implements Serializable
 {   
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 4967207360757952950L;
+    
     String filename;
     int    index;
 	TBNode rootNode;
 	int    terminalCount;
 	int    tokenCount;
+	
+    public TBTree(String treeFile, int treeIndex, TBNode root, int terminalCount, int tokenCount) throws ParseException
+    {
+        this.filename      = treeFile;
+        this.index     = treeIndex;
+        this.rootNode      = root;
+        this.terminalCount = terminalCount;
+        this.tokenCount    = tokenCount;
+        linkIndices(root);
+    }
 	
     public String getFilename() {
         return filename;
@@ -62,45 +70,12 @@ public class TBTree implements Serializable
 		return tokenCount;
 	}
 
-	/**
-	 * Initializes the tree with the root node.
-	 * @param root root node
-	 * @throws ParseException 
-	 */
-	//public TBTree(TBNode root)
-	//{
-		
-	//}
-	
-	public TBTree(String treeFile, int treeIndex, TBNode root, int terminalCount, int tokenCount) throws ParseException
-	{
-	    this.filename      = treeFile;
-	    this.index     = treeIndex;
-		this.rootNode      = root;
-		this.terminalCount = terminalCount;
-		this.tokenCount    = tokenCount;
-		linkIndices(root);
-	}
-	
 	public TBNode getRootNode()
 	{
 		return rootNode;
 	}
 	
-/*
-	public TBNode getNodeByTerminalIndex(int terminalIndex)
-	{
-	    return rootNode.getTerminalNodes().get(terminalIndex);
-	}
-	
-	
-	public TBNode getNodeByTokenIndex(int tokenIndex)
-    {
-        return rootNode.getTokenNodes().get(tokenIndex);
-    }
-*/	
-	
-	protected void linkIndices(TBNode node) throws ParseException
+	void linkIndices(TBNode node) throws ParseException
 	{
 	    Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
         matcher.matches();

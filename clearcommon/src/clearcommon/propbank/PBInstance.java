@@ -1,10 +1,5 @@
 package clearcommon.propbank;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
 import clearcommon.treebank.*;
 
 public class PBInstance implements Comparable<PBInstance>
@@ -56,9 +51,9 @@ public class PBInstance implements Comparable<PBInstance>
 		int ret = tree.getFilename()==null?0:tree.getFilename().compareTo(rhs.tree.getFilename());
 		if (ret!=0) return ret;
 		
-		ret = tree.getIndex()==rhs.tree.getIndex()?0:(tree.getIndex()<rhs.tree.getIndex()?-1:1);
+		ret = tree.getIndex()-rhs.tree.getIndex();
 		if (ret!=0) return ret;
 		
-		return predicateNode.getTerminalIndex()==rhs.predicateNode.getTerminalIndex()?0:(predicateNode.getTerminalIndex()<rhs.predicateNode.getTerminalIndex()?-1:1);
+		return predicateNode.getTerminalIndex()-rhs.predicateNode.getTerminalIndex();
 	}
 }

@@ -1,6 +1,6 @@
 package clearcommon.treebank;
 
-import clearcommon.util.JIO;
+import clearcommon.util.FileUtil;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -61,7 +61,7 @@ public final class TBUtil {
 	{
 		File dir = new File(dirName);
 		
-		ArrayList<String> files = JIO.getFiles(dir, regex);
+		List<String> files = FileUtil.getFiles(dir, regex);
 		if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
 			files.add(dir.getName());
 		

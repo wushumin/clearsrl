@@ -23,14 +23,16 @@
 */
 package clearcommon.alg;
 
-import gnu.trove.TIntArrayList;
 import gnu.trove.TShortArrayList;
 import gnu.trove.TShortHashSet;
 import clearcommon.alg.Classifier.InstanceFormat;
-import clearcommon.util.JIO;
 import clearcommon.util.JArrays;
 import clearcommon.util.tuple.JShortDoubleArrayTuple;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -64,14 +66,15 @@ public class SuperTrainer
 	 * Initializes all member fields with training instances in <code>instanceFile</code>.
 	 * @see SuperTrainer#init(String, String, int)
 	 * @param instanceFile name of the file containing training instances
+	 * @throws FileNotFoundException 
 	 */
-	public SuperTrainer(String instanceFile)
+	public SuperTrainer(String instanceFile) throws FileNotFoundException
 	{
 		readInstanceFile(instanceFile, InstanceFormat.DEFAULT);
 		init();
 	}
 	
-	public SuperTrainer(String instanceFile, InstanceFormat format)
+	public SuperTrainer(String instanceFile, InstanceFormat format) throws FileNotFoundException
 	{
 		readInstanceFile(instanceFile, format);
 		init();
@@ -94,11 +97,12 @@ public class SuperTrainer
 	 * Reads training instances from <code>instanceFile</code> and stores to 
 	 * {@link SuperTrainer#a_features} and {@link SuperTrainer#a_labels}. 
 	 * @param instanceFile name of the file containing training instances
+	 * @throws FileNotFoundException 
 	 */
-	private void readInstanceFile(String instanceFile, InstanceFormat format)
+	private void readInstanceFile(String instanceFile, InstanceFormat format) throws FileNotFoundException
 	{
 		final int NUM = 1000000;
-		Scanner scan  = JIO.createScanner(instanceFile);
+		Scanner scan  = new Scanner(new BufferedReader(new FileReader(instanceFile)));
 		
 		a_labels      = new TShortArrayList (NUM);
 		a_features    = new ArrayList<int[]>(NUM);
@@ -228,18 +232,19 @@ public class SuperTrainer
 	 * @param filename name of the file to print
 	 * @param label label for the weight vector
 	 * @param weight weight vector
+	 * @throws FileNotFoundException 
 	 */
-	static public void printWeight(String filename, short label, double[] weight)
+	static public void printWeight(String filename, short label, double[] weight) throws FileNotFoundException
 	{
-		PrintStream fout = JIO.createPrintFileOutputStream(filename);
+		PrintStream fout = new PrintStream(new FileOutputStream(filename));
 		
 		printWeight(fout, label, weight);
 		fout.close();
 	}
 	
-	static public void printWeight(String filename, short[] labels, double[][] weights)
+	static public void printWeight(String filename, short[] labels, double[][] weights) throws FileNotFoundException
 	{
-		PrintStream fout = JIO.createPrintFileOutputStream(filename);
+		PrintStream fout = new PrintStream(new FileOutputStream(filename));
 		
 		for (short label : labels)
 			printWeight(fout, label, weights[label]);

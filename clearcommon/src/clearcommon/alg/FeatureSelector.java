@@ -1,7 +1,7 @@
 package clearcommon.alg;
 
-import clearcommon.util.JIO;
-
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 
@@ -11,7 +11,7 @@ public class FeatureSelector extends SuperTrainer
 	private double[] d_rel;
 	private double[] d_mut;
 	
-	public FeatureSelector(String instanceFile, String modelFile)
+	public FeatureSelector(String instanceFile, String modelFile) throws FileNotFoundException
 	{
 		super(instanceFile);
 		init();
@@ -90,7 +90,13 @@ public class FeatureSelector extends SuperTrainer
 	
 	private void print(String filename)
 	{
-		PrintStream fout = JIO.createPrintFileOutputStream(filename);
+		PrintStream fout;
+        try {
+            fout = new PrintStream(new FileOutputStream(filename));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return;
+        }
 		
 		for (int i=1; i<D; i++)
 			if (d_mut[i] > 0)	fout.println(i + COL_DELIM + d_mut[i]);

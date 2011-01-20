@@ -28,20 +28,19 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.treebank.ParseException;
-import clearcommon.util.JIO;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.SortedMap;
 import java.util.StringTokenizer;
+
 
 /**
  * 'PBReader' reads a Propbank annotation file and stores all information from both treebank 
@@ -80,22 +79,23 @@ public class PBReader
 	 * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
 	 * @param annotationFile the path of the annotation file.
 	 * @param treebankPath the path of the treebank.
+	 * @throws FileNotFoundException 
 	 */
-	public PBReader(String annotationFile, String treebankPath)
+	public PBReader(String annotationFile, String treebankPath) throws FileNotFoundException
 	{
 	    this(annotationFile,treebankPath, null, null);
 	}
 	
-	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees)
+	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees) throws FileNotFoundException
 	{
 		this(annotationFile,treebankPath, trees, null);
 	}
 
-	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver)
+	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver) throws FileNotFoundException
     {
 	    this.annotationFile = annotationFile;
         treePath            = treebankPath;
-        scanner             = JIO.createScanner(annotationFile);
+        scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
         treeMap             = (trees==null?new HashMap<String, TBTree[]>():trees);
         filenameResolver    = resolver;
     }
@@ -105,7 +105,7 @@ public class PBReader
 	    return treeMap;
 	}
 	
-	public PBInstance nextProp()
+	public PBInstance nextProp() throws PBFormatException
 	{
 		if (!scanner.hasNextLine())	
 		{
@@ -155,32 +155,50 @@ public class PBReader
 		
 		tok.nextToken();	            // skip "-----"
 		//System.out.print(instance.rolesetId+" ");
+
 		while (tok.hasMoreTokens())
 		{
-			String argStr = tok.nextToken();
-			int    idx    = argStr.indexOf(PBLib.ARG_DELIM);
-			
-			String label = argStr.substring(idx+1);
-			if (label.startsWith("ARGM") && !label.toUpperCase().equals(label)) continue;
-            if (label.equals("LINK-PCR")) continue;
-			
-            List<TBNode> nodeList = new ArrayList<TBNode>();
+		    String argStr = tok.nextToken();
+		    if (!argStr.matches(PBArg.ARG_PATTERN))
+		        throw new PBFormatException("malformed argument: "+argStr);
+		    
+            int idx    = argStr.indexOf(PBLib.ARG_DELIM);
             
-			String locs = argStr.substring(0, idx);
-			
-			StringTokenizer tokLocs = new StringTokenizer(locs, PBLib.ARG_OP);
-			
-			while (tokLocs.hasMoreTokens())
-			{
-				String[] loc      = tokLocs.nextToken().split(":");
-				int terminalIndex = Integer.parseInt(loc[0]);
-				int height        = Integer.parseInt(loc[1]);
-				
-				nodeList.add(instance.tree.getRootNode().getNodeByTerminalIndex(terminalIndex).getAncestor(height));
-			}
-			PBArg arg = new PBArg(label);
-			arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);	
-			argList.add(arg);
+            String label = argStr.substring(idx+1);
+            if (!label.matches(PBArg.LABEL_PATTERN))
+                throw new PBFormatException("unrecognized argument label: "+label);
+
+            List<TBNode> nodeList = new ArrayList<TBNode>();
+            List<TBNode> nestedNodeList = new ArrayList<TBNode>();
+            String[] locs = argStr.substring(0, idx).split("(?=[\\*,;&])");
+            
+            String[] loc      = locs[0].split(":");
+            nodeList.add(instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1])));
+            
+            for (int i=1; i<locs.length; ++i)
+            {
+                loc = locs[i].substring(1).split(":");
+                TBNode node = instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1]));
+                if (locs[i].charAt(0)=='*')
+                    nestedNodeList.add(node);
+                else
+                    nodeList.add(node);
+            }
+            
+            PBArg arg = new PBArg(label);
+            arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);
+            
+            if (!nestedNodeList.isEmpty())
+            {
+                arg.nestedArgs = new PBArg[nestedNodeList.size()];
+                for (int i=0; i<nestedNodeList.size(); ++i)
+                {
+                    arg.nestedArgs[i] = new PBArg("C-"+label);
+                    arg.nestedArgs[i].tokenNodes = new TBNode[1];
+                    arg.nestedArgs[i].tokenNodes[0] = nestedNodeList.get(i);
+                }
+            }
+            argList.add(arg);
 		}
 		
 		PBArg linkArg;
@@ -214,6 +232,10 @@ public class PBReader
 		    else
 		        ++i;
 		}
+		
+		for (PBArg arg:argList)
+		    arg.processNodes();
+		
 		
 		return instance;
 	}

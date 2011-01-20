@@ -4,9 +4,7 @@ package clearcommon.treebank;
 import static org.junit.Assert.*;
 
 import java.io.StringReader;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 
 import org.junit.Before;

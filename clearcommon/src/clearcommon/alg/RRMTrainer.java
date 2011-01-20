@@ -25,6 +25,7 @@ package clearcommon.alg;
 
 import clearcommon.alg.Classifier.InstanceFormat;
 
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,8 +57,9 @@ public class RRMTrainer extends SuperTrainer
 	 * @param mu prior
 	 * @param eta learning rate
 	 * @param c regularization parameter
+	 * @throws FileNotFoundException 
 	 */
-	public RRMTrainer(String instanceFile, String modelFile, int numThreads, int K, double mu, double eta, double c)
+	public RRMTrainer(String instanceFile, String modelFile, int numThreads, int K, double mu, double eta, double c) throws FileNotFoundException
 	{
 		super(instanceFile);
 		
@@ -75,8 +77,9 @@ public class RRMTrainer extends SuperTrainer
 	 * @param mu prior
 	 * @param eta learning rate
 	 * @param c regularization parameter
+	 * @throws FileNotFoundException 
 	 */
-	public RRMTrainer(String instanceFile, InstanceFormat format, String modelFile, int numThreads, int K, double mu, double eta, double c)
+	public RRMTrainer(String instanceFile, InstanceFormat format, String modelFile, int numThreads, int K, double mu, double eta, double c) throws FileNotFoundException
 	{
 		super(instanceFile, format);
 		
@@ -175,7 +178,11 @@ public class RRMTrainer extends SuperTrainer
 			normalize(bWeight);
 			
 			String filename = model_file + ".l"+curr_label + ".m"+mu + ".e"+eta + ".c"+c;
-			printWeight(filename, curr_label, bWeight);
+			try {
+                printWeight(filename, curr_label, bWeight);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
 		}
 		
 		/**
