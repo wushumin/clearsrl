@@ -3,6 +3,7 @@ package clearcommon.treebank;
 
 import static org.junit.Assert.*;
 
+import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,20 @@ public class TestTBReader {
                 ++count;
             }
         assertEquals(count, 4);
+        List<TBTree> trees = new ArrayList<TBTree>();
+        try {
+            TBReader tbReader = new TBReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations","nw/wsj/23/wsj_2356.parse");
+            while ((tree=tbReader.nextTree())!=null)
+            {
+                trees.add(tree);
+            }
+        } catch (Exception e) {
+            // TODO Auto-generated catch blockassertFalse
+            e.printStackTrace();
+            assertFalse(true);
+        }
+        assertEquals(36, trees.size());
+    
     }
 
     void getNodes(TBNode node, List<TBNode> nodes)

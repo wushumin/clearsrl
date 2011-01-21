@@ -148,6 +148,8 @@ public class TBNode
 
     public TBNode getTrace()
 	{
+        if (children.length==1)
+            return children[0].getTrace();
 		return TBLib.POS_EC.equals(pos)?indexingNode:null;
 	}
 	

@@ -145,7 +145,7 @@ public class TBReader
 		{
 			if ((str = nextToken()) == null)
 				throw new ParseException("more tokens needed");
-			System.out.println(str);
+			//System.out.println(str);
 			
 			if (str.equals(TBLib.LRB))
 			{
@@ -179,8 +179,6 @@ public class TBReader
 			}
 			else
 			{
-			    if (!TBNode.WORD_PATTERN.matcher(str).matches())
-			        throw new ParseException("Malformed word: "+str);
 				curr.word = str;						// str = word
 				curr.terminalIndex = terminalIndex++;
 				if (!curr.isEC())	curr.tokenIndex = tokenIndex++;

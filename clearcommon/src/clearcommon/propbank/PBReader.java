@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -179,7 +180,7 @@ public class PBReader
             {
                 loc = locs[i].substring(1).split(":");
                 TBNode node = instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1]));
-                if (locs[i].charAt(0)=='*')
+                if (locs[i].charAt(0)!='*')
                     nestedNodeList.add(node);
                 else
                     nodeList.add(node);
@@ -202,11 +203,11 @@ public class PBReader
 		}
 		
 		PBArg linkArg;
-		for (int i=0; i<argList.size(); ++i)
+		for (int i=0; i<argList.size();)
 		{
 		    if ((linkArg=argList.get(i)).isLabel("LINK-SLC"))
             {
-		        if (linkArg.tokenNodes.length!=2) System.err.println("LINK-SLC size incorrect "+linkArg.tokenNodes);
+		        if (linkArg.tokenNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.tokenNodes);
 
 		        for (PBArg arg:argList)
                 {
@@ -219,7 +220,7 @@ public class PBReader
 		                    {
 		                        linkArg.label = "R-"+arg.label;
 		                        linkArg.linkingArg = arg;
-		                        linkArg.node = linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0];
+		                        linkArg.tokenNodes = Arrays.asList(linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0]).toArray(new TBNode[1]);
 		                        break;
 		                    }
 		                }
@@ -236,6 +237,7 @@ public class PBReader
 		for (PBArg arg:argList)
 		    arg.processNodes();
 		
+		instance.args = argList.toArray(new PBArg[argList.size()]); 
 		
 		return instance;
 	}

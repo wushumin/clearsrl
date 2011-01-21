@@ -11,7 +11,7 @@ import clearcommon.treebank.*;
 public class PBArg implements Comparable<PBArg>
 {
     static final String LABEL_PATTERN = "((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
-    static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Z].*";
+    static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
     
     static final PBArg[] NO_ARGS = new PBArg[0];
     
@@ -28,19 +28,27 @@ public class PBArg implements Comparable<PBArg>
 	public PBArg(String label)
 	{
 	    this.label = label;
+	    node       = null;
 	    linkingArg = null;
 	    nestedArgs = NO_ARGS;
 	}
 	
 	void processNodes() throws PBFormatException
 	{  	    
+	    //System.out.print(label+":");
+	    //for (TBNode node:tokenNodes)
+	    //    System.out.print(" "+node.toParse());
+	    //System.out.print("\n");
+	    
 	    // link traces
-	    List<TBNode> mainNodes = Arrays.asList(tokenNodes);
+	    List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(tokenNodes));
+	    
 	    TBNode traceNode;
 	    boolean addedNodes;
 	    do {
 	        addedNodes = false;
     	    for (int i=0; i<mainNodes.size();++i)
+    	    {
     	        if ((traceNode=mainNodes.get(i).getTrace())!=null)
     	        {
     	            boolean found = false;
@@ -57,27 +65,57 @@ public class PBArg implements Comparable<PBArg>
     	                break;
     	            }
     	        }
+    	    }
 	    } while (addedNodes);
 	   
 	    // assign single node to represent this argument
 	    node = null;
 	    for (TBNode mainNode:mainNodes)
-	        if (!mainNode.isEC())
+	        if (!mainNode.isEC() && !mainNode.getTokenSet().isEmpty())
 	        {
 	            if (node!=null)
-	                throw new PBFormatException(label+": multiple non-EC node detected");
+	            {
+	                StringBuilder builder = new StringBuilder();
+	                for (TBNode node:mainNodes)
+	                    builder.append("\n    "+node.toParse());
+	                throw new PBFormatException(label+": multiple non-EC node detected"+builder.toString());
+	            }
 	            node = mainNode;
 	        }
+	    // We have an empty argument
+	    if (node==null) node = mainNodes.get(0);
 	    
 	    // populate token nodes, etc
         terminalSet = node.getTerminalSet();
         tokenSet = node.getTokenSet();
         
         for (PBArg nestedArg:nestedArgs)
-        {
             nestedArg.processNodes();
+        
+        List<PBArg> nestedArgList = new ArrayList<PBArg>(Arrays.asList(nestedArgs));
+        for (int i=0; i<nestedArgList.size()-1; ++i)
+            for (int j=i+1; j<nestedArgList.size();)
+            {
+                if (nestedArgList.get(i).node==nestedArgList.get(j).node)
+                    nestedArgList.remove(j);
+                else
+                    ++j;
+            }
+        
+        nestedArgs = nestedArgList.toArray(NO_ARGS);
+        
+        for (PBArg nestedArg:nestedArgs)
+        {
             if (terminalSet.intersects(nestedArg.terminalSet))
-                throw new PBFormatException(label+": terminal overlap detected");
+            {
+                StringBuilder builder = new StringBuilder();
+                builder.append("\n    "+node.toParse());
+                for (PBArg arg: nestedArgs)
+                {
+                    builder.append("\n    "+arg.node.toParse());
+                }
+                throw new PBFormatException(label+": terminal overlap detected"+builder.toString());
+            }
             terminalSet.or(nestedArg.terminalSet);
             tokenSet.or(nestedArg.tokenSet);
         }
