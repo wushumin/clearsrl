@@ -3,7 +3,6 @@ package clearcommon.treebank;
 
 import static org.junit.Assert.*;
 
-import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;

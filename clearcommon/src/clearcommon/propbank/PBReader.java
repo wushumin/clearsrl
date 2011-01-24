@@ -41,7 +41,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.StringTokenizer;
 
 
 /**
@@ -107,7 +106,7 @@ public class PBReader
 	    return treeMap;
 	}
 	
-	public PBInstance nextProp() throws PBFormatException
+	public PBInstance nextProp() throws PBFormatException, ParseException
 	{
 		if (!scanner.hasNextLine())	
 		{
@@ -116,7 +115,7 @@ public class PBReader
 		}
 		String line = scanner.nextLine().trim();
 		String[] tokens = line.split("[ \t]+");
-		System.out.println(Arrays.toString(tokens));
+		//System.out.println(Arrays.toString(tokens));
 		int t=0;
 		
 		PBInstance instance = new PBInstance();
@@ -125,9 +124,10 @@ public class PBReader
 	    TBTree[] trees      = null;
         if ((trees = treeMap.get(treeFile))==null)
         {
+            System.out.println("Reading "+treePath+File.separatorChar+treeFile);
+            TBReader tbreader;
             try {
-                System.out.println("Reading "+treePath+File.separatorChar+treeFile);
-                TBReader tbreader    = new TBReader(treePath, treeFile);
+                tbreader = new TBReader(treePath, treeFile);
                 ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
                 TBTree tree;
                 while ((tree = tbreader.nextTree()) != null)
@@ -137,19 +137,27 @@ public class PBReader
                 treeMap.put(treeFile, trees);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
             }
         }
 		
 		int treeIndex       = Integer.parseInt(tokens[1]);
 		int predicateIndex  = Integer.parseInt(tokens[2]);
 		
+		if (trees==null || treeIndex>=trees.length)
+		    throw new PBFormatException("parse tree invalid "+"\n"+Arrays.toString(tokens));
+		
 		instance.tree = trees[treeIndex];
 		instance.predicateNode = instance.tree.getRootNode().getNodeByTerminalIndex(predicateIndex);
 		
+		if (instance.predicateNode == null)
+            throw new PBFormatException("predicate node not found "+"\n"+Arrays.toString(tokens));
+		
 		t = 3; // skip "gold" or annotator initial before roleset id
-		while (!tokens[t].matches("[^\\.-]+(\\.\\w{2}|-[nv])")) ++t;
+		while (!tokens[t].matches(".+(\\.\\w{2}|-[nv])")) {
+		    ++t;
+		    if (t>=tokens.length)
+		        throw new PBFormatException("Can't find roleset: "+"\n"+Arrays.toString(tokens));
+		}
 		
 		if (tokens[t].endsWith("-v"))
 		    instance.rolesetId = tokens[++t];// skip roleset-v for ontonotes
@@ -165,25 +173,31 @@ public class PBReader
 		for (++t;t<tokens.length; ++t)
 		{
 		    if (!tokens[t].matches(PBArg.ARG_PATTERN))
-		        throw new PBFormatException("malformed argument: "+tokens[t]);
+		        throw new PBFormatException("malformed argument: "+tokens[t]+"\n"+Arrays.toString(tokens));
 		    
             int idx    = tokens[t].indexOf(PBLib.ARG_DELIM);
             
             String label = tokens[t].substring(idx+1);
             if (!label.matches(PBArg.LABEL_PATTERN))
-                throw new PBFormatException("unrecognized argument label: "+label);
+                throw new PBFormatException("unrecognized argument label: "+label+"\n"+Arrays.toString(tokens));
 
             List<TBNode> nodeList = new ArrayList<TBNode>();
             List<TBNode> nestedNodeList = new ArrayList<TBNode>();
             String[] locs = tokens[t].substring(0, idx).split("(?=[\\*,;&])");
             
             String[] loc      = locs[0].split(":");
-            nodeList.add(instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1])));
+            
+            TBNode node = instance.tree.getRootNode().getNode(Integer.parseInt(loc[0]),Integer.parseInt(loc[1]));
+            if (node==null)
+                throw new PBFormatException("invalid node:"+locs[0]+"\n"+Arrays.toString(tokens));
+            nodeList.add(node);
             
             for (int i=1; i<locs.length; ++i)
             {
                 loc = locs[i].substring(1).split(":");
-                TBNode node = instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1]));
+                node = instance.tree.getRootNode().getNode(Integer.parseInt(loc[0]),Integer.parseInt(loc[1]));
+                if (node==null)
+                    throw new PBFormatException("invalid node:"+locs[i]+"\n"+Arrays.toString(tokens));
                 if (locs[i].charAt(0)!='*')
                     nestedNodeList.add(node);
                 else
@@ -244,13 +258,16 @@ public class PBReader
 	            }
 	            if (found) break;
             }
-	        if (!found) throw new PBFormatException(linkArg.label+" not resolved "+linkArg.tokenNodes);
+	        if (!found) throw new PBFormatException(linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
 	        if (!isSLC) iter.remove();
 
 		}
-		
-		for (PBArg arg:argList)
-		    arg.processNodes();
+		try {
+    		for (PBArg arg:argList)
+    		    arg.processNodes();
+		} catch (PBFormatException e) {
+		    throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
+		}
 		
 		instance.allArgs = argList.toArray(new PBArg[argList.size()]); 
 		

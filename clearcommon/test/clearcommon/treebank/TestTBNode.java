@@ -3,6 +3,7 @@ package clearcommon.treebank;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.regex.Matcher;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +40,17 @@ public class TestTBNode {
         assertEquals("POS:", node.getPOS(), "NP");
         assertTrue(node.hasFunctionTag("sbj"));
         assertEquals(node.getFunctionTags().size(),1);
+        
+        assertTrue("NP-SBJ=2-1-5".matches(TBNode.POS_PATTERN.pattern()));
+        assertTrue("NP-SBJ-1=2-5".matches(TBNode.POS_PATTERN.pattern()));
+        
+        Matcher matcher = TBNode.POS_PATTERN.matcher("NP-SBJ-1=2-5");
+        assertTrue(matcher.matches());
+        
+        System.out.println(matcher.group(4));
+        System.out.println(matcher.group(6));
+        
+        System.out.println(Arrays.toString(matcher.group(4).split("(?=[-\\=])")));
         
         node = new TBNode(null, "-NONE-");
         node.cleanUpPOS();

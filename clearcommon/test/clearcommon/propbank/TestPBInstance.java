@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import org.junit.Test;
 
 import clearcommon.treebank.OntoNoteTreeFileResolver;
+import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 
@@ -35,6 +36,10 @@ public class TestPBInstance {
                 System.out.println(instance);
             }
         } catch (PBFormatException e) {
+            System.err.println(instances.size());
+            e.printStackTrace();
+            assertTrue(false);
+        } catch (ParseException e) {
             System.err.println(instances.size());
             e.printStackTrace();
             assertTrue(false);

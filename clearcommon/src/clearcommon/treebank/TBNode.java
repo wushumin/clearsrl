@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
 public class TBNode
 {
     public static final Pattern WORD_PATTERN = Pattern.compile("\\A([^-]+)(-\\d+)?\\z");    
-    public static final Pattern POS_PATTERN = Pattern.compile("\\A([^\\-=\\)]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)([\\-=]\\d+)?\\z");
+    public static final Pattern POS_PATTERN = Pattern.compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-)((-[a-zA-Z]+)*)((-\\d+)*(\\=\\d+)?(-\\d+)*)\\z");
   
     static final TBNode[] NO_CHILDREN = new TBNode[0];
     
@@ -253,6 +253,12 @@ public class TBNode
         return null;
     }
     
+    public TBNode getNode(int terminalIndex, int ancestorLevel)
+    {
+        TBNode node = getNodeByTerminalIndex(terminalIndex);
+        return node==null?null:node.getAncestor(ancestorLevel);
+    }
+    
     public TBNode getNodeByTokenIndex(int tokenIndex)
     {
         if (tokenIndex<0) return null;
@@ -303,9 +309,13 @@ public class TBNode
 	    Matcher matcher = POS_PATTERN.matcher(pos);
 	    matcher.matches();
 	    String idxStr = matcher.group(4);
-		if (idxStr!=null && idxStr.charAt(0)=='-' && Integer.parseInt(idxStr.substring(1))==idx)
-			return this;
-
+		if (idxStr!=null)
+		{
+		    String []indices = idxStr.split("(?=[-\\=])");
+		    for (String index:indices)
+    		    if (!index.isEmpty() && index.charAt(0)=='-'&&Integer.parseInt(index.substring(1))==idx)
+    		        return this;
+		}
 		if (children==null) return null;
 		
 		for (TBNode aNode:children)

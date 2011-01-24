@@ -31,8 +31,9 @@ public class SRLUtil {
 	public static String removeArgModifier(String argType)
 	{
 		Matcher matcher = ARG_PATTERN.matcher(argType);
-		matcher.matches();
-		return matcher.group(1);
+		if (matcher.matches())
+		    return matcher.group(1);
+		return argType;
 	}
 	/*
 	public static void getSamplesFromPBInstance(PBInstance instance, ArrayList<TBNode> argNodes, ArrayList<String> labels)

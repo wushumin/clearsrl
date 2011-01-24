@@ -1,6 +1,7 @@
 package clearcommon.propbank;
 
 import gnu.trove.TIntObjectHashMap;
+import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.util.FileUtil;
@@ -59,6 +60,10 @@ public final class PBUtil {
 			{
 				try {
 					instance = pbreader.nextProp();
+				} catch (PBFormatException e) {
+				    continue;
+				} catch (ParseException e) {
+				    continue;
 				} catch (Exception e) {
 					System.err.print(annotationFile+": ");
                     e.printStackTrace();

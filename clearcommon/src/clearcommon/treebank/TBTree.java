@@ -79,8 +79,8 @@ public class TBTree implements Serializable
 	{
 	    Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
         matcher.matches();
-        String idxStr = matcher.group(4);
-        if (idxStr != null && idxStr.charAt(0)=='=')
+        String idxStr = matcher.group(6);
+        if (idxStr != null)
         {
             node.indexingNode = rootNode.findIndexedNode(Integer.parseInt(idxStr.substring(1)));
             if (node.indexingNode==null)
