@@ -32,7 +32,7 @@ public class TestPBInstance {
             while ((instance = reader.nextProp())!=null)
             {
                 instances.add(instance);
-                System.out.println(instances.size()+": "+instance);
+                System.out.println(instance);
             }
         } catch (PBFormatException e) {
             System.err.println(instances.size());

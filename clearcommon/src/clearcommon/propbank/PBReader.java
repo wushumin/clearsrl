@@ -36,6 +36,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -113,65 +114,68 @@ public class PBReader
 			scanner.close();
 			return null;
 		}
-		StringTokenizer tok = new StringTokenizer(scanner.nextLine());
+		String line = scanner.nextLine().trim();
+		String[] tokens = line.split("[ \t]+");
+		System.out.println(Arrays.toString(tokens));
+		int t=0;
+		
 		PBInstance instance = new PBInstance();
 		
-		String treeFile     = (filenameResolver==null?tok.nextToken():filenameResolver.resolve(annotationFile, tok.nextToken()));
-		int treeIndex       = Integer.parseInt(tok.nextToken());
-		int predicateIndex  = Integer.parseInt(tok.nextToken());
-		TBTree[] trees      = null;
-		
-		if ((trees = treeMap.get(treeFile))==null)
-		{
-			try {
-			    System.out.println("Reading "+treePath+File.separatorChar+treeFile);
-				TBReader tbreader    = new TBReader(treePath, treeFile);
-				ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
-				TBTree tree;
-				while ((tree = tbreader.nextTree()) != null)
-					a_tree.add(tree);
-				trees = a_tree.toArray(new TBTree[a_tree.size()]);
-				
-				treeMap.put(treeFile, trees);
-			} catch (FileNotFoundException e) {
+		String treeFile     = (filenameResolver==null?tokens[0]:filenameResolver.resolve(annotationFile, tokens[0]));
+	    TBTree[] trees      = null;
+        if ((trees = treeMap.get(treeFile))==null)
+        {
+            try {
+                System.out.println("Reading "+treePath+File.separatorChar+treeFile);
+                TBReader tbreader    = new TBReader(treePath, treeFile);
+                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
+                TBTree tree;
+                while ((tree = tbreader.nextTree()) != null)
+                    a_tree.add(tree);
+                trees = a_tree.toArray(new TBTree[a_tree.size()]);
+                
+                treeMap.put(treeFile, trees);
+            } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (ParseException e) {
                 e.printStackTrace();
             }
-		}
+        }
+		
+		int treeIndex       = Integer.parseInt(tokens[1]);
+		int predicateIndex  = Integer.parseInt(tokens[2]);
+		
 		instance.tree = trees[treeIndex];
 		instance.predicateNode = instance.tree.getRootNode().getNodeByTerminalIndex(predicateIndex);
 		
-		instance.rolesetId = tok.nextToken();
+		t = 3; // skip "gold" or annotator initial before roleset id
+		while (!tokens[t].matches("[^\\.-]+(\\.\\w{2}|-[nv])")) ++t;
 		
-		if (!instance.rolesetId.matches("[~\\.-]++(\\.\\w{2}|-[nv])"))
-			instance.rolesetId = tok.nextToken(); // skip "gold" or annotator initial before roleset id
-		
-		if (instance.rolesetId.endsWith("-v"))
-		    instance.rolesetId = tok.nextToken();// skip roleset-v for ontonotes
-		else if (instance.rolesetId.endsWith("-n"))
+		if (tokens[t].endsWith("-v"))
+		    instance.rolesetId = tokens[++t];// skip roleset-v for ontonotes
+		else if (tokens[t].endsWith("-n"))
 		    return nextProp(); // skip nominalization for now
+		else
+		    instance.rolesetId = tokens[t];
+		
+		++t;              // skip "-----"
 		
 		List<PBArg> argList = new LinkedList<PBArg>();
-		
-		tok.nextToken();	            // skip "-----"
-		//System.out.print(instance.rolesetId+" ");
 
-		while (tok.hasMoreTokens())
+		for (++t;t<tokens.length; ++t)
 		{
-		    String argStr = tok.nextToken();
-		    if (!argStr.matches(PBArg.ARG_PATTERN))
-		        throw new PBFormatException("malformed argument: "+argStr);
+		    if (!tokens[t].matches(PBArg.ARG_PATTERN))
+		        throw new PBFormatException("malformed argument: "+tokens[t]);
 		    
-            int idx    = argStr.indexOf(PBLib.ARG_DELIM);
+            int idx    = tokens[t].indexOf(PBLib.ARG_DELIM);
             
-            String label = argStr.substring(idx+1);
+            String label = tokens[t].substring(idx+1);
             if (!label.matches(PBArg.LABEL_PATTERN))
                 throw new PBFormatException("unrecognized argument label: "+label);
 
             List<TBNode> nodeList = new ArrayList<TBNode>();
             List<TBNode> nestedNodeList = new ArrayList<TBNode>();
-            String[] locs = argStr.substring(0, idx).split("(?=[\\*,;&])");
+            String[] locs = tokens[t].substring(0, idx).split("(?=[\\*,;&])");
             
             String[] loc      = locs[0].split(":");
             nodeList.add(instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(loc[0])).getAncestor(Integer.parseInt(loc[1])));
@@ -203,41 +207,58 @@ public class PBReader
 		}
 		
 		PBArg linkArg;
-		for (int i=0; i<argList.size();)
+		for (Iterator<PBArg> iter=argList.iterator(); iter.hasNext();)
 		{
-		    if ((linkArg=argList.get(i)).isLabel("LINK-SLC"))
-            {
-		        if (linkArg.tokenNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.tokenNodes);
+		    linkArg = iter.next();
+		    if (!linkArg.getLabel().startsWith("LINK")) continue;
 
-		        for (PBArg arg:argList)
-                {
-		            if (linkArg==arg) continue;
-		            for (TBNode node: arg.tokenNodes)
-		            {
-		                for (TBNode linkNode:linkArg.tokenNodes)
-		                {
-		                    if (node == linkNode)
-		                    {
-		                        linkArg.label = "R-"+arg.label;
-		                        linkArg.linkingArg = arg;
-		                        linkArg.tokenNodes = Arrays.asList(linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0]).toArray(new TBNode[1]);
-		                        break;
-		                    }
-		                }
-		                if (linkArg.linkingArg!=null) break;
-		            }
-		            if (linkArg.linkingArg!=null) break;
-                }
-		        if (linkArg.linkingArg==null) System.err.println("LINK-SLC not resolved "+linkArg.tokenNodes);
+	        boolean found = false;
+	        boolean isSLC = linkArg.isLabel("LINK-SLC");
+	        if (isSLC && linkArg.tokenNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.tokenNodes);
+
+	        for (PBArg arg:argList)
+            {
+	            if (linkArg==arg) continue;
+	            for (TBNode node: arg.tokenNodes)
+	            {
+	                for (TBNode linkNode:linkArg.tokenNodes)
+	                {
+	                    if (node == linkNode)
+	                    {
+	                        found = true;
+	                        if (isSLC)
+	                        {
+	                            linkArg.label = "R-"+arg.label;
+	                            linkArg.linkingArg = arg;
+	                            linkArg.tokenNodes = Arrays.asList(linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0]).toArray(new TBNode[1]);
+	                        } else {
+	                            List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.tokenNodes));
+	                            for (TBNode aNode:linkArg.tokenNodes)
+	                                if (aNode!=linkNode) nodeList.add(aNode);
+	                            arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);
+	                        }
+	                        break;
+	                    }
+	                }
+	                if (found) break;
+	            }
+	            if (found) break;
             }
-		    else
-		        ++i;
+	        if (!found) throw new PBFormatException(linkArg.label+" not resolved "+linkArg.tokenNodes);
+	        if (!isSLC) iter.remove();
+
 		}
 		
 		for (PBArg arg:argList)
 		    arg.processNodes();
 		
-		instance.args = argList.toArray(new PBArg[argList.size()]); 
+		instance.allArgs = argList.toArray(new PBArg[argList.size()]); 
+		
+		argList.clear();
+		for (PBArg arg:instance.allArgs)
+		    if (!arg.isEmpty()) argList.add(arg);
+		
+		instance.args = argList.toArray(new PBArg[argList.size()]);
 		
 		return instance;
 	}

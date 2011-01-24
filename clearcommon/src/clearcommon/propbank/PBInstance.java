@@ -7,6 +7,7 @@ public class PBInstance implements Comparable<PBInstance>
 	TBNode      predicateNode;
 	String      rolesetId;
 	PBArg[]     args;
+	PBArg[]     allArgs;
 	TBTree      tree;
 
 	public PBInstance()
@@ -29,11 +30,24 @@ public class PBInstance implements Comparable<PBInstance>
 	    return tree;
 	}
 	
+	/**
+	 * Gets non empty (word) arguments 
+	 * @return non empty (word) arguments 
+	 */
 	public PBArg[] getArgs()
 	{
 		return args;
 	}
-
+	
+    /**
+     * Gets all arguments, including ones without words
+     * @return all arguments, including ones without words
+     */
+    public PBArg[] getAllArgs()
+    {
+        return allArgs;
+    }
+	
 	public String toString() {
 		StringBuilder str = new StringBuilder();
 		str.append(rolesetId+": ");
