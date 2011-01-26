@@ -58,6 +58,7 @@ public class PBArg implements Comparable<PBArg>
     	                    found = true;
     	                    break;
     	                }
+    	            if (node == traceNode) found = true;
     	            if (!found)
     	            {
     	                mainNodes.add(traceNode);

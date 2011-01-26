@@ -144,16 +144,16 @@ public class TBReader
 		do
 		{
 			if ((str = nextToken()) == null)
-				throw new ParseException("more tokens needed");
+				throw new ParseException(fileName+", "+treeCount+": more tokens needed");
 			//System.out.println(str);
 			
 			if (str.equals(TBLib.LRB))
 			{
 
 				if ((str = nextToken()) == null)		// str = pos-tag
-					throw new ParseException("POS-tag is missing");
+					throw new ParseException(fileName+", "+treeCount+": POS-tag is missing");
 				if (!TBNode.POS_PATTERN.matcher(str).matches())
-				    throw new ParseException("Malformed POS tag: "+str);
+				    throw new ParseException(fileName+", "+treeCount+": Malformed POS tag: "+str);
 				
 				TBNode childNode = new TBNode(curr, str, (short)(childNodeStack.peek().size()));
 				childNodeStack.peek().add(childNode);

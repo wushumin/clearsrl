@@ -148,6 +148,7 @@ public class RunSRL {
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
+                    System.out.println(i+" "+trees[i].getRootNode().toParse());
                     TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
                     if (modelPredicate)

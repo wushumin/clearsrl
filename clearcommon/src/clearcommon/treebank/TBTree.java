@@ -52,6 +52,7 @@ public class TBTree implements Serializable
         this.terminalCount = terminalCount;
         this.tokenCount    = tokenCount;
         linkIndices(root);
+        rootNode.cleanUpPOS();
     }
 	
     public String getFilename() {
@@ -84,7 +85,7 @@ public class TBTree implements Serializable
         {
             node.indexingNode = rootNode.findIndexedNode(Integer.parseInt(idxStr.substring(1)));
             if (node.indexingNode==null)
-                throw new ParseException("Missing antecedent: "+idxStr);
+                throw new ParseException(filename+", "+index+": Missing antecedent: "+idxStr);
         }
         else if (node.isEC())
         {    
@@ -96,7 +97,7 @@ public class TBTree implements Serializable
     	    {
     	        node.indexingNode = rootNode.findIndexedNode(Integer.parseInt(idxStr.substring(1)));
     	        if (node.indexingNode==null)
-    	            throw new ParseException("Missing antecedent: "+idxStr);
+    	            throw new ParseException(filename+", "+index+": Missing antecedent: "+idxStr);
     	    }
         }
 	    

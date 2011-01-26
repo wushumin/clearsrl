@@ -54,23 +54,26 @@ public final class PBUtil {
                 continue;
             }
 			System.out.println("Reading "+dirName+File.separatorChar+annotationFile);
-			PBInstance instance;
+			PBInstance instance=null;
 			//System.out.println(annotationFile);
-			for(;;)
+			for (;;)
 			{
 				try {
 					instance = pbreader.nextProp();
 				} catch (PBFormatException e) {
+				    e.printStackTrace();
 				    continue;
 				} catch (ParseException e) {
-				    continue;
+				    e.printStackTrace();
+				    pbreader.close();
+				    break;
 				} catch (Exception e) {
 					System.err.print(annotationFile+": ");
                     e.printStackTrace();
 					continue;
 				}
-				if (instance==null)
-					break;
+				
+				if (instance==null) break;
 				
 				predicates.add(instance.rolesetId);
 				++pCnt;
@@ -95,10 +98,8 @@ public final class PBUtil {
 				//String[] sent = instance.tree.getSubTokens();				
 				//for (String word:sent)
 				//	System.out.print(word+" ");
-				//System.out.print("\n");
-				
+				//System.out.print("\n");	
 			}
-			
 		}
 
 		return pbMap;		
