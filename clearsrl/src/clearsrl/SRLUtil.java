@@ -8,6 +8,7 @@ import clearcommon.treebank.TBTree;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -242,10 +243,15 @@ public class SRLUtil {
 			else
 			{
 				ArrayList<TBNode> childNodes = getArgumentCandidates(childNode);
-				if (childNodes.size()>0 && node.getChildren().length>1)
+				if (childNodes.size()>0)// && node.getChildren().length>1)
 					nodes.add(childNode);
 				if (childNodes.size()>1)
-					nodes.addAll(childNodes);
+				{
+				    if (childNode.getChildren().length>1)
+				        nodes.addAll(childNodes);
+				    else
+				        nodes.addAll(childNodes.subList(1, childNodes.size()));
+				}
 			}
 		}
 		return nodes;

@@ -19,8 +19,16 @@ public final class TBUtil {
         TBHeadRule headrule = headrules.getHeadRule(node.pos);
         if (headrule==null)
         {
-            System.err.println(node.toParse());
-            headrule = TBHeadRule.DEFAULT;
+            if (node.pos.equals("NML"))
+                node.pos = "NP";
+            else if (node.pos.equals("SG"))
+                node.pos = "S";
+            headrule = headrules.getHeadRule(node.pos);
+            if (headrule==null)
+            {
+                System.err.println(node.pos+": "+node.toParse());
+                headrule = TBHeadRule.DEFAULT;
+            }
         }
         List<TBNode> decendants = node.getTokenNodes();
        

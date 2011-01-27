@@ -79,6 +79,7 @@ public class TrainSRL {
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
                 trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
                 trainInstances.add(trainInstance);
+                System.out.println(trainInstance);
             }
 	    }
         model.addTrainingSentence(parsedTree, trainInstances, namedEntities, buildDictionary);
@@ -157,7 +158,7 @@ public class TrainSRL {
 			{
 			    try {
 	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
-	                TBReader tbreader    = new TBReader(props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+	                TBReader tbreader    = new TBReader(props.getProperty("parsedir"), entry.getKey());
 	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
 	                TBTree tree;
 	                while ((tree = tbreader.nextTree()) != null)

@@ -99,6 +99,7 @@ public class SRInstance {
         
         for (SRArg arg:args)
         {
+           if (arg.label.equals(SRLModel.NOT_ARG)) continue;
            TreeSet<SRArg> argSet;
            if ((argSet = argMap.get(arg.label))==null)
            {
@@ -143,6 +144,7 @@ public class SRInstance {
 		
 		for (SRArg arg:args)
 		{
+		    if (arg.label.equals(SRLModel.NOT_ARG)) continue;
 			BitSet bits = arg.getTokenSet();
 			
 			if (bits.nextSetBit(0)>= nodes.size())

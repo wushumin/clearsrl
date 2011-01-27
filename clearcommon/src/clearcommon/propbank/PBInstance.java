@@ -1,5 +1,8 @@
 package clearcommon.propbank;
 
+import java.util.BitSet;
+import java.util.List;
+
 import clearcommon.treebank.*;
 
 public class PBInstance implements Comparable<PBInstance>
@@ -47,7 +50,54 @@ public class PBInstance implements Comparable<PBInstance>
     {
         return allArgs;
     }
-	
+
+    public String toText()
+    {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(tree.getFilename()); buffer.append(" ");
+        buffer.append(tree.getIndex()); buffer.append(" ");
+        
+        List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        String[] tokens = new String[nodes.size()];
+        for (int i=0; i<tokens.length; ++i)
+            tokens[i] = nodes.get(i).getWord();
+        
+        for (PBArg arg:args)
+        {
+            BitSet bits = arg.getTokenSet();
+            if (bits.nextSetBit(0)<0) continue;
+            if (bits.nextSetBit(0)>= nodes.size())
+            {
+                System.err.println(nodes);
+                System.err.println(arg.label+": "+bits);
+            }
+            
+            tokens[bits.nextSetBit(0)] = '['+arg.label+' '+tokens[bits.nextSetBit(0)];
+            tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
+            
+            for (PBArg carg:arg.nestedArgs)
+            {
+                bits = carg.getTokenSet();
+                if (bits.nextSetBit(0)<0) continue;
+                if (bits.nextSetBit(0)>= nodes.size())
+                {
+                    System.err.println(nodes);
+                    System.err.println(carg.label+": "+bits);
+                }
+                
+                tokens[bits.nextSetBit(0)] = '['+carg.label+' '+tokens[bits.nextSetBit(0)];
+                tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
+            }
+        }
+        
+        for (String token:tokens)
+            buffer.append(token+' ');
+        
+        return buffer.toString();
+    }
+
+    
+    
 	public String toString() {
 		StringBuilder str = new StringBuilder();
 		str.append(rolesetId+": ");

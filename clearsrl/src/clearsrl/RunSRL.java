@@ -148,7 +148,10 @@ public class RunSRL {
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
-                    System.out.println(i+" "+trees[i].getRootNode().toParse());
+                    //System.out.println(i+" "+trees[i].getRootNode().toParse());
+                    //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
+                    //for (TBNode node:nodes)
+                    //    System.out.println(node.toParse());
                     TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
                     if (modelPredicate)
@@ -157,7 +160,6 @@ public class RunSRL {
                         for (int j=0; j<goldInstances.length; ++j)
                             goldInstances[j] = new SRInstance(pbInstances.get(j));
                         List<SRInstance> predictions = model.predict(trees[i], goldInstances, null);
-                        
                         for (SRInstance instance:predictions)
                             output.println(instance.toString(outputFormat));
                         
@@ -170,7 +172,7 @@ public class RunSRL {
                         BitSet predPredicates = new BitSet();
                         for (SRInstance instance:predictions)
                             predPredicates.set(instance.getPredicateNode().getTokenIndex());
-                        
+                        /*
                         if (!goldPredicates.equals(predPredicates))
                         {
                             System.out.print(entry.getKey()+","+i+": ");
@@ -187,7 +189,7 @@ public class RunSRL {
                                     System.out.print(nodes.get(j).getWord()+" ");
                             }
                             System.out.print("\n");
-                        }
+                        }*/
                     }
                 }
             }      
