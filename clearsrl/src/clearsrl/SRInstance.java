@@ -142,23 +142,35 @@ public class SRInstance {
 		for (int i=0; i<tokens.length; ++i)
 			tokens[i] = nodes.get(i).getWord();
 		
+		String[] labels = new String[nodes.size()];
+		
 		for (SRArg arg:args)
 		{
 		    if (arg.label.equals(SRLModel.NOT_ARG)) continue;
 			BitSet bits = arg.getTokenSet();
 			
-			if (bits.nextSetBit(0)>= nodes.size())
-			{
-				System.err.println(nodes);
-				System.err.println(arg.label+": "+bits);
-			}
-			
-			tokens[bits.nextSetBit(0)] = '['+arg.label+' '+tokens[bits.nextSetBit(0)];
-			tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
+			for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i+1))
+			    labels[i] = arg.label;
 		}
 		
-		for (String token:tokens)
-			buffer.append(token+' ');
+		String previousLabel = null;
+		for (int i=0; i<tokens.length; ++i)
+		{
+		    if (labels[i]!=null && labels[i].startsWith("C-") && labels[i].substring(2).equals(previousLabel))
+		            labels[i] = labels[i].substring(2);
+		    previousLabel = labels[i];
+		}
+		
+		for (int i=0; i<tokens.length; ++i)
+        {
+            if (labels[i]!=null && (i==0 || !labels[i].equals(labels[i-1])))
+                buffer.append('['+labels[i]+' ');
+            buffer.append(tokens[i]);
+            if (labels[i]!=null && (i==tokens.length-1 || !labels[i].equals(labels[i+1])))
+                buffer.append(']');
+                    
+            buffer.append(' ');      
+        }
 		
 		return buffer.toString();
 	}

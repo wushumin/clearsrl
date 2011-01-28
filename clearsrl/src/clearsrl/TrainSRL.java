@@ -79,7 +79,7 @@ public class TrainSRL {
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
                 trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
                 trainInstances.add(trainInstance);
-                System.out.println(trainInstance);
+                //System.out.println(trainInstance);
             }
 	    }
         model.addTrainingSentence(parsedTree, trainInstances, namedEntities, buildDictionary);
