@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.zip.ZipInputStream;
 
 public class RunSRL {
 	static final float THRESHOLD=0.8f;
@@ -34,7 +35,7 @@ public class RunSRL {
 		if (!langUtil.init(props))
 		    System.exit(-1);
 
-		ObjectInputStream mIn = new ObjectInputStream(new FileInputStream(props.getProperty("model_file")));
+		ObjectInputStream mIn = new ObjectInputStream(new ZipInputStream(new FileInputStream(props.getProperty("model_file"))));
 		SRLModel model = (SRLModel)mIn.readObject();
 		mIn.close();
 		System.out.println(model.featureSet);

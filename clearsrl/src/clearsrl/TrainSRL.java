@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
+import java.util.zip.ZipOutputStream;
 
 import clearsrl.SRLModel.Feature;
 import clearsrl.SRLModel.PredicateFeature;
@@ -346,7 +347,7 @@ public class TrainSRL {
 		System.gc();
 		model.train(props);
 		
-		ObjectOutputStream mOut = new ObjectOutputStream(new FileOutputStream(props.getProperty("model_file")));
+		ObjectOutputStream mOut = new ObjectOutputStream(new ZipOutputStream(new FileOutputStream(props.getProperty("model_file"))));
 		mOut.writeObject(model);
 		mOut.close();
 		
