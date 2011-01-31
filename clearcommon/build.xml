@@ -1,0 +1,23 @@
+<project>
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+    <target name="compile" depends="clean">
+        <mkdir dir="build"/>
+        <javac srcdir="src" destdir="build">
+        	<classpath>
+        		<pathelement location="lib/blas.jar"/>
+        	    <pathelement location="lib/liblinearbinary.jar"/>	
+        	    <pathelement location="lib/trove-2.1.0.jar"/>
+        	</classpath>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <jar destfile="bin/clearcommon.jar" basedir="build">
+        </jar>
+        <delete dir="build"/>
+    </target>
+
+</project>

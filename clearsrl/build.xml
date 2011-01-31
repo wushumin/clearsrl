@@ -1,0 +1,34 @@
+<project>
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+    <target name="compile" depends="clean">
+    	<mkdir dir="build"/>
+        <javac srcdir="src" destdir="build">
+        	<classpath>
+        		<pathelement location="../clearcommon/lib/blas.jar"/>
+        	    <pathelement location="../clearcommon/lib/liblinearbinary.jar"/>   
+        	    <pathelement location="../clearcommon/lib/trove-2.1.0.jar"/>
+        		<pathelement location="../clearcommon/lib/berkeleyParser.jar"/>   
+        		<pathelement location="../clearcommon/lib/edu.mit.jwi_2.1.5_jdk.jar"/>
+        		<pathelement location="../clearcommon/bin/clearcommon.jar"/>
+        	</classpath>
+    	</javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <jar destfile="bin/clearsrl.jar" basedir="build">
+            <manifest>
+                <attribute name="Main-Class" value="clearsrl.RunSRL"/>
+            </manifest>
+        </jar>
+    	<delete dir="build"/>
+    </target>
+
+    <target name="run">
+        <java jar="bin/clearsrl.jar" fork="true"/>
+    </target>
+
+</project>

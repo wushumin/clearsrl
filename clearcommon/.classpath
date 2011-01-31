@@ -5,6 +5,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/trove-2.1.0.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/liblinearbinary"/>
+	<classpathentry kind="lib" path="lib/blas.jar"/>
+	<classpathentry kind="lib" path="lib/liblinearbinary.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
