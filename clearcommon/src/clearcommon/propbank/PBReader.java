@@ -242,9 +242,10 @@ public class PBReader
 	                        found = true;
 	                        if (isSLC)
 	                        {
-	                            linkArg.label = "R-"+arg.label;
-	                            linkArg.linkingArg = arg;
+	                            linkArg.label = arg.label;
 	                            linkArg.tokenNodes = Arrays.asList(linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0]).toArray(new TBNode[1]);
+	                            arg.label = "R-"+linkArg.label;
+	                            arg.linkingArg = linkArg;
 	                        } else {
 	                            List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.tokenNodes));
 	                            for (TBNode aNode:linkArg.tokenNodes)
@@ -263,8 +264,11 @@ public class PBReader
 
 		}
 		try {
+		    // process all the main args before the reference args
     		for (PBArg arg:argList)
-    		    arg.processNodes();
+    		    if (arg.linkingArg==null) arg.processNodes();
+    		for (PBArg arg:argList)
+                if (arg.linkingArg!=null) arg.processNodes();
 		} catch (PBFormatException e) {
 		    throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
 		}
@@ -276,7 +280,7 @@ public class PBReader
 		    if (!arg.isEmpty()) argList.add(arg);
 		
 		instance.args = argList.toArray(new PBArg[argList.size()]);
-		
+		//System.out.println(instance);
 		return instance;
 	}
 	

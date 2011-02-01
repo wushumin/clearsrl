@@ -95,7 +95,7 @@ public class TBNode
 	
 	public boolean isTerminal()
 	{
-		return terminalIndex>=0;
+		return children.length==0;
 	}
 	
 	public boolean isToken()

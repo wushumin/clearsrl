@@ -42,7 +42,7 @@ public class PBArg implements Comparable<PBArg>
 	    
 	    // link traces
 	    List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(tokenNodes));
-	    
+
 	    TBNode traceNode;
 	    boolean addedNodes;
 	    do {
@@ -58,7 +58,9 @@ public class PBArg implements Comparable<PBArg>
     	                    found = true;
     	                    break;
     	                }
-    	            if (node == traceNode) found = true;
+    	            // if it's a reference arg, make sure the trace node doesn't trace back to the main argument
+    	            if (linkingArg!=null && traceNode==linkingArg.node)
+    	                found = true;
     	            if (!found)
     	            {
     	                mainNodes.add(traceNode);
@@ -68,7 +70,7 @@ public class PBArg implements Comparable<PBArg>
     	        }
     	    }
 	    } while (addedNodes);
-	   
+
 	    // assign single node to represent this argument
 	    node = null;
 	    for (TBNode mainNode:mainNodes)
