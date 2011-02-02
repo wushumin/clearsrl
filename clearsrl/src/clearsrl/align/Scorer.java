@@ -19,12 +19,6 @@ public class Scorer {
 	{
 		
 	}
-	/*
-	public static TIntObjectHashMap<TIntDoubleHashMap> convertScore(String filename)
-	{
-		
-	}
-	*/
 	public static TIntObjectHashMap<TIntDoubleHashMap> readScore(String filename) throws FileNotFoundException
 	{
 		TIntObjectHashMap<TIntDoubleHashMap> scores = new TIntObjectHashMap<TIntDoubleHashMap>();

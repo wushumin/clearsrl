@@ -11,11 +11,7 @@ import java.util.TreeMap;
 
 import org.junit.Test;
 
-import clearcommon.treebank.OntoNoteTreeFileResolver;
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-
+import clearcommon.treebank.*;
 
 public class TestPBInstance {
     @Test

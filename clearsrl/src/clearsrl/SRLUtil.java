@@ -8,7 +8,6 @@ import clearcommon.treebank.TBTree;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
