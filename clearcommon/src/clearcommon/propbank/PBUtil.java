@@ -38,6 +38,9 @@ public final class PBUtil {
 		if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
 			files.add(dir.getName());
 		
+		int correctCnt=0;
+		int exceptionCnt=0;
+		
 		Map<String, TIntObjectHashMap<List<PBInstance>>> pbMap = new TreeMap<String, TIntObjectHashMap<List<PBInstance>>>();
 		TIntObjectHashMap<List<PBInstance>> instances;
 		
@@ -61,6 +64,7 @@ public final class PBUtil {
 				try {
 					instance = pbreader.nextProp();
 				} catch (PBFormatException e) {
+					++exceptionCnt;
 				    e.printStackTrace();
 				    continue;
 				} catch (ParseException e) {
@@ -74,6 +78,7 @@ public final class PBUtil {
 				}
 				
 				if (instance==null) break;
+				++correctCnt;
 				
 				predicates.add(instance.rolesetId);
 				++pCnt;
@@ -101,7 +106,8 @@ public final class PBUtil {
 				//System.out.print("\n");	
 			}
 		}
-
+		System.out.printf("%d props read, %d format exceptions encountered\n", correctCnt, exceptionCnt);
+		
 		return pbMap;		
 	}
 }

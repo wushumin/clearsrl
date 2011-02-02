@@ -35,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -281,6 +282,14 @@ public class PBReader
 		
 		instance.args = argList.toArray(new PBArg[argList.size()]);
 		//System.out.println(instance);
+
+		BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());
+		for (PBArg arg:instance.allArgs)
+		{
+		    if (terminalSet.intersects(arg.terminalSet))
+		        throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens));
+		    terminalSet.or(arg.terminalSet);
+		}
 		return instance;
 	}
 	
