@@ -10,6 +10,7 @@
         		<pathelement location="lib/blas.jar"/>
         	    <pathelement location="lib/liblinearbinary.jar"/>	
         	    <pathelement location="lib/trove-2.1.0.jar"/>
+        		<pathelement location="lib/berkeleyParser.jar"/>
         	</classpath>
         </javac>
     </target>

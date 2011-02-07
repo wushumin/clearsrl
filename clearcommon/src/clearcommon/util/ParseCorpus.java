@@ -1,10 +1,11 @@
-package clearsrl;
+package clearcommon.util;
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser;
 import edu.berkeley.nlp.PCFGLA.CoarseToFineNBestParser;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Grammar;
 import edu.berkeley.nlp.PCFGLA.Lexicon;
+import edu.berkeley.nlp.PCFGLA.MultiThreadedParserWrapper;
 import edu.berkeley.nlp.PCFGLA.ParserData;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
@@ -39,8 +40,10 @@ public class ParseCorpus {
 	    Numberer.setNumberers(pData.getNumbs());
     
 	    if (props.getProperty("parser.Chinese")!=null) 
+	    {
+	        System.err.println("Chinese parsing features enabled.");
 	    	Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
-    
+	    }
 	    CoarseToFineMaxRuleParser parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
 	    parser.binarization = pData.getBinarization();
 	    
@@ -87,21 +90,27 @@ public class ParseCorpus {
 		Properties props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
-		in.close();
 		
 		CoarseToFineMaxRuleParser parser = initParser(props);
 		
-		Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex"));
-		TBUtil.extractText(props.getProperty("tbtxtdir"), treeBank);
-		
-		for (Map.Entry<String, TBTree[]> entry:treeBank.entrySet()) 
+		String txtDir = props.getProperty("tbtxtdir");
+	    String parseDir = props.getProperty("parsedir");
+		if (props.getProperty("tbdir")!=null)
 		{
-			File inputFile = new File(props.getProperty("tbtxtdir"), entry.getKey());
-			File outputFile = new File(props.getProperty("parsedir"), entry.getKey());
+		    Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex"));
+		    TBUtil.extractText(txtDir, treeBank);
+		}
+
+		List<String> fileNames = FileUtil.getFiles(new File(txtDir), ".*\\.txt");
+		
+		for (String fileName:fileNames)
+		{
+			File inputFile = new File(txtDir, fileName);
+			File outputFile = new File(parseDir, fileName);
 			
 			outputFile.getParentFile().mkdirs();
 			
-			System.out.println("Parsing: "+entry.getKey());
+			System.out.println("Parsing: "+fileName);
 		    try{
 		    	BufferedReader inputData = new BufferedReader(new InputStreamReader(new FileInputStream(inputFile), "UTF-8"));
 		    	PrintWriter outputData = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"), true);
