@@ -5,7 +5,6 @@ import edu.berkeley.nlp.PCFGLA.CoarseToFineNBestParser;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Grammar;
 import edu.berkeley.nlp.PCFGLA.Lexicon;
-import edu.berkeley.nlp.PCFGLA.MultiThreadedParserWrapper;
 import edu.berkeley.nlp.PCFGLA.ParserData;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
@@ -101,7 +100,7 @@ public class ParseCorpus {
 		    TBUtil.extractText(txtDir, treeBank);
 		}
 
-		List<String> fileNames = FileUtil.getFiles(new File(txtDir), ".*\\.txt");
+		List<String> fileNames = FileUtil.getFiles(new File(txtDir), ".*\\..*");
 		
 		for (String fileName:fileNames)
 		{
