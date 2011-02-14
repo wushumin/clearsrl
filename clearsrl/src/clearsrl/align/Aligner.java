@@ -84,7 +84,7 @@ public class Aligner {
 			for (int j=0; j<alignMatrix[i].length; ++j)
 			{
 				alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR);
-				alignMatrix[i][j].computeAlignment();
+				alignMatrix[i][j].computeSymmetricAlignment();
 			}
 		
 		return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix);
@@ -338,11 +338,6 @@ public class Aligner {
 		return simScore;
 	}
 */
-	float getFScore(float lhs, float rhs, float bias)
-	{
-		float denom = bias*lhs + rhs;
-		return denom==0?0:(1+bias)*lhs*rhs/denom;
-	}
 
 	/**
 	 * measures the argument alignment based on GIZA++

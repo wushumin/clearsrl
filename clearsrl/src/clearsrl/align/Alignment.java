@@ -43,6 +43,12 @@ public class Alignment{
 		this.beta_sqr = beta_sqr;
 	}
 	
+    static float getFScore(float lhs, float rhs, float bias)
+    {
+        float denom = bias*lhs + rhs;
+        return denom==0?0:(1+bias)*lhs*rhs/denom;
+    }
+	
     float measureArgAlignment(PBArg lhs, PBArg rhs, 
     		                  float[] lhsWeights, float[] rhsWeights, 
     		                  int lhsTreeIdx, int rhsTreeIdx, 
@@ -87,8 +93,7 @@ public class Alignment{
 
     public float getCompositeScore()
     {
-    	float denom = beta_sqr*srcScore + dstScore;
-		return denom==0?0:(1+beta_sqr)*srcScore*dstScore/denom;
+        return getFScore(srcScore, dstScore, beta_sqr);
     }
 
     void computeArgWeight(PBArg arg, float[] weights)
@@ -120,11 +125,11 @@ public class Alignment{
 		for (ArgAlignment argAlignment:argAlignments)
 		{
 			if (argAlignment.srcArg.getLabel().equals("rel"))
-				predicateWeight += argAlignment.srcWeight;
+				predicateWeight += argAlignment.weight;
 			else if (argAlignment.srcArg.getLabel().matches(".*ARG\\d"))
-				argNumWeight += argAlignment.srcWeight;
+				argNumWeight += argAlignment.weight;
 			else
-				argMWeight += argAlignment.srcWeight;
+				argMWeight += argAlignment.weight;
 		}
 		
 		if (argNumWeight>0 && argNumWeight<argMWeight)
@@ -155,9 +160,70 @@ public class Alignment{
 		
 		return argAlignments;
     }
+
+    float computeAlignment(float[][] lhsScore, float[][] rhsScore, List<ArgAlignment> lhsAlignments, List<ArgAlignment> rhsAlignments, float bias)
+    {
+        float fScore=0.0f;
+        float lhsWeight = 0.0f;
+        float rhsWeight = 0.0f;
+        float precision = 0.0f;
+        float recall = 0.0f;
+        
+        float[] argScores = new float[rhsScore.length];
+        int[] argIndices = new int[rhsScore.length];
+        
+        for (int i=0; i<rhsScore.length; ++i)
+        {
+            for (int j=0;j<rhsScore[i].length; ++j)
+            {
+                ArgAlignment lhsAlignment = lhsAlignments.get(j);
+                ArgAlignment rhsAlignment = rhsAlignments.get(i);
+                
+                float score = getFScore(rhsScore[i][j], lhsScore[j][i], 
+                        bias*(float)Math.pow(lhsAlignment.getFactoredWeight()/rhsAlignment.getFactoredWeight(), 2));
+                if (score>argScores[i])
+                {
+                    argScores[i] = score;
+                    argIndices[i] = j;
+                }
+            }
+        }
+        for (;;)
+        {
+            int index = getMaxIndex(argScores);
+            if (argScores[index]<fScore) break;
+            
+            ArgAlignment lhsAlignment = lhsAlignments.get(index);
+            ArgAlignment rhsAlignment = rhsAlignments.get(argIndices[index]);
+            
+            precision+=lhsAlignment.getFactoredWeight()*lhsScore[index][argIndices[index]];
+            recall+=rhsAlignment.getFactoredWeight()*rhsScore[argIndices[index]][index];
+            
+            fScore = getFScore(precision, recall, bias);
+            
+            lhsAlignment.dstArgList.add(rhsAlignment.srcArg);
+            lhsAlignment.score+=lhsScore[index][argIndices[index]];
+            
+            argScores[index] = Float.NEGATIVE_INFINITY;
+        }
+        
+        return fScore;
+    }
     
+    static int getMaxIndex(float[] vals)
+    {
+        int index=0;
+        float maxVal = vals[0];
+        for (int i=1; i<vals.length; ++i)
+            if (vals[i]>maxVal)
+            {
+                maxVal = vals[i];
+                index=i;
+            }
+        return index;
+    }
     
-	public void computeAlignment() {
+	public void computeSymmetricAlignment() {
 		
 		PBArg[] srcArgs = sentence.src.pbInstances[srcPBIdx].getArgs();
 		PBArg[] dstArgs = sentence.dst.pbInstances[dstPBIdx].getArgs();
@@ -169,7 +235,7 @@ public class Alignment{
 		dstSrcAlignment = initArgAlignment(sentence.dst.pbInstances[dstPBIdx], dstTerminalWeights);
 		
 		float[][] srcDstScore = new float[srcArgs.length][dstArgs.length];
-		float[][] dstSrcScore = new float[srcArgs.length][dstArgs.length];
+		float[][] dstSrcScore = new float[dstArgs.length][srcArgs.length];
 		
 		for (int i=0; i<srcDstScore.length; ++i)
 			for (int j=0; j<srcDstScore[i].length;++j)
@@ -179,32 +245,25 @@ public class Alignment{
 						sentence.src.pbInstances[srcPBIdx].getTree().getIndex(), 
 						sentence.dst.pbInstances[dstPBIdx].getTree().getIndex(),
 		                sentence.srcAlignment, sentence.dst);
-				srcDstScore[i][j] /= srcDstAlignment.get(i).srcWeight;
-				dstSrcScore[i][j] = measureArgAlignment(dstArgs[j], srcArgs[i],
+				srcDstScore[i][j] /= srcDstAlignment.get(i).weight;
+				dstSrcScore[j][i] = measureArgAlignment(dstArgs[j], srcArgs[i],
 						dstTerminalWeights, srcTerminalWeights, 
 						sentence.dst.pbInstances[dstPBIdx].getTree().getIndex(),
 						sentence.src.pbInstances[srcPBIdx].getTree().getIndex(), 
 		                sentence.dstAlignment, sentence.src);
-				dstSrcScore[i][j] /= dstSrcAlignment.get(j).srcWeight;
+				dstSrcScore[j][i] /= dstSrcAlignment.get(j).weight;
 			}
 		
-		
-	
-		
-		
-		float precision = 0.0f;
-		float recall    = 0.0f;
-		float fScore    = 0.0f;
-		
-		
+		computeAlignment(srcDstScore, dstSrcScore, srcDstAlignment, dstSrcAlignment, beta_sqr);
+		computeAlignment(dstSrcScore, srcDstScore, dstSrcAlignment, srcDstAlignment, 1/beta_sqr);
 		
 		srcScore = 0.0f;
 		for (ArgAlignment argAlign: dstSrcAlignment)
-			srcScore += argAlign.srcScore/argAlign.srcWeight*argAlign.factor;
+			srcScore += argAlign.score*argAlign.getFactoredWeight();
 		
 		dstScore = 0.0f;
 		for (ArgAlignment argAlign: srcDstAlignment)
-			dstScore += argAlign.srcScore/argAlign.srcWeight*argAlign.factor;
+			dstScore += argAlign.score*argAlign.getFactoredWeight();
 	}
 
 }

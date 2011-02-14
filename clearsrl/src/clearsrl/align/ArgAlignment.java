@@ -10,11 +10,10 @@ public class ArgAlignment {
     PBArg       srcArg;
     List<PBArg> dstArgList;
 
-    float       srcWeight;
+    float       weight;
     float       factor;
    
-    float       srcScore;
-    float       dstScore;
+    float       score;
     
     public ArgAlignment(PBArg srcArg, List<PBArg> dstArgList, float[] srcTerminalWeights)
     {
@@ -24,8 +23,14 @@ public class ArgAlignment {
      
         TBNode[] nodes = srcArg.getTokenNodes();
         
-        srcWeight=0.0f;
+        weight=0.0f;
         for (TBNode node:nodes)
-        	srcWeight += srcTerminalWeights[node.getTerminalIndex()];
+        	weight += srcTerminalWeights[node.getTerminalIndex()];
     }
+    
+    public float getFactoredWeight()
+    {
+        return weight*factor;
+    }
+    
 }
