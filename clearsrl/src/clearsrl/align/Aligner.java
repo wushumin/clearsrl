@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -32,15 +33,15 @@ public class Aligner {
 	
 	public static final float MAX_SIMILARITY = 3.0f;
 
-	public static final float ARG01FACTOR   = 3.0f;
+	private static final float BETA_SQR = 1.5f;
+
+	float alignThreshold;
 	
-	public Map<String, TIntObjectHashMap<List<PBInstance>>> srcPB;
-	public Map<String, TIntObjectHashMap<List<PBInstance>>> dstPB;
+	public Map<String, SortedMap<Integer, List<PBInstance>>> srcPB;
+	public Map<String, SortedMap<Integer, List<PBInstance>>> dstPB;
 	
 	public Map<String, TBTree[]> srcTB;
 	public Map<String, TBTree[]> dstTB;
-	
-	public Map<String, TObjectIntHashMap<String>> argMap;
 	
 	public enum Method {
 		DEFAULT,
@@ -49,24 +50,27 @@ public class Aligner {
 	};
 	
 	public Aligner(){
-		srcPB = new HashMap<String, TIntObjectHashMap<List<PBInstance>>>();
-		dstPB = new HashMap<String, TIntObjectHashMap<List<PBInstance>>>();
-		
-		srcTB = new HashMap<String, TBTree[]>();
-		dstTB = new HashMap<String, TBTree[]>();
-		
-		argMap = new TreeMap<String, TObjectIntHashMap<String>>();
+		this(new HashMap<String, TBTree[]>(),
+		     new HashMap<String, SortedMap<Integer, List<PBInstance>>>(), 
+		     new HashMap<String, TBTree[]>(),
+		     new HashMap<String, SortedMap<Integer, List<PBInstance>>>());
 	}
 
-	public Aligner(Map<String, TBTree[]> srcTB, Map<String, TIntObjectHashMap<List<PBInstance>>> srcPB,
-			Map<String, TBTree[]> dstTB, Map<String, TIntObjectHashMap<List<PBInstance>>> dstPB){
+	public Aligner(Map<String, TBTree[]> srcTB, Map<String, SortedMap<Integer, List<PBInstance>>> srcPB,
+			Map<String, TBTree[]> dstTB, Map<String, SortedMap<Integer, List<PBInstance>>> dstPB){
+		this(srcTB, srcPB, dstTB, dstPB, 0.05f);
+	}
+		
+	public Aligner(Map<String, TBTree[]> srcTB, Map<String, SortedMap<Integer, List<PBInstance>>> srcPB,
+			Map<String, TBTree[]> dstTB, Map<String, SortedMap<Integer, List<PBInstance>>> dstPB, float threshold){
 		this.srcTB = srcTB;
 		this.srcPB = srcPB;
 		
 		this.dstTB = dstTB;
 		this.dstPB = dstPB;
+		this.alignThreshold = threshold;
 	}
-		
+	
 	/**
 	 * Perform argument matching based alignment
 	 * @param sentence input sentence pair to be aligned
@@ -74,9 +78,16 @@ public class Aligner {
 	 */
 	public Alignment[] align(SentencePair sentence)
 	{
-		SimilarityPair [][]simMatrix = computeSimilarity(sentence);
+		Alignment[][] alignMatrix = new Alignment[sentence.src.pbInstances.length][sentence.dst.pbInstances.length];
+			
+		for (int i=0; i<alignMatrix.length; ++i)
+			for (int j=0; j<alignMatrix[i].length; ++j)
+			{
+				alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR);
+				alignMatrix[i][j].computeAlignment();
+			}
 		
-		return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, simMatrix);
+		return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix);
 	}
 	
 	/**
@@ -87,36 +98,36 @@ public class Aligner {
 	 * @param simMatrix computed similarity measure
 	 * @return the alignment array
 	 */
-	public Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, SimilarityPair [][]simMatrix)
+	public Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix)
 	{		
-		if (simMatrix==null)
+		if (alignMatrix==null)
 			return new Alignment[0];
 		
 		float [][]costMatrix = new float[srcInstances.length>dstInstances.length?srcInstances.length:dstInstances.length][];
 		for (int i=0; i<costMatrix.length; ++i)
 			costMatrix[i] = new float[costMatrix.length];
 			
-		for (int i=0; i<simMatrix.length; ++i)
-			for (int j=0; j<simMatrix[i].length; ++j)
-				costMatrix[i][j] = MAX_SIMILARITY-simMatrix[i][j].getCompositeScore();
+		for (int i=0; i<alignMatrix.length; ++i)
+			for (int j=0; j<alignMatrix[i].length; ++j)
+				costMatrix[i][j] = MAX_SIMILARITY-alignMatrix[i][j].getCompositeScore();
 		
 		int[][] alignIdx = HungarianAlgorithm.computeAssignments(costMatrix);
 		
 		int i=0;
 		
-		ArrayList<Alignment> alignment = new ArrayList<Alignment>();
+		ArrayList<Alignment> alignments = new ArrayList<Alignment>();
 		
 		for (; i<dstInstances.length; ++i)
 		{
-			if (alignIdx[i][0]<simMatrix.length && simMatrix[alignIdx[i][0]][i].getCompositeScore()>=0.05f)
-				alignment.add(new Alignment(id, alignIdx[i][0]+1, i+1, simMatrix[alignIdx[i][0]][i].getCompositeScore()));
+			if (alignIdx[i][0]<alignMatrix.length && alignMatrix[alignIdx[i][0]][i].getCompositeScore()>=alignThreshold)
+				alignments.add(alignMatrix[alignIdx[i][0]][i]);
 		}
 		
-		return alignment.toArray(new Alignment[alignment.size()]);
+		return alignments.toArray(new Alignment[alignments.size()]);
 	}
 		
 	/**
-	 * Perform predicate matching (using GIZ++) based alignment
+	 * Perform predicate matching (using GIZA++) based alignment
 	 * @param sentence input sentence pair to be aligned
 	 * @return alignments
 	 */
@@ -127,8 +138,8 @@ public class Aligner {
 		for (int i=0; i<sentence.src.pbInstances.length;++i)
 		{
 			int srcIdx = sentence.src.pbInstances[i].getPredicate().getTerminalIndex() | (sentence.src.pbInstances[i].getTree().getIndex()<<16);
-			TIntHashSet idxSet = sentence.srcAlignment.get(srcIdx);
-			if (idxSet==null) 
+			int[] indices = sentence.srcAlignment.get(srcIdx);
+			if (indices==null) 
 			{
 				System.out.printf("%d: %s, %d %s\n", sentence.src.pbInstances[i].getTree().getIndex(), sentence.src.pbInstances[i].getPredicate().getWord(), sentence.src.pbInstances[i].getPredicate().getTerminalIndex(), sentence.srcAlignment.toString());
 				continue;
@@ -136,10 +147,10 @@ public class Aligner {
 			for (int j=0; j<sentence.dst.pbInstances.length;++j)
 			{
 				int dstIdx = Arrays.binarySearch(sentence.dst.indices, sentence.dst.pbInstances[j].getPredicate().getTerminalIndex() | sentence.dst.pbInstances[j].getTree().getIndex()<<16);
-				if (idxSet.contains(dstIdx))
+				if (Arrays.binarySearch(indices, dstIdx)>=0)
 				{
 					//System.out.printf("%s => %s\n", srcInstance.predicateNode.word, dstInstance.predicateNode.word);
-					alignment.add(new Alignment(sentence.id, i+1, j+1, 1f));
+					alignment.add(new Alignment(sentence, i, j, BETA_SQR));
 					break;
 				}
 			}
@@ -152,6 +163,7 @@ public class Aligner {
 	 * @param sentence input sentence pair to be aligned
 	 * @return alignments
 	 */
+	/*
 	public Alignment[] alignArg(SentencePair sentence)
 	{	
 		PBInstance[] srcInstances = sentence.src.pbInstances;
@@ -187,7 +199,7 @@ public class Aligner {
 		{
 			if (alignIdx[i][0]<simMatrix.length && simMatrix[alignIdx[i][0]][i]>=0.05f)
 			{
-				alignment.add(new Alignment(sentence.id, alignIdx[i][0]+1, i+1, simMatrix[alignIdx[i][0]][i]));
+				alignment.add(new Alignment(sentence, alignIdx[i][0], i+1, simMatrix[alignIdx[i][0]][i]));
 				
 				ArrayList<String> argPair = new ArrayList<String>();
 				measureSymmetricSimilarity(srcInstances[alignIdx[i][0]], dstInstances[i], sentence, argPair);
@@ -198,153 +210,7 @@ public class Aligner {
 		
 		return alignment.toArray(new Alignment[alignment.size()]);
 	}
-
-	
-	/**
-	 * Compute pairwise similarity measure between predicates
-	 * @param sentence
-	 * @return
-	 */
-	public SimilarityPair [][] computeSimilarity(SentencePair sentence)
-	{
-		if (sentence.src.pbInstances.length==0 || sentence.dst.pbInstances.length==0)
-			return null;
-		
-		SimilarityPair [][]simMatrix = new SimilarityPair[sentence.src.pbInstances.length][];
-		
-		for (int i=0; i<sentence.src.pbInstances.length; ++i)
-		{
-			simMatrix[i] = new SimilarityPair[sentence.dst.pbInstances.length];
-			for (int j=0; j<sentence.dst.pbInstances.length; ++j)
-			{
-				simMatrix[i][j] = new SimilarityPair(measureSimilarity(sentence.src.pbInstances[i], sentence.dst.pbInstances[j], sentence, true), 
-						measureSimilarity(sentence.dst.pbInstances[j], sentence.src.pbInstances[i], sentence, false));
-
-				//System.out.printf("%s => %s %f\n", srcInstances.get(i).rolesetId, dstInstances.get(j).rolesetId, simMatrix[i][j].getCompositeScore());
-			}
-		}
-		return simMatrix;	
-	}
-
-	/**
-	 * Measure similarity between a pair of predicates
-	 * @param lhs
-	 * @param rhs
-	 * @param sentence
-	 * @param isSrc
-	 * @return
-	 */
-	private Similarity measureSimilarity(PBInstance lhs, PBInstance rhs, SentencePair sentence, boolean isSrc) 
-	{
-		Similarity simScore = new Similarity();
-		
-		PBArg[] lhsArgs = lhs.getArgs();
-		float predicateScore = 0.0f;
-		float predicateDenom = 0.0f;
-		float[][] scores = new float[lhsArgs.length][];
-	
-		float argScore      = 0.0f;
-		float argDenom      = 0.0f;
-		float arg01Score    = 0.0f;
-		
-		float arg01Denom    = 0.0f;
-		float argOtherScore = 0.0f;
-		float argOtherDenom = 0.0f;
-
-		int i=0;
-		for (PBArg lhsArg : lhsArgs)
-		{
-			scores[i] = measureArgAlignment(lhsArg, rhs, lhs.getTree().getIndex(), sentence, isSrc);
-			TBNode[] nodes = lhsArg.getTokenNodes();
-			argScore = 0.0f;
-			argDenom = 0.0f;
-			float[] weight;
-			for (int c=0; c<scores[i].length; ++c)
-			{
-				weight = isSrc?SimilarityPair.SRC_POS_WEIGHT.get(nodes[c].getPOS()):SimilarityPair.DST_POS_WEIGHT.get(nodes[c].getPOS());
-				weight = weight==null? SimilarityPair.DEFAULT_POS_WEIGHTS : weight;
-				argScore += weight[0]*scores[i][c];
-				argDenom += weight[1];
-				
-				float[] val = simScore.posScore.get(nodes[c].getPOS());
-				
-				if (val==null)
-				{
-					val = new float[2];
-					simScore.posScore.put(nodes[c].getPOS(), val);
-				}
-				
-				val[0] += scores[i][c];
-				//val[0] += scores[i][c]>0?1:0;
-				++val[1];
-			}
-			
-			argScore = (argDenom==0?0:argScore/argDenom);
-			argScore = argScore>1?1:argScore;
-			
-			if (lhsArg.isLabel("rel"))
-			{
-				predicateDenom = argDenom;
-				predicateScore = argScore;
-			}
-			else if (lhsArg.isLabel("ARG0") || lhsArg.isLabel("ARG1"))
-			{
-				arg01Score+=argScore*argDenom;
-				arg01Denom+=argDenom;
-				/*
-				for (float s:scores[i])
-					arg01Score+=s;
-				arg01Cnt += scores[i].length;*/
-			}
-			else
-			{
-				argOtherScore+=argScore*argDenom;
-				argOtherDenom+=argDenom;
-				/*
-				for (float s:scores[i])
-					argOtherScore+=s;
-				argOtherCnt += scores[i].length;*/
-			}
-			//System.out.print(lhs.rolesetId+": ");
-			//for (float s:scores[i])
-			//	System.out.print(" "+s);
-			//System.out.print("\n");
-			++i;
-		}
-		arg01Score = arg01Denom==0?0:arg01Score/arg01Denom;
-		argOtherScore = argOtherDenom==0?0:argOtherScore/argOtherDenom;
-		//System.out.printf("%s -> %s: %.2f,%.2f,%.2f\n",lhs.rolesetId,rhs.rolesetId,predicateScore,arg01Score,argOtherScore);
-		
-		if (arg01Denom==0 && argOtherDenom==0)
-		{
-			simScore.score = predicateScore;
-			return simScore;
-		}
-		
-		if (arg01Denom>=argOtherDenom)
-		{
-			argDenom = (arg01Denom*ARG01FACTOR+argOtherDenom)/ARG01FACTOR;
-			argScore = (ARG01FACTOR*arg01Denom*arg01Score+argOtherScore*argOtherDenom)/ARG01FACTOR/argDenom;
-		}
-		else if (arg01Denom!=0.0f && argOtherDenom!=0.0f)
-		{
-			argDenom = arg01Denom*(1+ARG01FACTOR)/ARG01FACTOR;
-			argScore = (ARG01FACTOR*arg01Score+argOtherScore)/(1+ARG01FACTOR);
-		}
-		else //arg01Denom==0.0f
-		{
-			argDenom = argOtherDenom/ARG01FACTOR;
-			argScore = argOtherScore/ARG01FACTOR;
-		}
-		
-		if (predicateDenom>0 && arg01Denom/predicateDenom>=2f)
-		{
-			simScore.score = 0.5f*predicateScore+0.5f*arg01Score;
-			return simScore;
-		}
-		simScore.score = 0.7f*predicateScore+0.3f*arg01Score;
-		return simScore;
-	}
+*/
 	
 	/**
 	 * measures the argument alignment based on GIZA++
@@ -355,6 +221,7 @@ public class Aligner {
 	 * @param isSrc whether the lhs is the src sentence or not
 	 * @return the alignment score for each token of the lhs argument
 	 */
+	/*
 	private float[] measureArgAlignment(PBArg arg, PBInstance rhs, int treeIndex, SentencePair sentence, boolean isSrc) 
 	{
 		TBNode[] lhsNodes = arg.getTokenNodes();
@@ -415,78 +282,7 @@ public class Aligner {
 		}
 		return scores;
 	}
-	
-	
-	private float[] computeArgWeight(PBInstance instance)
-	{
-		PBArg[] args = instance.getArgs();
-		float[] weights = new float[args.length];
-		
-		float predWeight = 0;
-		float argWeight = 0;
-		float arg01Weight = 0;
-		float argOtherWeight = 0;
-		
-		float predCnt = 0;
-		float arg01Cnt = 0;
-		float argCnt = 0;
-		float argOtherCnt = 0;
-		
-		for (PBArg arg:args)
-		{
-			if (arg.isLabel("rel"))
-				predCnt = arg.getTokenNodes().length;
-			else if (arg.isLabel("ARG0") || arg.isLabel("ARG1"))
-				arg01Cnt += arg.getTokenNodes().length;
-			else
-				argOtherCnt += arg.getTokenNodes().length;
-		}
-
-		if (arg01Cnt==0 && argOtherCnt==0)
-			predWeight = 1;
-		else
-		{
-			if (arg01Cnt>=argOtherCnt)
-				argCnt= arg01Cnt+argOtherCnt/ARG01FACTOR;
-			else if (arg01Cnt>0 && argOtherCnt>0)
-				argCnt = arg01Cnt*(1+ARG01FACTOR)/ARG01FACTOR;
-			else //arg01Denom==0.0f
-				argCnt = argOtherCnt/ARG01FACTOR;
-			
-			arg01Weight = argCnt==0?0:arg01Cnt/argCnt;
-			argOtherWeight = argCnt==0?0:(argCnt-arg01Cnt)/argCnt;
-	
-			if (predCnt>0 && argCnt/predCnt>=2f)
-			{
-				predWeight = 0.5f;
-				argWeight = 0.5f;
-			}
-			else
-			{
-				predWeight = 0.7f;
-				argWeight = 0.3f;
-			}
-		}
-		
-		predWeight = predCnt==0?0:predWeight/predCnt;
-		arg01Weight = argCnt==0?0:argWeight/argCnt;
-		argOtherWeight = argOtherCnt==0?0:(argCnt-arg01Cnt)/argCnt*argWeight/argOtherCnt;
-		
-		int i=0;
-		for (PBArg arg:args)
-		{
-			if (arg.isLabel("rel"))
-				weights[i] = arg.getTokenNodes().length*predWeight;
-			else if (arg.isLabel("ARG0") || arg.isLabel("ARG1"))
-				weights[i] = arg.getTokenNodes().length*arg01Weight;
-			else
-				weights[i] = arg.getTokenNodes().length*argOtherWeight;
-			++i;
-		}
-
-		return weights;
-	}
-	
+	*/	
 	/**
 	 * Measure similarity between a pair of predicates
 	 * @param lhs
@@ -495,6 +291,7 @@ public class Aligner {
 	 * @param isSrc
 	 * @return
 	 */
+	/*
 	private float measureSymmetricSimilarity(PBInstance src, PBInstance dst, SentencePair sentence, ArrayList<String> argPair) 
 	{
 		float simScore = 0;
@@ -540,8 +337,8 @@ public class Aligner {
 		}
 		return simScore;
 	}
-
-	private float getFScore(float lhs, float rhs, float bias)
+*/
+	float getFScore(float lhs, float rhs, float bias)
 	{
 		float denom = bias*lhs + rhs;
 		return denom==0?0:(1+bias)*lhs*rhs/denom;
@@ -556,6 +353,7 @@ public class Aligner {
 	 * @param isSrc whether the lhs is the src sentence or not
 	 * @return the alignment score for each token of the lhs argument
 	 */
+	/*
 	private float measureArgAlignment(PBArg lhs, PBArg rhs, int lhsTIdx, int rhsTIdx, SentencePair sentence, boolean isSrc) 
 	{
 		TBNode[] lhsNodes = lhs.getTokenNodes();
@@ -603,7 +401,7 @@ public class Aligner {
 		
 		return score/lhsNodes.length;
 	}
-
+*/
 	
 	public float getScore(ArrayList<SentencePair> sentences, TIntObjectHashMap<TIntDoubleHashMap> goldLabel, Method method)
 	{
@@ -617,19 +415,19 @@ public class Aligner {
 			{
 			case DEFAULT:   alignments = align(sentence); break;
 			case GIZA:      alignments = alignGIZA(sentence); break;
-			case ARGUMENTS: alignments = alignArg(sentence); break;
+			//case ARGUMENTS: alignments = alignArg(sentence); break;
 			}
 			
 			for (Alignment alignment:alignments)
 			{
-				if (alignment.srcId==0 || alignment.dstId==0 || alignment.score<0.1f)
+				if (alignment.srcPBIdx<0 || alignment.dstPBIdx<0 || alignment.getCompositeScore()<0.1f)
 					continue;
 				if ((sMap=systemLabel.get(sentence.id))==null)
 				{
 					sMap = new TIntDoubleHashMap();
 					systemLabel.put(sentence.id, sMap);
 				}
-				sMap.put((alignment.srcId<<16)|alignment.dstId,alignment.score);
+				sMap.put((alignment.srcPBIdx<<16)|alignment.dstPBIdx,alignment.getCompositeScore());
 			}
 		}
 		
@@ -707,7 +505,7 @@ public class Aligner {
 		}
 		System.out.println("--------------------------");
 	}
-	
+	/*
 	public void train(ArrayList<SentencePair> sentences, TIntObjectHashMap<TIntDoubleHashMap> goldLabel)
 	{
 		float fmeasure = getScore(sentences, goldLabel, Method.DEFAULT);
@@ -801,7 +599,7 @@ public class Aligner {
 		reweighPOS(goldSrcPOSScore, otherSrcPOSScore, SimilarityPair.SRC_POS_WEIGHT);
 		reweighPOS(goldDstPOSScore, otherDstPOSScore, SimilarityPair.DST_POS_WEIGHT);
 	}
-	
+	*/
 	class FileFilter implements FilenameFilter{
 
 		String regex;

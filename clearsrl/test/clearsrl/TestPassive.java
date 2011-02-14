@@ -1,6 +1,5 @@
 package clearsrl;
 
-import gnu.trove.TIntObjectHashMap;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
@@ -19,6 +18,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
@@ -59,7 +59,7 @@ public class TestPassive {
 		{
 		    String trainRegex = props.getProperty("train.regex");
             //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
-            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = 
+            Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = 
                 PBUtil.readPBDir(props.getProperty("pbdir"), 
                                  trainRegex, 
                                  props.getProperty("tbdir"), 
@@ -68,7 +68,7 @@ public class TestPassive {
             System.out.println(propBank.size());
             
             Map<String, TBTree[]> parsedTreeBank = new TreeMap<String, TBTree[]>();
-            for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
+            for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:propBank.entrySet())
             {
                 try {
                     System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
@@ -86,7 +86,7 @@ public class TestPassive {
             }
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
-                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+            	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {

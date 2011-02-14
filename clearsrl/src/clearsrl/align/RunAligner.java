@@ -159,8 +159,8 @@ public class RunAligner {
 			srcTokenCnt += sentence.srcAlignment.size();
 			dstTokenCnt += sentence.dstAlignment.size();
 						
-			//Alignment[] alignment = aligner.align(sentence);
-			Alignment[] alignment = aligner.alignArg(sentence);
+			Alignment[] alignment = aligner.align(sentence);
+			//Alignment[] alignment = aligner.alignArg(sentence);
 			
 			TObjectIntHashMap<String> tgtMap;
 			
@@ -192,8 +192,8 @@ public class RunAligner {
 				//System.out.println("-----------------------------");
 				//System.out.printf("# %s => %s, %.4f\n", alignment[i].src.rolesetId, alignment[i].dst.rolesetId, alignment[i].score);
 				
-				String srcRole = sentence.src.pbInstances[alignment[i].srcId-1].getRoleset();
-				String dstRole = sentence.dst.pbInstances[alignment[i].dstId-1].getRoleset();
+				String srcRole = sentence.src.pbInstances[alignment[i].srcPBIdx-1].getRoleset();
+				String dstRole = sentence.dst.pbInstances[alignment[i].dstPBIdx-1].getRoleset();
 
 				// strip roleset id
 				if (srcRole.lastIndexOf('.')>=0) 
@@ -215,7 +215,7 @@ public class RunAligner {
 				}
 				tgtMap.put(srcRole, tgtMap.get(srcRole)+1);	
 				
-				stream.printf("<p> %d,%d,%f </p>\n", alignment[i].srcId, alignment[i].dstId, alignment[i].score);
+				stream.printf("<p> %d,%d,%f </p>\n", alignment[i].srcPBIdx, alignment[i].dstPBIdx, alignment[i].getCompositeScore());
 
 			}
 			stream.println("<HR></div>\n");

@@ -1,6 +1,5 @@
 package clearcommon.propbank;
 
-import gnu.trove.TIntObjectHashMap;
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TreeFileResolver;
@@ -13,23 +12,24 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 public final class PBUtil {
     
-    public static Map<String, TIntObjectHashMap<List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir)
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir)
     {
         return readPBDir(dirName, regex, tbDir, null);
     }
     
-    public static Map<String, TIntObjectHashMap<List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, TreeFileResolver resolver)
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, TreeFileResolver resolver)
     {
         Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
         return readPBDir(dirName, regex, tbDir, tbMap, resolver);
     }
     
-	public static Map<String, TIntObjectHashMap<List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, Map<String, TBTree[]> tbMap, TreeFileResolver resolver)
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, Map<String, TBTree[]> tbMap, TreeFileResolver resolver)
 	{   
 		File dir = new File(dirName);
 		
@@ -41,8 +41,8 @@ public final class PBUtil {
 		int correctCnt=0;
 		int exceptionCnt=0;
 		
-		Map<String, TIntObjectHashMap<List<PBInstance>>> pbMap = new TreeMap<String, TIntObjectHashMap<List<PBInstance>>>();
-		TIntObjectHashMap<List<PBInstance>> instances;
+		Map<String, SortedMap<Integer, List<PBInstance>>> pbMap = new TreeMap<String, SortedMap<Integer, List<PBInstance>>>();
+		SortedMap<Integer, List<PBInstance>> instances;
 		
 		Set<String> predicates = new HashSet<String>();
 		int pCnt = 0;
@@ -87,7 +87,7 @@ public final class PBUtil {
 				instances = pbMap.get(instance.tree.getFilename());
 				if (instances == null)
 				{
-					instances = new TIntObjectHashMap<List<PBInstance>>();
+					instances = new TreeMap<Integer, List<PBInstance>>();
 					pbMap.put(instance.tree.getFilename(), instances);
 				}
 				

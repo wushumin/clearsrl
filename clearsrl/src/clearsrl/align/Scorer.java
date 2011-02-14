@@ -15,10 +15,7 @@ import java.util.Scanner;
 import java.util.StringTokenizer;
 
 public class Scorer {
-	public Scorer()
-	{
-		
-	}
+
 	public static TIntObjectHashMap<TIntDoubleHashMap> readScore(String filename) throws FileNotFoundException
 	{
 		TIntObjectHashMap<TIntDoubleHashMap> scores = new TIntObjectHashMap<TIntDoubleHashMap>();

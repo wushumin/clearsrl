@@ -1,7 +1,5 @@
 package clearsrl;
 
-import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TObjectFloatHashMap;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
@@ -19,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.SortedMap;
 import java.util.zip.GZIPInputStream;
 
 public class RunSRL {
@@ -131,7 +130,7 @@ public class RunSRL {
         
         if (!dataFormat.equals("conll"))
         {       
-            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = null;
+            Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
             if (props.getProperty("pbdir")!=null)
             {
                 String testRegex = props.getProperty("train.regex");
@@ -145,7 +144,7 @@ public class RunSRL {
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
-                TIntObjectHashMap<List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
+            	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
@@ -206,7 +205,7 @@ public class RunSRL {
 				for (SRInstance instance:sentence.srls)
 				{
 					ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-					ArrayList<TObjectFloatHashMap<String>> labels = new ArrayList<TObjectFloatHashMap<String>>();
+					ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
 					SRLUtil.getSamplesFromParse(instance, sentence.parse, THRESHOLD, argNodes, labels);
 					
 					SRInstance trainInstance = new SRInstance(instance.predicateNode, sentence.parse);

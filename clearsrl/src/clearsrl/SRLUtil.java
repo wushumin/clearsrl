@@ -1,12 +1,11 @@
 package clearsrl;
 
-import gnu.trove.TObjectFloatHashMap;
-import gnu.trove.TObjectFloatIterator;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
@@ -140,7 +139,7 @@ public class SRLUtil {
 	public static void getSamplesFromParse(SRInstance instance, 
 			TBTree parsedTree, float threshold, 
 			ArrayList<TBNode> candidateNodes, 
-			ArrayList<TObjectFloatHashMap<String>> labels)
+			ArrayList<Map<String, Float>> labels)
 	{
 		if (instance.getArgs().size()==1) // skip if there are no arguments
 			return;
@@ -159,7 +158,7 @@ public class SRLUtil {
 				// initialize all candidates to not argument
 				candidateNodes.add(tmpNodes.get(i));
 				candidateTokens.add(tmp);
-				labels.add(new TObjectFloatHashMap<String>());
+				labels.add(new HashMap<String, Float>());
 				labels.get(labels.size()-1).put(SRLModel.NOT_ARG, 1.0f);
 			}
 		}
@@ -298,17 +297,16 @@ public class SRLUtil {
 		return index;
 	}
 
-	public static String getMaxLabel(TObjectFloatHashMap<String> labels)
+	public static String getMaxLabel(Map<String, Float> labels)
 	{
 		float val = Float.NEGATIVE_INFINITY;
 		String maxLabel = null;
-		for (TObjectFloatIterator<String> iter=labels.iterator(); iter.hasNext();)
+		for (Map.Entry<String, Float> entry:labels.entrySet())
 		{
-			iter.advance();
-			if (iter.value()>val)
+			if (entry.getValue()>val)
 			{
-				val = iter.value();
-				maxLabel = iter.key();
+				val = entry.getValue();
+				maxLabel = entry.getKey();
 			}
 		}
 		return maxLabel;

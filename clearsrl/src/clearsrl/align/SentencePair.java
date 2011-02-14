@@ -1,17 +1,20 @@
 package clearsrl.align;
 
-import gnu.trove.TIntHashSet;
-import gnu.trove.TIntObjectHashMap;
 
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.StringTokenizer;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public 	class SentencePair {
 
 	static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
+	static final int[] EMPTY_INT_ARRAY = new int[0];
 	
 	public class BadInstanceException extends Exception {
 		/**
@@ -30,21 +33,21 @@ public 	class SentencePair {
 		id = sentId;
 		src = new Sentence();
 		dst = new Sentence();
-		srcAlignment = new TIntObjectHashMap<TIntHashSet>();
-		dstAlignment = new TIntObjectHashMap<TIntHashSet>();
+		srcAlignment = new TreeMap<Integer, int[]>();
+		dstAlignment = new TreeMap<Integer, int[]>();
 	}
 		
 	public void parseSrcAlign(String line) throws BadInstanceException
 	{
 		for (int i=0; i<src.indices.length; ++i)
-			srcAlignment.put(src.indices[i], new TIntHashSet());
+			srcAlignment.put(src.indices[i], EMPTY_INT_ARRAY);
 		parseAlign(line, srcAlignment, dst.indices.length);
 	}
 	
 	public void parseDstAlign(String line) throws BadInstanceException
 	{
 		for (int i=0; i<dst.indices.length; ++i)
-			dstAlignment.put(dst.indices[i], new TIntHashSet());
+			dstAlignment.put(dst.indices[i], EMPTY_INT_ARRAY);
 		parseAlign(line, dstAlignment, src.indices.length);
 	}
 	
@@ -58,24 +61,23 @@ public 	class SentencePair {
 		return getAlignmentString(dstAlignment, dst.tokens, src.tokens);
 	}
 	
-	private String getAlignmentString(TIntObjectHashMap<TIntHashSet> alignment, String[] src, String[] dst)
+	private String getAlignmentString(SortedMap<Integer, int[]> alignment, String[] src, String[] dst)
 	{
 		StringBuilder ret = new StringBuilder();
-		int[] keys = alignment.keys();
-		Arrays.sort(keys);
-		
-		for (int i=0; i<keys.length; ++i)
+
+		int i=0;
+		for (SortedMap.Entry<Integer, int[]> entry:alignment.entrySet())
 		{
-			ret.append(src[i]); ret.append(' ');
-			int[] dstKeys = alignment.get(keys[i]).toArray();
-			Arrays.sort(dstKeys);
-			for (int dstKey:dstKeys)
+			ret.append(src[i++]); 
+			ret.append(' ');
+			for (int dstKey:entry.getValue())
 			{
 				ret.append(dst[dstKey]);
 				ret.append(' ');
 			}
 			ret.append('|');
 		}
+		
 		return ret.toString();	
 	}
 	
@@ -89,17 +91,13 @@ public 	class SentencePair {
 		return getAlignmentIndex(dstAlignment);
 	}
 	
-	private String getAlignmentIndex(TIntObjectHashMap<TIntHashSet> alignment)
+	private String getAlignmentIndex(SortedMap<Integer, int[]> alignment)
 	{
 		StringBuilder ret = new StringBuilder();
-		int[] keys = alignment.keys();
-		Arrays.sort(keys);
 		
-		for (int i=0; i<keys.length; ++i)
+		for (SortedMap.Entry<Integer, int[]> entry:alignment.entrySet())
 		{
-			int[] dstKeys = alignment.get(keys[i]).toArray();
-			Arrays.sort(dstKeys);
-			for (int dstKey:dstKeys)
+			for (int dstKey:entry.getValue())
 			{
 				ret.append(dstKey);
 				ret.append(' ');
@@ -109,31 +107,31 @@ public 	class SentencePair {
 		return ret.toString();	
 	}
 	
-	private void parseAlign(String line, TIntObjectHashMap<TIntHashSet> alignment, int dstLen)  throws BadInstanceException
+	private void parseAlign(String line, SortedMap<Integer, int[]> alignment, int dstLen)  throws BadInstanceException
 	{
-		int[] keys = alignment.keys();
-		Arrays.sort(keys);
-	
 		Matcher matcher = alignPattern.matcher(line);
 		int srcCnt = -1;
 		int dstCnt = 0;
-		int val;
+
 		BitSet dstBitSet = new BitSet(dstLen);
-		TIntHashSet alignSet;
+		Iterator<Map.Entry<Integer, int[]>> iter = alignment.entrySet().iterator();
+		Entry<Integer, int[]> entry = null;
 		while (matcher.find())
 		{
 			//System.out.print(matcher.group(1)+'|');
-			StringTokenizer tok = new StringTokenizer(matcher.group(1));
-			alignSet = srcCnt>=0?alignment.get(keys[srcCnt]):null;
-			while (tok.hasMoreTokens())
+			String[] tokens = matcher.group(1).trim().split(" +");
+
+			int[] vals = new int[tokens.length];
+			if (entry!=null&&vals.length>0) entry.setValue(vals);
+			
+			for (int i=0; i<tokens.length; ++i)
 			{
-				val = Integer.parseInt(tok.nextToken())-1;
-				if (alignSet!=null)
-					alignSet.add(val);
-				dstBitSet.set(val);
-				
+				vals[i] = Integer.parseInt(tokens[i])-1;
+				dstBitSet.set(vals[i]);
 				++dstCnt;
 			}
+			Arrays.sort(vals);
+			entry = iter.next();
 			++srcCnt;
 		}
 		//System.out.print("\n");
@@ -146,10 +144,20 @@ public 	class SentencePair {
 		//	System.out.print(" "+i);
 		//System.out.print("\n");
 	}
+	
+	public SortedMap<Integer, int[]> getAlignment(boolean isSrc)
+	{
+	    return isSrc?srcAlignment:dstAlignment;
+	}
+	
+	public Sentence getSentence(boolean isSrc)
+	{
+		return isSrc?src:dst;
+	}
 
-	public int                    id;
-	public Sentence               src;
-	public Sentence               dst;
-	public TIntObjectHashMap<TIntHashSet> srcAlignment;
-	public TIntObjectHashMap<TIntHashSet> dstAlignment;
+	public int                       id;
+	public Sentence                  src;
+	public Sentence                  dst;
+	public SortedMap<Integer, int[]> srcAlignment;
+	public SortedMap<Integer, int[]> dstAlignment;
 }

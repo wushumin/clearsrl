@@ -8,6 +8,7 @@ import clearcommon.treebank.TBTree;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,14 +17,14 @@ public class Sentence {
 	
 	static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
 	
-	public void parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, TIntObjectHashMap<List<PBInstance>>> pbData)
+	public void parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
 	{
 		StringTokenizer tok=new StringTokenizer(line); // Chinese treebank
 		Matcher matcher;
 		tbFile = tok.nextToken();
 	
 		TBTree[] trees = tbData.get(tbFile);
-		TIntObjectHashMap<List<PBInstance>> pbMap = pbData.get(tbFile);
+		SortedMap<Integer, List<PBInstance>> pbMap = pbData.get(tbFile);
 		
 		int sIdx,tIdx;
 		TIntArrayList a_idx = new TIntArrayList();
