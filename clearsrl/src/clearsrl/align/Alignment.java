@@ -142,7 +142,7 @@ public class Alignment{
     	else
     		predicateFactor =  PREDICATEFACTOR/predicateWeight;
     	
-    	float denom = 1/(predicateFactor*predicateWeight+argWeight);
+    	float denom = predicateFactor*predicateWeight+argWeight;
     	
     	predicateFactor/=denom;
     	argNumFactor/=denom;
@@ -164,8 +164,6 @@ public class Alignment{
     float computeAlignment(float[][] lhsScore, float[][] rhsScore, List<ArgAlignment> lhsAlignments, List<ArgAlignment> rhsAlignments, float bias)
     {
         float fScore=0.0f;
-        float lhsWeight = 0.0f;
-        float rhsWeight = 0.0f;
         float precision = 0.0f;
         float recall = 0.0f;
         
@@ -193,16 +191,16 @@ public class Alignment{
             int index = getMaxIndex(argScores);
             if (argScores[index]<fScore) break;
             
-            ArgAlignment lhsAlignment = lhsAlignments.get(index);
-            ArgAlignment rhsAlignment = rhsAlignments.get(argIndices[index]);
+            ArgAlignment lhsAlignment = lhsAlignments.get(argIndices[index]);
+            ArgAlignment rhsAlignment = rhsAlignments.get(index);
             
-            precision+=lhsAlignment.getFactoredWeight()*lhsScore[index][argIndices[index]];
-            recall+=rhsAlignment.getFactoredWeight()*rhsScore[argIndices[index]][index];
+            precision+=lhsAlignment.getFactoredWeight()*lhsScore[argIndices[index]][index];
+            recall+=rhsAlignment.getFactoredWeight()*rhsScore[index][argIndices[index]];
             
             fScore = getFScore(precision, recall, bias);
             
             lhsAlignment.dstArgList.add(rhsAlignment.srcArg);
-            lhsAlignment.score+=lhsScore[index][argIndices[index]];
+            lhsAlignment.score+=lhsScore[argIndices[index]][index];
             
             argScores[index] = Float.NEGATIVE_INFINITY;
         }

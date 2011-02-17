@@ -100,7 +100,7 @@ public class Aligner {
 	 */
 	public Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix)
 	{		
-		if (alignMatrix==null)
+		if (alignMatrix.length==0)
 			return new Alignment[0];
 		
 		float [][]costMatrix = new float[srcInstances.length>dstInstances.length?srcInstances.length:dstInstances.length][];

@@ -122,6 +122,9 @@ public class RunAligner {
 				sentence.src.parseSentence(chLine, aligner.srcTB, aligner.srcPB);
 				sentence.dst.parseSentence(enLine, aligner.dstTB, aligner.dstPB);
 				
+				System.out.println(chenLine);
+				System.out.println(enchLine);
+				
 				sentence.parseSrcAlign(chenLine);
 				sentence.parseDstAlign(enchLine);
 			} catch (SentencePair.BadInstanceException e) {
@@ -192,8 +195,8 @@ public class RunAligner {
 				//System.out.println("-----------------------------");
 				//System.out.printf("# %s => %s, %.4f\n", alignment[i].src.rolesetId, alignment[i].dst.rolesetId, alignment[i].score);
 				
-				String srcRole = sentence.src.pbInstances[alignment[i].srcPBIdx-1].getRoleset();
-				String dstRole = sentence.dst.pbInstances[alignment[i].dstPBIdx-1].getRoleset();
+				String srcRole = sentence.src.pbInstances[alignment[i].srcPBIdx].getRoleset();
+				String dstRole = sentence.dst.pbInstances[alignment[i].dstPBIdx].getRoleset();
 
 				// strip roleset id
 				if (srcRole.lastIndexOf('.')>=0) 
@@ -215,7 +218,7 @@ public class RunAligner {
 				}
 				tgtMap.put(srcRole, tgtMap.get(srcRole)+1);	
 				
-				stream.printf("<p> %d,%d,%f </p>\n", alignment[i].srcPBIdx, alignment[i].dstPBIdx, alignment[i].getCompositeScore());
+				stream.printf("<p> %d,%d,%f </p>\n", alignment[i].srcPBIdx+1, alignment[i].dstPBIdx+1, alignment[i].getCompositeScore());
 
 			}
 			stream.println("<HR></div>\n");

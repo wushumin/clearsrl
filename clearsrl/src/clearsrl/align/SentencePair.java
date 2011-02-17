@@ -119,11 +119,15 @@ public 	class SentencePair {
 		while (matcher.find())
 		{
 			//System.out.print(matcher.group(1)+'|');
-			String[] tokens = matcher.group(1).trim().split(" +");
+		    String alignments = matcher.group(1).trim();
+			String[] tokens = alignments.isEmpty()?new String[0]:alignments.split(" +");
 
 			int[] vals = new int[tokens.length];
-			if (entry!=null&&vals.length>0) entry.setValue(vals);
-			
+			if (srcCnt>=0) 
+			{
+			    entry = iter.next();
+			    if (vals.length>0) entry.setValue(vals);
+			}
 			for (int i=0; i<tokens.length; ++i)
 			{
 				vals[i] = Integer.parseInt(tokens[i])-1;
@@ -131,7 +135,6 @@ public 	class SentencePair {
 				++dstCnt;
 			}
 			Arrays.sort(vals);
-			entry = iter.next();
 			++srcCnt;
 		}
 		//System.out.print("\n");

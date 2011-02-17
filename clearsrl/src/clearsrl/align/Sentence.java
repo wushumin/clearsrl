@@ -1,7 +1,6 @@
 package clearsrl.align;
 
 import gnu.trove.TIntArrayList;
-import gnu.trove.TIntObjectHashMap;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBTree;
 
