@@ -253,6 +253,26 @@ public class TBNode
         return null;
     }
     
+   
+    /**
+     * Returns the Node Id in PropBank format
+     * id[0] is the terminal index of the left most terminal
+     * id[1] is the tree level (from the left most terminal)
+     * @return the Node Id in PropBank format
+     */
+    public int[] getPBId()
+    {
+    	int[] id = new int[2];
+    	TBNode node = this;
+    	while (node.children.length!=0)
+    	{
+    		++id[1];
+    		node = node.children[0];
+    	}
+    	id[0] = node.terminalIndex;
+    	return id;
+    }
+    
     public TBNode getNode(int terminalIndex, int ancestorLevel)
     {
         TBNode node = getNodeByTerminalIndex(terminalIndex);

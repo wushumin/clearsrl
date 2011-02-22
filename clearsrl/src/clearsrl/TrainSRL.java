@@ -41,23 +41,21 @@ public class TrainSRL {
 		if (instance.tree.getTokenCount() == parsedTree.getTokenCount())
 		{
 		    SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-		    SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree);
+		    SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree, instance.getRolesetId(), 1.0);
 		    for (int i=0; i<labels.size(); ++i)
                 trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
-            trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
 		    
 			model.addTrainingSamples(trainInstance, namedEntities, buildDictionary);
 		}
 			
 		if (!buildDictionary)
 		{	
-			SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree);
+			SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
 			for (int i=0; i<labels.size(); ++i)
 			{
 				if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG)) continue;
 				trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
 			}
-			trainInstance.addArg(new SRArg("rel", instance.predicateNode));
 			return trainInstance;
 		}
 		return null;
@@ -74,10 +72,9 @@ public class TrainSRL {
                 ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                 ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
                 SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-                SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree);
+                SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree, instance.getRolesetId(), 1.0);
                 for (int i=0; i<labels.size(); ++i)
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
-                trainInstance.addArg(new SRArg("rel", trainInstance.predicateNode));
                 trainInstances.add(trainInstance);
                 //System.out.println(trainInstance);
             }

@@ -11,6 +11,7 @@ import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearsrl.LanguageUtil.POS;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -837,11 +838,13 @@ public class SRLModel implements Serializable {
         List<SRInstance> predictions = new ArrayList<SRInstance>();
         
         List<TBNode> nodes = parseTree.getRootNode().getTokenNodes();
+        double[] vals = new double[2];
         for (TBNode node: nodes)
             if (node.getPOS().startsWith("V") &&
-                predicateClassifier.predict(getPredicateFeatureVector(extractPredicateFeature(node, nodes)))==1)
+                predicateClassifier.predictValues(getPredicateFeatureVector(extractPredicateFeature(node, nodes)), vals)==1)
             {
-                predictions.add(new SRInstance(node, parseTree));
+            	List<String> stem = langUtil.findStems(node.getWord(), POS.VERB);
+                predictions.add(new SRInstance(node, parseTree, stem.get(0)+".XX", vals[1]-vals[0]));
                 SRInstance goldSRL = null;
                 for (SRInstance srl:goldSRLs)
                     if (node.getTokenIndex()==srl.predicateNode.getTokenIndex())
@@ -849,9 +852,9 @@ public class SRLModel implements Serializable {
                         goldSRL = srl;
                         break;
                     }
+
                 predict(predictions.get(predictions.size()-1), goldSRL, namedEntities);
             }
-        
         return predictions;
     }
 
@@ -871,9 +874,9 @@ public class SRLModel implements Serializable {
                     prediction.addArg(new SRArg(label, argNodes.get(i), value));
             } 
         }
+
+        prediction.cleanUpArgs();
         
-        prediction.addArg(new SRArg("rel", prediction.predicateNode));
-        SRLUtil.removeOverlap(prediction);
         if (goldSRL!=null)
         {
             if (labeled)

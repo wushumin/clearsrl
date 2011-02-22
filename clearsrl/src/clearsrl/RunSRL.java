@@ -208,13 +208,12 @@ public class RunSRL {
 					ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
 					SRLUtil.getSamplesFromParse(instance, sentence.parse, THRESHOLD, argNodes, labels);
 					
-					SRInstance trainInstance = new SRInstance(instance.predicateNode, sentence.parse);
+					SRInstance trainInstance = new SRInstance(instance.predicateNode, sentence.parse, instance.getRolesetId(), 1.0);
 					for (int i=0; i<labels.size(); ++i)
 					{
 						if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG)) continue;
 						trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
 					}
-					trainInstance.addArg(new SRArg("rel", instance.predicateNode));
 					
 					model.score.addResult(SRLUtil.convertSRInstanceToTokenMap(trainInstance), SRLUtil.convertSRInstanceToTokenMap(instance));
 				}				
@@ -248,7 +247,7 @@ public class RunSRL {
 						else
 							argBitSet.put(arg.label, arg.getTokenSet());
 					}
-					SRInstance pInstance = new SRInstance(instance.predicateNode, instance.tree);
+					SRInstance pInstance = new SRInstance(instance.predicateNode, instance.tree, instance.getRolesetId(), 1.0);
 					cCount += model.predict(pInstance, instance, sentence.namedEntities);
 					pCount += pInstance.getArgs().size()-1;
 					//pCount += instance.getArgs().size()-1;

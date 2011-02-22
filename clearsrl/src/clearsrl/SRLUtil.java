@@ -311,7 +311,7 @@ public class SRLUtil {
 		}
 		return maxLabel;
 	}
-
+/*
 	public static void removeOverlap(SRInstance instance)
 	{		
 		boolean overlapped = false;
@@ -402,4 +402,5 @@ public class SRLUtil {
             args.addAll(overlappedArgs);
         }
     }	
+    */
 }

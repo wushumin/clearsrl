@@ -60,4 +60,9 @@ public class SRArg implements Comparable<SRArg>{
 	public int compareTo(SRArg arg0) {
 		return tokenSet.nextSetBit(0)-arg0.tokenSet.nextSetBit(0);
 	}
+	
+	public String toString()
+	{
+		return String.format("%s(%.3f): %s", label, score, node.toString());
+	}
 }

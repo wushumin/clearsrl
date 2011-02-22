@@ -2,10 +2,12 @@ package clearsrl;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
@@ -31,6 +33,13 @@ public class SRInstance {
 		this.tree = tree;
 		args = new ArrayList<SRArg>();
 	}
+	
+	public SRInstance(TBNode predicateNode, TBTree tree, String rolesetId, double score)
+	{
+		this(predicateNode, tree);
+		this.rolesetId = rolesetId;
+		args.add(new SRArg("rel",predicateNode, score));
+	}
 	/*
 	public SRInstance(PBInstance instance) {
 		this(instance.predicateNode, instance.tree);
@@ -45,7 +54,7 @@ public class SRInstance {
 	}
 	*/
 	public SRInstance(PBInstance instance) {
-		this(instance.getPredicate(), instance.getTree());
+		this(instance.getPredicate(), instance.getTree(), instance.getRoleset(), 1.0);
 		for (PBArg pbArg: instance.getArgs())
 		{
 		    if (!pbArg.getTokenSet().isEmpty())
@@ -86,6 +95,168 @@ public class SRInstance {
 		this.rolesetId = rolesetId;
 	}
 	
+	/*
+	public void removeOverlap()
+	{		
+		boolean overlapped = false;
+		
+		do {
+			overlapped = false;
+			for (int i=0; i<args.size();++i)
+			{
+				BitSet argi = args.get(i).tokenSet;
+				for (int j=i+1; j<args.size();++j)
+				{
+					BitSet argj= args.get(j).tokenSet; 
+					if (argj.intersects(argi))
+					{
+						//if (instance.args.get(i).label.equals(instance.args.get(j).label))
+						{
+							args.remove(argi.cardinality()<argj.cardinality()?i:j);
+							overlapped = true;
+							break;
+						}
+					}	
+				}
+				if (overlapped) break;
+			}
+		} while (overlapped);
+		
+		for (int i=0; i<args.size();++i)
+		{
+			BitSet argi = args.get(i).tokenSet;
+			for (int j=i+1; j<args.size();++j)
+			{
+				BitSet argj= args.get(j).tokenSet; 
+				if (argj.intersects(argi))
+				{
+					//System.out.println(instance);
+					return;
+				}
+			}
+		}
+	}
+*/
+	public void removeOverlap()
+	{
+		System.out.println(args);
+		removeOverlap(args);
+	}
+	
+    static void removeOverlap(List<SRArg> args)
+    {       
+    	LinkedList<SRArg> argQueue = new LinkedList<SRArg>(args);
+    	args.clear();
+    	
+        while (!argQueue.isEmpty())
+        {
+            LinkedList<SRArg> overlappedArgs = new LinkedList<SRArg>();
+            
+            overlappedArgs.add(argQueue.pop());
+            BitSet tokenSet = (BitSet)overlappedArgs.element().tokenSet.clone();
+            
+            boolean overlapFound;
+            do
+            {
+                overlapFound = false;
+                for (ListIterator<SRArg> iter=argQueue.listIterator(); iter.hasNext();)
+                {
+                    SRArg arg = iter.next();
+                    if (tokenSet.intersects(arg.tokenSet))
+                    {
+                        overlapFound = true;
+                        tokenSet.or(arg.tokenSet);
+                        overlappedArgs.add(arg);
+                        iter.remove();
+                        break;
+                    }
+                }
+            } while (overlapFound);
+          
+            if (overlappedArgs.size()>1)
+            {
+                SRArg topArg = overlappedArgs.get(0);
+                for (SRArg arg:overlappedArgs)
+                    if (arg.score>topArg.score) topArg = arg;
+
+                for (ListIterator<SRArg> iter=overlappedArgs.listIterator(); iter.hasNext();)
+                {
+                    SRArg arg = iter.next();
+                    if (arg==topArg) continue;
+                    if (arg.tokenSet.intersects(topArg.tokenSet))
+                        iter.remove();
+                }
+                removeOverlap(overlappedArgs);
+            }
+     
+            args.addAll(overlappedArgs);
+        }
+    }	
+
+    public void cleanUpArgs()
+    {
+    	removeOverlap();
+
+    	Collections.sort(args);
+    	
+    	Map<String, SRArg> argMap = new TreeMap<String, SRArg>();
+    	for (SRArg arg: args)
+    	{
+    		if (arg.label.startsWith("C-") && !argMap.containsKey(arg.label.substring(2)))
+    		{
+    			arg.label = arg.label.substring(2);
+    		}
+    		argMap.put(arg.label, arg);
+    	}
+    }
+    
+	public String toPropbankString()
+	{
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(tree.getFilename()); buffer.append(' ');
+        buffer.append(tree.getIndex()); buffer.append(' ');
+        buffer.append(predicateNode.getTerminalIndex()); buffer.append(' ');
+        buffer.append("system "); 
+        buffer.append(rolesetId==null?predicateNode.getWord()+".XX":rolesetId);
+        buffer.append(" ----- ");
+        
+        Collections.sort(args);
+        
+        TreeMap<String, List<StringBuilder>> argMap = new TreeMap<String, List<StringBuilder>>();
+        
+        for (SRArg arg:args)
+        {
+           if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+           
+           List<StringBuilder> argOut;
+           
+           String label = arg.label.startsWith("C-")?arg.label.substring(2):arg.label;
+           if ((argOut = argMap.get(label))==null)
+           {
+        	   argOut = new LinkedList<StringBuilder>();
+               argMap.put(label, argOut);
+           }
+           
+           int[] id = arg.node.getPBId();
+           if (arg.label.startsWith("C-"))
+        	   argOut.get(argOut.size()-1).append(","+id[0]+":"+id[1]);
+           else
+        	   argOut.add(new StringBuilder(id[0]+":"+id[1]));
+        }
+        
+        for (Map.Entry<String, List<StringBuilder>> entry:argMap.entrySet())
+        {
+        	for (StringBuilder builder:entry.getValue())
+        	{
+        		buffer.append(builder.toString());
+                buffer.append('-');
+                buffer.append(entry.getKey()); buffer.append(' ');   
+        	}
+        }
+        
+        return buffer.toString();
+	}
+	/*
 	public String toPropbankString()
 	{
         StringBuilder buffer = new StringBuilder();
@@ -130,6 +301,7 @@ public class SRInstance {
         
         return buffer.toString();
 	}
+*/
 	
 	public String toString()
 	{

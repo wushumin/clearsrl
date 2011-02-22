@@ -116,7 +116,7 @@ public class CoNLLSentence {
 				if (tokens[j+6].endsWith(")"))
 				{
 					if (labels[j].equals("V")) labels[j] = "rel";
-					else if (labels[j].equals("C-V")) continue;
+					else if (labels[j].equals("C-V")) labels[j] = "C-rel";
 					else if (labels[j].startsWith("R-A")) labels[j] = "R-ARG"+labels[j].substring(3);
 					//else if (labels[j].startsWith("R-A")) labels[j] = "ARG"+labels[j].substring(3);
 					//else if (labels[j].startsWith("C-A")) labels[j] = "C-ARG"+labels[j].substring(3);

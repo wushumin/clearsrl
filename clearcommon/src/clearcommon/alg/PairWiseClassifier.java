@@ -50,7 +50,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 				
 				if (label==labelIdx[i])
 					values[i]++;
-				else if (probs[0]<0)
+				else //if (probs[0]<0)
 					values[j]++;
 				/*
 				if (classifiers[i][j].predict(x)==labelIdx[i])
@@ -77,17 +77,18 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 			}
 		*/
 		int highIdx = 0;
-		for (int i=1; i<values.length; ++i)
+		for (int i=0; i<values.length; ++i)
+		{
+			values[i] /= values.length-1;
 			if (values[i]>values[highIdx])
 				highIdx = i;
-		
+		}
 		int cnt = 0;
 		for (int i=0; i<values.length; ++i)
 			if (values[i]==values[highIdx])
 				cnt++;
 		
-		if (cnt>1)
-			System.out.print("TIE ");
+		//if (cnt>1) System.out.print("TIE ");
 			
 		return labelIdx[highIdx];
 		
