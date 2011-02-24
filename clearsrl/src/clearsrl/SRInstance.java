@@ -139,7 +139,7 @@ public class SRInstance {
 */
 	public void removeOverlap()
 	{
-		System.out.println(args);
+		//System.out.println(args);
 		removeOverlap(args);
 	}
 	

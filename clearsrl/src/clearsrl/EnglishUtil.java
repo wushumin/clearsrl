@@ -3,6 +3,7 @@ package clearsrl;
 import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -45,7 +46,8 @@ public class EnglishUtil extends LanguageUtil {
 
     public List<String> findStems(String word, POS pos)
     {
-        return stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
+        List<String> stems = stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
+        return stems.isEmpty()?Arrays.asList(word):stems;
     }
     
     @Override

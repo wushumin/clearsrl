@@ -87,7 +87,14 @@ public final class TBUtil {
 				a_tree = new ArrayList<TBTree>();
 				
 				while ((tree = tbreader.nextTree()) != null)
+				{
 					a_tree.add(tree);
+					if (tree.index!=0 && tree.index%10000==0)
+	                {
+	                    System.out.println(tree.index);
+	                    System.out.flush();
+	                }
+				}
 				tbMap.put(treeFile, a_tree.toArray(new TBTree[a_tree.size()]));
 			} catch(Exception e)
 			{

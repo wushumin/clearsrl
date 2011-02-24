@@ -6,7 +6,7 @@
 
     <target name="compile" depends="clean">
     	<mkdir dir="build"/>
-        <javac srcdir="src" destdir="build">
+        <javac srcdir="src" destdir="build" debug="true">
         	<classpath>
         		<pathelement location="../clearcommon/lib/blas.jar"/>
         	    <pathelement location="../clearcommon/lib/liblinearbinary.jar"/>   

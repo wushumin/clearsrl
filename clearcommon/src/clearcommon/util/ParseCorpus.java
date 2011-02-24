@@ -21,34 +21,94 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ParseCorpus {
-	
-	public static CoarseToFineMaxRuleParser initParser(Properties props)
-	{
-	    double threshold = 1.0;
-	    ParserData pData = ParserData.Load(props.getProperty("parser.grammar"));
-	    if (pData==null) {
-	    	System.out.println("Failed to load grammar from file"+props.getProperty("parser.grammar")+".");
-	    	System.exit(1);
-	    }
-	    Grammar grammar = pData.getGrammar();
-	    Lexicon lexicon = pData.getLexicon();
-	    Numberer.setNumberers(pData.getNumbs());
+    public ParseCorpus()
+    {
+        
+    }
     
-	    if (props.getProperty("parser.Chinese")!=null) 
-	    {
-	        System.err.println("Chinese parsing features enabled.");
-	    	Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
-	    }
-	    CoarseToFineMaxRuleParser parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
-	    parser.binarization = pData.getBinarization();
-	    
-	    return parser;
-	}
-	
+    public static PriorityQueue<Sentence> parseQueue = new PriorityQueue<Sentence>();
+
+    public class Sentence implements Comparable<Sentence>, Runnable  {
+        int linenum;
+        String line;
+        String parse;
+        
+        public Sentence(int linenum, String line){
+            this.linenum = linenum;
+            this.line = line;
+        }
+        @Override
+        public int compareTo(Sentence arg0) {
+            return linenum-arg0.linenum;
+        }
+        
+        @Override
+        public void run() {
+            List<String> words = Arrays.asList(line.split(" "));
+            if (words.isEmpty())
+                parse=makeDefaultParse(words);
+            else if (words.size()>=250) { 
+                parse=makeDefaultParse(words);
+                System.err.println("Skipping sentence with "+words.size()+" words since it is too long.");
+            }
+            else {
+                Tree<String> parsedTree = getParser().getBestConstrainedParse(words,null,null);
+    
+                if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
+                {
+                    removeUselessNodes(parsedTree.getChildren().get(0));
+                    parse="( "+parsedTree.getChildren().get(0)+" )\n";
+                }
+                else
+                    parse=makeDefaultParse(words);
+            }
+            synchronized (parseQueue)
+            {
+                //System.out.println(linenum+" "+line);
+                parseQueue.add(this);
+                parseQueue.notify();
+            }
+        }
+    }
+    
+    public static Map<Long, CoarseToFineMaxRuleParser> parserMap = new HashMap<Long, CoarseToFineMaxRuleParser>();
+    
+    public static Properties props;
+    public static CoarseToFineMaxRuleParser getParser()
+    {
+        CoarseToFineMaxRuleParser parser;
+        if ((parser=parserMap.get(Thread.currentThread().getId()))==null)
+        {
+            double threshold = 1.0;
+            ParserData pData = ParserData.Load(props.getProperty("parser.grammar"));
+            if (pData==null) {
+                System.out.println("Failed to load grammar from file"+props.getProperty("parser.grammar")+".");
+                System.exit(1);
+            }
+            Grammar grammar = pData.getGrammar();
+            Lexicon lexicon = pData.getLexicon();
+            Numberer.setNumberers(pData.getNumbs());
+        
+            if (props.getProperty("parser.Chinese")!=null) 
+            {
+                System.err.println("Chinese parsing features enabled.");
+                Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
+            }
+            parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
+            parser.binarization = pData.getBinarization();
+            parserMap.put(Thread.currentThread().getId(), parser);
+        }
+        return parser;
+    }
+
 	static void outputTrees(List<Tree<String>> parseTrees, PrintWriter outputData, 
 			CoarseToFineMaxRuleParser parser) {
 		for (Tree<String> parsedTree : parseTrees){
@@ -86,12 +146,13 @@ public class ParseCorpus {
 	
 	public static void main(String[] args) throws Exception
 	{
-		Properties props = new Properties();
+	    ParseCorpus parseCorpus = new ParseCorpus();
+		props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		
-		CoarseToFineMaxRuleParser parser = initParser(props);
-		
+		ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(props.getProperty("parser.threads","1")));
+        
 		String txtDir = props.getProperty("tbtxtdir");
 	    String parseDir = props.getProperty("parsedir");
 		if (props.getProperty("tbdir")!=null)
@@ -114,36 +175,36 @@ public class ParseCorpus {
 		    	BufferedReader inputData = new BufferedReader(new InputStreamReader(new FileInputStream(inputFile), "UTF-8"));
 		    	PrintWriter outputData = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"), true);
 	
-		    	String line = "";
+		    	String line;
+		    	int lineCount = 0;
+		    	int lineNum = 0;
 		    	while((line=inputData.readLine()) != null){
-		    		List<String> sentence = Arrays.asList(line.split(" "));
-		    		if (sentence.isEmpty())
-		    		{
-		    		    outputData.write(makeDefaultParse(sentence));
-		    		    continue;
-		    		}
-		    		if (sentence.size()>=250) { 
-		    			outputData.write(makeDefaultParse(sentence));
-		    			System.err.println("Skipping sentence with "+sentence.size()+" words since it is too long.");
-		    			continue; 
-		    		}
-		    		    
-					Tree<String> parsedTree = parser.getBestConstrainedParse(sentence,null,null);
-	
-					if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
-					{
-			        	removeUselessNodes(parsedTree.getChildren().get(0));
-						outputData.write("( "+parsedTree.getChildren().get(0)+" )\n");
-					}
-					else
-						outputData.write(makeDefaultParse(sentence));
+		    	    executor.execute(parseCorpus.new Sentence(lineCount++, line));		    	    
 		    	}
+		    	while (lineNum!=lineCount)
+		    	{
+		    	    Sentence sentence;
+		    	    synchronized (parseQueue) {
+		    	        sentence = parseQueue.peek();
+                        if (sentence==null || sentence.linenum!=lineNum)
+                        {
+                            parseQueue.wait();
+                            continue;
+                        }
+		    	        sentence = parseQueue.remove();
+		    	    }
+	    	        outputData.write(sentence.parse);
+	    	        //System.out.println(lineNum+" "+sentence.parse);
+	    	        ++lineNum;
+		    	}
+		    	
 		    	outputData.flush();
 		    	outputData.close();
 		    } catch (Exception ex) {
 		    	ex.printStackTrace();
 		    }
-		}		
+		}
+        executor.shutdown();
 	    System.exit(0);
 	}
 }
