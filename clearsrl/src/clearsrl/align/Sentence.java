@@ -2,6 +2,7 @@ package clearsrl.align;
 
 import gnu.trove.TIntArrayList;
 import clearcommon.propbank.PBInstance;
+import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 
 import java.util.ArrayList;
@@ -15,6 +16,21 @@ import java.util.regex.Pattern;
 public class Sentence {
 	
 	static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
+	
+	public void parseSentence(TBTree tree, List<PBInstance> pbInstanceList)
+	{
+	    tbFile = tree.getFilename();
+	    List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+	    indices = new int[nodes.size()];
+	    tokens = new String[nodes.size()];
+	    for (int i=0; i<nodes.size();++i)
+	    {
+	        indices[i] = (tree.getIndex()<<16)|nodes.get(i).getTerminalIndex();
+	        tokens[i] = nodes.get(i).getWord();
+	    }
+	                        
+	    pbInstances = pbInstanceList==null?new PBInstance[0]:pbInstanceList.toArray(new PBInstance[pbInstanceList.size()]);
+	}
 	
 	public void parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
 	{

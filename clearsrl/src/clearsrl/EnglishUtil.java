@@ -157,7 +157,7 @@ public class EnglishUtil extends LanguageUtil {
             TBNode currNode = predicate;
             while (currNode.getParent()!=null && currNode.getParent().getPOS().matches("ADJP.*"))
                 currNode = currNode.getParent();
-            if (currNode != predicate)
+            if (currNode != predicate && currNode.getParent()!=null)
             {
                 boolean found = true;
                 TBNode[] children = currNode.getParent().getChildren();

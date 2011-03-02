@@ -81,7 +81,7 @@ import java.util.Stack;
  * @author Jinho D. Choi
  * <b>Last update:</b> 02/05/2010
  */
-public class TBReader
+public class TBFileReader
 {
 	FileTokenizer scanner;
 	int            treeCount;
@@ -92,7 +92,7 @@ public class TBReader
 	 * @param filename name of the Treebank file
 	 * @throws FileNotFoundException 
 	 */
-	public TBReader(String fileName) throws FileNotFoundException
+	public TBFileReader(String fileName) throws FileNotFoundException
 	{
 		String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
 		scanner       = new FileTokenizer(new FileReader(fileName), delim, true);
@@ -100,7 +100,7 @@ public class TBReader
 		this.fileName = fileName;
 	}
 	
-	public TBReader(String dirName, String fileName) throws FileNotFoundException
+	public TBFileReader(String dirName, String fileName) throws FileNotFoundException
     {
         String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
         scanner       = new FileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
@@ -109,7 +109,7 @@ public class TBReader
     }
 	
 	
-	public TBReader(Reader reader)
+	public TBFileReader(Reader reader)
 	{
 		String delim = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
 		scanner      = new FileTokenizer(reader, delim, true);
@@ -191,6 +191,11 @@ public class TBReader
 		
 		tmp.parent=null;
 		return new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
+	}
+	
+	public void close()
+	{
+	    scanner.close();
 	}
 	
 	private String nextToken()

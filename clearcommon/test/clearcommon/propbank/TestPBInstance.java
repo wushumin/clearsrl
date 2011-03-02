@@ -20,7 +20,7 @@ public class TestPBInstance {
         assertTrue("19:1*27:0-LINK-SLC".matches(PBArg.ARG_PATTERN));
         assertFalse("19:1*27:0LINK-SLC".matches(PBArg.ARG_PATTERN));
         Map<String, TBTree[]> trees = new TreeMap<String, TBTree[]>();
-        PBReader reader = new PBReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
+        PBFileReader reader = new PBFileReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
                                        "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/",trees,
                                        new OntoNoteTreeFileResolver());
         List<PBInstance> instances = new ArrayList<PBInstance> ();

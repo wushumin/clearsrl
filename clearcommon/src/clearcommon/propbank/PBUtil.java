@@ -49,9 +49,9 @@ public final class PBUtil {
 		
 		for (String annotationFile: files)
 		{
-			PBReader pbreader=null;
+			PBFileReader pbreader=null;
             try {
-                pbreader = new PBReader(dirName+File.separatorChar+annotationFile, tbDir, tbMap, resolver);
+                pbreader = new PBFileReader(dirName+File.separatorChar+annotationFile, tbDir, tbMap, resolver);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
                 continue;

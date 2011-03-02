@@ -5,6 +5,7 @@ import gnu.trove.TObjectDoubleIterator;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 import clearcommon.propbank.PBUtil;
+import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 
 import java.io.BufferedReader;
@@ -43,18 +44,21 @@ public class RunAligner {
 		
 		//String filter = "\\Achtb_1\\d{3}\\.[a-zA-Z]+\\z";
 		//String filter = "\\Achtb_0100\\.[a-zA-Z]+\\z";
-		String filter = props.getProperty("alignment.file_filter");
-		
+		String tbFilter = props.getProperty("tb.file_filter");
+		String pbFilter = props.getProperty("pb.file_filter");
+	
 		Aligner aligner = new Aligner();
-		aligner.srcTB = TBUtil.readTBDir(props.getProperty("src.tbdir"), filter);
-		aligner.dstTB = TBUtil.readTBDir(props.getProperty("dst.tbdir"), filter);
-		aligner.srcPB = PBUtil.readPBDir(props.getProperty("src.pbdir"), filter, null, aligner.srcTB, null);
-		aligner.dstPB = PBUtil.readPBDir(props.getProperty("dst.pbdir"), filter, null, aligner.dstTB, null);
+		aligner.srcTB = TBUtil.readTBDir(props.getProperty("src.tb.dir"), tbFilter);
+		aligner.dstTB = TBUtil.readTBDir(props.getProperty("dst.tb.dir"), tbFilter);
+		aligner.srcPB = PBUtil.readPBDir(props.getProperty("src.pb.dir"), pbFilter, null, aligner.srcTB, null);
+		aligner.dstPB = PBUtil.readPBDir(props.getProperty("dst.pb.dir"), pbFilter, null, aligner.dstTB, null);
 			
-		Scanner chScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_idx"))));
-		Scanner enScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_idx"))));
-		Scanner chenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment"))));
-		Scanner enchScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment"))));
+		boolean sentenceAligned = !(props.getProperty("alignment.sentence_aligned")==null||props.getProperty("alignment.sentence_aligned").equals("false"));
+		
+		Scanner chScanner = sentenceAligned?null:new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.src.token_idx"))));
+		Scanner enScanner = sentenceAligned?null:new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.dst.token_idx"))));
+		Scanner chenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.src"))));
+		Scanner enchScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.dst"))));
 		
 		//Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
 		//int lineIdx = linesIdx.nextInt();
@@ -92,47 +96,59 @@ public class RunAligner {
       			"</script>\n</head>\n"+
 				"<body><font size=\"+1\">\n");
 		
-		while (chScanner.hasNextLine() && enScanner.hasNextLine() &&
+		TBTree[] srcTrees = null;
+		TBTree[] dstTrees = null;
+		if (sentenceAligned)
+		{
+		    srcTrees = (TBTree[])aligner.srcTB.values().toArray()[0];
+		    dstTrees = (TBTree[])aligner.dstTB.values().toArray()[0];
+		}
+		
+		while ((sentenceAligned || (chScanner.hasNextLine() && enScanner.hasNextLine())) &&
 				chenScanner.hasNextLine() && enchScanner.hasNextLine())
 		{
-			String chLine = chScanner.nextLine(); // Chinese treebank terminals
-			String enLine = enScanner.nextLine(); // English treebank terminals
-			chenScanner.nextLine(); chenScanner.nextLine(); // skip comment & text
-			enchScanner.nextLine(); enchScanner.nextLine(); // skip comment & text
-			
-			String chenLine = chenScanner.nextLine();
-			String enchLine = enchScanner.nextLine();
-			
-			++linenum;
-			
-			//if (linenum!=lineIdx)
-			//	continue;
-			
-			//if (linenum>lineIdx)
-			//	break;
-
-			//if (linesIdx.hasNext()) lineIdx = linesIdx.nextInt();
-			
-			if (!Pattern.matches(filter, chLine.substring(0,chLine.indexOf(" "))))
-				continue;
-		
-			sentence = new SentencePair(linenum);
-			
-			try {
-				sentence.src.parseSentence(chLine, aligner.srcTB, aligner.srcPB);
-				sentence.dst.parseSentence(enLine, aligner.dstTB, aligner.dstPB);
-				
-				System.out.println(chenLine);
-				System.out.println(enchLine);
-				
+		    
+	        chenScanner.nextLine(); chenScanner.nextLine(); // skip comment & text
+	        enchScanner.nextLine(); enchScanner.nextLine(); // skip comment & text
+	            
+	        String chenLine = chenScanner.nextLine();
+	        String enchLine = enchScanner.nextLine();
+	          
+	        String chLine = null;
+	        String enLine = null;
+            ++linenum;
+            sentence = new SentencePair(linenum);
+            
+		    if (sentenceAligned)
+		    {
+		        sentence.src.parseSentence(aligner.srcTB.entrySet().iterator().next().getValue()[linenum-1], 
+		                aligner.srcPB.entrySet().iterator().next().getValue().get(linenum-1));
+		        sentence.dst.parseSentence(aligner.dstTB.entrySet().iterator().next().getValue()[linenum-1], 
+		                aligner.dstPB.entrySet().iterator().next().getValue().get(linenum-1));
+		    }
+		    else
+		    {
+		        chLine = chScanner.nextLine(); // Chinese treebank terminals
+	            enLine = enScanner.nextLine(); // English treebank terminals
+		    
+    			if (!Pattern.matches(tbFilter, chLine.substring(0,chLine.indexOf(" "))))
+    				continue;
+    			
+    			sentence.src.parseSentence(chLine, aligner.srcTB, aligner.srcPB);
+                sentence.dst.parseSentence(enLine, aligner.dstTB, aligner.dstPB);
+		    }
+		    
+		    System.out.println(chenLine);
+            System.out.println(enchLine);
+		    
+			try {				
 				sentence.parseSrcAlign(chenLine);
 				sentence.parseDstAlign(enchLine);
 			} catch (SentencePair.BadInstanceException e) {
 				System.err.println(e);
 				continue;
 			}
-			
-			
+		    
 			//System.out.println(sentence.src.tbFile+":");
 			//for (String s:sentence.src.tokens)
 			//	System.out.print(" "+s);
@@ -151,8 +167,11 @@ public class RunAligner {
 			for (String s:sentence.dst.tokens)
 				stream.print(" "+s);
 			stream.println("<br>");
-			stream.printf("<!-- %s -->\n", chLine);
-			stream.printf("<!-- %s -->\n", enLine);
+			if (!sentenceAligned)
+			{
+			    stream.printf("<!-- %s -->\n", chLine);
+			    stream.printf("<!-- %s -->\n", enLine);
+			}
 			stream.printf("<!-- %s -->\n", sentence.getSrcAlignmentIndex());
 			stream.printf("<!-- %s -->\n", sentence.getDstAlignmentIndex());
 			

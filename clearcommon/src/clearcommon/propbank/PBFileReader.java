@@ -24,7 +24,7 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
+import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.treebank.ParseException;
@@ -69,7 +69,7 @@ import java.util.Scanner;
  * </pre>
  * @since 09/13/07
  */
-public class PBReader
+public class PBFileReader
 {
     String                annotationFile;
 	String                treePath;
@@ -83,17 +83,17 @@ public class PBReader
 	 * @param treebankPath the path of the treebank.
 	 * @throws FileNotFoundException 
 	 */
-	public PBReader(String annotationFile, String treebankPath) throws FileNotFoundException
+	public PBFileReader(String annotationFile, String treebankPath) throws FileNotFoundException
 	{
 	    this(annotationFile,treebankPath, null, null);
 	}
 	
-	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees) throws FileNotFoundException
+	public PBFileReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees) throws FileNotFoundException
 	{
 		this(annotationFile,treebankPath, trees, null);
 	}
 
-	public PBReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver) throws FileNotFoundException
+	public PBFileReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver) throws FileNotFoundException
     {
 	    this.annotationFile = annotationFile;
         treePath            = treebankPath;
@@ -126,9 +126,9 @@ public class PBReader
         if ((trees = treeMap.get(treeFile))==null)
         {
             System.out.println("Reading "+treePath+File.separatorChar+treeFile);
-            TBReader tbreader;
+            TBFileReader tbreader;
             try {
-                tbreader = new TBReader(treePath, treeFile);
+                tbreader = new TBFileReader(treePath, treeFile);
                 ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
                 TBTree tree;
                 while ((tree = tbreader.nextTree()) != null)

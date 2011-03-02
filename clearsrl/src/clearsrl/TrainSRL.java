@@ -4,7 +4,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
+import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
@@ -155,7 +155,7 @@ public class TrainSRL {
 			{
 			    try {
 	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
-	                TBReader tbreader    = new TBReader(props.getProperty("parsedir"), entry.getKey());
+	                TBFileReader tbreader    = new TBFileReader(props.getProperty("parsedir"), entry.getKey());
 	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
 	                TBTree tree;
 	                while ((tree = tbreader.nextTree()) != null)

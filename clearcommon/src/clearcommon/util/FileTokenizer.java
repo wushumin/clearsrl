@@ -162,4 +162,10 @@ public class FileTokenizer
 		while (mb_tok.hasMoreTokens())
 			mb_tok.nextToken();
 	}
+	
+	public void close()
+	{
+	    mb_scan.close();
+	}
+	
 }

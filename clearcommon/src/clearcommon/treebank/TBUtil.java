@@ -75,14 +75,14 @@ public final class TBUtil {
 		
 		Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
 		
-		TBReader          tbreader = null;
+		TBFileReader          tbreader = null;
 		ArrayList<TBTree> a_tree   = null;
 		TBTree            tree     = null;
 		for (String treeFile: files)
 		{
 			System.out.println("Reading "+dirName+File.separatorChar+treeFile);
 			try {
-				tbreader    = new TBReader(dirName, treeFile);
+				tbreader    = new TBFileReader(dirName, treeFile);
 			
 				a_tree = new ArrayList<TBTree>();
 				

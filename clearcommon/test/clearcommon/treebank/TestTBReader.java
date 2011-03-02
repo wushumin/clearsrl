@@ -29,7 +29,7 @@ public class TestTBReader {
     
     @Test
     public void testTree() {
-        TBReader reader = new TBReader(new StringReader(treeString));
+        TBFileReader reader = new TBFileReader(new StringReader(treeString));
         TBTree tree=null;
         try {
             tree = reader.nextTree();
@@ -57,7 +57,7 @@ public class TestTBReader {
         assertEquals(count, 4);
         List<TBTree> trees = new ArrayList<TBTree>();
         try {
-            TBReader tbReader = new TBReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations","nw/wsj/23/wsj_2356.parse");
+            TBFileReader tbReader = new TBFileReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations","nw/wsj/23/wsj_2356.parse");
             while ((tree=tbReader.nextTree())!=null)
             {
                 trees.add(tree);
