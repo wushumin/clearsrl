@@ -8,11 +8,19 @@ import java.util.regex.Pattern;
 
 public class FileUtil
 {
-	static public List<String> getFiles(File dir, String regex)
+    static public List<String> getFiles(File dir, String regex)
+    {
+        return getFiles(dir, regex, false);
+    }
+	static public List<String> getFiles(File dir, String regex, boolean fullName)
 	{
 		List<String> fileNames = new ArrayList<String>();
 		if (!dir.isDirectory())
-			return fileNames;
+		{
+		    if (Pattern.matches(regex, dir.getName()))
+                fileNames.add(fullName?dir.getAbsolutePath():dir.getName());
+	          return fileNames;
+		}
 		
 		File[] files = dir.listFiles();
 		Arrays.sort(files);
@@ -23,12 +31,12 @@ public class FileUtil
 			{
 				if (file.getName().startsWith("."))
 					continue;
-				List<String> moreFileNames = getFiles(file, regex);
+				List<String> moreFileNames = getFiles(file, regex, fullName);
 				for (String fileName:moreFileNames)
-					fileNames.add(file.getName()+File.separatorChar+fileName);
+					fileNames.add(fullName?fileName:file.getName()+File.separatorChar+fileName);
 			}
 			else if (Pattern.matches(regex, file.getName()))
-				fileNames.add(file.getName());
+				fileNames.add(fullName?file.getAbsolutePath():file.getName());
 		}
 		return fileNames;
 	}

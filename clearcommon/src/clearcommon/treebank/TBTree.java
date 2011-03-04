@@ -47,12 +47,15 @@ public class TBTree implements Serializable
     public TBTree(String treeFile, int treeIndex, TBNode root, int terminalCount, int tokenCount) throws ParseException
     {
         this.filename      = treeFile;
-        this.index     = treeIndex;
+        this.index         = treeIndex;
         this.rootNode      = root;
         this.terminalCount = terminalCount;
         this.tokenCount    = tokenCount;
-        linkIndices(root);
-        rootNode.cleanUpPOS();
+        if (rootNode !=null)
+        {
+            linkIndices(root);
+            rootNode.cleanUpPOS();
+        }
     }
 	
     public String getFilename() {

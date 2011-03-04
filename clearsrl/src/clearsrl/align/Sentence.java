@@ -16,7 +16,12 @@ import java.util.regex.Pattern;
 public class Sentence {
 	
 	static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
-	
+	   
+    public String   tbFile;
+    public String[] tokens;
+    public int[]    indices;
+    PBInstance[]    pbInstances; 
+    
 	public void parseSentence(TBTree tree, List<PBInstance> pbInstanceList)
 	{
 	    tbFile = tree.getFilename();
@@ -82,9 +87,5 @@ public class Sentence {
 		pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
 		
 	}
-	
-	public String   tbFile;
-	public String[] tokens;
-	public int[]    indices;
-	PBInstance[]    pbInstances; 
+
 }

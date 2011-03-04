@@ -15,7 +15,13 @@ public 	class SentencePair {
 
 	static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
 	static final int[] EMPTY_INT_ARRAY = new int[0];
-	
+
+    public int                       id;
+    public Sentence                  src;
+    public Sentence                  dst;
+    public SortedMap<Integer, int[]> srcAlignment;
+    public SortedMap<Integer, int[]> dstAlignment;
+    
 	public class BadInstanceException extends Exception {
 		/**
 		 * 
@@ -158,9 +164,4 @@ public 	class SentencePair {
 		return isSrc?src:dst;
 	}
 
-	public int                       id;
-	public Sentence                  src;
-	public Sentence                  dst;
-	public SortedMap<Integer, int[]> srcAlignment;
-	public SortedMap<Integer, int[]> dstAlignment;
 }

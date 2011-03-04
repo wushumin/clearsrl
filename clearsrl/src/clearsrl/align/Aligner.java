@@ -448,7 +448,7 @@ public class Aligner {
 		}
 	}
 	
-	
+	/*
 	public void reweighPOS(Map<String, float[]> goldPOSScore, Map<String, float[]> otherPOSScore, Map<String, float[]> tgtPOSWeight)
 	{
 		Map<String, float[]> posWeight = new TreeMap<String, float[]>();
@@ -499,7 +499,7 @@ public class Aligner {
 			SimilarityPair.SRC_POS_WEIGHT.put(entry.getKey(), val);
 		}
 		System.out.println("--------------------------");
-	}
+	}*/
 	/*
 	public void train(ArrayList<SentencePair> sentences, TIntObjectHashMap<TIntDoubleHashMap> goldLabel)
 	{

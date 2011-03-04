@@ -24,23 +24,19 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
+import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.treebank.ParseException;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 
 
@@ -72,10 +68,9 @@ import java.util.Scanner;
 public class PBFileReader
 {
     String                annotationFile;
-	String                treePath;
 	Scanner               scanner;
-	Map<String, TBTree[]> treeMap;
 	TreeFileResolver      filenameResolver;
+	TBReader              tbReader;
 	
 	/**
 	 * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
@@ -83,29 +78,18 @@ public class PBFileReader
 	 * @param treebankPath the path of the treebank.
 	 * @throws FileNotFoundException 
 	 */
-	public PBFileReader(String annotationFile, String treebankPath) throws FileNotFoundException
+	public PBFileReader(TBReader tbReader, String annotationFile) throws FileNotFoundException
 	{
-	    this(annotationFile,treebankPath, null, null);
-	}
-	
-	public PBFileReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees) throws FileNotFoundException
-	{
-		this(annotationFile,treebankPath, trees, null);
+	    this(tbReader, annotationFile, null);
 	}
 
-	public PBFileReader(String annotationFile, String treebankPath, Map<String, TBTree[]> trees, TreeFileResolver resolver) throws FileNotFoundException
+	public PBFileReader(TBReader tbReader, String annotationFile, TreeFileResolver resolver) throws FileNotFoundException
     {
+	    this.tbReader       = tbReader;
 	    this.annotationFile = annotationFile;
-        treePath            = treebankPath;
         scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
-        treeMap             = (trees==null?new HashMap<String, TBTree[]>():trees);
         filenameResolver    = resolver;
     }
-		
-	public Map<String, TBTree[]> getTrees()
-	{
-	    return treeMap;
-	}
 	
 	public PBInstance nextProp() throws PBFormatException, ParseException
 	{
@@ -122,33 +106,12 @@ public class PBFileReader
 		PBInstance instance = new PBInstance();
 		
 		String treeFile     = (filenameResolver==null?tokens[0]:filenameResolver.resolve(annotationFile, tokens[0]));
-	    TBTree[] trees      = null;
-        if ((trees = treeMap.get(treeFile))==null)
-        {
-            System.out.println("Reading "+treePath+File.separatorChar+treeFile);
-            TBFileReader tbreader;
-            try {
-                tbreader = new TBFileReader(treePath, treeFile);
-                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
-                TBTree tree;
-                while ((tree = tbreader.nextTree()) != null)
-                    a_tree.add(tree);
-                trees = a_tree.toArray(new TBTree[a_tree.size()]);
-                
-                treeMap.put(treeFile, trees);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
 		
-		int treeIndex       = Integer.parseInt(tokens[1]);
-		int predicateIndex  = Integer.parseInt(tokens[2]);
-		
-		if (trees==null || treeIndex>=trees.length)
-		    throw new PBFormatException("parse tree invalid "+"\n"+Arrays.toString(tokens));
-		
-		instance.tree = trees[treeIndex];
-		instance.predicateNode = instance.tree.getRootNode().getNodeByTerminalIndex(predicateIndex);
+		instance.tree = tbReader.getTree(treeFile, Integer.parseInt(tokens[1]));
+		if (instance.tree==null)
+		    throw new PBFormatException("parse tree invalid: "+treeFile+" "+tokens[1]+"\n"+Arrays.toString(tokens));
+
+		instance.predicateNode = instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(tokens[2]));
 		
 		if (instance.predicateNode == null)
             throw new PBFormatException("predicate node not found "+"\n"+Arrays.toString(tokens));

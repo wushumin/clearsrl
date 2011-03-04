@@ -84,9 +84,10 @@ import java.util.Stack;
 public class TBFileReader
 {
 	FileTokenizer scanner;
-	int            treeCount;
-	String         fileName;
-
+	int           treeCount;
+	String        fileName;
+	TBTree        lastTree;
+	
 	/**
 	 * Initializes the Treebank reader.
 	 * @param filename name of the Treebank file
@@ -94,27 +95,26 @@ public class TBFileReader
 	 */
 	public TBFileReader(String fileName) throws FileNotFoundException
 	{
-		String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
-		scanner       = new FileTokenizer(new FileReader(fileName), delim, true);
-		treeCount     = 0;
-		this.fileName = fileName;
+	    this(new FileReader(fileName), null);
 	}
 	
 	public TBFileReader(String dirName, String fileName) throws FileNotFoundException
     {
-        String delim  = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
-        scanner       = new FileTokenizer(new FileReader(new File(dirName, fileName)), delim, true);
-        treeCount     = 0;
-        this.fileName = fileName;
+	    this(new FileReader(new File(dirName, fileName)), fileName);
     }
-	
-	
+
 	public TBFileReader(Reader reader)
 	{
-		String delim = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
-		scanner      = new FileTokenizer(reader, delim, true);
-		treeCount   = 0;
-		fileName     = null; 
+		this(reader, null);
+	}
+	
+	public TBFileReader(Reader reader, String fileName)
+	{
+	    String delim = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
+        scanner      = new FileTokenizer(reader, delim, true);
+        treeCount     = 0;
+        this.fileName = fileName;
+        lastTree      = null;
 	}
 	
 	/**
@@ -129,7 +129,7 @@ public class TBFileReader
 		do
 		{
 			str = nextToken();
-			if (str == null)	return null;
+			if (str == null)	return lastTree=null;
 		}
 		while (!str.equals(TBLib.LRB));
 		
@@ -190,8 +190,28 @@ public class TBFileReader
 		TBNode tmp = head.children.length==1?head.children[0]:head;
 		
 		tmp.parent=null;
-		return new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
+		return lastTree=new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
 	}
+	
+    public TBTree getTree(int index) throws ParseException
+    {
+        while (true)
+        {
+            if (lastTree!=null)
+            {
+                if (lastTree.index==index)
+                    return lastTree;
+                if (lastTree.index>index)
+                    return null;
+            }
+            try {
+                lastTree = nextTree();
+                if (lastTree==null) return null;
+            } catch (ParseException e) {
+                System.err.println(e);
+            }
+        }
+    }
 	
 	public void close()
 	{

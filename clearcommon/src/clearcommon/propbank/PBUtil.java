@@ -1,6 +1,7 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.ParseException;
+import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.util.FileUtil;
@@ -23,20 +24,16 @@ public final class PBUtil {
         return readPBDir(dirName, regex, tbDir, null);
     }
     
-    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, TreeFileResolver resolver)
-    {
-        Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
-        return readPBDir(dirName, regex, tbDir, tbMap, resolver);
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String tbDir, String dirName, String regex, TreeFileResolver resolver)
+    {   
+        return readPBDir(new TBReader(tbDir, true), dirName, regex, resolver);
     }
     
-	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, Map<String, TBTree[]> tbMap, TreeFileResolver resolver)
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(TBReader tbReader, String dirName, String regex, TreeFileResolver resolver)
 	{   
 		File dir = new File(dirName);
 		
 		List<String> files = FileUtil.getFiles(dir, regex);
-		
-		if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
-			files.add(dir.getName());
 		
 		int correctCnt=0;
 		int exceptionCnt=0;
@@ -51,7 +48,7 @@ public final class PBUtil {
 		{
 			PBFileReader pbreader=null;
             try {
-                pbreader = new PBFileReader(dirName+File.separatorChar+annotationFile, tbDir, tbMap, resolver);
+                pbreader = new PBFileReader(tbReader, dirName+File.separatorChar+annotationFile, resolver);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
                 continue;

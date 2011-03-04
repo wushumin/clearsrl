@@ -6,8 +6,6 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 import org.junit.Test;
 
@@ -19,17 +17,22 @@ public class TestPBInstance {
         System.out.println(Arrays.toString("19:1*27:0;31:4".split("(?=[\\*,;])")));
         assertTrue("19:1*27:0-LINK-SLC".matches(PBArg.ARG_PATTERN));
         assertFalse("19:1*27:0LINK-SLC".matches(PBArg.ARG_PATTERN));
-        Map<String, TBTree[]> trees = new TreeMap<String, TBTree[]>();
-        PBFileReader reader = new PBFileReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
-                                       "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/",trees,
-                                       new OntoNoteTreeFileResolver());
+        
+        String treeDir = "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/";
+        
+        TBReader tbReader = new TBReader(treeDir, false);
+        PBFileReader reader = new PBFileReader(tbReader,
+                "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
+                new OntoNoteTreeFileResolver());
         List<PBInstance> instances = new ArrayList<PBInstance> ();
         PBInstance instance=null;
         try {
             while ((instance = reader.nextProp())!=null)
             {
                 instances.add(instance);
+                System.out.println(instance.tree.getFilename()+" "+instance.tree.getIndex());
                 System.out.println(instance);
+                System.out.flush();
             }
         } catch (PBFormatException e) {
             System.err.println(instances.size());
@@ -40,5 +43,26 @@ public class TestPBInstance {
             e.printStackTrace();
             assertTrue(false);
         }
+        
+        int instanceNum = instances.size();
+        
+        int iNum = 0;
+        
+        PBReader pbReader = new PBReader(new TBReader(treeDir, false), 
+                "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop", ".+",new OntoNoteTreeFileResolver());
+ 
+        while ((instances = pbReader.nextPropSet())!=null)
+        {
+            System.out.println("--------------------------");
+            iNum += instances.size();
+            for (PBInstance aInstance:instances)
+            {
+                System.out.println(aInstance.tree.getFilename()+" "+aInstance.tree.getIndex());
+                System.out.println(aInstance);
+                System.out.flush();
+            }
+        } 
+        System.out.println(instanceNum+" "+iNum);
+        assertEquals(instanceNum, iNum);
     }
 }
