@@ -7,14 +7,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     
-    TBTree threadedLastTree;
+	SerialTBFileReader tbReader;
+    TBTree lastTree;
     BlockingQueue<TBTree> treeQueue;
     AtomicBoolean keepRunning;
     Thread thread;
     
-    public ThreadedTBFileReader(String dirName, String treeFile, int capacity) throws FileNotFoundException {
-        super(dirName, treeFile);
-        threadedLastTree = null;
+    public ThreadedTBFileReader(String dirName, String fileName, int capacity) throws FileNotFoundException {
+        super(fileName);
+        
+        tbReader = new SerialTBFileReader(dirName, fileName);
+        
+        lastTree = null;
         
         treeQueue = new ArrayBlockingQueue<TBTree>(capacity);
         
@@ -36,7 +40,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         while (keepRunning.get())
         {
             try {
-                tree = super.nextTree();
+                tree = tbReader.nextTree();
             } catch(Exception e) {
                 System.err.println(e);
             }
@@ -57,7 +61,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
             // the last tree inserted will be null, indicating there are no more trees
             if (tree.index==Integer.MAX_VALUE) break;
         }
-        super.close();
+        tbReader.close();
     }
     
     public TBTree nextTree()
@@ -65,8 +69,8 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         while (true)
         {
             try {
-                threadedLastTree = treeQueue.take();
-                if (threadedLastTree.index==Integer.MAX_VALUE)
+                lastTree = treeQueue.take();
+                if (lastTree.index==Integer.MAX_VALUE)
                 return null;
             } catch (InterruptedException e) {
                 if (!keepRunning.get()) return null;
@@ -79,14 +83,14 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         while (true)
         {
             try {
-                if (threadedLastTree!=null)
+                if (lastTree!=null)
                 {
-                    if (threadedLastTree.index==index)
-                        return threadedLastTree;
-                    if (threadedLastTree.index>index)
+                    if (lastTree.index==index)
+                        return lastTree;
+                    if (lastTree.index>index)
                         return null;
                 }
-                threadedLastTree = treeQueue.take();
+                lastTree = treeQueue.take();
             } catch (InterruptedException e) {
                 if (!keepRunning.get()) return null;
             }
@@ -95,7 +99,11 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     
     public void close()
     {
-        keepRunning.set(false);
-        treeQueue.clear();
+    	if (!closed)
+    	{
+    		keepRunning.set(false);
+    		treeQueue.clear();
+    		closed = true;
+    	}
     }
 }

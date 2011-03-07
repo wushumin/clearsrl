@@ -22,19 +22,21 @@ public class Sentence {
     public int[]    indices;
     PBInstance[]    pbInstances; 
     
-	public void parseSentence(TBTree tree, List<PBInstance> pbInstanceList)
+	public static Sentence parseSentence(TBTree tree, List<PBInstance> pbInstanceList)
 	{
-	    tbFile = tree.getFilename();
+		Sentence sentence = new Sentence();
+		sentence.tbFile = tree.getFilename();
 	    List<TBNode> nodes = tree.getRootNode().getTokenNodes();
-	    indices = new int[nodes.size()];
-	    tokens = new String[nodes.size()];
+	    sentence.indices = new int[nodes.size()];
+	    sentence.tokens = new String[nodes.size()];
 	    for (int i=0; i<nodes.size();++i)
 	    {
-	        indices[i] = (tree.getIndex()<<16)|nodes.get(i).getTerminalIndex();
-	        tokens[i] = nodes.get(i).getWord();
+	    	sentence.indices[i] = (tree.getIndex()<<16)|nodes.get(i).getTerminalIndex();
+	    	sentence.tokens[i] = nodes.get(i).getWord();
 	    }
 	                        
-	    pbInstances = pbInstanceList==null?new PBInstance[0]:pbInstanceList.toArray(new PBInstance[pbInstanceList.size()]);
+	    sentence.pbInstances = pbInstanceList==null?new PBInstance[0]:pbInstanceList.toArray(new PBInstance[pbInstanceList.size()]);
+	    return sentence;
 	}
 	
 	public void parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)

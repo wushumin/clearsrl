@@ -48,8 +48,30 @@ public class TestPBInstance {
         
         int iNum = 0;
         
-        PBReader pbReader = new PBReader(new TBReader(treeDir, false), 
-                "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop", ".+",new OntoNoteTreeFileResolver());
+        reader = new PBFileReader(new TBReader(treeDir, false),
+                "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
+                new OntoNoteTreeFileResolver());
+ 
+        while ((instances = reader.nextPropSet())!=null)
+        {
+            System.out.println("--------------------------");
+            iNum += instances.size();
+            for (PBInstance aInstance:instances)
+            {
+                System.out.println(aInstance.tree.getFilename()+" "+aInstance.tree.getIndex());
+                System.out.println(aInstance);
+                System.out.flush();
+            }
+        } 
+        System.out.println(instanceNum+" "+iNum);
+        assertEquals(instanceNum, iNum);
+        
+        iNum = 0;
+        
+        PBReader pbReader = new PBReader(new TBReader(treeDir, false),
+                "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
+                ".+",
+                new OntoNoteTreeFileResolver());
  
         while ((instances = pbReader.nextPropSet())!=null)
         {

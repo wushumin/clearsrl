@@ -3,21 +3,18 @@ package clearcommon.propbank;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayDeque;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TreeFileResolver;
 import clearcommon.util.FileUtil;
 
 public class PBReader {
 
-    Queue<String> fileList;
-    TBReader      tbReader;
-    PBFileReader  pbReader;
-    PBInstance    lastInstance;
+    Queue<String>    fileList;
+    TBReader         tbReader;
+    PBFileReader     pbReader;
     TreeFileResolver resolver;
     
     public PBReader(TBReader tbReader, String dir, String regex, TreeFileResolver resolver)
@@ -33,21 +30,13 @@ public class PBReader {
         if (pbReader!=null)
             pbReader.close();
         pbReader = null;
-        lastInstance = null;
         fileList.clear();
+        tbReader.close();
     }
     
     public List<PBInstance> nextPropSet()
-    {
-        LinkedList<PBInstance> retList = new LinkedList<PBInstance>();
-        if (lastInstance!=null)
-        {
-            retList.add(lastInstance);
-            lastInstance = null;
-            if (pbReader==null) return retList;
-        }
-        
-        while (pbReader==null)
+    { 
+        while (pbReader==null || !pbReader.isOpen())
         {
             if (fileList.isEmpty())
                 return null;
@@ -57,50 +46,11 @@ public class PBReader {
                 e.printStackTrace();
             }
         }
-        for (;;)
-        {
-            try {
-                lastInstance = pbReader.nextProp();
-                
-                if (lastInstance==null) 
-                {
-                    pbReader = null;
-                    break;
-                }
-                if (retList.isEmpty())
-                {
-                    retList.add(lastInstance);
-                    lastInstance = null;
-                }
-                else
-                {
-                    if (!retList.getLast().tree.getFilename().equals(lastInstance.tree.getFilename())||
-                        retList.getLast().tree.getIndex()!=lastInstance.tree.getIndex())
-                        return retList;
-                    else
-                    {
-                        retList.add(lastInstance);
-                        lastInstance = null;
-                    }
-                }
-            } catch (PBFormatException e) {
-                e.printStackTrace();
-                continue;
-            } catch (ParseException e) {
-                e.printStackTrace();
-                pbReader.close();
-                break;
-            } catch (Exception e) {
-                System.err.print(pbReader.annotationFile+": ");
-                e.printStackTrace();
-                break;
-            }
-        }
+        List<PBInstance> instances = pbReader.nextPropSet();
+
+        if (instances==null) return nextPropSet();
         
-        if (retList.isEmpty())
-            return nextPropSet();
-        
-        return retList;
+        return instances;
     }
 
 }

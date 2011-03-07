@@ -14,7 +14,11 @@ public class TBReader {
     
     public TBReader(String dir, boolean cached)
     {
-        this.dir = dir;
+    	File dirFile = new File(dir);
+    	if (dirFile.isFile())
+    		this.dir = dirFile.getParentFile().getName();
+    	else
+    		this.dir = dir;
         this.cached = cached;
         if (cached) treeMap = new TreeMap<String, TBTree[]>();
     }
@@ -43,7 +47,7 @@ public class TBReader {
             {
                 System.out.println("Reading "+dir+File.separatorChar+fileName);
                 try {
-                    TBFileReader tbreader = new TBFileReader(dir, fileName);
+                    TBFileReader tbreader = new SerialTBFileReader(dir, fileName);
                     ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
                     TBTree tree;
                     while ((tree = tbreader.nextTree()) != null)

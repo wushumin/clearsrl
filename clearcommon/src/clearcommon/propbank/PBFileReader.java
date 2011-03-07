@@ -71,6 +71,8 @@ public class PBFileReader
 	Scanner               scanner;
 	TreeFileResolver      filenameResolver;
 	TBReader              tbReader;
+	PBInstance            lastInstance;
+	boolean               closed;
 	
 	/**
 	 * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
@@ -89,13 +91,16 @@ public class PBFileReader
 	    this.annotationFile = annotationFile;
         scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
         filenameResolver    = resolver;
+        lastInstance        = null;
+        closed              = false;
     }
 	
 	public PBInstance nextProp() throws PBFormatException, ParseException
 	{
+		if (closed) return null;
 		if (!scanner.hasNextLine())	
 		{
-			scanner.close();
+			close();
 			return null;
 		}
 		String line = scanner.nextLine().trim();
@@ -256,8 +261,59 @@ public class PBFileReader
 		return instance;
 	}
 	
+    public List<PBInstance> nextPropSet()
+    {
+        LinkedList<PBInstance> retList = new LinkedList<PBInstance>();
+        if (lastInstance!=null)
+        {
+            retList.add(lastInstance);
+            lastInstance = null;
+        }
+
+        for (;;)
+        {
+            try {
+                lastInstance = nextProp();
+                
+                if (lastInstance==null) return retList.isEmpty()?null:retList;
+                if (retList.isEmpty())
+                {
+                    retList.add(lastInstance);
+                    lastInstance = null;
+                }
+                else
+                {
+                    if (!retList.getLast().tree.getFilename().equals(lastInstance.tree.getFilename())||
+                        retList.getLast().tree.getIndex()!=lastInstance.tree.getIndex())
+                        return retList;
+                    else
+                    {
+                        retList.add(lastInstance);
+                        lastInstance = null;
+                    }
+                }
+            } catch (PBFormatException e) {
+                e.printStackTrace();
+                continue;
+            } catch (ParseException e) {
+                e.printStackTrace();
+                close();
+                return retList.isEmpty()?null:retList;
+            } catch (Exception e) {
+                System.err.print(annotationFile+": ");
+                e.printStackTrace();
+                return retList.isEmpty()?null:retList;
+            }
+        }
+    }
+	
+    public boolean isOpen() {
+    	return !closed;
+    }
+    
 	public void close()
 	{
+		closed = true;
 	    scanner.close();
 	}
 }

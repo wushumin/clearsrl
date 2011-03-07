@@ -18,20 +18,17 @@ import clearcommon.treebank.ThreadedTBFileReader;
 public class SentencePairReader {
     
     Properties props;
-    
-    PBReader srcPBReader;
-    PBReader dstPBReader;
 
-    TBReader srcTBReader;
-    TBReader dstTBReader;
-   
     Scanner srcAlignmentScanner;
     Scanner dstAlignmentScanner;
     
-    Sentence srcLastSentence;
-    Sentence dstLastSentence;
+    SentenceReader srcSentenceReader;
+    SentenceReader dstSentenceReader;
+
+    Scanner srcTokenIndexScanner;
+    Scanner dstTokenIndexScanner; 
     
-    int count = 0;
+    int count;
     
     public SentencePairReader(Properties props)
     {
@@ -50,16 +47,22 @@ public class SentencePairReader {
     public void initialize() throws FileNotFoundException
     {
         close();
+        count = 0;
         
-        srcTBReader = new TBReader(props.getProperty("src.tbdir"), false);
-        dstTBReader = new TBReader(props.getProperty("src.tbdir"), false);
-  
-        srcPBReader = new PBReader(srcTBReader, props.getProperty("src.pbdir"), ".+", new OntoNoteTreeFileResolver());
-        dstPBReader = new PBReader(dstTBReader, props.getProperty("dst.pbdir"), ".+", new OntoNoteTreeFileResolver());
-        
-        srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment"))));
-        dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment"))));
+		boolean sentenceAligned = !(props.getProperty("alignment.sentence_aligned")==null||props.getProperty("alignment.sentence_aligned").equals("false"));
 
+		if (sentenceAligned)
+		{
+			srcSentenceReader = new AlignedSentenceReader("src.", props);
+			dstSentenceReader = new AlignedSentenceReader("dst.", props);
+		}
+		else
+		{
+			//TODO: init srcSentenceReader, dstSentenceReader, srcTokenIndexScanner, dstTokenIndexScanner
+		}
+		
+		srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment"))));
+		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment"))));
     }
 
     
@@ -67,18 +70,8 @@ public class SentencePairReader {
     {
         SentencePair sentencePair = new SentencePair(count);
         
-        if (srcLastSentence==null)
-        {
-            List<PBInstance> instances = srcPBReader.nextPropSet();
-            
-        }
-        
-        if (dstLastSentence==null)
-        {
-            List<PBInstance> instances = dstPBReader.nextPropSet();
-            
-        }
-        
+        sentencePair.src = srcSentenceReader.nextSentence();
+        sentencePair.dst = dstSentenceReader.nextSentence();
         
         ++count;
         
@@ -88,24 +81,27 @@ public class SentencePairReader {
     
     void close()
     {
-        if (srcPBReader!=null)
+        if (srcSentenceReader!=null)
         {
-            
-            srcPBReader.close();
-            dstPBReader.close();
-            srcTBReader.close();
-            dstTBReader.close();
-            
+        	srcSentenceReader.close();
+        	dstSentenceReader.close();
             srcAlignmentScanner.close();
             dstAlignmentScanner.close();   
         }
+        if (srcTokenIndexScanner!= null)
+        {
+        	srcTokenIndexScanner.close();
+        	dstTokenIndexScanner.close();
+        }
 
-        srcPBReader = null;
-        dstPBReader = null;
-        srcTBReader = null;
-        dstTBReader = null;
-       
+        srcSentenceReader = null;
+        dstSentenceReader = null;
+        
         srcAlignmentScanner = null;
         dstAlignmentScanner = null;
+        
+        srcTokenIndexScanner = null;
+        dstTokenIndexScanner = null;
+
     }
 }

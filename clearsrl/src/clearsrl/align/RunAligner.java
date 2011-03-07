@@ -39,6 +39,10 @@ public class RunAligner {
 			in.close();
 		}
 
+		boolean sentenceAligned = !(props.getProperty("alignment.sentence_aligned")==null||props.getProperty("alignment.sentence_aligned").equals("false"));
+
+		
+		
 		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
@@ -46,15 +50,16 @@ public class RunAligner {
 		//String filter = "\\Achtb_0100\\.[a-zA-Z]+\\z";
 		String tbFilter = props.getProperty("tb.file_filter");
 		String pbFilter = props.getProperty("pb.file_filter");
+		
+		
+		
 	
 		Aligner aligner = new Aligner();
 		aligner.srcTB = TBUtil.readTBDir(props.getProperty("src.tb.dir"), tbFilter);
 		aligner.dstTB = TBUtil.readTBDir(props.getProperty("dst.tb.dir"), tbFilter);
 		aligner.srcPB = PBUtil.readPBDir(props.getProperty("src.pb.dir"), pbFilter, null, aligner.srcTB, null);
 		aligner.dstPB = PBUtil.readPBDir(props.getProperty("dst.pb.dir"), pbFilter, null, aligner.dstTB, null);
-			
-		boolean sentenceAligned = !(props.getProperty("alignment.sentence_aligned")==null||props.getProperty("alignment.sentence_aligned").equals("false"));
-		
+					
 		Scanner chScanner = sentenceAligned?null:new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.src.token_idx"))));
 		Scanner enScanner = sentenceAligned?null:new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.dst.token_idx"))));
 		Scanner chenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment.src"))));

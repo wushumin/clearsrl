@@ -1,5 +1,6 @@
 package clearsrl;
 
+import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
@@ -64,7 +65,7 @@ public class CoNLLSentence {
 		
 		//if (!parseStr.toString().startsWith("(S1(S")) System.out.println(parseStr);
 		
-		TBFileReader tbReader = new TBFileReader(new StringReader(parseStr.toString()));
+		TBFileReader tbReader = new SerialTBFileReader(new StringReader(parseStr.toString()));
 		
 		sentence.parse = tbReader.nextTree();
 	

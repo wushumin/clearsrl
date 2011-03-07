@@ -82,7 +82,7 @@ public final class TBUtil {
 		{
 			System.out.println("Reading "+dirName+File.separatorChar+treeFile);
 			try {
-				tbreader    = new TBFileReader(dirName, treeFile);
+				tbreader    = new SerialTBFileReader(dirName, treeFile);
 			
 				a_tree = new ArrayList<TBTree>();
 				
