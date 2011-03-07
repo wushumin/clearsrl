@@ -1,7 +1,6 @@
 package clearcommon.alg;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Properties;
 
 import liblinearbinary.Linear;
@@ -27,7 +26,8 @@ public class LinearClassifier extends Classifier implements Serializable {
 		super(labelMap, prop);
 	}
 
-	public int predict(int[] x) {
+	@Override
+    public int predict(int[] x) {
 		return Linear.predictValues(model, convertToLibLinear(x), values);
 		//return predict(convertToNodes(x));
 	}

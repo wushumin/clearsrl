@@ -137,7 +137,8 @@ public class SparseVector
 		return keys;
 	}
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		int[] indices = getIndices();
 		String    str = "";

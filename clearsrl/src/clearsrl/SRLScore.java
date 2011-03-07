@@ -68,7 +68,8 @@ public class SRLScore {
 		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", "all", fTotal, pTotal, rTotal, p, r,f);
 	}
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		StringBuilder builder = new StringBuilder();
 		

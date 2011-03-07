@@ -7,7 +7,6 @@ import java.util.Properties;
 
 import clearcommon.propbank.PBFileReader;
 import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBReader;
@@ -28,6 +27,7 @@ public class AlignedSentenceReader extends SentenceReader {
        super(propRoot, props);
     }
     
+    @Override
     protected void finalize() throws Throwable {
         try {
             close();
@@ -36,18 +36,20 @@ public class AlignedSentenceReader extends SentenceReader {
         }
     }
 
+    @Override
     public void initialize() throws FileNotFoundException
     {
         close();
         
         tbReader = new ThreadedTBFileReader(null, props.getProperty("tbfile"), 1000);
         pbReader = new PBFileReader(new TBReader(props.getProperty("tbfile"), false), 
-        		props.getProperty("pbfile"), new OntoNoteTreeFileResolver());
+        		props.getProperty("pbfile"), null);
         
         lastInstanceSet = null;
         count = 0;
     }
     
+    @Override
     public Sentence nextSentence()
     {
         TBTree tree;
@@ -71,6 +73,7 @@ public class AlignedSentenceReader extends SentenceReader {
 
     }
     
+    @Override
     public void close()
     {
         if (pbReader!=null)

@@ -23,6 +23,7 @@ public class TBReader {
         if (cached) treeMap = new TreeMap<String, TBTree[]>();
     }
     
+    @Override
     protected void finalize() throws Throwable {
         try {
             close();

@@ -40,10 +40,12 @@ public class EnglishUtil extends LanguageUtil {
         return true;
     }
     
+    @Override
     protected void finalize() throws Throwable {
         dict.close();
     }
 
+    @Override
     public List<String> findStems(String word, POS pos)
     {
         List<String> stems = stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));

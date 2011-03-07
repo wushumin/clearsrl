@@ -193,6 +193,7 @@ public class PBArg implements Comparable<PBArg>
         return (BitSet)tokenSet.clone();
     }
 
+    @Override
     public String toString()
 	{
 		StringBuilder str = new StringBuilder(label + ": ");

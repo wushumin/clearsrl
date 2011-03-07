@@ -61,7 +61,8 @@ public class SRArg implements Comparable<SRArg>{
 		return tokenSet.nextSetBit(0)-arg0.tokenSet.nextSetBit(0);
 	}
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		return String.format("%s(%.3f): %s", label, score, node.toString());
 	}

@@ -92,6 +92,7 @@ public class ChineseUtil extends LanguageUtil {
 
     
 
+    @Override
     public TBHeadRules getHeadRules() {
         return headRules;
     }

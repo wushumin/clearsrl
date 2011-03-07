@@ -1,27 +1,21 @@
 package clearsrl.align;
 
 import gnu.trove.TIntDoubleHashMap;
-import gnu.trove.TIntDoubleIterator;
-import gnu.trove.TIntHashSet;
-import gnu.trove.TIntIterator;
 import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TObjectIntHashMap;
+
 
 import clearcommon.alg.HungarianAlgorithm;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 
@@ -37,11 +31,7 @@ public class Aligner {
 
 	float alignThreshold;
 	
-	public Map<String, SortedMap<Integer, List<PBInstance>>> srcPB;
-	public Map<String, SortedMap<Integer, List<PBInstance>>> dstPB;
-	
-	public Map<String, TBTree[]> srcTB;
-	public Map<String, TBTree[]> dstTB;
+	SentencePairReader reader;
 	
 	public enum Method {
 		DEFAULT,
@@ -49,25 +39,12 @@ public class Aligner {
 		ARGUMENTS
 	};
 	
-	public Aligner(){
-		this(new HashMap<String, TBTree[]>(),
-		     new HashMap<String, SortedMap<Integer, List<PBInstance>>>(), 
-		     new HashMap<String, TBTree[]>(),
-		     new HashMap<String, SortedMap<Integer, List<PBInstance>>>());
+	public Aligner(SentencePairReader reader){
+		this(reader, 0.05f);
 	}
-
-	public Aligner(Map<String, TBTree[]> srcTB, Map<String, SortedMap<Integer, List<PBInstance>>> srcPB,
-			Map<String, TBTree[]> dstTB, Map<String, SortedMap<Integer, List<PBInstance>>> dstPB){
-		this(srcTB, srcPB, dstTB, dstPB, 0.05f);
-	}
-		
-	public Aligner(Map<String, TBTree[]> srcTB, Map<String, SortedMap<Integer, List<PBInstance>>> srcPB,
-			Map<String, TBTree[]> dstTB, Map<String, SortedMap<Integer, List<PBInstance>>> dstPB, float threshold){
-		this.srcTB = srcTB;
-		this.srcPB = srcPB;
-		
-		this.dstTB = dstTB;
-		this.dstPB = dstPB;
+	
+	public Aligner(SentencePairReader reader, float threshold){
+		this.reader = reader;
 		this.alignThreshold = threshold;
 	}
 	
@@ -448,6 +425,73 @@ public class Aligner {
 		}
 	}
 	
+	public static void initAlignmentOutput(PrintStream stream)
+	{   
+        stream.println("<html>\n<head>\n" +
+                "<META http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"+
+                "<script type=\"text/javascript\">\n"+
+                "function toggleDiv(id)\n"+
+                "{\n"+
+                "  if (document.getElementById(id).style.display == \"block\")\n"+
+                "  {\n"+
+                "    document.getElementById(id).style.display = \"none\";\n"+
+                "  }\n"+
+                "  else\n"+
+                "  {\n"+
+                "    document.getElementById(id).style.display = \"block\";\n"+
+                "  }\n"+
+                "}\n"+
+                "</script>\n</head>\n"+
+                "<body><font size=\"+1\">\n");
+	}
+	
+	public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments)
+	{
+        stream.printf("<h3>%d</h3>\n", sentencePair.id);
+        
+        for (String s:sentencePair.src.tokens)
+            stream.print(" "+s);
+        stream.println("<br>");
+        for (String s:sentencePair.dst.tokens)
+            stream.print(" "+s);
+        stream.println("<br>");
+        
+        stream.printf("<!-- %s -->\n", sentencePair.getSrcAlignmentIndex());
+        stream.printf("<!-- %s -->\n", sentencePair.getDstAlignmentIndex());
+
+        stream.println("<br><font size=\"-1\">Source:\n<ol>");
+        for (int i=0; i<sentencePair.src.pbInstances.length; ++i)
+        {
+            stream.println("<li> "+toHTMLPB(sentencePair.src.pbInstances[i], sentencePair.src));
+            stream.printf("<!-- %s: %d,%d -->\n", sentencePair.src.pbInstances[i].getTree().getFilename(), sentencePair.src.pbInstances[i].getTree().getIndex(), sentencePair.src.pbInstances[i].getPredicate().getTerminalIndex());
+        }
+        stream.println("</ol>");
+        
+        stream.println("Dest:\n<ol>");
+        for (int i=0; i<sentencePair.dst.pbInstances.length; ++i)
+        {
+            stream.println("<li> "+toHTMLPB(sentencePair.dst.pbInstances[i], sentencePair.dst));
+            stream.printf("<!-- %s: %d,%d -->\n", sentencePair.dst.pbInstances[i].getTree().getFilename(), sentencePair.dst.pbInstances[i].getTree().getIndex(), sentencePair.dst.pbInstances[i].getPredicate().getTerminalIndex());
+        }
+        stream.println("</ol></font>");
+        
+        stream.println("<input type=\"button\" value=\"system\" onclick=\"toggleDiv("+(sentencePair.id+1)+")\">\n"+
+                "<div id="+(sentencePair.id+1)+" style=\"display:none;\">\n"+
+                "<HR>");
+        
+        for (int i=0; i<alignments.length; ++i)
+            stream.printf("<p> %d,%d,%f </p>\n", alignments[i].srcPBIdx+1, alignments[i].dstPBIdx+1, alignments[i].getCompositeScore());
+
+        stream.println("<HR></div>\n");
+	}
+	
+	public static void finalizeAlignmentOutput(PrintStream stream)
+	{
+	    stream.println("<h3>end<h3>\n</font>\n</body></html>");
+	    if (stream != System.out && stream != System.err)
+	        stream.close();
+	}
+	
 	/*
 	public void reweighPOS(Map<String, float[]> goldPOSScore, Map<String, float[]> otherPOSScore, Map<String, float[]> tgtPOSWeight)
 	{
@@ -620,7 +664,7 @@ public class Aligner {
 		argColorMap.put("default", "#EEE8AA");
 	}
 	
-	public String toHTMLPB(PBInstance instance, Sentence sentence)
+	public static String toHTMLPB(PBInstance instance, Sentence sentence)
 	{
 		StringBuilder buffer = new StringBuilder();
 		

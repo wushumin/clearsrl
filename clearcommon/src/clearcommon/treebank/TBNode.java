@@ -380,7 +380,8 @@ public class TBNode
 		return str.toString();
 	}
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		StringBuilder str = new StringBuilder();
 		if (isTrace())

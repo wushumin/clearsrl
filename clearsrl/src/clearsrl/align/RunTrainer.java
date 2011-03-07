@@ -2,7 +2,6 @@ package clearsrl.align;
 
 import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntObjectHashMap;
-import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 
@@ -29,11 +28,7 @@ public class RunTrainer {
 
 		String filter = props.getProperty("alignment.file_filter");
 		
-		Map<String, TBTree[]> srcTB = TBUtil.readTBDir(props.getProperty("src.tbdir"), filter);
-		Map<String, TBTree[]> dstTB = TBUtil.readTBDir(props.getProperty("dst.tbdir"), filter);
-		
-		Aligner aligner = new Aligner(srcTB, PBUtil.readPBDir(props.getProperty("src.pbdir"), filter, null, srcTB, null),
-				dstTB, PBUtil.readPBDir(props.getProperty("dst.pbdir"), filter, null, dstTB, null));
+		Aligner aligner = new Aligner(new SentencePairReader(props));
 		
 		Scanner chScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_idx"))));
         Scanner enScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_idx"))));
@@ -90,8 +85,8 @@ public class RunTrainer {
 			sentence = new SentencePair(linenum);
 			
 			try {
-				sentence.src.parseSentence(chLine, aligner.srcTB, aligner.srcPB);
-				sentence.dst.parseSentence(enLine, aligner.dstTB, aligner.dstPB);
+				//sentence.src.parseSentence(chLine, aligner.srcTB, aligner.srcPB);
+				//sentence.dst.parseSentence(enLine, aligner.dstTB, aligner.dstPB);
 				
 				sentence.parseSrcAlign(chenLine);
 				sentence.parseDstAlign(enchLine);

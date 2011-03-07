@@ -21,7 +21,8 @@ public class CoNLLSentence {
 	String[]     namedEntities;
 	SRInstance[] srls;
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		StringBuilder buffer = new StringBuilder();
 		

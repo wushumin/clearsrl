@@ -3,17 +3,10 @@ package clearsrl.align;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.List;
 import java.util.Properties;
 import java.util.Scanner;
 
-import clearcommon.propbank.PBFileReader;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBReader;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.ThreadedTBFileReader;
+import clearsrl.align.SentencePair.BadInstanceException;
 
 public class SentencePairReader {
     
@@ -35,6 +28,7 @@ public class SentencePairReader {
         this.props = props;
     }
     
+    @Override
     protected void finalize() throws Throwable {
         try {
             close();
@@ -43,18 +37,20 @@ public class SentencePairReader {
         }
     }
 
-    
     public void initialize() throws FileNotFoundException
     {
         close();
         count = 0;
         
-		boolean sentenceAligned = !(props.getProperty("alignment.sentence_aligned")==null||props.getProperty("alignment.sentence_aligned").equals("false"));
+		boolean sentenceAligned = !(props.getProperty("sentence_aligned")==null||props.getProperty("sentence_aligned").equals("false"));
 
 		if (sentenceAligned)
 		{
 			srcSentenceReader = new AlignedSentenceReader("src.", props);
 			dstSentenceReader = new AlignedSentenceReader("dst.", props);
+			
+			srcSentenceReader.initialize();
+			dstSentenceReader.initialize();
 		}
 		else
 		{
@@ -73,8 +69,20 @@ public class SentencePairReader {
         sentencePair.src = srcSentenceReader.nextSentence();
         sentencePair.dst = dstSentenceReader.nextSentence();
         
-        ++count;
+        srcAlignmentScanner.nextLine(); srcAlignmentScanner.nextLine(); // skip comment & text
+        dstAlignmentScanner.nextLine(); dstAlignmentScanner.nextLine(); // skip comment & text
         
+        
+        String srcLine = srcAlignmentScanner.nextLine();
+        String dstLine = dstAlignmentScanner.nextLine();
+        try {
+            sentencePair.parseSrcAlign(srcLine);
+            sentencePair.parseDstAlign(dstLine);
+        } catch (BadInstanceException e) {
+            e.printStackTrace();
+        } finally {
+            ++count;
+        }
         return sentencePair;
     }
     

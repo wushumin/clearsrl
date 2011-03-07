@@ -27,6 +27,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         thread.start();
     }
     
+    @Override
     protected void finalize() throws Throwable {
         try {
             close();
@@ -64,6 +65,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         tbReader.close();
     }
     
+    @Override
     public TBTree nextTree()
     {
         while (true)
@@ -78,6 +80,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         }
     }
     
+    @Override
     public TBTree getTree(int index)
     {
         while (true)
@@ -97,6 +100,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         }
     }
     
+    @Override
     public void close()
     {
     	if (!closed)

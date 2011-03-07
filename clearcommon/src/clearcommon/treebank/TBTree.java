@@ -109,7 +109,8 @@ public class TBTree implements Serializable
 			linkIndices(aNode); 
 	}
 	
-	public String toString()
+	@Override
+    public String toString()
 	{
 		return rootNode.toParse();
 	}

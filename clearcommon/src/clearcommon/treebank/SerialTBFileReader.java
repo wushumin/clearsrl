@@ -51,7 +51,8 @@ public class SerialTBFileReader extends TBFileReader
 	 * If there is none, returns null.
 	 * @throws TreeException 
 	 */
-	public TBTree nextTree() throws ParseException
+	@Override
+    public TBTree nextTree() throws ParseException
 	{
 		String str;
 		
@@ -122,6 +123,7 @@ public class SerialTBFileReader extends TBFileReader
 		return lastTree=new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
 	}
 	
+    @Override
     public TBTree getTree(int index) throws ParseException
     {
         while (true)
@@ -142,7 +144,8 @@ public class SerialTBFileReader extends TBFileReader
         }
     }
 	
-	public void close()
+	@Override
+    public void close()
 	{
 		if (!closed)
 		{
@@ -151,7 +154,8 @@ public class SerialTBFileReader extends TBFileReader
 		}
 	}
 	
-	public boolean isOpen()
+	@Override
+    public boolean isOpen()
 	{
 		return !closed;
 	}

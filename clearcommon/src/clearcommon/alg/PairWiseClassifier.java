@@ -26,7 +26,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 		values = new double[labelIdx.length];
 	}
 	
-	public int predict(int[] x)
+	@Override
+    public int predict(int[] x)
 	{
 	    return predictValues(x, values);
 	}
