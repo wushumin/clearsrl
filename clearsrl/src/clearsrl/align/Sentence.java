@@ -89,5 +89,17 @@ public class Sentence {
 		pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
 		
 	}
+	
+	public String toString()
+	{
+		StringBuilder builder = new StringBuilder();
+		builder.append(tbFile+":");
+		for (String token:tokens)
+			builder.append(" "+token);
+		builder.append("\n");
+		for (PBInstance instance:pbInstances)
+			builder.append(instance.toText()+"\n");
+		return builder.toString();
+	}
 
 }

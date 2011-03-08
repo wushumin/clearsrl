@@ -62,14 +62,17 @@ public class AlignedSentenceReader extends SentenceReader {
 			++count;
 		}
         
+		if (tree==null) return null;
+		
 		if (lastInstanceSet==null)
 			lastInstanceSet = pbReader.nextPropSet();
 		
 		if (lastInstanceSet==null||lastInstanceSet.get(0).getTree().getIndex()!=tree.getIndex())
 			return Sentence.parseSentence(tree, null);
 		
+		List<PBInstance> tmp = lastInstanceSet;
 		lastInstanceSet = null;
-		return Sentence.parseSentence(tree, lastInstanceSet);
+		return Sentence.parseSentence(tree, tmp);
 
     }
     

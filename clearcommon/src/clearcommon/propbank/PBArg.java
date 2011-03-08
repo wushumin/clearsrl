@@ -9,7 +9,7 @@ import clearcommon.treebank.*;
 
 public class PBArg implements Comparable<PBArg>
 {
-    static final String LABEL_PATTERN = "((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
+    static final String LABEL_PATTERN = "(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
     static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
     
     static final PBArg[] NO_ARGS = new PBArg[0];

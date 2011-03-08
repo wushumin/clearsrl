@@ -57,8 +57,8 @@ public class SentencePairReader {
 			//TODO: init srcSentenceReader, dstSentenceReader, srcTokenIndexScanner, dstTokenIndexScanner
 		}
 		
-		srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment"))));
-		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment"))));
+		srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
+		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
     }
 
     
@@ -69,17 +69,22 @@ public class SentencePairReader {
         sentencePair.src = srcSentenceReader.nextSentence();
         sentencePair.dst = dstSentenceReader.nextSentence();
         
-        srcAlignmentScanner.nextLine(); srcAlignmentScanner.nextLine(); // skip comment & text
-        dstAlignmentScanner.nextLine(); dstAlignmentScanner.nextLine(); // skip comment & text
+        if (sentencePair.src==null || sentencePair.dst==null) return null;
+        
+        srcAlignmentScanner.next(); srcAlignmentScanner.next(); // skip comment & text
+        dstAlignmentScanner.next(); dstAlignmentScanner.next(); // skip comment & text
         
         
-        String srcLine = srcAlignmentScanner.nextLine();
-        String dstLine = dstAlignmentScanner.nextLine();
+        String srcLine = srcAlignmentScanner.next();
+        String dstLine = dstAlignmentScanner.next();
         try {
             sentencePair.parseSrcAlign(srcLine);
             sentencePair.parseDstAlign(dstLine);
         } catch (BadInstanceException e) {
+        	System.err.println(count);
             e.printStackTrace();
+            System.err.println(srcLine);
+            System.err.println(dstLine);
         } finally {
             ++count;
         }

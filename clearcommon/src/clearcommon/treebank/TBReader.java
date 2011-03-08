@@ -16,9 +16,10 @@ public class TBReader {
     {
     	File dirFile = new File(dir);
     	if (dirFile.isFile())
-    		this.dir = dirFile.getParentFile().getName();
+    		this.dir = dirFile.getParentFile().getAbsolutePath();
     	else
     		this.dir = dir;
+    	
         this.cached = cached;
         if (cached) treeMap = new TreeMap<String, TBTree[]>();
     }

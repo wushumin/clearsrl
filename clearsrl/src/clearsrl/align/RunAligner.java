@@ -65,6 +65,11 @@ public class RunAligner {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
+		    if (sentencePair.id%1000==0)
+		    	System.out.println(sentencePair.id);
+		    
+		    //System.out.println("*****************");
+		    //System.out.println(sentencePair);
 		    
 		    Alignment[] alignments = aligner.align(sentencePair);
 	        

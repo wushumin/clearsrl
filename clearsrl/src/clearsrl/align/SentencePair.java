@@ -11,6 +11,8 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import clearcommon.propbank.PBInstance;
+
 public 	class SentencePair {
 
 	static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
@@ -162,6 +164,11 @@ public 	class SentencePair {
 	public Sentence getSentence(boolean isSrc)
 	{
 		return isSrc?src:dst;
+	}
+	
+	public String toString()
+	{
+		return src+"---\n"+dst;
 	}
 
 }
