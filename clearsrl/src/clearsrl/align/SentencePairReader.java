@@ -1,6 +1,9 @@
 package clearsrl.align;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -17,6 +20,8 @@ import clearsrl.align.SentencePair.BadInstanceException;
 
 public class SentencePairReader {
     
+	static final int GZIP_BUFFER = 0x40000;
+	
     Properties props;
 
     Scanner srcAlignmentScanner;
@@ -62,7 +67,7 @@ public class SentencePairReader {
         if (objStreamAvailable)
         {
             try {
-                inStream = new ObjectInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("sentencePair_file"))));
+                inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
                 return;
             } catch (FileNotFoundException e) {
             } catch (Exception e) {
@@ -93,7 +98,7 @@ public class SentencePairReader {
 		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
 		
 		try {
-            outStream = new ObjectOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file"))));
+            outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -106,8 +111,9 @@ public class SentencePairReader {
             try {
                 return (SentencePair) inStream.readObject();
             } catch (Exception e) {
-                e.printStackTrace();
-                try {
+            	if (!(e instanceof EOFException))
+            		e.printStackTrace();
+            	try {
                     inStream.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();
