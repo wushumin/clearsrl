@@ -1,13 +1,19 @@
 package clearcommon.propbank;
 
+import java.io.Serializable;
 import java.util.BitSet;
 import java.util.List;
 
 import clearcommon.treebank.*;
 
-public class PBInstance implements Comparable<PBInstance>
+public class PBInstance implements Comparable<PBInstance>, Serializable
 {
-	TBNode      predicateNode;
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -1966998836839085182L;
+    
+    TBNode      predicateNode;
 	String      rolesetId;
 	PBArg[]     args;
 	PBArg[]     allArgs;

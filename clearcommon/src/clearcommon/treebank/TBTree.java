@@ -36,7 +36,7 @@ public class TBTree implements Serializable
     /**
      * 
      */
-    private static final long serialVersionUID = 4967207360757952950L;
+    private static final long serialVersionUID = 8010593996914604986L;
     
     String filename;
     int    index;

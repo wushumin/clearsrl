@@ -5,6 +5,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +14,14 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Sentence {
+public class Sentence implements Serializable{
 	
-	static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
+	/**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+
+    static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
 	   
     public String   tbFile;
     public String[] tokens;

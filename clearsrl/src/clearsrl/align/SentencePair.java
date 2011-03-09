@@ -1,6 +1,7 @@
 package clearsrl.align;
 
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -13,9 +14,14 @@ import java.util.regex.Pattern;
 
 import clearcommon.propbank.PBInstance;
 
-public 	class SentencePair {
+public 	class SentencePair implements Serializable {
 
-	static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
+   /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+    
+    static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
 	static final int[] EMPTY_INT_ARRAY = new int[0];
 
     public int                       id;

@@ -23,6 +23,7 @@
 */
 package clearcommon.treebank;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
@@ -36,8 +37,13 @@ import java.util.regex.Pattern;
  * @author Jinho D. Choi
  * <b>Last update:</b> 02/05/2010
  */
-public class TBNode
+public class TBNode implements Serializable
 {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -1925614518382689283L;
+    
     public static final Pattern WORD_PATTERN = Pattern.compile("\\A([^-]+)(-\\d+)?\\z");    
     public static final Pattern POS_PATTERN = Pattern.compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-)((-[a-zA-Z]+)*)((-\\d+)*(\\=\\d+)?(-\\d+)*)\\z");
   

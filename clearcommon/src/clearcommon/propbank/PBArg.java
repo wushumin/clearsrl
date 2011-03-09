@@ -1,5 +1,6 @@
 package clearcommon.propbank;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -7,8 +8,13 @@ import java.util.List;
 
 import clearcommon.treebank.*;
 
-public class PBArg implements Comparable<PBArg>
+public class PBArg implements Comparable<PBArg>, Serializable
 {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 3167382729194529990L;
+    
     static final String LABEL_PATTERN = "(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
     static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
     

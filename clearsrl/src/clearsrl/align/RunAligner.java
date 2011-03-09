@@ -36,7 +36,7 @@ public class RunAligner {
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
 		
-		SentencePairReader sentencePairReader = new SentencePairReader(props);
+		SentencePairReader sentencePairReader = new SentencePairReader(props, false);
 		
 		Aligner aligner = new Aligner(sentencePairReader);
 		
@@ -65,9 +65,10 @@ public class RunAligner {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
-		    if (sentencePair.id%1000==0)
-		    	System.out.println(sentencePair.id);
-		    
+		    if (sentencePair.id%1000==999)
+		    {
+		    	System.out.println(sentencePair.id+1);
+		    }
 		    //System.out.println("*****************");
 		    //System.out.println(sentencePair);
 		    
@@ -130,9 +131,12 @@ public class RunAligner {
             */
             
 		}
+		sentencePairReader.close();
 		Aligner.finalizeAlignmentOutput(stream);
 
 		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
+
+		System.exit(0);
 		
 		// Get rid of singleton mapping and light verbs
 		Set<String> srcLightVerbs = new HashSet<String>();
