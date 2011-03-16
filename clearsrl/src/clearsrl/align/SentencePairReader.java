@@ -2,44 +2,27 @@ package clearsrl.align;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import clearsrl.align.SentencePair.BadInstanceException;
-
-public class SentencePairReader {
+public abstract class SentencePairReader {
     
 	static final int GZIP_BUFFER = 0x40000;
 	
     Properties props;
-
-    Scanner srcAlignmentScanner;
-    Scanner dstAlignmentScanner;
-    
-    SentenceReader srcSentenceReader;
-    SentenceReader dstSentenceReader;
-
-    Scanner srcTokenIndexScanner;
-    Scanner dstTokenIndexScanner; 
     
     ObjectInputStream inStream;
     ObjectOutputStream outStream;
     
     boolean objStreamAvailable;
-    boolean sentenceAligned;
-    boolean bidirectionAligned;
-    int     count;
     
     public SentencePairReader(Properties props)
     {
@@ -50,9 +33,6 @@ public class SentencePairReader {
     {
         this.props = props;
         objStreamAvailable = reWriteObjStream?false:true;
-        
-        sentenceAligned = !(props.getProperty("sentence_aligned")==null||props.getProperty("sentence_aligned").equals("false"));
-        bidirectionAligned = !(props.getProperty("bidrectional_aligned")==null||props.getProperty("bidrectional_aligned").equals("false"));
     }
     
     @Override
@@ -81,31 +61,6 @@ public class SentencePairReader {
             }
         }
         
-        count = 0;
-        
-		if (sentenceAligned)
-		{
-			srcSentenceReader = new AlignedSentenceReader("src.", props);
-			dstSentenceReader = new AlignedSentenceReader("dst.", props);
-			
-			srcSentenceReader.initialize();
-			dstSentenceReader.initialize();
-		}
-		else
-		{
-			//TODO: init srcSentenceReader, dstSentenceReader, srcTokenIndexScanner, dstTokenIndexScanner
-		}
-		
-		if (bidirectionAligned)
-		{
-			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
-		}
-		else
-		{
-			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
-			dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
-		}
-		
 		try {
             outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
         } catch (IOException e) {
@@ -114,7 +69,9 @@ public class SentencePairReader {
 		
     }
     
-    public SentencePair nextPair()
+    public abstract SentencePair nextPair();
+    
+    SentencePair readSentencePair()
     {
         if (inStream!=null)
             try {
@@ -131,32 +88,11 @@ public class SentencePairReader {
                 }
                 return null;
             }
-        
-        SentencePair sentencePair = new SentencePair(count);
-        
-        sentencePair.src = srcSentenceReader.nextSentence();
-        sentencePair.dst = dstSentenceReader.nextSentence();
-        
-        if (sentencePair.src==null || sentencePair.dst==null) return null;
-        
-        srcAlignmentScanner.next(); srcAlignmentScanner.next(); // skip comment & text
-        dstAlignmentScanner.next(); dstAlignmentScanner.next(); // skip comment & text
-        
-        
-        String srcLine = srcAlignmentScanner.next();
-        String dstLine = dstAlignmentScanner.next();
-        try {
-            sentencePair.parseSrcAlign(srcLine);
-            sentencePair.parseDstAlign(dstLine);
-        } catch (BadInstanceException e) {
-        	System.err.println(count);
-            e.printStackTrace();
-            System.err.println(srcLine);
-            System.err.println(dstLine);
-        } finally {
-            ++count;
-        }
-        
+        return null;
+    }
+    
+    void writeSentencePair(SentencePair sentencePair) 
+    {
         if (outStream!=null)
             try {
                 outStream.writeObject(sentencePair);
@@ -175,26 +111,10 @@ public class SentencePairReader {
                     outStream = null;
                 }
             }
-        
-        return sentencePair;
     }
-    
     
     void close()
     {
-        if (srcSentenceReader!=null)
-        {
-        	srcSentenceReader.close();
-        	dstSentenceReader.close();
-            srcAlignmentScanner.close();
-            dstAlignmentScanner.close();   
-        }
-        if (srcTokenIndexScanner!= null)
-        {
-        	srcTokenIndexScanner.close();
-        	dstTokenIndexScanner.close();
-        }
-
         if (inStream != null)
             try {
                 inStream.close();
@@ -213,15 +133,5 @@ public class SentencePairReader {
             } finally {
                 outStream = null;
             }
-              
-        srcSentenceReader = null;
-        dstSentenceReader = null;
-        
-        srcAlignmentScanner = null;
-        dstAlignmentScanner = null;
-        
-        srcTokenIndexScanner = null;
-        dstTokenIndexScanner = null;
-
     }
 }

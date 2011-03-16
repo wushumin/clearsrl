@@ -2,15 +2,12 @@ package clearsrl.align;
 
 import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntObjectHashMap;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.regex.Pattern;
@@ -28,7 +25,7 @@ public class RunTrainer {
 
 		String filter = props.getProperty("alignment.file_filter");
 		
-		Aligner aligner = new Aligner(new SentencePairReader(props));
+		Aligner aligner = new Aligner(new DefaultSentencePairReader(props));
 		
 		Scanner chScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_idx"))));
         Scanner enScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_idx"))));
@@ -53,7 +50,7 @@ public class RunTrainer {
 		{
 			SentencePair sentence;
 			String chLine = chScanner.nextLine(); // Chinese treebank terminals
-			String enLine = enScanner.nextLine(); // English treebank terminals
+			enScanner.nextLine(); // English treebank terminals
 			chenScanner.nextLine(); chenScanner.nextLine(); // skip comment & text
 			enchScanner.nextLine(); enchScanner.nextLine(); // skip comment & text
 			

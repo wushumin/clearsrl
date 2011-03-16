@@ -36,7 +36,7 @@ public class RunAligner {
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
 		
-		SentencePairReader sentencePairReader = new SentencePairReader(props, false);
+		SentencePairReader sentencePairReader = new DefaultSentencePairReader(props, false);
 		
 		Aligner aligner = new Aligner(sentencePairReader);
 		
