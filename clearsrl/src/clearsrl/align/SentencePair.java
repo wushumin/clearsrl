@@ -1,6 +1,5 @@
 package clearsrl.align;
 
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -11,8 +10,6 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import clearcommon.propbank.PBInstance;
 
 public 	class SentencePair implements Serializable {
 
@@ -27,8 +24,8 @@ public 	class SentencePair implements Serializable {
     public int                       id;
     public Sentence                  src;
     public Sentence                  dst;
-    public SortedMap<Integer, int[]> srcAlignment;
-    public SortedMap<Integer, int[]> dstAlignment;
+    public SortedMap<Long, int[]> srcAlignment;
+    public SortedMap<Long, int[]> dstAlignment;
     
 	public class BadInstanceException extends Exception {
 		/**
@@ -47,8 +44,8 @@ public 	class SentencePair implements Serializable {
 		id = sentId;
 		src = new Sentence();
 		dst = new Sentence();
-		srcAlignment = new TreeMap<Integer, int[]>();
-		dstAlignment = new TreeMap<Integer, int[]>();
+		srcAlignment = new TreeMap<Long, int[]>();
+		dstAlignment = new TreeMap<Long, int[]>();
 	}
 		
 	public void parseSrcAlign(String line) throws BadInstanceException
@@ -75,12 +72,12 @@ public 	class SentencePair implements Serializable {
 		return getAlignmentString(dstAlignment, dst.tokens, src.tokens);
 	}
 	
-	private String getAlignmentString(SortedMap<Integer, int[]> alignment, String[] src, String[] dst)
+	private String getAlignmentString(SortedMap<Long, int[]> alignment, String[] src, String[] dst)
 	{
 		StringBuilder ret = new StringBuilder();
 
 		int i=0;
-		for (SortedMap.Entry<Integer, int[]> entry:alignment.entrySet())
+		for (SortedMap.Entry<Long, int[]> entry:alignment.entrySet())
 		{
 			ret.append(src[i++]); 
 			ret.append(' ');
@@ -105,11 +102,11 @@ public 	class SentencePair implements Serializable {
 		return getAlignmentIndex(dstAlignment);
 	}
 	
-	private String getAlignmentIndex(SortedMap<Integer, int[]> alignment)
+	private String getAlignmentIndex(SortedMap<Long, int[]> alignment)
 	{
 		StringBuilder ret = new StringBuilder();
 		
-		for (SortedMap.Entry<Integer, int[]> entry:alignment.entrySet())
+		for (SortedMap.Entry<Long, int[]> entry:alignment.entrySet())
 		{
 			for (int dstKey:entry.getValue())
 			{
@@ -121,15 +118,15 @@ public 	class SentencePair implements Serializable {
 		return ret.toString();	
 	}
 	
-	private void parseAlign(String line, SortedMap<Integer, int[]> alignment, int dstLen)  throws BadInstanceException
+	private void parseAlign(String line, SortedMap<Long, int[]> alignment, int dstLen)  throws BadInstanceException
 	{
 		Matcher matcher = alignPattern.matcher(line);
 		int srcCnt = -1;
 		int dstCnt = 0;
 
 		BitSet dstBitSet = new BitSet(dstLen);
-		Iterator<Map.Entry<Integer, int[]>> iter = alignment.entrySet().iterator();
-		Entry<Integer, int[]> entry = null;
+		Iterator<Map.Entry<Long, int[]>> iter = alignment.entrySet().iterator();
+		Entry<Long, int[]> entry = null;
 		while (matcher.find())
 		{
 			//System.out.print(matcher.group(1)+'|');
@@ -162,7 +159,7 @@ public 	class SentencePair implements Serializable {
 		//System.out.print("\n");
 	}
 	
-	public SortedMap<Integer, int[]> getAlignment(boolean isSrc)
+	public SortedMap<Long, int[]> getAlignment(boolean isSrc)
 	{
 	    return isSrc?srcAlignment:dstAlignment;
 	}

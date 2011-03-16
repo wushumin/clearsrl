@@ -55,16 +55,27 @@ public class RunAligner {
 		if (htmlOutfile==null)
 			htmlOutfile = "/dev/null";
 
-		PrintStream stream = new PrintStream(htmlOutfile);
+		PrintStream alignmentStream;
+		try {
+		    alignmentStream = new PrintStream(props.getProperty("alignment.output.txt", null));
+		} catch (Exception e) {
+		    alignmentStream = System.out;
+		}
+		
+		PrintStream htmlStream = new PrintStream(htmlOutfile);
 
 		sentencePairReader.initialize();
 		
-		Aligner.initAlignmentOutput(stream);
+		Aligner.initAlignmentOutput(htmlStream);
 		
 		while (true)
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
+		    
+            srcTokenCnt += sentencePair.srcAlignment.size();
+            dstTokenCnt += sentencePair.dstAlignment.size();
+		    
 		    if (sentencePair.id%1000==999)
 		    {
 		    	System.out.println(sentencePair.id+1);
@@ -74,11 +85,11 @@ public class RunAligner {
 		    
 		    Alignment[] alignments = aligner.align(sentencePair);
 	        
-		    Aligner.printAlignment(stream, sentencePair, alignments);
+		    for (Alignment alignment:alignments)
+		        alignmentStream.println(alignment.toString());
 		    
-            srcTokenCnt += sentencePair.srcAlignment.size();
-            dstTokenCnt += sentencePair.dstAlignment.size();
-            
+		    Aligner.printAlignment(htmlStream, sentencePair, alignments);
+
             TObjectIntHashMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)
             {
@@ -132,7 +143,7 @@ public class RunAligner {
             
 		}
 		sentencePairReader.close();
-		Aligner.finalizeAlignmentOutput(stream);
+		Aligner.finalizeAlignmentOutput(htmlStream);
 
 		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
 

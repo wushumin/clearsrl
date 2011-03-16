@@ -46,7 +46,7 @@ public class Alignment{
     float measureArgAlignment(PBArg lhs, PBArg rhs, 
     		                  float[] lhsWeights, float[] rhsWeights, 
     		                  int lhsTreeIdx, int rhsTreeIdx, 
-    		                  SortedMap<Integer, int[]> wordAlignment, 
+    		                  SortedMap<Long, int[]> wordAlignment, 
     		                  Sentence rhsSentence) 
     {	    	
         TBNode[] lhsNodes = lhs.getTokenNodes();
@@ -55,8 +55,7 @@ public class Alignment{
 
         for (int i=0; i<lhsNodes.length; ++i)
         {   
-            int pIndex = (lhsNodes[i].getTerminalIndex()|(lhsTreeIdx<<16));
-            int[] dstIndices = wordAlignment.get(pIndex);
+            int[] dstIndices = wordAlignment.get(Sentence.makeIndex(lhsTreeIdx, lhsNodes[i].getTerminalIndex()));
             float score=0;
             float weight=0;
 
@@ -64,18 +63,17 @@ public class Alignment{
             {
 	            for (int dstIdx: dstIndices)
 	            {
-	                int idx = rhsSentence.indices[dstIdx];
+	                int treeIdx = Sentence.getTreeIndex(rhsSentence.indices[dstIdx]);
 	
 	                // rare (ignore): when GIZA aligns word to a different tree
-	                if ((idx>>16) != rhsTreeIdx) continue;
+	                if (treeIdx != rhsTreeIdx) continue;
 	                
-	                // strip the tree index
-	                idx = (idx&0xffff);
+	                int terminalIdx = Sentence.getTerminalIndex(rhsSentence.indices[dstIdx]);
 	
-	                if (rhs.hasTerminal(idx)) 
-	                	score+=rhsWeights[idx];
+	                if (rhs.hasTerminal(terminalIdx)) 
+	                	score+=rhsWeights[terminalIdx];
 	                
-	                weight+=rhsWeights[idx];
+	                weight+=rhsWeights[terminalIdx];
 	            }
 	            if (weight>0) score/=weight;
             }
@@ -258,4 +256,35 @@ public class Alignment{
 			dstScore += argAlign.score*argAlign.getFactoredWeight();
 	}
 
+	public String toString() {
+	    boolean foundm = false;
+	    for (ArgAlignment argAlignment:dstSrcAlignment)
+	        if (argAlignment.dstArgList.size()>1)
+	            foundm = true;
+	    for (ArgAlignment argAlignment:srcDstAlignment)
+            if (argAlignment.dstArgList.size()>1)
+                foundm = true;
+	    if (!foundm) return "";
+	    StringBuilder builder = new StringBuilder();
+	    builder.append(sentence.id+","+srcPBIdx+","+dstPBIdx+","+getCompositeScore()+",");
+	    builder.append(sentence.src.pbInstances[srcPBIdx].getRoleset()+"<->"+sentence.dst.pbInstances[dstPBIdx].getRoleset()+",");
+	    builder.append("[");
+	    for (ArgAlignment argAlignment:srcDstAlignment)
+	    {
+	        builder.append(argAlignment.srcArg.getLabel()+"<->");
+	        for (PBArg arg:argAlignment.dstArgList)
+	            builder.append(arg.getLabel()+" ");
+	        builder.append(",");
+	    }
+	    builder.append("][");
+        for (ArgAlignment argAlignment:dstSrcAlignment)
+        {
+            builder.append(argAlignment.srcArg.getLabel()+"<->");
+            for (PBArg arg:argAlignment.dstArgList)
+                builder.append(arg.getLabel()+" ");
+            builder.append(",");
+        }
+        builder.append("]");
+	    return builder.toString();
+	}
 }

@@ -114,8 +114,7 @@ public class Aligner {
 		
 		for (int i=0; i<sentence.src.pbInstances.length;++i)
 		{
-			int srcIdx = sentence.src.pbInstances[i].getPredicate().getTerminalIndex() | (sentence.src.pbInstances[i].getTree().getIndex()<<16);
-			int[] indices = sentence.srcAlignment.get(srcIdx);
+			int[] indices = sentence.srcAlignment.get(Sentence.makeIndex(sentence.src.pbInstances[i].getTree().getIndex(), sentence.src.pbInstances[i].getPredicate().getTerminalIndex()));
 			if (indices==null) 
 			{
 				System.out.printf("%d: %s, %d %s\n", sentence.src.pbInstances[i].getTree().getIndex(), sentence.src.pbInstances[i].getPredicate().getWord(), sentence.src.pbInstances[i].getPredicate().getTerminalIndex(), sentence.srcAlignment.toString());
@@ -123,7 +122,7 @@ public class Aligner {
 			}
 			for (int j=0; j<sentence.dst.pbInstances.length;++j)
 			{
-				int dstIdx = Arrays.binarySearch(sentence.dst.indices, sentence.dst.pbInstances[j].getPredicate().getTerminalIndex() | sentence.dst.pbInstances[j].getTree().getIndex()<<16);
+				int dstIdx = Arrays.binarySearch(sentence.dst.indices, Sentence.makeIndex(sentence.dst.pbInstances[j].getTree().getIndex(), sentence.dst.pbInstances[j].getPredicate().getTerminalIndex()));
 				if (Arrays.binarySearch(indices, dstIdx)>=0)
 				{
 					//System.out.printf("%s => %s\n", srcInstance.predicateNode.word, dstInstance.predicateNode.word);
@@ -679,8 +678,10 @@ public class Aligner {
 		}
 		for (int i=0; i<sentence.tokens.length; ++i)
 		{
-			if ((sentence.indices[i]>>16) != instance.getTree().getIndex() || 
-					colors[sentence.indices[i]&0xffff]==null)
+		    int treeIndex = Sentence.getTreeIndex(sentence.indices[i]);
+		    int terminalIndex = Sentence.getTerminalIndex(sentence.indices[i]);
+			if (treeIndex != instance.getTree().getIndex() || 
+					colors[terminalIndex]==null)
 			{
 				buffer.append(sentence.tokens[i]);
 				buffer.append(" ");
@@ -688,7 +689,7 @@ public class Aligner {
 			else
 			{
 				buffer.append("<font style=\"BACKGROUND:");
-				buffer.append(colors[sentence.indices[i]&0xffff]);
+				buffer.append(colors[terminalIndex]);
 				buffer.append("\">");
 				buffer.append(sentence.tokens[i]);
 				buffer.append("</font> ");

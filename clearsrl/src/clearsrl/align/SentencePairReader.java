@@ -37,8 +37,9 @@ public class SentencePairReader {
     ObjectOutputStream outStream;
     
     boolean objStreamAvailable;
-    
-    int count;
+    boolean sentenceAligned;
+    boolean bidirectionAligned;
+    int     count;
     
     public SentencePairReader(Properties props)
     {
@@ -49,6 +50,9 @@ public class SentencePairReader {
     {
         this.props = props;
         objStreamAvailable = reWriteObjStream?false:true;
+        
+        sentenceAligned = !(props.getProperty("sentence_aligned")==null||props.getProperty("sentence_aligned").equals("false"));
+        bidirectionAligned = !(props.getProperty("bidrectional_aligned")==null||props.getProperty("bidrectional_aligned").equals("false"));
     }
     
     @Override
@@ -79,8 +83,6 @@ public class SentencePairReader {
         
         count = 0;
         
-		boolean sentenceAligned = !(props.getProperty("sentence_aligned")==null||props.getProperty("sentence_aligned").equals("false"));
-
 		if (sentenceAligned)
 		{
 			srcSentenceReader = new AlignedSentenceReader("src.", props);
@@ -94,8 +96,15 @@ public class SentencePairReader {
 			//TODO: init srcSentenceReader, dstSentenceReader, srcTokenIndexScanner, dstTokenIndexScanner
 		}
 		
-		srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
-		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
+		if (bidirectionAligned)
+		{
+			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
+		}
+		else
+		{
+			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
+			dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
+		}
 		
 		try {
             outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
