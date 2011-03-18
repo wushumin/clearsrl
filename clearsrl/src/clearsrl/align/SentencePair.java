@@ -171,7 +171,28 @@ public 	class SentencePair implements Serializable {
 	
 	public String toString()
 	{
-		return src+"---\n"+dst;
+		StringBuilder builder = new StringBuilder(src+"\n"+dst+"\n");
+		int cnt=0;
+		for (Map.Entry<Long, int[]> entry:srcAlignment.entrySet())
+		{
+			builder.append(src.tokens[cnt++]+" [");
+			for (int id:entry.getValue())
+				builder.append(dst.tokens[id]+' ');
+			builder.append("] ");
+		}
+		builder.append('\n');
+		
+		cnt=0;
+		for (Map.Entry<Long, int[]> entry:dstAlignment.entrySet())
+		{
+			builder.append(dst.tokens[cnt++]+" [");
+			for (int id:entry.getValue())
+				builder.append(src.tokens[id]+' ');
+			builder.append("] ");
+		}
+		builder.append('\n');
+		
+		return builder.toString();
 	}
 
 }

@@ -25,7 +25,6 @@ public class Sentence implements Serializable{
 	   
     public String   tbFile;
     public String[] tokens;
-    public TBNode[] terminals;
     public long[]   indices;
     PBInstance[]    pbInstances; 
     
@@ -34,7 +33,6 @@ public class Sentence implements Serializable{
 		Sentence sentence = new Sentence();
 		sentence.tbFile = tree.getFilename();
 	    List<TBNode> nodes = tree.getRootNode().getTokenNodes();
-	    sentence.terminals = tree.getRootNode().getTerminalNodes().toArray(new TBNode[0]);
 	    sentence.indices = new long[nodes.size()];
 	    sentence.tokens = new String[nodes.size()];
 	    for (int i=0; i<nodes.size();++i)
@@ -62,14 +60,16 @@ public class Sentence implements Serializable{
         return (int)(index&0xffffffff);
     }
 	
-	public void parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
+	public static Sentence parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
 	{
-		StringTokenizer tok=new StringTokenizer(line); // Chinese treebank
+		Sentence sentence = new Sentence();
+		
+		StringTokenizer tok=new StringTokenizer(line);
 		Matcher matcher;
-		tbFile = tok.nextToken();
+		sentence.tbFile = tok.nextToken();
 	
-		TBTree[] trees = tbData.get(tbFile);
-		SortedMap<Integer, List<PBInstance>> pbMap = pbData.get(tbFile);
+		TBTree[] trees = tbData.get(sentence.tbFile);
+		SortedMap<Integer, List<PBInstance>> pbMap = pbData.get(sentence.tbFile);
 		
 		int treeIdx,terminalIdx;
 		TLongArrayList a_idx = new TLongArrayList();
@@ -92,14 +92,13 @@ public class Sentence implements Serializable{
 			}
 		}
 
-		indices = a_idx.toNativeArray();
-		tokens = a_token.toArray(new String[a_token.size()]);
-		terminals = a_terminals.toArray(new TBNode[a_terminals.size()]);
+		sentence.indices = a_idx.toNativeArray();
+		sentence.tokens = a_token.toArray(new String[a_token.size()]);
 		
 		List<PBInstance> pbList = new ArrayList<PBInstance>();
 		
 		List<PBInstance> instances;
-		for (long i:indices)
+		for (long i:sentence.indices)
 		{
 		    treeIdx = getTreeIndex(i);
 			terminalIdx = getTerminalIndex(i);
@@ -111,7 +110,9 @@ public class Sentence implements Serializable{
 				//System.out.println("------------------------");
 			}
 		}
-		pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
+		sentence.pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
+		
+		return sentence;
 		
 	}
 	

@@ -1,5 +1,9 @@
 package clearsrl.align;
 
+import gnu.trove.TIntHashSet;
+import gnu.trove.TIntObjectHashMap;
+import gnu.trove.TIntObjectIterator;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -10,6 +14,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
@@ -77,60 +82,117 @@ public class LDCSentencePairReader extends SentencePairReader {
     	String[] infoTokens = sentenceInfoScanner.nextLine().trim().split("[ \t]+");
     	String[] srcTerminals = srcTokenScanner.nextLine().trim().split("[ \t]+");
     	String[] dstTerminals = dstTokenScanner.nextLine().trim().split("[ \t]+");
-    	String[] alignments = alignmentScanner.nextLine().trim().split("[ \t]+");
-    	
-    	int[] srcTerminaltoToken = new int[srcTerminals.length];
-    	int[] dstTerminaltoToken = new int[dstTerminals.length];
-    	
-    	List<String> srcTokens = new ArrayList<String>();
-    	for (int i=0; i<srcTerminals.length; ++i)
-    	    if (!srcTerminals[i].startsWith("*"))  {
-    	        srcTerminaltoToken[i] = srcTokens.size();
-    	        srcTokens.add(srcTerminals[i]);
-    	    } else {
-    	        srcTerminaltoToken[i] = -1;
-    	    }
-
-    	List<String> dstTokens = new ArrayList<String>();
-    	for (int i=0; i<dstTerminals.length; ++i)
-            if (!dstTerminals[i].startsWith("*"))  {
-                dstTerminaltoToken[i] = dstTokens.size();
-                dstTokens.add(dstTerminals[i]);
-            } else {
-                dstTerminaltoToken[i] = -1;
-            }
+    	String[] alignmentStrs = alignmentScanner.nextLine().trim().split("[ \t]+");
     	
         int id=Integer.parseInt(infoTokens[0]);
         SentencePair sentencePair = new SentencePair(id);
+        
+		
+		List<String> srcWords = new ArrayList<String>();
+		List<String> dstWords = new ArrayList<String>();
 
-        String filename = "nw/xinhua/"+infoTokens[1].substring(5,7)+"/"+infoTokens[1];
+		int[] srcTerminaltoToken = new int[srcTerminals.length];
+		for (int i=0; i<srcTerminals.length; ++i)
+    	    if (!srcTerminals[i].startsWith("*"))  {
+    	    	srcTerminaltoToken[i] = srcWords.size();
+    	    	srcWords.add(srcTerminals[i]);
+    	    } else {
+    	    	srcTerminaltoToken[i] = -1;
+    	    }
+    	
+    	int[] dstTerminaltoToken = new int[dstTerminals.length];
+    	for (int i=0; i<dstTerminals.length; ++i)
+    	    if (!dstTerminals[i].startsWith("*"))  {
+    	    	dstTerminaltoToken[i] = dstWords.size();
+    	    	dstWords.add(dstTerminals[i]);
+    	    } else {
+    	    	dstTerminaltoToken[i] = -1;
+    	    }
+
+    	String treeFilename = "nw/xinhua/"+infoTokens[1].substring(5,7)+"/"+infoTokens[1]+".parse";
         
-        TBTree srcTree = srcTreeBank.get(filename+".parse")[Integer.parseInt(infoTokens[3])];
-        TBTree[] dstTrees = null;
-        {
-            TBTree[] trees = dstTreeBank.get(filename+".parse");
-            String[] dstTreeIds = infoTokens[4].split(",");
-            dstTrees = new TBTree[dstTreeIds.length];
-            for (int i=0; i<dstTreeIds.length; ++i)
-                dstTrees[i] = trees[Integer.parseInt(dstTreeIds[i])];
-        }
-        List<TBNode> srcTreeNodes = srcTree.getRootNode().getTokenNodes();
-        List<TBNode> dstTreeNodes = new ArrayList<TBNode>();
-        for (TBTree tree:dstTrees)
-            dstTreeNodes.addAll(tree.getRootNode().getTokenNodes());
+        sentencePair.src = processSentence(treeFilename, infoTokens[3], srcTreeBank, srcPropBank);
+        sentencePair.dst = processSentence(treeFilename, infoTokens[4], dstTreeBank, dstPropBank);
         
-        if (srcTreeNodes.size()!=srcTokens.size() || dstTreeNodes.size()!=dstTokens.size())
+        if (sentencePair.src.indices.length != srcWords.size() || sentencePair.dst.indices.length != dstWords.size())
         {
             System.err.println("Mismatch: "+id);
             sentencePair.id = -id;
             return sentencePair;
         }
         
+        int[] srcAlignmentIdx = new int[alignmentStrs.length];
+        int[] dstAlignmentIdx = new int[alignmentStrs.length];
         
+        for (int i=0; i<alignmentStrs.length; ++i)
+        {
+        	dstAlignmentIdx[i] = dstTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')))];
+        	srcAlignmentIdx[i] = srcTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1))];
+        }
+        
+        TIntObjectHashMap<TIntHashSet> srcAlignment = new TIntObjectHashMap<TIntHashSet>();
+        TIntObjectHashMap<TIntHashSet> dstAlignment = new TIntObjectHashMap<TIntHashSet>();
+        for (int i=0; i<srcAlignmentIdx.length; ++i)
+        {
+        	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
+        		continue;
+        	TIntHashSet srcSet = srcAlignment.get(srcAlignmentIdx[i]);
+        	if (srcSet==null) srcAlignment.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
+        	srcSet.add(dstAlignmentIdx[i]);
+        	
+        	TIntHashSet dstSet = dstAlignment.get(dstAlignmentIdx[i]);
+        	if (dstSet==null) dstAlignment.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
+        	dstSet.add(srcAlignmentIdx[i]);
+        }
+        
+        sentencePair.srcAlignment = convertAlignment(sentencePair.src.indices, srcAlignment);
+        sentencePair.dstAlignment = convertAlignment(sentencePair.dst.indices, dstAlignment);
         
     	writeSentencePair(sentencePair);
         
         return sentencePair;
+	}
+	
+	Sentence processSentence(String filename, 
+			String treeIndices, 
+			Map<String, TBTree[]> tbData, 
+			Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
+	{
+		
+		StringBuilder builder = new StringBuilder();
+		builder.append(filename);
+
+		TBTree[] trees = tbData.get(filename);
+		String[] treeIds = treeIndices.split(",");
+		for (int i=0; i<treeIds.length; ++i)
+		{
+			TBTree tree =  trees[Integer.parseInt(treeIds[i])];
+			List<TBNode> treeNodes = tree.getRootNode().getTokenNodes();
+			for (TBNode node:treeNodes)
+				builder.append(" "+tree.getIndex()+'~'+node.getTerminalIndex());
+		}
+		
+		return Sentence.parseSentence(builder.toString(), tbData, pbData);	
+	}
+	
+	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectHashMap<TIntHashSet> inAlignment)
+	{
+		SortedMap<Long, int[]> outAlignment = new TreeMap<Long, int[]>();
+		for (long index:indices)
+			outAlignment.put(index, SentencePair.EMPTY_INT_ARRAY);
+		
+		for (TIntObjectIterator<TIntHashSet> iter = inAlignment.iterator(); iter.hasNext();)
+		{
+			iter.advance();
+			if (!iter.value().isEmpty())
+			{
+				int[] iArray = iter.value().toArray();
+				Arrays.sort(iArray);
+				outAlignment.put(indices[iter.key()], iArray);
+			}
+		}
+		
+		return outAlignment;
 	}
 	
 	@Override
