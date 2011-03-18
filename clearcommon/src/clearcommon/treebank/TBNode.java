@@ -391,12 +391,12 @@ public class TBNode implements Serializable
 	{
 		StringBuilder str = new StringBuilder();
 		if (isTrace())
-		    str.append("["+getTrace()+"] ");
+		    str.append("["+getTrace()+"]");
 		else if (word!=null)
-			str.append(word+" ");
+			str.append(word);
 		
 		for (TBNode node : children)
-			str.append(node);
+			str.append(" "+node);
 		
 		return str.toString();
 	}

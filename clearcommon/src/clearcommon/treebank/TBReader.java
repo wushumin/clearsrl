@@ -3,14 +3,22 @@ package clearcommon.treebank;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.SortedMap;
+import java.util.Map;
 import java.util.TreeMap;
 
 public class TBReader {
     String               dir;
     boolean              cached;
     ThreadedTBFileReader reader;
-    SortedMap<String, TBTree[]> treeMap;
+    Map<String, TBTree[]> treeMap;
+    
+    public TBReader(Map<String, TBTree[]> treeMap)
+    {
+        dir = null;
+        cached = true;
+        reader = null;
+        this.treeMap = treeMap;
+    }
     
     public TBReader(String dir, boolean cached)
     {
@@ -21,6 +29,7 @@ public class TBReader {
     		this.dir = dir;
     	
         this.cached = cached;
+        reader = null;
         if (cached) treeMap = new TreeMap<String, TBTree[]>();
     }
     
@@ -47,6 +56,7 @@ public class TBReader {
             TBTree[] trees      = null;
             if ((trees = treeMap.get(fileName))==null)
             {
+                if (dir==null) return null;
                 System.out.println("Reading "+dir+File.separatorChar+fileName);
                 try {
                     TBFileReader tbreader = new SerialTBFileReader(dir, fileName);
@@ -86,7 +96,7 @@ public class TBReader {
         }
     }
     
-    public SortedMap<String, TBTree[]> getTreeMap()
+    public Map<String, TBTree[]> getTreeMap()
     {
         return treeMap;
     }

@@ -6,14 +6,8 @@ import java.util.Properties;
 public abstract class SentenceReader {
     Properties props;
 	
-    public SentenceReader(String propRoot, Properties props)
-    {
-        this.props = new Properties();
-        for (String propName:props.stringPropertyNames())
-        {
-        	if (propName.startsWith(propRoot))
-        		this.props.setProperty(propName.substring(propRoot.length()), props.getProperty(propName));
-        }
+    public SentenceReader(Properties props) {
+        this.props = props;
     }
     
 	public abstract void initialize() throws FileNotFoundException;

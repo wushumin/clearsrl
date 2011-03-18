@@ -22,9 +22,9 @@ public class AlignedSentenceReader extends SentenceReader {
     
     int count;
     
-    public AlignedSentenceReader(String propRoot, Properties props)
+    public AlignedSentenceReader(Properties props)
     {
-       super(propRoot, props);
+       super(props);
     }
     
     @Override

@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.util.Properties;
 import java.util.Scanner;
 
+import clearcommon.util.PropertyUtil;
 import clearsrl.align.SentencePair.BadInstanceException;
 
 public class DefaultSentencePairReader extends SentencePairReader{
@@ -53,8 +54,8 @@ public class DefaultSentencePairReader extends SentencePairReader{
         
 		if (sentenceAligned)
 		{
-			srcSentenceReader = new AlignedSentenceReader("src.", props);
-			dstSentenceReader = new AlignedSentenceReader("dst.", props);
+			srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src."));
+			dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst."));
 			
 			srcSentenceReader.initialize();
 			dstSentenceReader.initialize();
