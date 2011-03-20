@@ -3,6 +3,7 @@ package clearsrl.align;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.Properties;
 
@@ -19,9 +20,26 @@ public class RunTrainer {
             iReader.close();
             in.close();
         }
+        
+        String htmlOutfile = props.getProperty("ldc.alignment.output.html", null);
+        
+        if (htmlOutfile==null)
+            htmlOutfile = "/dev/null";
+        
+        PrintStream alignmentStream;
+        try {
+            alignmentStream = new PrintStream(props.getProperty("ldc.alignment.output.txt", null));
+        } catch (Exception e) {
+            alignmentStream = System.out;
+        }
+        
+        PrintStream htmlStream = new PrintStream(htmlOutfile);
 		
         SentencePairReader sentencePairReader = new LDCSentencePairReader(PropertyUtil.filterProperties(props, "ldc."));
+        Aligner aligner = new Aligner(sentencePairReader);
+        
         sentencePairReader.initialize();
+        Aligner.initAlignmentOutput(htmlStream);
         
 		//Aligner aligner = new Aligner(sentencePairReader);
 		int goodCnt = 0;
@@ -34,12 +52,20 @@ public class RunTrainer {
             if (sentencePair.id >=0)
             {
                 ++goodCnt;
-                System.out.println(sentencePair+"-----------------------------------------");
+                Alignment[] alignments = aligner.align(sentencePair);
+                
+                for (Alignment alignment:alignments)
+                    alignmentStream.println(alignment.toString());
+                
+                Aligner.printAlignment(htmlStream, sentencePair, alignments);
             }
             else
                 ++badCnt;
         }
 		
+		sentencePairReader.close();
+        Aligner.finalizeAlignmentOutput(htmlStream);
+        
 		System.out.println(goodCnt+" "+badCnt);
 	}
 }

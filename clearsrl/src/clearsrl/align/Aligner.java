@@ -27,7 +27,7 @@ public class Aligner {
 	
 	public static final float MAX_SIMILARITY = 3.0f;
 
-	private static final float BETA_SQR = 1.5f;
+	private static final float BETA_SQR = 1.0f;
 
 	float alignThreshold;
 	

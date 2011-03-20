@@ -11,7 +11,7 @@ import clearcommon.treebank.TBNode;
 
 public class Alignment{
 
-	private static final float ARGNUMFACTOR = 2.0f;
+	private static final float ARGNUMFACTOR = 1.5f;
 	private static final float ARGFACTOR = 1.0f;
 	private static final float PREDICATEFACTOR = 2.0f;
 	
