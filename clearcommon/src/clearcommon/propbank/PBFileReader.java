@@ -243,12 +243,14 @@ public class PBFileReader
 		}
 		
 		instance.allArgs = argList.toArray(new PBArg[argList.size()]); 
+		Arrays.sort(instance.allArgs);
 		
 		argList.clear();
 		for (PBArg arg:instance.allArgs)
 		    if (!arg.isEmpty()) argList.add(arg);
 		
 		instance.args = argList.toArray(new PBArg[argList.size()]);
+		Arrays.sort(instance.args);
 		//System.out.println(instance);
 
 		BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());

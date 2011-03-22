@@ -10,6 +10,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -475,11 +476,11 @@ public class Aligner {
         stream.println("</ol></font>");
         
         stream.println("<input type=\"button\" value=\"system\" onclick=\"toggleDiv("+(sentencePair.id+1)+")\">\n"+
-                "<div id="+(sentencePair.id+1)+" style=\"display:none;\">\n"+
+                "<div id="+(sentencePair.id+1)+" style=\"display:block;\">\n"+
                 "<HR>");
         
         for (int i=0; i<alignments.length; ++i)
-            stream.printf("<p> %d,%d,%f </p>\n", alignments[i].srcPBIdx+1, alignments[i].dstPBIdx+1, alignments[i].getCompositeScore());
+            stream.printf("<p> %s </p>\n", alignments[i].toString());
 
         stream.println("<HR></div>\n");
 	}
@@ -697,6 +698,17 @@ public class Aligner {
 		}
 		
 		return buffer.toString();
+	}
+	
+	public void collectStats()
+	{
+		try {
+			reader.initialize();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		
 	}
 	
 }

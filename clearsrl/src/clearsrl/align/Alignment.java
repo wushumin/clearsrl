@@ -1,9 +1,12 @@
 package clearsrl.align;
 
+import gnu.trove.TIntHashSet;
+
+import java.io.PrintStream;
 import java.util.BitSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
@@ -26,15 +29,19 @@ public class Alignment{
 	public float[]      srcTerminalWeights;
 	public float[]      dstTerminalWeights;
 	
-	public List<ArgAlignment> srcDstAlignment;
-	public List<ArgAlignment> dstSrcAlignment;
+	public float[][]    srcDstScore;
+	public float[][]    dstSrcScore;
+	
+	public ArgAlignment[] srcDstAlignment;
+	public ArgAlignment[] dstSrcAlignment;
 	
 	public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr) 
 	{
 		this.sentence = sentence;
 		this.srcPBIdx = srcPBIdx;
 		this.dstPBIdx = dstPBIdx;
-		this.beta_sqr = beta_sqr;
+		//this.beta_sqr = beta_sqr;
+		this.beta_sqr = (float)sentence.src.indices.length/sentence.dst.indices.length;
 	}
 	
     static float getFScore(float lhs, float rhs, float bias)
@@ -96,15 +103,14 @@ public class Alignment{
     		weights[i] = 1.0f;
     }
     
-    List<ArgAlignment> initArgAlignment(PBInstance instance, float[] weights)
+    ArgAlignment[] initArgAlignment(PBInstance instance, float[] weights)
     {
     	PBArg[] args = instance.getArgs();
     	
-    	List<ArgAlignment> argAlignments = new LinkedList<ArgAlignment>();
-    	for (PBArg arg:args)
-    	{
-    		computeArgWeight(arg, weights);
-    		argAlignments.add(new ArgAlignment(arg, new LinkedList<PBArg>(), weights));
+    	ArgAlignment[] argAlignments = new ArgAlignment[args.length];
+    	for (int i=0; i<args.length; ++i) {
+    		computeArgWeight(args[i], weights);
+    		argAlignments[i]=new ArgAlignment(instance, i, new TIntHashSet(), weights);
     	}
 		float predicateFactor = 0.0f;
 		float predicateWeight = 0.0f;
@@ -116,9 +122,9 @@ public class Alignment{
 		
 		for (ArgAlignment argAlignment:argAlignments)
 		{
-			if (argAlignment.srcArg.getLabel().equals("rel"))
+			if (argAlignment.getSrcArg().getLabel().equals("rel"))
 				predicateWeight += argAlignment.weight;
-			else if (argAlignment.srcArg.getLabel().matches(".*ARG\\d"))
+			else if (argAlignment.getSrcArg().getLabel().matches(".*ARG\\d"))
 				argNumWeight += argAlignment.weight;
 			else
 				argMWeight += argAlignment.weight;
@@ -142,9 +148,9 @@ public class Alignment{
     	
 		for (ArgAlignment argAlignment:argAlignments)
 		{
-			if (argAlignment.srcArg.getLabel().equals("rel"))
+			if (argAlignment.getSrcArg().getLabel().equals("rel"))
 				argAlignment.factor = predicateFactor;
-			else if (argAlignment.srcArg.getLabel().matches(".*ARG\\d"))
+			else if (argAlignment.getSrcArg().getLabel().matches(".*ARG\\d"))
 				argAlignment.factor = argNumFactor;
 			else
 				argAlignment.factor = argMFactor;
@@ -152,12 +158,15 @@ public class Alignment{
 		
 		return argAlignments;
     }
-
-    float computeAlignment(float[][] lhsScore, float[][] rhsScore, List<ArgAlignment> lhsAlignments, List<ArgAlignment> rhsAlignments, float bias)
+/*
+    float computeAlignment(float[][] lhsScore, float[][] rhsScore, ArgAlignment[] lhsAlignments, ArgAlignment[] rhsAlignments, float bias)
     {
         float fScore=0.0f;
         float precision = 0.0f;
         float recall = 0.0f;
+        
+        float fScoreTmp=0.0f;
+        float pDelta, rDelta;
         
         float[] argScores = new float[rhsScore.length];
         int[] argIndices = new int[rhsScore.length];
@@ -166,11 +175,11 @@ public class Alignment{
         {
             for (int j=0;j<rhsScore[i].length; ++j)
             {
-                ArgAlignment lhsAlignment = lhsAlignments.get(j);
-                ArgAlignment rhsAlignment = rhsAlignments.get(i);
+                ArgAlignment lhsAlignment = lhsAlignments[j];
+                ArgAlignment rhsAlignment = rhsAlignments[i];
                 
                 float score = getFScore(rhsScore[i][j], lhsScore[j][i], 
-                        bias*(float)Math.pow(lhsAlignment.getFactoredWeight()/rhsAlignment.getFactoredWeight(), 2));
+                		bias*(float)Math.pow(lhsAlignment.getFactoredWeight()/rhsAlignment.getFactoredWeight(), 2));
                 if (score>argScores[i])
                 {
                     argScores[i] = score;
@@ -181,19 +190,72 @@ public class Alignment{
         for (;;)
         {
             int index = getMaxIndex(argScores);
-            if (argScores[index]<fScore) break;
+            if (argScores[index]<0) break;
             
-            ArgAlignment lhsAlignment = lhsAlignments.get(argIndices[index]);
-            ArgAlignment rhsAlignment = rhsAlignments.get(index);
+            ArgAlignment lhsAlignment = lhsAlignments[argIndices[index]];
+            ArgAlignment rhsAlignment = rhsAlignments[index];
             
-            precision+=lhsAlignment.getFactoredWeight()*lhsScore[argIndices[index]][index];
-            recall+=rhsAlignment.getFactoredWeight()*rhsScore[index][argIndices[index]];
+            pDelta = lhsAlignment.getFactoredWeight()*lhsScore[argIndices[index]][index];
+            rDelta = rhsAlignment.getFactoredWeight()*rhsScore[index][argIndices[index]];
             
-            fScore = getFScore(precision, recall, bias);
+            fScoreTmp = getFScore(precision+pDelta, recall+rDelta, bias);
             
-            lhsAlignment.dstArgList.add(rhsAlignment.srcArg);
-            lhsAlignment.score+=lhsScore[argIndices[index]][index];
+            if (fScoreTmp>fScore)
+            {
+            	precision += pDelta;
+            	recall += rDelta;
+            	fScore = fScoreTmp;
+
+                lhsAlignment.dstArgList.add(rhsAlignment.srcArgIdx);
+                lhsAlignment.score+=lhsScore[argIndices[index]][index];
+            	
+            }
+            argScores[index] = Float.NEGATIVE_INFINITY;
+        }
+        
+        return fScore;
+    }
+    */
+    
+    float computeAlignment(float[][] lhsScore, float[][] rhsScore, ArgAlignment[] lhsAlignments, ArgAlignment[] rhsAlignments, float bias)
+    {
+        float fScore=0.0f;
+        float precision = 0.0f;
+        float recall = 0.0f;
+        
+        float fScoreTmp=0.0f;
+        float pDelta, rDelta;
+        
+        int[] argIndices = new int[lhsScore.length];
+        float[] argScores = new float[lhsScore.length];
+        for (int i=0; i<lhsScore.length; ++i)
+        {
+        	argIndices[i] = getMaxIndex(lhsScore[i]);
+        	argScores[i] = lhsScore[i][argIndices[i]];
+        }
+        for (;;)
+        {
+            int index = getMaxIndex(argScores);
+            if (argScores[index]<0) break;
             
+            ArgAlignment lhsAlignment = lhsAlignments[index];
+            ArgAlignment rhsAlignment = rhsAlignments[argIndices[index]];
+            
+            pDelta = lhsAlignment.getFactoredWeight()*lhsScore[index][argIndices[index]];
+            rDelta = rhsAlignment.getFactoredWeight()*rhsScore[argIndices[index]][index];
+            
+            fScoreTmp = getFScore(precision+pDelta, recall+rDelta, bias);
+            
+            if (fScoreTmp>fScore)
+            {
+            	precision += pDelta;
+            	recall += rDelta;
+            	fScore = fScoreTmp;
+
+                lhsAlignment.dstArgList.add(rhsAlignment.srcArgIdx);
+                lhsAlignment.score+=lhsScore[index][argIndices[index]];
+            	
+            }
             argScores[index] = Float.NEGATIVE_INFINITY;
         }
         
@@ -215,47 +277,98 @@ public class Alignment{
     
 	public void computeSymmetricAlignment() {
 		
-		PBArg[] srcArgs = sentence.src.pbInstances[srcPBIdx].getArgs();
-		PBArg[] dstArgs = sentence.dst.pbInstances[dstPBIdx].getArgs();
+		PBArg[] srcArgs = getSrcPBInstance().getArgs();
+		PBArg[] dstArgs = getDstPBInstance().getArgs();
 			
-		srcTerminalWeights = new float[sentence.src.pbInstances[srcPBIdx].getTree().getTerminalCount()];
-		dstTerminalWeights = new float[sentence.dst.pbInstances[dstPBIdx].getTree().getTerminalCount()];
+		srcTerminalWeights = new float[getSrcPBInstance().getTree().getTerminalCount()];
+		dstTerminalWeights = new float[getDstPBInstance().getTree().getTerminalCount()];
 		
-		srcDstAlignment = initArgAlignment(sentence.src.pbInstances[srcPBIdx], srcTerminalWeights);
-		dstSrcAlignment = initArgAlignment(sentence.dst.pbInstances[dstPBIdx], dstTerminalWeights);
+		srcDstAlignment = initArgAlignment(getSrcPBInstance(), srcTerminalWeights);
+		dstSrcAlignment = initArgAlignment(getDstPBInstance(), dstTerminalWeights);
 		
-		float[][] srcDstScore = new float[srcArgs.length][dstArgs.length];
-		float[][] dstSrcScore = new float[dstArgs.length][srcArgs.length];
+		srcDstScore = new float[srcArgs.length][dstArgs.length];
+		dstSrcScore = new float[dstArgs.length][srcArgs.length];
 		
 		for (int i=0; i<srcDstScore.length; ++i)
 			for (int j=0; j<srcDstScore[i].length;++j)
 			{
 				srcDstScore[i][j] = measureArgAlignment(srcArgs[i], dstArgs[j],
 						srcTerminalWeights, dstTerminalWeights, 
-						sentence.src.pbInstances[srcPBIdx].getTree().getIndex(), 
-						sentence.dst.pbInstances[dstPBIdx].getTree().getIndex(),
+						getSrcPBInstance().getTree().getIndex(), 
+						getDstPBInstance().getTree().getIndex(),
 		                sentence.srcAlignment, sentence.dst);
-				srcDstScore[i][j] /= srcDstAlignment.get(i).weight;
+				srcDstScore[i][j] /= srcDstAlignment[i].weight;
 				dstSrcScore[j][i] = measureArgAlignment(dstArgs[j], srcArgs[i],
 						dstTerminalWeights, srcTerminalWeights, 
-						sentence.dst.pbInstances[dstPBIdx].getTree().getIndex(),
-						sentence.src.pbInstances[srcPBIdx].getTree().getIndex(), 
+						getDstPBInstance().getTree().getIndex(),
+						getSrcPBInstance().getTree().getIndex(), 
 		                sentence.dstAlignment, sentence.src);
-				dstSrcScore[j][i] /= dstSrcAlignment.get(j).weight;
+				dstSrcScore[j][i] /= dstSrcAlignment[j].weight;
 			}
 		
 		computeAlignment(srcDstScore, dstSrcScore, srcDstAlignment, dstSrcAlignment, beta_sqr);
 		computeAlignment(dstSrcScore, srcDstScore, dstSrcAlignment, srcDstAlignment, 1/beta_sqr);
 		
 		srcScore = 0.0f;
-		for (ArgAlignment argAlign: dstSrcAlignment)
+		for (ArgAlignment argAlign: srcDstAlignment)
 			srcScore += argAlign.score*argAlign.getFactoredWeight();
 		
 		dstScore = 0.0f;
-		for (ArgAlignment argAlign: srcDstAlignment)
+		for (ArgAlignment argAlign: dstSrcAlignment)
 			dstScore += argAlign.score*argAlign.getFactoredWeight();
 	}
+	
+	public ArgAlignmentPair[] getArgAlignmentPairs()
+	{
+		Map<Long, ArgAlignmentPair> argPairMap = new TreeMap<Long, ArgAlignmentPair>();
+		
+		for (ArgAlignment argAlignment:srcDstAlignment)
+			for (int id:argAlignment.dstArgList.toArray())
+			{
+				long idx = (((long)argAlignment.srcArgIdx)<<32)|id;
+				ArgAlignmentPair alignmentPair = argPairMap.get(idx);
+				if (alignmentPair==null)
+				{
+					alignmentPair = new ArgAlignmentPair(argAlignment.srcArgIdx, id, argAlignment.score);
+					argPairMap.put(idx, alignmentPair);
+				}
+			}
+		for (ArgAlignment argAlignment:dstSrcAlignment)
+			for (int id:argAlignment.dstArgList.toArray())
+			{
+				long idx = (((long)id)<<32)|argAlignment.srcArgIdx;
+				ArgAlignmentPair alignmentPair = argPairMap.get(idx);
+				if (alignmentPair==null)
+				{
+					alignmentPair = new ArgAlignmentPair(id, argAlignment.srcArgIdx, argAlignment.score);
+					argPairMap.put(idx, alignmentPair);
+				}
+				else
+					alignmentPair.score = getFScore(argAlignment.score, alignmentPair.score, beta_sqr);
+			}
+		return argPairMap.values().toArray(new ArgAlignmentPair[argPairMap.size()]);
+	}
+	
+	public PBArg getSrcPBArg(int idx)
+	{
+		return getSrcPBInstance().getArgs()[idx];
+	}
+	
+	public PBArg getDstPBArg(int idx)
+	{
+		return getDstPBInstance().getArgs()[idx];
+	}
 
+	public PBInstance getSrcPBInstance()
+	{
+		return sentence.src.pbInstances[srcPBIdx];
+	}
+	
+	public PBInstance getDstPBInstance()
+	{
+		return sentence.dst.pbInstances[dstPBIdx];
+	}
+	/*
 	public String toString() {
 	    boolean foundm = false;
 	    for (ArgAlignment argAlignment:dstSrcAlignment)
@@ -266,25 +379,96 @@ public class Alignment{
                 foundm = true;
 	    if (!foundm) return "";
 	    StringBuilder builder = new StringBuilder();
-	    builder.append(sentence.id+","+srcPBIdx+","+dstPBIdx+","+getCompositeScore()+",");
-	    builder.append(sentence.src.pbInstances[srcPBIdx].getRoleset()+"<->"+sentence.dst.pbInstances[dstPBIdx].getRoleset()+",");
+	    builder.append(sentence.id+":"+srcPBIdx+","+dstPBIdx+","+getCompositeScore()+";");
+	    builder.append(getSrcPBInstance().getRoleset()+"<->"+getDstPBInstance().getRoleset()+",");
 	    builder.append("[");
 	    for (ArgAlignment argAlignment:srcDstAlignment)
 	    {
-	        builder.append(argAlignment.srcArg.getLabel()+"<->");
-	        for (PBArg arg:argAlignment.dstArgList)
-	            builder.append(arg.getLabel()+" ");
+	        builder.append(argAlignment.getSrcArg().getLabel()+"<->");
+	        int[] ids = argAlignment.dstArgList.toArray();
+	        Arrays.sort(ids);
+	        for (int id:ids)
+	            builder.append(getDstPBArg(id).getLabel()+" ");
 	        builder.append(",");
 	    }
 	    builder.append("][");
         for (ArgAlignment argAlignment:dstSrcAlignment)
         {
-            builder.append(argAlignment.srcArg.getLabel()+"<->");
-            for (PBArg arg:argAlignment.dstArgList)
-                builder.append(arg.getLabel()+" ");
+            builder.append(argAlignment.getSrcArg().getLabel()+"<->");
+            int[] ids = argAlignment.dstArgList.toArray();
+	        Arrays.sort(ids);
+	        for (int id:ids)
+	            builder.append(getSrcPBArg(id).getLabel()+" ");
             builder.append(",");
         }
         builder.append("]");
 	    return builder.toString();
 	}
+	*/
+	
+	public void printScoreTable(PrintStream out)
+	{
+		PBArg[] srcArgs = getSrcPBInstance().getArgs();
+		PBArg[] dstArgs = getDstPBInstance().getArgs();
+		out.print("          ");
+		for (PBArg arg:dstArgs)
+			out.printf("%10s",arg.getLabel());
+		out.print("\n");
+		for (int i=0; i<srcDstScore.length; ++i)
+		{
+			out.printf("%10s",srcArgs[i].getLabel());
+			for (int j=0; j<srcDstScore[i].length; ++j)
+				out.printf("%10.5f", srcDstScore[i][j]);
+			out.printf("%10.5f%10.5f", srcDstAlignment[i].score, srcDstAlignment[i].getFactoredWeight());
+			out.print("\n");
+		}
+		out.print("          ");
+		for (PBArg arg:srcArgs)
+			out.printf("%10s",arg.getLabel());
+		out.print("\n");
+		for (int i=0; i<dstSrcScore.length; ++i)
+		{
+			out.printf("%10s",dstArgs[i].getLabel());
+			for (int j=0; j<dstSrcScore[i].length; ++j)
+				out.printf("%10.5f", dstSrcScore[i][j]);
+			out.printf("%10.5f%10.5f", dstSrcAlignment[i].score, dstSrcAlignment[i].getFactoredWeight());
+			out.print("\n");
+		}
+		
+	}
+	
+	public String toString() {
+		/*
+	    boolean foundm = false;
+	    for (ArgAlignment argAlignment:dstSrcAlignment)
+	        if (argAlignment.dstArgList.size()>1)
+	            foundm = true;
+	    for (ArgAlignment argAlignment:srcDstAlignment)
+            if (argAlignment.dstArgList.size()>1)
+                foundm = true;
+	    if (!foundm) return "";*/
+	    StringBuilder builder = new StringBuilder();
+	    builder.append(String.format("%d,%d,%.3f;",srcPBIdx+1,dstPBIdx+1,getCompositeScore()));
+
+	    BitSet srcArgBitSet=new BitSet();
+	    BitSet dstArgBitSet=new BitSet();
+	    
+	    for (ArgAlignmentPair alignmentPair:getArgAlignmentPairs())
+	    {
+	    	builder.append(String.format("(%s,%s,%.3f)",getSrcPBArg(alignmentPair.srcArgIdx).getLabel(),getDstPBArg(alignmentPair.dstArgIdx).getLabel(),alignmentPair.score));
+	    	srcArgBitSet.set(alignmentPair.srcArgIdx);
+	    	dstArgBitSet.set(alignmentPair.dstArgIdx);
+	    }
+	    
+	    builder.append("[");
+	    for (int i=srcArgBitSet.nextClearBit(0); i<getSrcPBInstance().getArgs().length; i=srcArgBitSet.nextClearBit(i+1))
+	    	 builder.append(getSrcPBArg(i).getLabel()+',');
+	    builder.append("][");
+	    for (int i=dstArgBitSet.nextClearBit(0); i<getDstPBInstance().getArgs().length; i=dstArgBitSet.nextClearBit(i+1))
+	    	 builder.append(getDstPBArg(i).getLabel()+',');
+	    
+	    builder.append("]");
+	    return builder.toString();
+	}
+	
 }

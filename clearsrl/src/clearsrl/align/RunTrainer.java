@@ -55,8 +55,10 @@ public class RunTrainer {
                 Alignment[] alignments = aligner.align(sentencePair);
                 
                 for (Alignment alignment:alignments)
-                    alignmentStream.println(alignment.toString());
-                
+                {
+                    alignmentStream.println(sentencePair.id+","+alignment.toString());
+                    alignment.printScoreTable(alignmentStream);
+                }
                 Aligner.printAlignment(htmlStream, sentencePair, alignments);
             }
             else

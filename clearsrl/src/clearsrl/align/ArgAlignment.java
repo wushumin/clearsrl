@@ -1,31 +1,39 @@
 package clearsrl.align;
 
-import java.util.List;
+import gnu.trove.TIntHashSet;
 
 import clearcommon.propbank.PBArg;
+import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 
 public class ArgAlignment {
 
-    PBArg       srcArg;
-    List<PBArg> dstArgList;
+	PBInstance  srcInstance;
+    int         srcArgIdx;
+    TIntHashSet dstArgList;
 
     float       weight;
     float       factor;
    
     float       score;
     
-    public ArgAlignment(PBArg srcArg, List<PBArg> dstArgList, float[] srcTerminalWeights)
+    public ArgAlignment(PBInstance srcInstance, int srcArgIdx, TIntHashSet dstArgList, float[] srcTerminalWeights)
     {
-        this.srcArg     = srcArg;
-        this.dstArgList = dstArgList;
-        this.factor     = 1.0f;
+    	this.srcInstance = srcInstance;
+        this.srcArgIdx   = srcArgIdx;
+        this.dstArgList  = dstArgList;
+        this.factor      = 1.0f;
      
-        TBNode[] nodes = srcArg.getTokenNodes();
+        TBNode[] nodes = srcInstance.getArgs()[srcArgIdx].getTokenNodes();
         
         weight=0.0f;
         for (TBNode node:nodes)
         	weight += srcTerminalWeights[node.getTerminalIndex()];
+    }
+    
+    public PBArg getSrcArg()
+    {
+    	return srcInstance.getArgs()[srcArgIdx];
     }
     
     public float getFactoredWeight()
