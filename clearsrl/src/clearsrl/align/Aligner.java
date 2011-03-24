@@ -3,7 +3,6 @@ package clearsrl.align;
 import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntObjectHashMap;
 
-
 import clearcommon.alg.HungarianAlgorithm;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
@@ -17,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 
@@ -707,6 +708,56 @@ public class Aligner {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
+		
+		int srcPBInstanceCnt = 0;
+		int dstPBInstanceCnt = 0;
+		
+		int alignedSrcPBInstanceCnt = 0;
+		int alignedDstPBInstanceCnt = 0;
+		
+        SortedMap<String, int[]> srcPBArgMap = new TreeMap<String, int[]>();
+        SortedMap<String, int[]> dstPBArgMap = new TreeMap<String, int[]>();
+        
+		SentencePair sentencePair;
+		while ((sentencePair=reader.nextPair())!=null)
+		{
+		    if (sentencePair.id<0) continue;
+		    
+		    Alignment[] alignments = align(sentencePair);
+		    
+		    srcPBInstanceCnt += sentencePair.src.pbInstances.length;
+		    dstPBInstanceCnt += sentencePair.dst.pbInstances.length;
+
+		    alignedSrcPBInstanceCnt += alignments.length;
+		    alignedDstPBInstanceCnt += alignments.length;
+
+		    for (Alignment alignment:alignments)
+		    {
+		        for (PBArg arg:alignment.getSrcPBInstance().getArgs())
+		        {
+		            int[] cnt = srcPBArgMap.get(arg.getLabel());
+		            if (cnt==null) srcPBArgMap.put(arg.getLabel(), cnt=new int[2]);
+		            cnt[1]++;
+		        }
+		        for (PBArg arg:alignment.getDstPBInstance().getArgs())
+                {
+                    int[] cnt = dstPBArgMap.get(arg.getLabel());
+                    if (cnt==null)
+                        dstPBArgMap.put(arg.getLabel(), cnt=new int[2]);
+                    cnt[1]++;
+                }
+		        for (ArgAlignmentPair pair:alignment.getArgAlignmentPairs())
+		        {
+		            srcPBArgMap.get(alignment.getSrcPBArg(pair.srcArgIdx).getLabel())[0]++;
+		            dstPBArgMap.get(alignment.getDstPBArg(pair.dstArgIdx).getLabel())[0]++;
+		        }
+		    }
+		}
+		
+		for (Map.Entry<String,int[]> entry:srcPBArgMap.entrySet())
+		    System.out.printf("%s: %.3f (%d/%d)\n", entry.getKey(), entry.getValue()[0]*1.0/entry.getValue()[1], entry.getValue()[0], entry.getValue()[1]);
+        for (Map.Entry<String,int[]> entry:dstPBArgMap.entrySet())
+            System.out.printf("%s: %.3f (%d/%d)\n", entry.getKey(), entry.getValue()[0]*1.0/entry.getValue()[1], entry.getValue()[0], entry.getValue()[1]);
 		
 		
 	}
