@@ -47,16 +47,16 @@ public abstract class SentencePairReader {
     public void initialize() throws FileNotFoundException
     {
         close();
-        
+
         if (objStreamAvailable)
         {
             try {
                 inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
                 return;
             } catch (FileNotFoundException e) {
+                objStreamAvailable = false;
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
                 objStreamAvailable = false;
             }
         }
@@ -78,11 +78,15 @@ public abstract class SentencePairReader {
                 return (SentencePair) inStream.readObject();
             } catch (Exception e) {
             	if (!(e instanceof EOFException))
+            	{
             		e.printStackTrace();
+            		objStreamAvailable = false;
+            	}
             	try {
                     inStream.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();
+                    objStreamAvailable = false;
                 } finally {
                     inStream = null;
                 }

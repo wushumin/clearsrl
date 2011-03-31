@@ -36,7 +36,7 @@ public class RunTrainer {
         PrintStream htmlStream = new PrintStream(htmlOutfile);
 		
         SentencePairReader sentencePairReader = new LDCSentencePairReader(PropertyUtil.filterProperties(props, "ldc."));
-        Aligner aligner = new Aligner(sentencePairReader);
+        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("ldc.aligner.threshold", "0.7")));
         
         sentencePairReader.initialize();
         Aligner.initAlignmentOutput(htmlStream);
@@ -69,5 +69,7 @@ public class RunTrainer {
         Aligner.finalizeAlignmentOutput(htmlStream);
         
 		System.out.println(goodCnt+" "+badCnt);
+		
+		aligner.collectStats();
 	}
 }

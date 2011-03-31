@@ -14,6 +14,7 @@ import java.io.FilenameFilter;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
@@ -708,12 +709,23 @@ public class Aligner {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-		
+		int srcCoverageCnt = 0;
+        int dstCoverageCnt = 0;
+        
+        int alignedSrcCoverageCnt = 0;
+        int alignedDstCoverageCnt = 0;
+	        
 		int srcPBInstanceCnt = 0;
 		int dstPBInstanceCnt = 0;
 		
 		int alignedSrcPBInstanceCnt = 0;
 		int alignedDstPBInstanceCnt = 0;
+		
+		int srcTokenCnt = 0;
+		int dstTokenCnt = 0;
+		
+		int alignedSrcTokenCnt = 0;
+		int alignedDstTokenCnt = 0;
 		
         SortedMap<String, int[]> srcPBArgMap = new TreeMap<String, int[]>();
         SortedMap<String, int[]> dstPBArgMap = new TreeMap<String, int[]>();
@@ -722,6 +734,12 @@ public class Aligner {
 		while ((sentencePair=reader.nextPair())!=null)
 		{
 		    if (sentencePair.id<0) continue;
+		    
+		    srcCoverageCnt += sentencePair.src.tokens.length;
+		    dstCoverageCnt += sentencePair.dst.tokens.length;
+		    
+		    BitSet srcCoverageBitset = new BitSet();
+		    BitSet dstCoverageBitset = new BitSet();
 		    
 		    Alignment[] alignments = align(sentencePair);
 		    
@@ -738,6 +756,8 @@ public class Aligner {
 		            int[] cnt = srcPBArgMap.get(arg.getLabel());
 		            if (cnt==null) srcPBArgMap.put(arg.getLabel(), cnt=new int[2]);
 		            cnt[1]++;
+		            
+		            srcTokenCnt+= arg.getTokenNodes().length;
 		        }
 		        for (PBArg arg:alignment.getDstPBInstance().getArgs())
                 {
@@ -745,18 +765,48 @@ public class Aligner {
                     if (cnt==null)
                         dstPBArgMap.put(arg.getLabel(), cnt=new int[2]);
                     cnt[1]++;
+                    
+                    dstTokenCnt += arg.getTokenNodes().length;
                 }
+		        BitSet srcArgBitSet = new BitSet();
+		        BitSet dstArgBitSet = new BitSet();
+		        
 		        for (ArgAlignmentPair pair:alignment.getArgAlignmentPairs())
 		        {
-		            srcPBArgMap.get(alignment.getSrcPBArg(pair.srcArgIdx).getLabel())[0]++;
-		            dstPBArgMap.get(alignment.getDstPBArg(pair.dstArgIdx).getLabel())[0]++;
+		            srcArgBitSet.set(pair.srcArgIdx);
+		            dstArgBitSet.set(pair.dstArgIdx);
 		        }
+		        
+		        for (int i=srcArgBitSet.nextSetBit(0); i>=0; i=srcArgBitSet.nextSetBit(i+1))
+		        {
+		            srcPBArgMap.get(alignment.getSrcPBArg(i).getLabel())[0]++;
+		            alignedSrcTokenCnt += alignment.getSrcPBArg(i).getTokenNodes().length;
+		            srcCoverageBitset.or(alignment.getSrcPBArg(i).getTokenSet());
+		        }
+		        
+		        for (int i=dstArgBitSet.nextSetBit(0); i>=0; i=dstArgBitSet.nextSetBit(i+1))
+		        {
+		            dstPBArgMap.get(alignment.getDstPBArg(i).getLabel())[0]++;
+		            alignedDstTokenCnt += alignment.getDstPBArg(i).getTokenNodes().length;
+		            dstCoverageBitset.or(alignment.getDstPBArg(i).getTokenSet());
+		        }
+		        
 		    }
+		    alignedSrcCoverageCnt += srcCoverageBitset.cardinality();
+		    alignedDstCoverageCnt += dstCoverageBitset.cardinality();
 		}
-		
+		System.out.print("\nSrc\n");
+		System.out.printf("Props   : %.3f (%d/%d)\n", alignedSrcPBInstanceCnt*1.0/srcPBInstanceCnt, alignedSrcPBInstanceCnt, srcPBInstanceCnt);
+		System.out.printf("Tokens  : %.3f (%d/%d)\n", alignedSrcTokenCnt*1.0/srcTokenCnt, alignedSrcTokenCnt, srcTokenCnt);
+		System.out.printf("Coverage: %.3f (%d/%d)\n", alignedSrcCoverageCnt*1.0/srcCoverageCnt, alignedSrcCoverageCnt, srcCoverageCnt);
 		for (Map.Entry<String,int[]> entry:srcPBArgMap.entrySet())
 		    System.out.printf("%s: %.3f (%d/%d)\n", entry.getKey(), entry.getValue()[0]*1.0/entry.getValue()[1], entry.getValue()[0], entry.getValue()[1]);
-        for (Map.Entry<String,int[]> entry:dstPBArgMap.entrySet())
+		
+		System.out.print("\nDst\n");
+		System.out.printf("Props   : %.3f (%d/%d)\n", alignedDstPBInstanceCnt*1.0/dstPBInstanceCnt, alignedDstPBInstanceCnt, dstPBInstanceCnt);
+		System.out.printf("Tokens  : %.3f (%d/%d)\n", alignedDstTokenCnt*1.0/dstTokenCnt, alignedDstTokenCnt, dstTokenCnt);
+		System.out.printf("Coverage: %.3f (%d/%d)\n", alignedDstCoverageCnt*1.0/dstCoverageCnt, alignedDstCoverageCnt, dstCoverageCnt);
+		for (Map.Entry<String,int[]> entry:dstPBArgMap.entrySet())
             System.out.printf("%s: %.3f (%d/%d)\n", entry.getKey(), entry.getValue()[0]*1.0/entry.getValue()[1], entry.getValue()[0], entry.getValue()[1]);
 		
 		

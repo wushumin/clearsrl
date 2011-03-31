@@ -38,7 +38,7 @@ public class RunAligner {
 		
 		SentencePairReader sentencePairReader = new DefaultSentencePairReader(props, false);
 		
-		Aligner aligner = new Aligner(sentencePairReader);
+		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("aligner.threshold", "0.5")));
 		
 		//Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
 		//int lineIdx = linesIdx.nextInt();
@@ -84,7 +84,8 @@ public class RunAligner {
 		    //System.out.println(sentencePair);
 		    
 		    Alignment[] alignments = aligner.align(sentencePair);
-	        
+	       
+		    System.out.println(sentencePair.id+1);
 		    for (Alignment alignment:alignments)
 		        alignmentStream.println(alignment.toString());
 		    
@@ -144,9 +145,11 @@ public class RunAligner {
 		}
 		sentencePairReader.close();
 		Aligner.finalizeAlignmentOutput(htmlStream);
-
+		
 		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
 
+		aligner.collectStats();
+		
 		System.exit(0);
 		
 		// Get rid of singleton mapping and light verbs
