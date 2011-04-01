@@ -7,14 +7,17 @@ import gnu.trove.TIntObjectIterator;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
@@ -31,10 +34,20 @@ public class LDCSentencePairReader extends SentencePairReader {
     Map<String, SortedMap<Integer, List<PBInstance>>>  srcPropBank;
     Map<String, SortedMap<Integer, List<PBInstance>>>  dstPropBank;
 	
+    Set<String> excludeFiles;
+    
+    PrintStream srcTokenIdxOutput;
+    PrintStream dstTokenIdxOutput;
+    
+    PrintStream srcTokenOutput;
+    PrintStream dstTokenOutput;
+    
     Scanner sentenceInfoScanner;
     Scanner srcTokenScanner;
     Scanner dstTokenScanner;
     Scanner alignmentScanner;
+    
+    int count;
     
 	public LDCSentencePairReader(Properties props) {
 		this(props, true);
@@ -42,6 +55,8 @@ public class LDCSentencePairReader extends SentencePairReader {
 
 	public LDCSentencePairReader(Properties props, boolean reWriteObjStream) {
 		super(props, reWriteObjStream);
+
+		excludeFiles = new TreeSet<String>();
 	}
 	
 	@Override
@@ -60,6 +75,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         super.initialize();
         if (objStreamAvailable) return;
 
+        count = 0;
+        
         srcTreeBank = TBUtil.readTBDir(props.getProperty("src.tbdir"), props.getProperty("tb.regex"));
         dstTreeBank = TBUtil.readTBDir(props.getProperty("dst.tbdir"), props.getProperty("tb.regex"));
         
@@ -70,6 +87,12 @@ public class LDCSentencePairReader extends SentencePairReader {
         srcTokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.tokenfile")))).useDelimiter("[\n\r]");
         dstTokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.tokenfile")))).useDelimiter("[\n\r]");
         alignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment"))));
+        
+        srcTokenIdxOutput = new PrintStream(props.getProperty("src.token_idx"));
+        dstTokenIdxOutput = new PrintStream(props.getProperty("dst.token_idx"));
+        
+        srcTokenOutput = new PrintStream(props.getProperty("src.tokens"));
+        dstTokenOutput = new PrintStream(props.getProperty("dst.tokens"));
     }
 	
 	@Override
@@ -85,7 +108,7 @@ public class LDCSentencePairReader extends SentencePairReader {
     	String[] alignmentStrs = alignmentScanner.nextLine().trim().split("[ \t]+");
     	
         int id=Integer.parseInt(infoTokens[0]);
-        SentencePair sentencePair = new SentencePair(id);
+        SentencePair sentencePair = new SentencePair(count);
         
 		
 		List<String> srcWords = new ArrayList<String>();
@@ -121,6 +144,12 @@ public class LDCSentencePairReader extends SentencePairReader {
             return sentencePair;
         }
         
+        srcTokenIdxOutput.println(sentencePair.src.toTokenIdx());
+        dstTokenIdxOutput.println(sentencePair.dst.toTokenIdx());
+        
+        srcTokenOutput.println(sentencePair.src.toTokens());
+        dstTokenOutput.println(sentencePair.dst.toTokens());
+        
         int[] srcAlignmentIdx = new int[alignmentStrs.length];
         int[] dstAlignmentIdx = new int[alignmentStrs.length];
         
@@ -149,7 +178,10 @@ public class LDCSentencePairReader extends SentencePairReader {
         sentencePair.dstAlignment = convertAlignment(sentencePair.dst.indices, dstAlignment);
         
     	writeSentencePair(sentencePair);
-        
+    	
+    	excludeFiles.add(treeFilename);
+    	
+    	++count;
         return sentencePair;
 	}
 	
@@ -161,7 +193,7 @@ public class LDCSentencePairReader extends SentencePairReader {
 		
 		StringBuilder builder = new StringBuilder();
 		builder.append(filename);
-
+		
 		TBTree[] trees = tbData.get(filename);
 		String[] treeIds = treeIndices.split(",");
 		for (int i=0; i<treeIds.length; ++i)
@@ -214,7 +246,35 @@ public class LDCSentencePairReader extends SentencePairReader {
             alignmentScanner.close();
             alignmentScanner = null;
         }
-	    
+        if (!excludeFiles.isEmpty()) {
+            try {
+                PrintStream output = new PrintStream(props.getProperty("excludeFileList"));
+                for (String filename:excludeFiles)
+                    output.println(filename);
+                output.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        excludeFiles.clear();
+        
+        if (srcTokenIdxOutput!=null) {
+            srcTokenIdxOutput.close();
+            srcTokenIdxOutput=null;
+        }
+        if (dstTokenIdxOutput!=null) {
+            dstTokenIdxOutput.close();
+            dstTokenIdxOutput=null;
+        }
+        if (srcTokenOutput!=null) {
+            srcTokenOutput.close();
+            srcTokenOutput=null;
+        }
+        if (dstTokenOutput!=null) {
+            dstTokenOutput.close();
+            dstTokenOutput=null;
+        }
+        
         super.close();
     }
 

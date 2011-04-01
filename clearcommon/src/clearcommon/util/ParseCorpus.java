@@ -88,18 +88,18 @@ public class ParseCorpus {
         if ((parser=parserMap.get(Thread.currentThread().getId()))==null)
         {
             double threshold = 1.0;
-            ParserData pData = ParserData.Load(props.getProperty("parser.grammar"));
+            ParserData pData = ParserData.Load(props.getProperty("grammar"));
             if (pData==null) {
-                System.out.println("Failed to load grammar from file"+props.getProperty("parser.grammar")+".");
+                System.err.println("Failed to load grammar from file"+props.getProperty("grammar")+".");
                 System.exit(1);
             }
             Grammar grammar = pData.getGrammar();
             Lexicon lexicon = pData.getLexicon();
             Numberer.setNumberers(pData.getNumbs());
         
-            if (props.getProperty("parser.Chinese")!=null) 
+            if (props.getProperty("Chinese")!=null || !props.getProperty("Chinese").equals("false")) 
             {
-                System.err.println("Chinese parsing features enabled.");
+                System.out.println("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
             }
             parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
@@ -150,8 +150,10 @@ public class ParseCorpus {
 		props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
+		in.close();
+		props = PropertyUtil.filterProperties(props, "parser.");
 		
-		ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(props.getProperty("parser.threads","1")));
+		ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(props.getProperty("threads","1")));
         
 		String txtDir = props.getProperty("tbtxtdir");
 	    String parseDir = props.getProperty("parsedir");

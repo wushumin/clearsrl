@@ -6,6 +6,9 @@ import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
+import clearcommon.util.PropertyUtil;
+
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.ObjectInputStream;
@@ -29,7 +32,9 @@ public class RunSRL {
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		in.close();
-
+		props = PropertyUtil.filterProperties(props, "srl.");
+		
+		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
 		    System.exit(-1);
@@ -118,15 +123,23 @@ public class RunSRL {
 			}
 		}
 		*/
-        boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
+        boolean modelPredicate = props.getProperty("predicatedir")==null;
 		
         SRInstance.OutputFormat outputFormat = SRInstance.OutputFormat.valueOf(props.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
-        PrintStream output = null;
-        try {
-            output = new PrintStream(props.getProperty("output.file"));
-        } catch (Exception e){
-            output = System.out;
+        
+        File outputDir = null;
+        {
+            String outputDirName = props.getProperty("output.dir");
+            if (outputDirName != null) outputDir = new File(outputDirName);
         }
+        
+        PrintStream output = null;
+        if (outputDir.exists())
+        {
+            if (!outputDir.isDirectory()) output = new PrintStream(outputDir);
+        }
+        else
+            output = System.out;
         
         if (!dataFormat.equals("conll"))
         {       
@@ -145,7 +158,21 @@ public class RunSRL {
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
             	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
-                TBTree[] trees = entry.getValue(); 
+                TBTree[] trees = entry.getValue();
+                
+                System.out.println("Processing "+entry.getKey());
+                
+                boolean closeStream = false;
+                if (output==null && outputDir.isDirectory())
+                {
+                    String fName = entry.getKey();
+                    if (fName.endsWith("parse")) fName = fName.substring(0, fName.length()-5)+"prop";
+                    File propFile = new File(outputDir, fName);
+                    propFile.getParentFile().mkdirs();
+                    closeStream = true;
+                    output = new PrintStream(propFile);
+                }
+                    
                 for (int i=0; i<trees.length; ++i)
                 {
                     //System.out.println(i+" "+trees[i].getRootNode().toParse());
@@ -191,6 +218,11 @@ public class RunSRL {
                             System.out.print("\n");
                         }*/
                     }
+                }
+                if (closeStream)
+                {
+                    output.close();
+                    output = null;
                 }
             }      
         }		
@@ -293,7 +325,7 @@ public class RunSRL {
 			}
 
 		}
-        if (output != System.out)
+        if (output!=null && output != System.out)
             output.close();
 		/*
         else if (dataFormat.equals("conll"))

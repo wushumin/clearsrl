@@ -116,6 +116,23 @@ public class Sentence implements Serializable{
 		
 	}
 	
+	public String toTokenIdx()
+	{
+	    StringBuilder builder = new StringBuilder();
+        builder.append(tbFile);
+        for (long id:indices)
+            builder.append(" "+getTreeIndex(id)+"~"+getTerminalIndex(id));
+        return builder.toString();
+	}
+	
+	public String toTokens()
+	{
+	    StringBuilder builder = new StringBuilder();
+	    for (String token:tokens)
+            builder.append(token+" ");
+	    return builder.toString();
+	}
+	
 	public String toString()
 	{
 		StringBuilder builder = new StringBuilder();
