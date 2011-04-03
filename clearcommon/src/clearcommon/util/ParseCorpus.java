@@ -60,15 +60,20 @@ public class ParseCorpus {
                 System.err.println("Skipping sentence with "+words.size()+" words since it is too long.");
             }
             else {
-                Tree<String> parsedTree = getParser().getBestConstrainedParse(words,null,null);
-    
-                if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
-                {
-                    removeUselessNodes(parsedTree.getChildren().get(0));
-                    parse="( "+parsedTree.getChildren().get(0)+" )\n";
-                }
-                else
-                    parse=makeDefaultParse(words);
+                Tree<String> parsedTree = null;
+		try {
+		    parsedTree = getParser().getBestConstrainedParse(words,null,null);
+		} catch (Exception e) {
+		    e.printStackTrace();
+		} finally {
+		    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
+		    {
+			removeUselessNodes(parsedTree.getChildren().get(0));
+			parse="( "+parsedTree.getChildren().get(0)+" )\n";
+		    }
+		    else
+			parse=makeDefaultParse(words);
+		}
             }
             synchronized (parseQueue)
             {
@@ -97,7 +102,7 @@ public class ParseCorpus {
             Lexicon lexicon = pData.getLexicon();
             Numberer.setNumberers(pData.getNumbs());
         
-            if (props.getProperty("Chinese")!=null || !props.getProperty("Chinese").equals("false")) 
+            if (props.getProperty("Chinese")!=null && !props.getProperty("Chinese").equals("false")) 
             {
                 System.out.println("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
@@ -153,7 +158,10 @@ public class ParseCorpus {
 		in.close();
 		props = PropertyUtil.filterProperties(props, "parser.");
 		
-		ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(props.getProperty("threads","1")));
+		int threads = Integer.parseInt(props.getProperty("threads","1"));
+		System.out.printf("Using %d threads\n",threads);
+		
+		ExecutorService executor = Executors.newFixedThreadPool(threads);
         
 		String txtDir = props.getProperty("tbtxtdir");
 	    String parseDir = props.getProperty("parsedir");

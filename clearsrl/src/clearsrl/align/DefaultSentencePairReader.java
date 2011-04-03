@@ -54,16 +54,21 @@ public class DefaultSentencePairReader extends SentencePairReader{
         
 		if (sentenceAligned)
 		{
-			srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src."));
-			dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst."));
-			
-			srcSentenceReader.initialize();
-			dstSentenceReader.initialize();
+			if (srcSentenceReader==null)
+			    srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src."));
+			if (dstSentenceReader==null)
+			    dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst."));
 		}
 		else
 		{
-			//TODO: init srcSentenceReader, dstSentenceReader, srcTokenIndexScanner, dstTokenIndexScanner
+		    if (srcSentenceReader==null)
+                srcSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "src."));
+            if (dstSentenceReader==null)
+                dstSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "dst."));   
 		}
+		    
+		srcSentenceReader.initialize();
+		dstSentenceReader.initialize();
 		
 		srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
 		dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
@@ -109,26 +114,33 @@ public class DefaultSentencePairReader extends SentencePairReader{
     void close()
     {
         if (srcSentenceReader!=null)
+            srcSentenceReader.close();
+        if (dstSentenceReader!=null)
+            dstSentenceReader.close();
+        
+        if (srcAlignmentScanner!=null)
         {
-        	srcSentenceReader.close();
-        	dstSentenceReader.close();
             srcAlignmentScanner.close();
-            dstAlignmentScanner.close();   
+            srcAlignmentScanner = null;
         }
+        
+        if (dstAlignmentScanner!=null)
+        {
+            dstAlignmentScanner.close();  
+            dstAlignmentScanner = null;
+        }
+        
         if (srcTokenIndexScanner!= null)
         {
         	srcTokenIndexScanner.close();
-        	dstTokenIndexScanner.close();
+        	srcTokenIndexScanner = null;
         }
-
-        srcSentenceReader = null;
-        dstSentenceReader = null;
         
-        srcAlignmentScanner = null;
-        dstAlignmentScanner = null;
-        
-        srcTokenIndexScanner = null;
-        dstTokenIndexScanner = null;
+        if (dstTokenIndexScanner!=null)
+        {
+        	dstTokenIndexScanner.close();
+            dstTokenIndexScanner = null;
+        }
 
         super.close();
         
