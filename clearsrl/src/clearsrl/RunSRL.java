@@ -200,16 +200,15 @@ public class RunSRL {
                     {
                         predictions = model.predict(trees[i], goldInstances, null);
                         
-                        if (propBank==null) continue;
-                        
-                        BitSet goldPredicates = new BitSet();
-                        for (SRInstance instance:goldInstances)
-                            goldPredicates.set(instance.getPredicateNode().getTokenIndex());
-                        
-                        BitSet predPredicates = new BitSet();
-                        for (SRInstance instance:predictions)
-                            predPredicates.set(instance.getPredicateNode().getTokenIndex());
                         /*
+                    	BitSet goldPredicates = new BitSet();
+                    	for (SRInstance instance:goldInstances)
+                    		goldPredicates.set(instance.getPredicateNode().getTokenIndex());
+                    
+                    	BitSet predPredicates = new BitSet();
+                    	for (SRInstance instance:predictions)
+                    		predPredicates.set(instance.getPredicateNode().getTokenIndex());
+
                         if (!goldPredicates.equals(predPredicates))
                         {
                             System.out.print(entry.getKey()+","+i+": ");
