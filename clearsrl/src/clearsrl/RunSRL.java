@@ -190,7 +190,7 @@ public class RunSRL {
                     //    System.out.println(node.toParse());
                     TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
-                    SRInstance[] goldInstances = pbFileMap==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
+                    SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
                     for (int j=0; j<goldInstances.length; ++j)
                         goldInstances[j] = new SRInstance(pbInstances.get(j));
                     
