@@ -155,7 +155,7 @@ public class RunSRL {
             Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
             if (props.getProperty("pbdir")!=null)
             {
-                String testRegex = props.getProperty("train.regex");
+                String testRegex = props.getProperty("pb.regex");
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
                 propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
                                      testRegex, 
