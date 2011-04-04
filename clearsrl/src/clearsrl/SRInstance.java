@@ -29,7 +29,7 @@ public class SRInstance {
 	
 	public SRInstance(TBNode predicateNode, TBTree tree)
 	{
-		this.predicateNode = predicateNode;
+		this.predicateNode = tree.getRootNode().getNodeByTokenIndex(predicateNode.getTokenIndex());
 		this.tree = tree;
 		args = new ArrayList<SRArg>();
 	}
