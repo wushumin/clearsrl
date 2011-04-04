@@ -10,33 +10,28 @@ import java.util.Properties;
 import clearcommon.util.PropertyUtil;
 
 public class RunTrainer {
-	public static void main(String[] args) throws IOException
+	
+	static Aligner gatherSentences(Properties props, boolean isGold) throws IOException
 	{
-	    Properties props = new Properties();
-        {
-            FileInputStream in = new FileInputStream(args[0]);
-            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
-            props.load(iReader);
-            iReader.close();
-            in.close();
-        }
-        
-        String htmlOutfile = props.getProperty("ldc.alignment.output.html", null);
+		String prefix = isGold?"ldcgold.":"ldcsys.";
+		
+		String htmlOutfile = props.getProperty(prefix+"alignment.output.html", null);
         
         if (htmlOutfile==null)
             htmlOutfile = "/dev/null";
         
         PrintStream alignmentStream;
         try {
-            alignmentStream = new PrintStream(props.getProperty("ldc.alignment.output.txt", null));
+            alignmentStream = new PrintStream(props.getProperty(prefix+"alignment.output.txt", null));
         } catch (Exception e) {
             alignmentStream = System.out;
         }
         
         PrintStream htmlStream = new PrintStream(htmlOutfile);
 		
-        SentencePairReader sentencePairReader = new LDCSentencePairReader(PropertyUtil.filterProperties(props, "ldc."));
-        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("ldc.aligner.threshold", "0.7")));
+        SentencePairReader sentencePairReader = new LDCSentencePairReader(PropertyUtil.filterProperties(props, prefix+"align."));
+        
+        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty(prefix+"align.threshold", "0.7")));
         
         sentencePairReader.initialize();
         Aligner.initAlignmentOutput(htmlStream);
@@ -69,7 +64,24 @@ public class RunTrainer {
         Aligner.finalizeAlignmentOutput(htmlStream);
         
 		System.out.println(goodCnt+" "+badCnt);
-		
+	
 		aligner.collectStats();
+		return aligner;
+	}
+	
+	
+	public static void main(String[] args) throws IOException
+	{
+	    Properties props = new Properties();
+        {
+            FileInputStream in = new FileInputStream(args[0]);
+            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
+            props.load(iReader);
+            iReader.close();
+            in.close();
+        }
+        
+        gatherSentences(props, false);
+		
 	}
 }

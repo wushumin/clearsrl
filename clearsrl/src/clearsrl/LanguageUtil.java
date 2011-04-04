@@ -6,6 +6,7 @@ import clearcommon.treebank.TBNode;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public abstract class LanguageUtil {
     
@@ -23,8 +24,14 @@ public abstract class LanguageUtil {
     {
         return Arrays.asList(word);
     }
+
+    public List<String> getPredicateAlternatives(String predicate, Set<String> predicateSet)
+    {
+    	return Arrays.asList(predicate);
+    }
     
     public abstract int getPassive(TBNode predicateNode);
+    
     
     public abstract TBHeadRules getHeadRules();
 }

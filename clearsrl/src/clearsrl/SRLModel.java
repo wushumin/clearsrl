@@ -77,6 +77,7 @@ public class SRLModel implements Serializable {
 		HEADWORDPOS,
 		HEADWORDDUPE,
 		HEADWORDDUPE_HEADWORDPOS,
+		PREDICATE_HEADWORD,
 		FIRSTWORD,
 		FIRSTWORDPOS,
 		LASTWORD,
@@ -362,6 +363,8 @@ public class SRLModel implements Serializable {
 			if (!stems.isEmpty()) predicateLemma = stems.get(0);
 		}
 		
+        List<String> predicateAlternatives = langUtil.getPredicateAlternatives(predicateLemma, featureStringSet==null?null:featureStringSet.get(Feature.PREDICATE));
+		
 		// build subcategorization feature
 		String subCat = null;
 		{
@@ -382,7 +385,8 @@ public class SRLModel implements Serializable {
 		{
 			switch (feature) {
 			case PREDICATE:
-				defaultMap.put(feature, Arrays.asList(predicateLemma));
+				//defaultMap.put(feature, Arrays.asList(predicateLemma));
+				defaultMap.put(feature, predicateAlternatives);
 				break;
 			case PREDICATEPOS:
 				if (predicateNode.getPOS().matches("V.*"))
@@ -397,10 +401,12 @@ public class SRLModel implements Serializable {
 				break;
 			case PREDICATE_PREDICATEPOS:
 				if (predicateNode.getPOS().matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+predicateNode.getPOS()));
+					//defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+predicateNode.getPOS()));
+					defaultMap.put(feature, permute(predicateAlternatives, Arrays.asList(predicateNode.getPOS())));
 				break;
 			case PREDICATE_VOICE:
-				defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+(isPassive?"Passive":"Active")));
+				//defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+(isPassive?"Passive":"Active")));
+				defaultMap.put(feature, permute(predicateAlternatives, Arrays.asList(isPassive?"Passive":"Active")));
 				break;
 			default:
 				break;
@@ -472,7 +478,7 @@ public class SRLModel implements Serializable {
 					StringBuilder buffer = new StringBuilder();
 					for (int i=1; i<path.size()-2; i++) 
 					{
-						if (path.get(i).startsWith("S"))
+						if (path.get(i).startsWith("S") || path.get(i).equals("LP"))
 						{
 							buffer.append("S");
 							if (!path.get(i-1).equals(UP_CHAR)||!path.get(i+1).equals(DOWN_CHAR))
@@ -555,6 +561,9 @@ public class SRLModel implements Serializable {
                     //else
                     //    sample.put(feature, Arrays.asList("HeadUnique_"+SRLUtil.removeTrace(argNode.head.pos)));
                     break;
+				case PREDICATE_HEADWORD:
+					sample.put(feature, permute(predicateAlternatives, Arrays.asList(head.getPOS())));
+					break;
 				case FIRSTWORD:
 					sample.put(feature, Arrays.asList(tnodes.get(0).getWord()));
 					break;
@@ -577,10 +586,12 @@ public class SRLModel implements Serializable {
 					break;
 				}
 				case PREDICATE_POSITION:
-					sample.put(feature, Arrays.asList(predicateLemma+(isBefore?"_before":"+_after")));
+					//sample.put(feature, Arrays.asList(predicateLemma+(isBefore?"_before":"+_after")));
+					sample.put(feature, permute(predicateAlternatives, Arrays.asList((isBefore?"_before":"+_after"))));
 					break;
 				case PREDICATE_VOICE_POSITION:
-					sample.put(feature, Arrays.asList(predicateLemma+(isPassive?"_Passive":"_Active")+(isBefore?"_before":"_after")));
+					//sample.put(feature, Arrays.asList(predicateLemma+(isPassive?"_Passive":"_Active")+(isBefore?"_before":"_after")));
+					sample.put(feature, permute(predicateAlternatives, Arrays.asList((isPassive?"_Passive":"_Active")+(isBefore?"_before":"+_after"))));
 					break;
 				case PATH_POSITION:
 					sample.put(feature, Arrays.asList(pathStr+(isBefore?"_before":"_after")));
@@ -740,6 +751,15 @@ public class SRLModel implements Serializable {
             }
         }
         return sample;
+    }
+    
+    static List<String> permute(List<String> lhs, List<String> rhs)
+    {
+    	ArrayList<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
+    	for (String a1:lhs)
+    		for (String a2:rhs)
+    			ret.add(a1+"_"+a2);
+    	return ret;
     }
     
     int[] getPredicateFeatureVector(EnumMap<PredicateFeature,List<String>> sample)

@@ -1,10 +1,12 @@
 package clearsrl;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
@@ -22,6 +24,23 @@ public class ChineseUtil extends LanguageUtil {
             return false;
         }
         return true;
+    }
+    
+    @Override
+    public List<String> getPredicateAlternatives(String predicate, Set<String> predicateSet)
+    {
+    	if (predicateSet==null)
+    		return super.getPredicateAlternatives(predicate, predicateSet);
+    	ArrayList<String> alternatives = new ArrayList<String>();
+    	alternatives.add(predicate);
+    	if (predicate.length()>1)
+    	{
+    		if (alternatives.contains(predicate.substring(0,1)))
+    			alternatives.add(predicate.substring(0,1));
+    		if (alternatives.contains(predicate.substring(predicate.length()-1)))
+    			alternatives.add(predicate.substring(predicate.length()-1));
+    	}
+    	return alternatives;
     }
     
     @Override
@@ -89,9 +108,7 @@ public class ChineseUtil extends LanguageUtil {
         
         return count;
     }
-
     
-
     @Override
     public TBHeadRules getHeadRules() {
         return headRules;

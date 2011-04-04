@@ -22,12 +22,17 @@ public final class PBUtil {
         return readPBDir(dirName, regex, tbDir, null);
     }
     
-    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String tbDir, String dirName, String regex, TreeFileResolver resolver)
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, TreeFileResolver resolver)
     {   
-        return readPBDir(new TBReader(tbDir, true), dirName, regex, resolver);
+        return readPBDir(dirName, regex, new TBReader(tbDir, true), resolver);
     }
     
-	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(TBReader tbReader, String dirName, String regex, TreeFileResolver resolver)
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader)
+    {
+    	return readPBDir(dirName, regex, tbReader, null);
+    }
+    
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader, TreeFileResolver resolver)
 	{   
 		File dir = new File(dirName);
 		

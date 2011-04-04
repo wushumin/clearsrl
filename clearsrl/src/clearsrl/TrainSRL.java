@@ -9,6 +9,10 @@ import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
+import clearcommon.util.PropertyUtil;
+
+import gnu.trove.TObjectIntHashMap;
+import gnu.trove.TObjectIntIterator;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,9 +27,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.zip.GZIPOutputStream;
 
 import clearsrl.SRLModel.Feature;
@@ -91,6 +97,11 @@ public class TrainSRL {
 		props.load(in);
 		in.close();
 		
+		props = PropertyUtil.filterProperties(props, "srl.");
+		props = PropertyUtil.filterProperties(props, "train.", true);
+		
+		System.out.println(props.keySet());
+		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
         if (!langUtil.init(props))
             System.exit(-1);
@@ -137,11 +148,11 @@ public class TrainSRL {
 		
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 	
-        HashMap<String, Integer> rolesetEmpty = new HashMap<String, Integer>();
-        HashMap<String, Integer> rolesetArg = new HashMap<String, Integer>();
+        TObjectIntHashMap<String> rolesetEmpty = new TObjectIntHashMap<String>();
+        TObjectIntHashMap<String> rolesetArg = new TObjectIntHashMap<String>();
 		if (!dataFormat.equals("conll"))
 		{
-			String trainRegex = props.getProperty("train.regex");
+			String trainRegex = props.getProperty("regex");
 			//Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
 			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = 
 			    PBUtil.readPBDir(props.getProperty("pbdir"), 
@@ -155,15 +166,14 @@ public class TrainSRL {
 			for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:propBank.entrySet())
 			{
 			    try {
-	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
 	                TBFileReader tbreader    = new SerialTBFileReader(props.getProperty("parsedir"), entry.getKey());
+	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
 	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
 	                TBTree tree;
 	                while ((tree = tbreader.nextTree()) != null)
 	                    a_tree.add(tree);
 	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
 	            } catch (FileNotFoundException e) {
-	                e.printStackTrace();
 	            } catch (ParseException e) {
 	                e.printStackTrace();
 	            }
@@ -172,8 +182,9 @@ public class TrainSRL {
             model.initDictionary();
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
 			{
+				System.out.println("Processing (p1) "+entry.getKey());
 				SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
-			    TBTree[] trees = entry.getValue(); 
+			    TBTree[] trees = entry.getValue();
 			    for (int i=0; i<trees.length; ++i)
 			    {
 			        TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
@@ -212,19 +223,20 @@ public class TrainSRL {
             model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
 			
             System.out.println("***************************************************");
-            for (Iterator<Map.Entry<String, Integer>> iter = rolesetEmpty.entrySet().iterator(); iter.hasNext();)
+            for (TObjectIntIterator<String> iter = rolesetEmpty.iterator(); iter.hasNext();)
             {
-            	Map.Entry<String, Integer> entry = iter.next();
+            	iter.advance();
             	
-                if (entry.getValue()<rolesetArg.get(entry.getKey())||entry.getValue()<2)
+                if (iter.value()<rolesetArg.get(iter.key())||iter.value()<2)
                     iter.remove();
                 else
-                    System.out.println(entry.getKey()+": "+entry.getValue()+"/"+rolesetArg.get(entry.getKey()));
+                    System.out.println(iter.key()+": "+iter.value()+"/"+rolesetArg.get(iter.key()));
             }
             System.out.println("***************************************************");
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
+            	System.out.println("Processing (p2) "+entry.getKey());
             	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
@@ -237,7 +249,7 @@ public class TrainSRL {
                         {
                             for (PBInstance instance:pbInstances)
                             {
-                                if (!rolesetEmpty.containsKey(instance.getRoleset()))
+                                //if (!rolesetEmpty.containsKey(instance.getRoleset()))
                                     srls.add(new SRInstance(instance));
                             }
                         }

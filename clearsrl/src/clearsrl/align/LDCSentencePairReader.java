@@ -26,6 +26,7 @@ import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
+import clearsrl.align.SentencePair.BadInstanceException;
 
 public class LDCSentencePairReader extends SentencePairReader {
 
@@ -36,16 +37,18 @@ public class LDCSentencePairReader extends SentencePairReader {
 	
     Set<String> excludeFiles;
     
-    PrintStream srcTokenIdxOutput;
-    PrintStream dstTokenIdxOutput;
+    Scanner sentenceInfoScanner;
+    Scanner srcTokenScanner;
+    Scanner dstTokenScanner;
+    Scanner srcAlignmentScanner;
+    Scanner dstAlignmentScanner;
     
     PrintStream srcTokenOutput;
     PrintStream dstTokenOutput;
     
-    Scanner sentenceInfoScanner;
-    Scanner srcTokenScanner;
-    Scanner dstTokenScanner;
-    Scanner alignmentScanner;
+    PrintStream sentenceInfoOutput;
+    
+    boolean bidirectionalAlignemnt;
     
     int count;
     
@@ -80,19 +83,30 @@ public class LDCSentencePairReader extends SentencePairReader {
         srcTreeBank = TBUtil.readTBDir(props.getProperty("src.tbdir"), props.getProperty("tb.regex"));
         dstTreeBank = TBUtil.readTBDir(props.getProperty("dst.tbdir"), props.getProperty("tb.regex"));
         
-        srcPropBank = PBUtil.readPBDir(new TBReader(srcTreeBank), props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new OntoNoteTreeFileResolver());
-        dstPropBank = PBUtil.readPBDir(new TBReader(dstTreeBank), props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new OntoNoteTreeFileResolver());
-        
         sentenceInfoScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("info"))));
         srcTokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.tokenfile")))).useDelimiter("[\n\r]");
         dstTokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.tokenfile")))).useDelimiter("[\n\r]");
-        alignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment"))));
         
-        srcTokenIdxOutput = new PrintStream(props.getProperty("src.token_idx"));
-        dstTokenIdxOutput = new PrintStream(props.getProperty("dst.token_idx"));
-        
-        srcTokenOutput = new PrintStream(props.getProperty("src.tokens"));
-        dstTokenOutput = new PrintStream(props.getProperty("dst.tokens"));
+        if (props.getProperty("alignment")!=null)
+        {
+        	bidirectionalAlignemnt = true;
+        	
+        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), new OntoNoteTreeFileResolver());
+            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), new OntoNoteTreeFileResolver());
+             
+        	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment"))));
+        	srcTokenOutput = new PrintStream(props.getProperty("src.tokens"));
+            dstTokenOutput = new PrintStream(props.getProperty("dst.tokens"));
+            sentenceInfoOutput = new PrintStream(props.getProperty("info_out"));
+        }
+        else
+        {
+        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank));
+            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank));
+        	
+        	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
+        	dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
+        }
     }
 	
 	@Override
@@ -102,10 +116,11 @@ public class LDCSentencePairReader extends SentencePairReader {
 		// TODO the rest
     	if (!sentenceInfoScanner.hasNext()) return null;
     	
-    	String[] infoTokens = sentenceInfoScanner.nextLine().trim().split("[ \t]+");
+    	String info = sentenceInfoScanner.nextLine();
+    	
+    	String[] infoTokens = info.trim().split("[ \t]+");
     	String[] srcTerminals = srcTokenScanner.nextLine().trim().split("[ \t]+");
     	String[] dstTerminals = dstTokenScanner.nextLine().trim().split("[ \t]+");
-    	String[] alignmentStrs = alignmentScanner.nextLine().trim().split("[ \t]+");
     	
         int id=Integer.parseInt(infoTokens[0]);
         SentencePair sentencePair = new SentencePair(count);
@@ -144,42 +159,60 @@ public class LDCSentencePairReader extends SentencePairReader {
             return sentencePair;
         }
         
-        srcTokenIdxOutput.println(sentencePair.src.toTokenIdx());
-        dstTokenIdxOutput.println(sentencePair.dst.toTokenIdx());
-        
-        srcTokenOutput.println(sentencePair.src.toTokens());
-        dstTokenOutput.println(sentencePair.dst.toTokens());
-        
-        int[] srcAlignmentIdx = new int[alignmentStrs.length];
-        int[] dstAlignmentIdx = new int[alignmentStrs.length];
-        
-        for (int i=0; i<alignmentStrs.length; ++i)
+        if (bidirectionalAlignemnt)
         {
-        	dstAlignmentIdx[i] = dstTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')))];
-        	srcAlignmentIdx[i] = srcTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1))];
-        }
-        
-        TIntObjectHashMap<TIntHashSet> srcAlignment = new TIntObjectHashMap<TIntHashSet>();
-        TIntObjectHashMap<TIntHashSet> dstAlignment = new TIntObjectHashMap<TIntHashSet>();
-        for (int i=0; i<srcAlignmentIdx.length; ++i)
-        {
-        	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
-        		continue;
-        	TIntHashSet srcSet = srcAlignment.get(srcAlignmentIdx[i]);
-        	if (srcSet==null) srcAlignment.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
-        	srcSet.add(dstAlignmentIdx[i]);
+        	String[] alignmentStrs = srcAlignmentScanner.nextLine().trim().split("[ \t]+");
         	
-        	TIntHashSet dstSet = dstAlignment.get(dstAlignmentIdx[i]);
-        	if (dstSet==null) dstAlignment.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
-        	dstSet.add(srcAlignmentIdx[i]);
-        }
+        	srcTokenOutput.println(sentencePair.src.toTokens());
+        	dstTokenOutput.println(sentencePair.dst.toTokens());
         
-        sentencePair.srcAlignment = convertAlignment(sentencePair.src.indices, srcAlignment);
-        sentencePair.dstAlignment = convertAlignment(sentencePair.dst.indices, dstAlignment);
+	        int[] srcAlignmentIdx = new int[alignmentStrs.length];
+	        int[] dstAlignmentIdx = new int[alignmentStrs.length];
+	        
+	        for (int i=0; i<alignmentStrs.length; ++i)
+	        {
+	        	dstAlignmentIdx[i] = dstTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')))];
+	        	srcAlignmentIdx[i] = srcTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1))];
+	        }
+	        
+	        TIntObjectHashMap<TIntHashSet> srcAlignment = new TIntObjectHashMap<TIntHashSet>();
+	        TIntObjectHashMap<TIntHashSet> dstAlignment = new TIntObjectHashMap<TIntHashSet>();
+	        for (int i=0; i<srcAlignmentIdx.length; ++i)
+	        {
+	        	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
+	        		continue;
+	        	TIntHashSet srcSet = srcAlignment.get(srcAlignmentIdx[i]);
+	        	if (srcSet==null) srcAlignment.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
+	        	srcSet.add(dstAlignmentIdx[i]);
+	        	
+	        	TIntHashSet dstSet = dstAlignment.get(dstAlignmentIdx[i]);
+	        	if (dstSet==null) dstAlignment.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
+	        	dstSet.add(srcAlignmentIdx[i]);
+	        }
+	        
+	        sentencePair.srcAlignment = convertAlignment(sentencePair.src.indices, srcAlignment);
+	        sentencePair.dstAlignment = convertAlignment(sentencePair.dst.indices, dstAlignment);
+	        excludeFiles.add(treeFilename);
+	        sentenceInfoOutput.println(info);
+	        
+        } else {
+        	 srcAlignmentScanner.next(); srcAlignmentScanner.next(); // skip comment & text
+             dstAlignmentScanner.next(); dstAlignmentScanner.next(); // skip comment & text
+             
+             String srcLine = srcAlignmentScanner.next();
+             String dstLine = dstAlignmentScanner.next();
+             try {
+                 sentencePair.parseSrcAlign(srcLine);
+                 sentencePair.parseDstAlign(dstLine);
+             } catch (BadInstanceException e) {
+            	 System.err.println(count);
+                 e.printStackTrace();
+                 System.err.println(srcLine);
+                 System.err.println(dstLine);
+             }
+        }
         
     	writeSentencePair(sentencePair);
-    	
-    	excludeFiles.add(treeFilename);
     	
     	++count;
         return sentencePair;
@@ -242,10 +275,15 @@ public class LDCSentencePairReader extends SentencePairReader {
             dstTokenScanner.close();
             dstTokenScanner = null;
         }
-        if (alignmentScanner!=null) {
-            alignmentScanner.close();
-            alignmentScanner = null;
+        if (srcAlignmentScanner!=null) {
+            srcAlignmentScanner.close();
+            srcAlignmentScanner = null;
         }
+        if (dstAlignmentScanner!=null) {
+            dstAlignmentScanner.close();
+            dstAlignmentScanner = null;
+        }
+        
         if (!excludeFiles.isEmpty()) {
             try {
                 PrintStream output = new PrintStream(props.getProperty("excludeFileList"));
@@ -255,17 +293,9 @@ public class LDCSentencePairReader extends SentencePairReader {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            excludeFiles.clear();
         }
-        excludeFiles.clear();
-        
-        if (srcTokenIdxOutput!=null) {
-            srcTokenIdxOutput.close();
-            srcTokenIdxOutput=null;
-        }
-        if (dstTokenIdxOutput!=null) {
-            dstTokenIdxOutput.close();
-            dstTokenIdxOutput=null;
-        }
+
         if (srcTokenOutput!=null) {
             srcTokenOutput.close();
             srcTokenOutput=null;
@@ -274,7 +304,10 @@ public class LDCSentencePairReader extends SentencePairReader {
             dstTokenOutput.close();
             dstTokenOutput=null;
         }
-        
+        if (sentenceInfoOutput!=null) {
+        	sentenceInfoOutput.close();
+        	sentenceInfoOutput=null;
+        }
         super.close();
     }
 

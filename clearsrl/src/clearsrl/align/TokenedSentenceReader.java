@@ -11,7 +11,6 @@ import java.util.SortedMap;
 
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
@@ -38,12 +37,11 @@ public class TokenedSentenceReader extends SentenceReader {
     @Override
     public void initialize() throws FileNotFoundException {
         close();
-        
-        // TODO Auto-generated method stub
+
         if (treeBank==null)
             treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("tb.regex"));
         if (propBank==null)
-            propBank = PBUtil.readPBDir(new TBReader(treeBank), props.getProperty("pbdir"), props.getProperty("pb.regex"), new OntoNoteTreeFileResolver());
+            propBank = PBUtil.readPBDir(props.getProperty("pbdir"), props.getProperty("pb.regex"), new TBReader(treeBank));
         
         tokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("token_idx")))).useDelimiter("[\n\r]");
     }

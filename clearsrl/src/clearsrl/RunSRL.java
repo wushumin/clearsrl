@@ -7,6 +7,7 @@ import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.PropertyUtil;
+import clearsrl.LanguageUtil.POS;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -32,8 +34,9 @@ public class RunSRL {
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		in.close();
-		props = PropertyUtil.filterProperties(props, "srl.");
 		
+		props = PropertyUtil.filterProperties(props, "srl.");
+		props = PropertyUtil.filterProperties(props, "run.", true);
 		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
@@ -123,7 +126,13 @@ public class RunSRL {
 			}
 		}
 		*/
-        boolean modelPredicate = props.getProperty("predicatedir")==null;
+        boolean predictPredicate = (props.getProperty("predict_predicate")!=null && !props.getProperty("predict_predicate").equals("false"));
+        
+        if (predictPredicate==true && model.predicateClassifier==null)
+        {
+        	System.err.println("Predicate Classifier not trained!");
+        	System.exit(-1);
+        }
 		
         SRInstance.OutputFormat outputFormat = SRInstance.OutputFormat.valueOf(props.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
         
@@ -181,14 +190,15 @@ public class RunSRL {
                     //    System.out.println(node.toParse());
                     TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
-                    if (modelPredicate)
+                    SRInstance[] goldInstances = pbFileMap==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
+                    for (int j=0; j<goldInstances.length; ++j)
+                        goldInstances[j] = new SRInstance(pbInstances.get(j));
+                    
+                    List<SRInstance> predictions = null;
+                    
+                    if (predictPredicate)
                     {
-                        SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
-                        for (int j=0; j<goldInstances.length; ++j)
-                            goldInstances[j] = new SRInstance(pbInstances.get(j));
-                        List<SRInstance> predictions = model.predict(trees[i], goldInstances, null);
-                        for (SRInstance instance:predictions)
-                            output.println(instance.toString(outputFormat));
+                        predictions = model.predict(trees[i], goldInstances, null);
                         
                         if (propBank==null) continue;
                         
@@ -218,6 +228,19 @@ public class RunSRL {
                             System.out.print("\n");
                         }*/
                     }
+                    else
+                    {
+                    	predictions = new LinkedList<SRInstance>();
+                    	for (SRInstance goldInstance:goldInstances)
+                    	{
+                    		List<String> stem = langUtil.findStems(goldInstance.predicateNode.getWord(), POS.VERB);
+                            predictions.add(new SRInstance(goldInstance.predicateNode, trees[i], stem.get(0)+".XX", 1.0));
+                            model.predict(predictions.get(predictions.size()-1), goldInstance, null);
+                    	}
+                    }
+                    for (SRInstance instance:predictions)
+                        output.println(instance.toString(outputFormat));
+                    
                 }
                 if (closeStream)
                 {

@@ -55,16 +55,16 @@ public class DefaultSentencePairReader extends SentencePairReader{
 		if (sentenceAligned)
 		{
 			if (srcSentenceReader==null)
-			    srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src."));
+			    srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src.", true));
 			if (dstSentenceReader==null)
-			    dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst."));
+			    dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst.", true));
 		}
 		else
 		{
 		    if (srcSentenceReader==null)
-                srcSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "src."));
+                srcSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "src.", true));
             if (dstSentenceReader==null)
-                dstSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "dst."));   
+                dstSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "dst.", true));   
 		}
 		    
 		srcSentenceReader.initialize();
