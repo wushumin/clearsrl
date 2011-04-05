@@ -22,16 +22,12 @@ import java.io.FileReader;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.zip.GZIPOutputStream;
 
 import clearsrl.SRLModel.Feature;
@@ -48,7 +44,7 @@ public class TrainSRL {
 		if (instance.tree.getTokenCount() == parsedTree.getTokenCount())
 		{
 		    SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-		    SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree, instance.getRolesetId(), 1.0);
+		    SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
 		    for (int i=0; i<labels.size(); ++i)
                 trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
 		    
@@ -79,7 +75,7 @@ public class TrainSRL {
                 ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                 ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
                 SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-                SRInstance trainInstance = new SRInstance(parsedTree.getRootNode().getTokenNodes().get(instance.predicateNode.getTokenIndex()), parsedTree, instance.getRolesetId(), 1.0);
+                SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
                 for (int i=0; i<labels.size(); ++i)
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
                 trainInstances.add(trainInstance);

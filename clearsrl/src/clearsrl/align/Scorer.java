@@ -31,7 +31,7 @@ public class Scorer {
 		while (scanner.hasNextLine())
 		{
 			StringTokenizer tokenizer = new StringTokenizer(scanner.nextLine(),",");
-			if (tokenizer.countTokens() != 4)
+			if (tokenizer.countTokens() < 4)
 				continue;
 			try {
 				sentenceId = Integer.parseInt(tokenizer.nextToken().trim());

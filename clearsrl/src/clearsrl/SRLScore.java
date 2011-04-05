@@ -1,78 +1,137 @@
 package clearsrl;
 
+import gnu.trove.TObjectIntHashMap;
+
 import java.io.PrintStream;
-import java.util.BitSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.Arrays;
+import java.util.List;
+import java.util.SortedSet;
 
 public class SRLScore {
-	Map<String, int[]> score;
 	
-	public SRLScore(Set<String> argTypes)
+	SortedSet<String> labelSet;
+	TObjectIntHashMap<String> labelMap;
+	int[][] microCount;
+	int[][] macroCount;
+	
+	public SRLScore(SortedSet<String> labelSet)
 	{
-		score = new TreeMap<String, int[]>();
-		//for (String argType:argTypes)
-		//	score.put(argType, new int[3]);
+		this.labelSet = labelSet;
+		labelMap = new TObjectIntHashMap<String>();
+		
+		int count=0;
+		for (String argType:labelSet)
+			labelMap.put(argType, count++);
+
+		microCount = new int[count][count];
+		macroCount = new int[count][count];
 	}
 	
-	public void addResult(Map<String, BitSet> systemSRL, Map<String, BitSet> goldSRL)
+	String[] getLabels(List<SRArg> args, int tokenCount)
 	{
-		for (Map.Entry<String, BitSet> entry:systemSRL.entrySet())
-		{
-			if (entry.getKey().equals("rel")) continue;
-			if (!score.containsKey(entry.getKey()))
-				score.put(entry.getKey(), new int[3]);
-			int[] count = score.get(entry.getKey());
-			count[0] += entry.getValue().cardinality();
-		}
+		String[] strs = new String[tokenCount];
+		Arrays.fill(strs, SRLModel.NOT_ARG);
+		for (SRArg arg:args)
+			for (int i=arg.tokenSet.nextSetBit(0); i>=0; i=arg.tokenSet.nextSetBit(i+1))
+				strs[i] = arg.label;
+		return strs;
+	}
+	
+	public void addResult(SRInstance systemSRL, SRInstance goldSRL)
+	{
+		List<SRArg> sysArgs = systemSRL.getScoringArgs();
+		List<SRArg> goldArgs = goldSRL.getScoringArgs();
 		
-		BitSet tokenSet;
-		for (Map.Entry<String, BitSet> entry:goldSRL.entrySet())
+		String[] sysStr = getLabels(sysArgs, systemSRL.tree.getTokenCount());		
+		String[] goldStr = getLabels(goldArgs, goldSRL.tree.getTokenCount());
+		
+		for (int i=0; i<sysStr.length; ++i)
 		{
-			if (entry.getKey().equals("rel")) continue;
-			if (!score.containsKey(entry.getKey()))
-				score.put(entry.getKey(), new int[3]);
-			
-			int[] count = score.get(entry.getKey());
-			count[1] += entry.getValue().cardinality();
-			if ((tokenSet=systemSRL.get(entry.getKey()))!=null)
+			if (sysStr[i]==SRLModel.NOT_ARG && goldStr[i]==SRLModel.NOT_ARG)
+				continue;
+			microCount[labelMap.get(sysStr[i])][labelMap.get(goldStr[i])]++;
+		}
+
+		for (int i=0, j=0; i<sysArgs.size() || j<goldArgs.size();)
+		{
+			if (i>=sysArgs.size())
 			{
-				tokenSet = (BitSet)tokenSet.clone();
-				tokenSet.and(entry.getValue());
-				count[2] += tokenSet.cardinality();
+				macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+				++j;
+				continue;
 			}
+			if (j>=goldArgs.size())
+			{
+				macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
+				++i;
+				continue;
+			}
+			
+			int compare = sysArgs.get(i).compareTo(goldArgs.get(j));
+			if (compare<0)
+			{
+				macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
+				++i;
+			}
+			else if (compare>0)
+			{
+				macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+				++j;
+			}
+			else
+			{
+				if (sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet))
+					macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
+				else
+				{
+					macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
+					macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+				}
+				++i; ++j;
+			}	
 		}
-		
 	}
 	
 	public void printResults(PrintStream pStream)
 	{
+		System.out.println("\n********** Token Results **********");
+		printResults(pStream, microCount);
+		System.out.println("---------- Arg Results ------------");
+		printResults(pStream, macroCount);
+		System.out.println("************************\n");
+	}
+		
+	void printResults(PrintStream pStream, int[][] count)	
+	{
 		int pTotal=0, rTotal=0, fTotal=0;
 		double p, r, f;
-		for (Map.Entry<String, int[]> entry:score.entrySet())
+		for (String label: labelSet)
 		{
-			pTotal += entry.getValue()[0];
-			rTotal += entry.getValue()[1];
-			fTotal += entry.getValue()[2];
+			if (label.equals(SRLModel.NOT_ARG)) continue;
 			
-			p = entry.getValue()[0]==0?0:((double)entry.getValue()[2])/entry.getValue()[0];
-			r = entry.getValue()[1]==0?0:((double)entry.getValue()[2])/entry.getValue()[1];
+			int idx = labelMap.get(label);
+			
+			int pArgT=0, rArgT=0, fArgT=0;
+			
+			for (int i:count[idx]) pArgT+=i;
+			for (int i=0; i<count.length; ++i) rArgT+=count[i][idx];
+			
+			fArgT = count[idx][idx];
+
+			p = pArgT==0?0:((double)fArgT)/pArgT;
+			r = rArgT==0?0:((double)fArgT)/rArgT;
 			f = p==0?0:(r==0?0:2*p*r/(p+r));
-			System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", entry.getKey(), entry.getValue()[2], entry.getValue()[0], entry.getValue()[1], p, r,f);
+
+			System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", label, fArgT, pArgT, rArgT, p, r, f);
+			
+			pTotal += pArgT;
+			rTotal += rArgT;
+			fTotal += fArgT;
 		}
 		
 		p = pTotal==0?0:((double)fTotal)/pTotal;
 		r = rTotal==0?0:((double)fTotal)/rTotal;
 		f = p==0?0:(r==0?0:2*p*r/(p+r));
-		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", "all", fTotal, pTotal, rTotal, p, r,f);
-	}
-	
-	@Override
-    public String toString()
-	{
-		StringBuilder builder = new StringBuilder();
-		
-		return builder.toString();
+		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", "all", fTotal, pTotal, rTotal, p, r, f);
 	}
 }

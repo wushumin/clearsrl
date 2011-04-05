@@ -48,7 +48,6 @@ public class RunSRL {
 		System.out.println(model.featureSet);
 		
 		model.setLanguageUtil(langUtil);
-		model.initScore();
 		
 		int cCount = 0;
 		int pCount = 0;
@@ -150,8 +149,10 @@ public class RunSRL {
         else
             output = System.out;
         
+        SRLScore score = new SRLScore(model.labelStringSet);
+        SRLScore score2 = new SRLScore(model.labelStringSet);
         if (!dataFormat.equals("conll"))
-        {       
+        {	
             Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
             if (props.getProperty("pbdir")!=null)
             {
@@ -234,8 +235,26 @@ public class RunSRL {
                     	{
                     		List<String> stem = langUtil.findStems(goldInstance.predicateNode.getWord(), POS.VERB);
                             predictions.add(new SRInstance(goldInstance.predicateNode, trees[i], stem.get(0)+".XX", 1.0));
-                            model.predict(predictions.get(predictions.size()-1), goldInstance, null);
+                            model.predict(predictions.get(predictions.size()-1), null);
+                            score.addResult(predictions.get(predictions.size()-1), goldInstance);
+                            
+                            
+                            ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
+        					ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
+        					SRLUtil.getSamplesFromParse(goldInstance, trees[i], THRESHOLD, argNodes, labels);
+                            
+                            SRInstance trainInstance = new SRInstance(goldInstance.predicateNode, trees[i], goldInstance.getRolesetId(), 1.0);
+        					for (int l=0; l<labels.size(); ++l)
+        					{
+        						if (SRLUtil.getMaxLabel(labels.get(l)).equals(SRLModel.NOT_ARG)) continue;
+        						trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
+        					}
+        					score2.addResult(trainInstance, goldInstance);
                     	}
+                    	
+                    	
+                    	
+                    	
                     }
                     for (SRInstance instance:predictions)
                         output.println(instance.toString(outputFormat));
@@ -252,7 +271,6 @@ public class RunSRL {
 		{
 			ArrayList<CoNLLSentence> testing = CoNLLSentence.read(new FileReader(props.getProperty("test.input")), false);
 			
-			model.initScore();
 			for (CoNLLSentence sentence:testing)
 			{
 			    TBUtil.findHeads(sentence.parse.getRootNode(), langUtil.getHeadRules());
@@ -269,13 +287,11 @@ public class RunSRL {
 						trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
 					}
 					
-					model.score.addResult(SRLUtil.convertSRInstanceToTokenMap(trainInstance), SRLUtil.convertSRInstanceToTokenMap(instance));
+					score2.addResult(trainInstance, instance);
 				}				
 			}
-			model.score.printResults(System.out);
 
-			
-			model.initScore();
+
 			for (CoNLLSentence sentence:testing)
 			{
 				String[][] outStr = new String[sentence.parse.getTokenCount()][sentence.srls.length+1];
@@ -302,7 +318,7 @@ public class RunSRL {
 							argBitSet.put(arg.label, arg.getTokenSet());
 					}
 					SRInstance pInstance = new SRInstance(instance.predicateNode, instance.tree, instance.getRolesetId(), 1.0);
-					cCount += model.predict(pInstance, instance, sentence.namedEntities);
+					cCount += model.predict(pInstance, sentence.namedEntities);
 					pCount += pInstance.getArgs().size()-1;
 					//pCount += instance.getArgs().size()-1;
 					//System.out.println(instance);
@@ -378,7 +394,8 @@ public class RunSRL {
             
         }		
 		*/
-		model.score.printResults(System.out);
+		score2.printResults(System.out);
+		score.printResults(System.out);
 		System.out.println("Constituents predicted: "+pCount);
 		System.out.println("Constituents considered: "+cCount);
 

@@ -149,7 +149,7 @@ public class SRLModel implements Serializable {
 	transient int                                     hit = 0;
 	transient int                                     total = 0;
 	
-	transient SRLScore                                score;
+	transient private SRLScore                        score;
 	
 	public SRLModel (EnumSet<Feature> featureSet, EnumSet<PredicateFeature> predicateFeatureSet)
 	{
@@ -865,6 +865,7 @@ public class SRLModel implements Serializable {
             {
             	List<String> stem = langUtil.findStems(node.getWord(), POS.VERB);
                 predictions.add(new SRInstance(node, parseTree, stem.get(0)+".XX", vals[1]-vals[0]));
+                /*
                 SRInstance goldSRL = null;
                 for (SRInstance srl:goldSRLs)
                     if (node.getTokenIndex()==srl.predicateNode.getTokenIndex())
@@ -872,13 +873,13 @@ public class SRLModel implements Serializable {
                         goldSRL = srl;
                         break;
                     }
-
-                predict(predictions.get(predictions.size()-1), goldSRL, namedEntities);
+				*/
+                predict(predictions.get(predictions.size()-1), namedEntities);
             }
         return predictions;
     }
 
-    public int predict(SRInstance prediction, SRInstance goldSRL, String[] namedEntities)
+    public int predict(SRInstance prediction, /*SRInstance goldSRL,*/ String[] namedEntities)
     {
         ArrayList<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
         ArrayList<EnumMap<Feature,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
@@ -897,6 +898,7 @@ public class SRLModel implements Serializable {
 
         prediction.cleanUpArgs();
         
+        /*
         if (goldSRL!=null)
         {
             if (labeled)
@@ -910,11 +912,12 @@ public class SRLModel implements Serializable {
                     newGoldMap.get(IS_ARG).or(entry.getValue());
                 score.addResult(SRLUtil.convertSRInstanceToTokenMap(prediction), newGoldMap);
             }
-        }
+        }*/
+        
         return samples.size();
     }
 
-    public void initScore()
+    private void initScore()
     {
         score = new SRLScore(labelStringSet);
     }

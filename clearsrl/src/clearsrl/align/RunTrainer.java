@@ -15,14 +15,14 @@ public class RunTrainer {
 	{
 		String prefix = isGold?"ldcgold.":"ldcsys.";
 		
-		String htmlOutfile = props.getProperty(prefix+"alignment.output.html", null);
+		String htmlOutfile = props.getProperty(prefix+"align.output.html", null);
         
         if (htmlOutfile==null)
             htmlOutfile = "/dev/null";
         
         PrintStream alignmentStream;
         try {
-            alignmentStream = new PrintStream(props.getProperty(prefix+"alignment.output.txt", null));
+            alignmentStream = new PrintStream(props.getProperty(prefix+"align.output.txt", null));
         } catch (Exception e) {
             alignmentStream = System.out;
         }
@@ -52,7 +52,7 @@ public class RunTrainer {
                 for (Alignment alignment:alignments)
                 {
                     alignmentStream.println(sentencePair.id+","+alignment.toString());
-                    alignment.printScoreTable(alignmentStream);
+                    //alignment.printScoreTable(alignmentStream);
                 }
                 Aligner.printAlignment(htmlStream, sentencePair, alignments);
             }
@@ -80,7 +80,7 @@ public class RunTrainer {
             iReader.close();
             in.close();
         }
-        
+        gatherSentences(props, true);
         gatherSentences(props, false);
 		
 	}

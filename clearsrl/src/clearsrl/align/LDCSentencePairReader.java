@@ -156,6 +156,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         {
             System.err.println("Mismatch: "+id);
             sentencePair.id = -id;
+            // read the alignment line off
+            srcAlignmentScanner.nextLine();
             return sentencePair;
         }
         

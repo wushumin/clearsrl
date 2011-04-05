@@ -38,7 +38,7 @@ public class SRInstance {
 	{
 		this(predicateNode, tree);
 		this.rolesetId = rolesetId;
-		args.add(new SRArg("rel",predicateNode, score));
+		args.add(new SRArg("rel",this.predicateNode, score));
 	}
 	/*
 	public SRInstance(PBInstance instance) {
@@ -82,7 +82,7 @@ public class SRInstance {
 		return tree;
 	}
 	
-	public ArrayList<SRArg> getArgs()
+	public List<SRArg> getArgs()
 	{
 		return args;
 	}
@@ -208,6 +208,40 @@ public class SRInstance {
     		}
     		argMap.put(arg.label, arg);
     	}
+    }
+    
+    public List<SRArg> getScoringArgs() {
+    	Map<String, List<SRArg>> argMap = new TreeMap<String, List<SRArg>>();
+    	
+    	Collections.sort(args);
+    	for (SRArg arg:args)
+        {
+            if (arg.label.equals(SRLModel.NOT_ARG) || arg.label.equals("rel")) continue;
+            String label = arg.label.startsWith("C-")?arg.label.substring(2):arg.label;
+            List<SRArg> argList;
+            if ((argList = argMap.get(label))==null)
+            {
+            	argList = new LinkedList<SRArg>();
+            	argMap.put(label, argList);
+            }
+            argList.add(arg);
+        }
+    	
+    	LinkedList<SRArg> retArgs = new LinkedList<SRArg>();
+    	
+    	for (Map.Entry<String, List<SRArg>> entry:argMap.entrySet())
+    	{
+    		boolean isFirst = true;
+    		for (SRArg arg: entry.getValue())
+    		{
+    			if (isFirst || !arg.label.startsWith("C-"))
+    				retArgs.add(new SRArg(entry.getKey(), arg.tokenSet));
+    			else
+    				retArgs.getLast().tokenSet.or(arg.tokenSet);
+    			isFirst = false;
+    		}
+    	}
+    	return retArgs;
     }
     
 	public String toPropbankString()
