@@ -6,56 +6,101 @@ import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntDoubleIterator;
 import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TIntObjectIterator;
+import gnu.trove.TLongObjectHashMap;
+import gnu.trove.TLongObjectIterator;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 public class Scorer {
 
-	public static TIntObjectHashMap<TIntDoubleHashMap> readScore(String filename) throws FileNotFoundException
+	public static TLongObjectHashMap<Set<String>> readScore(String filename) throws FileNotFoundException
 	{
-		TIntObjectHashMap<TIntDoubleHashMap> scores = new TIntObjectHashMap<TIntDoubleHashMap>();
+		TLongObjectHashMap<Set<String>> scores = new TLongObjectHashMap<Set<String>>();
 		Scanner scanner = new Scanner(new BufferedReader(new FileReader(filename)));
 		
-		int    sentenceId;
+		long   sentenceId;
 		int    srcSRLId;
 		int    dstSRLId;
 		double score;
 
-		TIntDoubleHashMap sMap;
-		int i=0;
+		int i=0, j=0;
 		while (scanner.hasNextLine())
 		{
-			StringTokenizer tokenizer = new StringTokenizer(scanner.nextLine(),",");
-			if (tokenizer.countTokens() < 4)
-				continue;
+			Set<String> argSet = new HashSet<String>();
+			
+			String[] segments = scanner.nextLine().trim().split(";");
+			
+			if (segments.length<1) continue;
+			
+			String[] tokens = segments[0].split(",");
+		
+			if (tokens.length<4) continue;
 			try {
-				sentenceId = Integer.parseInt(tokenizer.nextToken().trim());
-				srcSRLId = Short.parseShort(tokenizer.nextToken().trim());
-				dstSRLId = Short.parseShort(tokenizer.nextToken().trim());
-				score = Double.parseDouble(tokenizer.nextToken().trim());
+				sentenceId = Long.parseLong(tokens[0].trim());
+				srcSRLId = Short.parseShort(tokens[1].trim());
+				dstSRLId = Short.parseShort(tokens[2].trim());
+				score = Double.parseDouble(tokens[3].trim());
 				
-				if ((sMap=scores.get(sentenceId))==null)
-				{
-					sMap = new TIntDoubleHashMap();
-					scores.put(sentenceId, sMap);
-				}
-				sMap.put((srcSRLId<<16)|dstSRLId,score);
+
+				scores.put((sentenceId<<32)|(srcSRLId<<16)|dstSRLId,argSet);
 			} 
 			catch (NumberFormatException e)
 			{
 				System.err.println(e);
 			}
 			++i;
+			
+			for (int s=1; s<segments.length; ++s)
+			{
+				if (segments[s].startsWith("[")) continue;
+				
+				tokens = segments[s].split(",");
+				
+				if (tokens.length<3) continue;
+				argSet.add(tokens[0].trim()+"<->"+tokens[1].trim());
+				++j;
+			}
+			
 		}
-		System.out.println(filename+": "+i);
+		System.out.println(filename+": "+i+" "+j);
 		return scores;
 	}
 	
+	public static float[] score(TLongObjectHashMap<Set<String>> lhs, TLongObjectHashMap<Set<String>> rhs)
+	{
+		float[] ret = new float[2];
+		float score=0, scoreArg=0;
+		float cnt=0, cntArg=0;
+
+		for (TLongObjectIterator<Set<String>> iter=lhs.iterator(); iter.hasNext();)
+		{
+			iter.advance();
+			Set<String> lhsArgSet = iter.value();
+			Set<String> rhsArgSet = null;
+			
+			if ((rhsArgSet=rhs.get(iter.key()))!=null)
+			{
+				score++;
+				for (String s:lhsArgSet)
+					if (rhsArgSet.contains(s))
+						scoreArg++;
+			}
+			cntArg+=lhsArgSet.size();
+			cnt++;
+		}
+		
+		ret[0] = cnt==0?0:score/cnt;
+		ret[1] = cntArg==0?0:scoreArg/cntArg;
+		return ret;
+	}
+
 	public static float score(TIntObjectHashMap<TIntDoubleHashMap> lhs, TIntObjectHashMap<TIntDoubleHashMap> rhs)
 	{
 		float score=0;
@@ -95,13 +140,15 @@ public class Scorer {
 		
 		return cnt==0?0:score/cnt;
 	}
+
 	
 	public static void main(String[] args) throws IOException
 	{
-		TIntObjectHashMap<TIntDoubleHashMap> systemLabel = Scorer.readScore(args[0]);
-		TIntObjectHashMap<TIntDoubleHashMap> goldLabel = Scorer.readScore(args[1]);
-		float precision = Scorer.score(systemLabel, goldLabel);
-		float recall = Scorer.score(goldLabel, systemLabel);
-		System.out.printf("precision: %.3f, recall: %.3f, f-measure: %.3f\n", precision, recall, 2*precision*recall/(precision+recall));
+		TLongObjectHashMap<Set<String>> systemLabel = Scorer.readScore(args[0]);
+		TLongObjectHashMap<Set<String>> goldLabel = Scorer.readScore(args[1]);
+		float[] p = Scorer.score(systemLabel, goldLabel);
+		float[] r = Scorer.score(goldLabel, systemLabel);
+		System.out.printf("predicate precision: %.3f, recall: %.3f, f-measure: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));
+		System.out.printf("argument precision: %.3f, recall: %.3f, f-measure: %.3f\n", p[1], r[1], 2*p[1]*r[1]/(p[1]+r[1]));
 	}
 }

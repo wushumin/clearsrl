@@ -62,6 +62,7 @@ public class RunTrainer {
 		
 		sentencePairReader.close();
         Aligner.finalizeAlignmentOutput(htmlStream);
+        if (alignmentStream!=System.out) alignmentStream.close();
         
 		System.out.println(goodCnt+" "+badCnt);
 	

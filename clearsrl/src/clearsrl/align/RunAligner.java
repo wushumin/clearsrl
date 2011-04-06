@@ -5,7 +5,9 @@ import gnu.trove.TObjectDoubleIterator;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -18,6 +20,8 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import clearcommon.util.PropertyUtil;
 
 public class RunAligner {
 
@@ -36,9 +40,9 @@ public class RunAligner {
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
 		
-		SentencePairReader sentencePairReader = new DefaultSentencePairReader(props, false);
+		SentencePairReader sentencePairReader = new DefaultSentencePairReader(PropertyUtil.filterProperties(props, "align."), false);
 		
-		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("aligner.threshold", "0.5")));
+		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("align.threshold", "0.5")));
 		
 		//Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
 		//int lineIdx = linesIdx.nextInt();
@@ -50,19 +54,19 @@ public class RunAligner {
 
 		System.out.println("#****************************");
 		
-		String htmlOutfile = props.getProperty("alignment.output.html", null);
+		String htmlOutfile = props.getProperty("align.output.html", null);
 		
 		if (htmlOutfile==null)
 			htmlOutfile = "/dev/null";
 
 		PrintStream alignmentStream;
 		try {
-		    alignmentStream = new PrintStream(props.getProperty("alignment.output.txt", null));
+		    alignmentStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(props.getProperty("align.output.txt", null))));
 		} catch (Exception e) {
 		    alignmentStream = System.out;
 		}
 		
-		PrintStream htmlStream = new PrintStream(htmlOutfile);
+		PrintStream htmlStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(htmlOutfile)));
 
 		sentencePairReader.initialize();
 		
@@ -85,9 +89,8 @@ public class RunAligner {
 		    
 		    Alignment[] alignments = aligner.align(sentencePair);
 	       
-		    System.out.println(sentencePair.id+1);
 		    for (Alignment alignment:alignments)
-		        alignmentStream.println(alignment.toString());
+		        alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
 		    
 		    Aligner.printAlignment(htmlStream, sentencePair, alignments);
 
@@ -145,6 +148,7 @@ public class RunAligner {
 		}
 		sentencePairReader.close();
 		Aligner.finalizeAlignmentOutput(htmlStream);
+		if (alignmentStream!=System.out) alignmentStream.close();
 		
 		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
 

@@ -53,7 +53,7 @@ public class LDCSentencePairReader extends SentencePairReader {
     int count;
     
 	public LDCSentencePairReader(Properties props) {
-		this(props, true);
+		this(props, false);
 	}
 
 	public LDCSentencePairReader(Properties props, boolean reWriteObjStream) {

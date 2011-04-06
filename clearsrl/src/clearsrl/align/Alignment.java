@@ -348,14 +348,14 @@ public class Alignment{
                 foundm = true;
 	    if (!foundm) return "";*/
 	    StringBuilder builder = new StringBuilder();
-	    builder.append(String.format("%d,%d,%.3f,",srcPBIdx+1,dstPBIdx+1,getCompositeScore()));
+	    builder.append(String.format("%d,%d,%.3f;",srcPBIdx+1,dstPBIdx+1,getCompositeScore()));
 
 	    BitSet srcArgBitSet=new BitSet();
 	    BitSet dstArgBitSet=new BitSet();
 	    
 	    for (ArgAlignmentPair alignmentPair:getArgAlignmentPairs())
 	    {
-	    	builder.append(String.format("(%s,%s,%.3f)",getSrcPBArg(alignmentPair.srcArgIdx).getLabel(),getDstPBArg(alignmentPair.dstArgIdx).getLabel(),alignmentPair.score));
+	    	builder.append(String.format("%s,%s,%.3f;",getSrcPBArg(alignmentPair.srcArgIdx).getLabel(),getDstPBArg(alignmentPair.dstArgIdx).getLabel(),alignmentPair.score));
 	    	srcArgBitSet.set(alignmentPair.srcArgIdx);
 	    	dstArgBitSet.set(alignmentPair.dstArgIdx);
 	    }

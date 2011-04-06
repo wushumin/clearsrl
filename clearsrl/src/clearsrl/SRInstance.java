@@ -251,7 +251,7 @@ public class SRInstance {
         buffer.append(tree.getIndex()); buffer.append(' ');
         buffer.append(predicateNode.getTerminalIndex()); buffer.append(' ');
         buffer.append("system "); 
-        buffer.append(rolesetId==null?predicateNode.getWord()+".XX":rolesetId);
+        buffer.append((rolesetId==null||rolesetId.isEmpty())?predicateNode.getWord()+".XX":rolesetId);
         buffer.append(" ----- ");
         
         Collections.sort(args);
