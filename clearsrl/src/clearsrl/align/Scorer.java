@@ -148,7 +148,7 @@ public class Scorer {
 		TLongObjectHashMap<Set<String>> goldLabel = Scorer.readScore(args[1]);
 		float[] p = Scorer.score(systemLabel, goldLabel);
 		float[] r = Scorer.score(goldLabel, systemLabel);
-		System.out.printf("predicate precision: %.3f, recall: %.3f, f-measure: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));
-		System.out.printf("argument precision: %.3f, recall: %.3f, f-measure: %.3f\n", p[1], r[1], 2*p[1]*r[1]/(p[1]+r[1]));
+		System.out.printf("predicate precision: %.3f, recall: %.3f, f-score: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));
+		System.out.printf("argument precision: %.3f, recall: %.3f, f-score: %.3f\n", p[1], r[1], 2*p[1]*r[1]/(p[1]+r[1]));
 	}
 }

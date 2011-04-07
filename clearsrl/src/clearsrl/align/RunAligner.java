@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Map.Entry;
 
 import clearcommon.util.PropertyUtil;
 
@@ -39,10 +40,22 @@ public class RunAligner {
 		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
+		String baseFilter = "";
+		if (args.length>1) baseFilter = args[1];
 		
-		SentencePairReader sentencePairReader = new DefaultSentencePairReader(PropertyUtil.filterProperties(props, "align."), false);
+		props = PropertyUtil.filterProperties(props, baseFilter+"align.");
 		
-		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("align.threshold", "0.5")));
+		for(Entry<Object, Object> prop: props.entrySet())
+		    System.out.println(prop.getKey()+" = "+prop.getValue());
+		
+		SentencePairReader sentencePairReader = null;
+		
+		if (baseFilter.startsWith("ldc"))
+		    sentencePairReader = new LDCSentencePairReader(props, false);
+		else
+		    sentencePairReader = new DefaultSentencePairReader(props, false);
+		
+		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
 		
 		//Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
 		//int lineIdx = linesIdx.nextInt();
@@ -54,14 +67,14 @@ public class RunAligner {
 
 		System.out.println("#****************************");
 		
-		String htmlOutfile = props.getProperty("align.output.html", null);
+		String htmlOutfile = props.getProperty("output.html", null);
 		
 		if (htmlOutfile==null)
 			htmlOutfile = "/dev/null";
 
 		PrintStream alignmentStream;
 		try {
-		    alignmentStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(props.getProperty("align.output.txt", null))));
+		    alignmentStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(props.getProperty("output.txt", null))));
 		} catch (Exception e) {
 		    alignmentStream = System.out;
 		}
@@ -71,6 +84,7 @@ public class RunAligner {
 		sentencePairReader.initialize();
 		
 		Aligner.initAlignmentOutput(htmlStream);
+		AlignmentStat stat = new AlignmentStat();
 		
 		while (true)
 		{
@@ -90,7 +104,10 @@ public class RunAligner {
 		    Alignment[] alignments = aligner.align(sentencePair);
 	       
 		    for (Alignment alignment:alignments)
+		    {
 		        alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+		        stat.addAlignment(alignment);
+		    }
 		    
 		    Aligner.printAlignment(htmlStream, sentencePair, alignments);
 
@@ -151,7 +168,7 @@ public class RunAligner {
 		if (alignmentStream!=System.out) alignmentStream.close();
 		
 		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
-
+		stat.printStats(System.out);
 		aligner.collectStats();
 		
 		System.exit(0);

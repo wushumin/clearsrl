@@ -11,10 +11,8 @@ import clearcommon.util.PropertyUtil;
 
 public class RunTrainer {
 	
-	static Aligner gatherSentences(Properties props, boolean isGold) throws IOException
-	{
-		String prefix = isGold?"ldcgold.":"ldcsys.";
-		
+	static Aligner gatherSentences(Properties props, String prefix) throws IOException
+	{	
 		String htmlOutfile = props.getProperty(prefix+"align.output.html", null);
         
         if (htmlOutfile==null)
@@ -81,8 +79,8 @@ public class RunTrainer {
             iReader.close();
             in.close();
         }
-        gatherSentences(props, true);
-        gatherSentences(props, false);
-		
+        gatherSentences(props, "ldcgold.");
+        gatherSentences(props, "ldcsys.");
+        gatherSentences(props, "ldcgold2.");
 	}
 }

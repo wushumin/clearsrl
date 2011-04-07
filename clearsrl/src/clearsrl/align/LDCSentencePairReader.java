@@ -101,8 +101,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         }
         else
         {
-        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank));
-            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank));
+        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
+            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
         	
         	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
         	dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");

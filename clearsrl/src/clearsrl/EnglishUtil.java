@@ -49,7 +49,7 @@ public class EnglishUtil extends LanguageUtil {
     public List<String> findStems(String word, POS pos)
     {
         List<String> stems = stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
-        return stems.isEmpty()?Arrays.asList(word):stems;
+        return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
     }
     
     @Override
