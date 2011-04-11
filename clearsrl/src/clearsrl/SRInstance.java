@@ -212,8 +212,8 @@ public class SRInstance {
     
     public List<SRArg> getScoringArgs() {
     	Map<String, List<SRArg>> argMap = new TreeMap<String, List<SRArg>>();
-    	
-    	Collections.sort(args);
+    	removeOverlap();
+
     	for (SRArg arg:args)
         {
             if (arg.label.equals(SRLModel.NOT_ARG) || arg.label.equals("rel")) continue;
@@ -241,6 +241,7 @@ public class SRInstance {
     			isFirst = false;
     		}
     	}
+    	Collections.sort(retArgs);
     	return retArgs;
     }
     

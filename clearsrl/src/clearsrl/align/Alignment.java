@@ -371,4 +371,39 @@ public class Alignment{
 	    return builder.toString();
 	}
 	
+	static String getTokenString(PBArg arg)
+	{
+		StringBuilder tokenBuilder = new StringBuilder(arg.getLabel());
+    	BitSet srcSet = arg.getTokenSet();
+    	for (int i=srcSet.nextSetBit(0); i>=0; i=srcSet.nextSetBit(i+1))
+    		tokenBuilder.append("_"+i);
+    	return tokenBuilder.toString();
+	}
+	
+	public String toArgTokenString() {
+	    StringBuilder builder = new StringBuilder();
+	    builder.append(String.format("%d,%d,%.3f;",srcPBIdx+1,dstPBIdx+1,getCompositeScore()));
+
+	    BitSet srcArgBitSet=new BitSet();
+	    BitSet dstArgBitSet=new BitSet();
+	    
+	    for (ArgAlignmentPair alignmentPair:getArgAlignmentPairs())
+	    {	    	
+	    	builder.append(String.format("%s,%s,%.3f;",getTokenString(getSrcPBArg(alignmentPair.srcArgIdx)),getTokenString(getDstPBArg(alignmentPair.dstArgIdx)),alignmentPair.score));
+	    	srcArgBitSet.set(alignmentPair.srcArgIdx);
+	    	dstArgBitSet.set(alignmentPair.dstArgIdx);
+	    }
+	    
+	    builder.append("[");
+	    for (int i=srcArgBitSet.nextClearBit(0); i<getSrcPBInstance().getArgs().length; i=srcArgBitSet.nextClearBit(i+1))
+	    	 builder.append(getSrcPBArg(i).getLabel()+',');
+	    builder.append("][");
+	    for (int i=dstArgBitSet.nextClearBit(0); i<getDstPBInstance().getArgs().length; i=dstArgBitSet.nextClearBit(i+1))
+	    	 builder.append(getDstPBArg(i).getLabel()+',');
+	    
+	    builder.append("]");
+	    
+	    return builder.toString();
+	}
+	
 }

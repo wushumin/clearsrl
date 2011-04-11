@@ -445,6 +445,17 @@ public class Aligner {
                 "}\n"+
                 "</script>\n</head>\n"+
                 "<body><font size=\"+1\">\n");
+        
+        stream.println("Color table: ");
+        for (Map.Entry<String, String> entry:argColorMap.entrySet())
+        {
+        	stream.print("<font style=\"BACKGROUND:");
+        	stream.print(entry.getValue());
+        	stream.print("\">");
+        	stream.print(entry.getKey());
+        	stream.print("</font> ");
+        }
+        stream.println("<br>");
 	}
 	
 	public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments)
@@ -656,14 +667,17 @@ public class Aligner {
 		}
 	};
 	
-	static HashMap<String,String> argColorMap = new HashMap<String,String>();
+	static TreeMap<String,String> argColorMap = new TreeMap<String,String>();
 	static
 	{
 		argColorMap.put("rel","#00ff00");
-		argColorMap.put("ARG0", "#FFA07A");
-		argColorMap.put("ARG1", "#00FFFF");
-		argColorMap.put("ARG2", "#EE82EE");
-		argColorMap.put("default", "#EEE8AA");
+		argColorMap.put("ARG0", "#FFA07A");	
+		argColorMap.put("ARG1", "#EE82EE");
+		argColorMap.put("ARG2", "#00FFFF");
+		argColorMap.put("ARG3", "#9090E0");
+		argColorMap.put("ARG4", "#996666");
+		argColorMap.put("ARG5", "#FFE8AA");
+		argColorMap.put("ARGM", "#EEE8AA");
 	}
 	
 	public static String toHTMLPB(PBInstance instance, Sentence sentence)
@@ -675,7 +689,7 @@ public class Aligner {
 		for (PBArg arg : instance.getArgs())
 		{
 			if ((color=argColorMap.get(arg.getLabel()))==null)
-				color=argColorMap.get("default");
+				color=argColorMap.get("ARGM");
 			for (TBNode node:arg.getTokenNodes())
 				colors[node.getTerminalIndex()] = color;
 		}

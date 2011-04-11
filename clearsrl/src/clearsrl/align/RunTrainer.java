@@ -49,7 +49,7 @@ public class RunTrainer {
                 
                 for (Alignment alignment:alignments)
                 {
-                    alignmentStream.println(sentencePair.id+","+alignment.toString());
+                    alignmentStream.println(sentencePair.id+","+alignment.toArgTokenString());
                     //alignment.printScoreTable(alignmentStream);
                 }
                 Aligner.printAlignment(htmlStream, sentencePair, alignments);

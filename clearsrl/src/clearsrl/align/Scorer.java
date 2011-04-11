@@ -75,9 +75,9 @@ public class Scorer {
 	
 	public static float[] score(TLongObjectHashMap<Set<String>> lhs, TLongObjectHashMap<Set<String>> rhs)
 	{
-		float[] ret = new float[2];
-		float score=0, scoreArg=0;
-		float cnt=0, cntArg=0;
+		float[] ret = new float[3];
+		float score=0, scoreArg=0, scoreCoreArg=0;
+		float cnt=0, cntArg=0, cntCoreArg=0;
 
 		for (TLongObjectIterator<Set<String>> iter=lhs.iterator(); iter.hasNext();)
 		{
@@ -89,8 +89,16 @@ public class Scorer {
 			{
 				score++;
 				for (String s:lhsArgSet)
+				{
+					boolean isCoreArg = s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*");
+					if (isCoreArg) cntCoreArg++;
 					if (rhsArgSet.contains(s))
+					{
+						if (isCoreArg) scoreCoreArg++;
 						scoreArg++;
+					}
+				}
+				
 			}
 			cntArg+=lhsArgSet.size();
 			cnt++;
@@ -98,6 +106,7 @@ public class Scorer {
 		
 		ret[0] = cnt==0?0:score/cnt;
 		ret[1] = cntArg==0?0:scoreArg/cntArg;
+		ret[2] = cntCoreArg==0?0:scoreCoreArg/cntCoreArg;
 		return ret;
 	}
 
@@ -150,5 +159,6 @@ public class Scorer {
 		float[] r = Scorer.score(goldLabel, systemLabel);
 		System.out.printf("predicate precision: %.3f, recall: %.3f, f-score: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));
 		System.out.printf("argument precision: %.3f, recall: %.3f, f-score: %.3f\n", p[1], r[1], 2*p[1]*r[1]/(p[1]+r[1]));
+		System.out.printf("core argument precision: %.3f, recall: %.3f, f-score: %.3f\n", p[2], r[2], 2*p[2]*r[2]/(p[2]+r[2]));
 	}
 }

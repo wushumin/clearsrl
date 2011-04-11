@@ -4,26 +4,42 @@ import gnu.trove.TFloatArrayList;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class AlignmentStat {
     
-    Map<String, Map<String, TFloatArrayList> > srcDstPredicateMap;
-    Map<String, Map<String, TFloatArrayList> > dstSrcPredicateMap;
+	int oneToOne;
+	int total;
+	
+    Map<String, Map<String, TFloatArrayList>> srcDstPredicateMap;
+    Map<String, Map<String, TFloatArrayList>> dstSrcPredicateMap;
     
-    Map<String, Map<String, TFloatArrayList> > srcDstArgTypeMap;
-    Map<String, Map<String, TFloatArrayList> > dstSrcArgTypeMap;
+    Map<String, Map<String, TFloatArrayList>> srcDstArgTypeMap;
+    Map<String, Map<String, TFloatArrayList>> dstSrcArgTypeMap;
+    
+    Map<String, Map<String, TFloatArrayList>> srcDstCoreArgTypeMap;
+    Map<String, Map<String, TFloatArrayList>> dstSrcCoreArgTypeMap;
     
     public AlignmentStat() {
-        srcDstPredicateMap = new TreeMap<String, Map<String, TFloatArrayList> >();
-        dstSrcPredicateMap = new TreeMap<String, Map<String, TFloatArrayList> >();
+        srcDstPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        dstSrcPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
         
-        srcDstArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList> >();
-        dstSrcArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList> >();
+        srcDstArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        dstSrcArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        
+        srcDstCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        dstSrcCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        
+        oneToOne = 0;
+        total = 0;
+        
     }
     
     class ObjectScore<T> implements Comparable<ObjectScore<T>>{
@@ -46,7 +62,7 @@ public class AlignmentStat {
         }
     }
     
-    static void insert(Map<String, Map<String, TFloatArrayList> > map, String key1, String key2, float score)
+    static void insert(Map<String, Map<String, TFloatArrayList>> map, String key1, String key2, float score)
     {
         Map<String, TFloatArrayList> val1 = null;
         if ((val1=map.get(key1))==null)
@@ -68,11 +84,40 @@ public class AlignmentStat {
         insert(srcDstPredicateMap, alignment.getSrcPBInstance().getRoleset(), alignment.getDstPBInstance().getRoleset(), alignment.getCompositeScore());
         insert(dstSrcPredicateMap, alignment.getDstPBInstance().getRoleset(), alignment.getSrcPBInstance().getRoleset(), alignment.getCompositeScore());
         
+        Set<String> srcArgSet = new HashSet<String>();
+        Set<String> dstArgSet = new HashSet<String>();
+        
         for (ArgAlignmentPair argPair: alignment.getArgAlignmentPairs())
         {
-            insert(srcDstArgTypeMap, alignment.getSrcPBArg(argPair.srcArgIdx).getLabel(), alignment.getDstPBArg(argPair.dstArgIdx).getLabel(), argPair.score);
-            insert(dstSrcArgTypeMap, alignment.getDstPBArg(argPair.dstArgIdx).getLabel(), alignment.getSrcPBArg(argPair.srcArgIdx).getLabel(), argPair.score);
+        	String srcLabel = convertLabel(alignment.getSrcPBArg(argPair.srcArgIdx).getLabel());
+        	String dstLabel = convertLabel(alignment.getDstPBArg(argPair.dstArgIdx).getLabel());
+        
+        	srcArgSet.add(srcLabel);
+        	dstArgSet.add(dstLabel);
+        	
+            insert(srcDstArgTypeMap, srcLabel, dstLabel, argPair.score);
+            insert(dstSrcArgTypeMap, dstLabel, srcLabel, argPair.score);
+            
+            if (srcLabel.matches("A\\d") && dstLabel.matches("A\\d"))
+            {
+            	insert(srcDstCoreArgTypeMap, srcLabel, dstLabel, argPair.score);
+                insert(dstSrcCoreArgTypeMap, dstLabel, srcLabel, argPair.score);
+            }
+            total += 2;
         }
+        oneToOne += srcArgSet.size();
+        oneToOne += dstArgSet.size();
+    }
+    
+    static String convertLabel(String input)
+    {
+    	if (input.equals("ARG"))
+    		return "A";
+    	if (input.startsWith("ARG"))
+    		return "A"+input.substring(3);
+    	if (input.startsWith("rel"))
+    		return "V";
+    	return input;
     }
     
     long getTotal(Map<String, TFloatArrayList> map)
@@ -99,7 +144,7 @@ public class AlignmentStat {
         return scores.subList(0, topN>scores.size()?scores.size():topN);
     }
     
-    void printStats(PrintStream out, Map<String, Map<String, TFloatArrayList> >  map, int topN)
+    void printStats(PrintStream out, Map<String, Map<String, TFloatArrayList>>  map, int topN)
     {
         for (Map.Entry<String, Map<String, TFloatArrayList>> entry:map.entrySet())
         {
@@ -113,6 +158,32 @@ public class AlignmentStat {
         }
     }
 
+    void printMatrix(PrintStream out, Map<String, Map<String, TFloatArrayList>> map1, Map<String, Map<String, TFloatArrayList>> map2)
+    {
+    	Map<String, Map<String, TFloatArrayList>> mapR = map1.size()>map2.size()?map1:map2;
+    	Map<String, Map<String, TFloatArrayList>> mapC = mapR==map1?map2:map1;
+    	
+    	
+    	String[] keysR = mapR.keySet().toArray(new String[0]).clone();
+    	Arrays.sort(keysR);
+    	
+    	String[] keysC = mapC.keySet().toArray(new String[0]).clone();
+    	Arrays.sort(keysC);
+    	
+    	out.print("       ");
+    	for (String keyC:keysC) out.printf("%6s&",keyC);
+    	out.print("\n");
+    	
+    	for (String keyR:keysR)
+    	{
+    		out.printf("%6s&",keyR);
+    		Map<String, TFloatArrayList> innerMap = mapR.get(keyR);
+    		for (String keyC:keysC)
+    			out.printf("%6d&",innerMap.get(keyC)==null?0:innerMap.get(keyC).size());
+    		out.print("\n");
+    	}
+    }
+    
     public void printStats(PrintStream out)
     {
         
@@ -127,6 +198,10 @@ public class AlignmentStat {
         
         out.println("\nDst->Src Argument:");
         printStats(out, dstSrcArgTypeMap, 5);
+        
+        printMatrix(out, srcDstArgTypeMap, dstSrcArgTypeMap);
+        
+        out.printf("one-to-one: %d, total: %d, %f\n", oneToOne, total, oneToOne*1.0/total);
 
     }
 }
