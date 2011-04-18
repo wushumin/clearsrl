@@ -27,6 +27,9 @@ public class AlignmentStat {
     Map<String, Map<String, TFloatArrayList>> srcDstCoreArgTypeMap;
     Map<String, Map<String, TFloatArrayList>> dstSrcCoreArgTypeMap;
     
+    Map<String, Map<String, TFloatArrayList>> srcDstPredicateArgMap;
+    Map<String, Map<String, TFloatArrayList>> dstSrcPredicateArgMap;
+    
     public AlignmentStat() {
         srcDstPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
         dstSrcPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
@@ -36,6 +39,10 @@ public class AlignmentStat {
         
         srcDstCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
         dstSrcCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        
+        
+        srcDstPredicateArgMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        dstSrcPredicateArgMap = new TreeMap<String, Map<String, TFloatArrayList>>();
         
         oneToOne = 0;
         total = 0;
@@ -81,8 +88,13 @@ public class AlignmentStat {
     
     public void addAlignment(Alignment alignment)
     {
-        insert(srcDstPredicateMap, alignment.getSrcPBInstance().getRoleset(), alignment.getDstPBInstance().getRoleset(), alignment.getCompositeScore());
-        insert(dstSrcPredicateMap, alignment.getDstPBInstance().getRoleset(), alignment.getSrcPBInstance().getRoleset(), alignment.getCompositeScore());
+        String srcRoleSet = alignment.getSrcPBInstance().getRoleset();
+        srcRoleSet = srcRoleSet.substring(0, srcRoleSet.length()-3);
+        String dstRoleSet = alignment.getDstPBInstance().getRoleset();
+        dstRoleSet = dstRoleSet.substring(0, dstRoleSet.length()-3);
+        
+        insert(srcDstPredicateMap, srcRoleSet, dstRoleSet, alignment.getCompositeScore());
+        insert(dstSrcPredicateMap, dstRoleSet, srcRoleSet, alignment.getCompositeScore());
         
         Set<String> srcArgSet = new HashSet<String>();
         Set<String> dstArgSet = new HashSet<String>();
@@ -103,6 +115,10 @@ public class AlignmentStat {
             	insert(srcDstCoreArgTypeMap, srcLabel, dstLabel, argPair.score);
                 insert(dstSrcCoreArgTypeMap, dstLabel, srcLabel, argPair.score);
             }
+            
+            insert(srcDstPredicateArgMap, srcRoleSet+'_'+dstRoleSet+'_'+srcLabel, dstLabel, argPair.score);
+            insert(dstSrcPredicateArgMap, dstRoleSet+'_'+srcRoleSet+'_'+dstLabel, srcLabel, argPair.score);
+            
             total += 2;
         }
         oneToOne += srcArgSet.size();
@@ -142,6 +158,24 @@ public class AlignmentStat {
     {
         Collections.sort(scores);
         return scores.subList(0, topN>scores.size()?scores.size():topN);
+    }
+    
+    void printProb(PrintStream out, Map<String, Map<String, TFloatArrayList>>  map, int freq, float threshold)
+    {
+        for (Map.Entry<String, Map<String, TFloatArrayList>> entry:map.entrySet())
+        {
+            long total = getTotal(entry.getValue());
+            if (total<freq) continue;
+            out.printf("%s(%d): ",entry.getKey(), total);
+            List<ObjectScore<String>> scores = makeStats(entry.getValue(), total);
+            Collections.sort(scores);
+            for (ObjectScore<String> score:scores)
+            {
+                if (score.score<threshold) break;
+                out.printf(" %s %.4f", score.object, score.score);
+            }
+            out.print("\n");
+        }
     }
     
     void printStats(PrintStream out, Map<String, Map<String, TFloatArrayList>>  map, int topN)
@@ -187,21 +221,27 @@ public class AlignmentStat {
     public void printStats(PrintStream out)
     {
         
-        out.println("\nSrc->Dst Argument:");
-        printStats(out, srcDstPredicateMap, 5);
+        //out.println("\nSrc->Dst Argument:");
+        //printStats(out, srcDstPredicateMap, 5);
         
-        out.println("\nDst->Src Argument:");
-        printStats(out, dstSrcPredicateMap, 5);   
+        //out.println("\nDst->Src Argument:");
+        //printStats(out, dstSrcPredicateMap, 5);   
         
-        out.println("\nSrc->Dst Argument:");
-        printStats(out, srcDstArgTypeMap, 5);
+        //out.println("\nSrc->Dst Argument:");
+        //printStats(out, srcDstArgTypeMap, 5);
         
-        out.println("\nDst->Src Argument:");
-        printStats(out, dstSrcArgTypeMap, 5);
+        //out.println("\nDst->Src Argument:");
+        //printStats(out, dstSrcArgTypeMap, 5);
         
-        printMatrix(out, srcDstArgTypeMap, dstSrcArgTypeMap);
+        out.println("\np(a_e|P_c,P_e,a_c):");
+        printProb(out, srcDstPredicateArgMap, 10, 0.05f);
         
-        out.printf("one-to-one: %d, total: %d, %f\n", oneToOne, total, oneToOne*1.0/total);
+        out.println("\np(a_c|P_e,P_c,a_e):");
+        printProb(out, dstSrcPredicateArgMap, 10, 0.05f);
+        
+        //printMatrix(out, srcDstArgTypeMap, dstSrcArgTypeMap);
+        
+        //out.printf("one-to-one: %d, total: %d, %f\n", oneToOne, total, oneToOne*1.0/total);
 
     }
 }
