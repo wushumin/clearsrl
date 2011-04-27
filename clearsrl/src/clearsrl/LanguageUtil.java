@@ -3,10 +3,11 @@ package clearsrl;
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
 
+import gnu.trove.TObjectIntHashMap;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 
 public abstract class LanguageUtil {
     
@@ -25,7 +26,7 @@ public abstract class LanguageUtil {
         return Arrays.asList(word);
     }
 
-    public List<String> getPredicateAlternatives(String predicate, Set<String> predicateSet)
+    public List<String> getPredicateAlternatives(String predicate, TObjectIntHashMap<String> predicateSet)
     {
     	return Arrays.asList(predicate);
     }

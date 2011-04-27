@@ -380,7 +380,7 @@ public class TBNode implements Serializable
 		if (word!=null) str.append(' '+word);
 		
         for (TBNode node : children)
-            str.append(node.toParse());
+            str.append(" "+node.toParse());
 
         str.append(')');
 		return str.toString();

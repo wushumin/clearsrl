@@ -97,6 +97,7 @@ public class LDCSentencePairReader extends SentencePairReader {
         	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment"))));
         	srcTokenOutput = new PrintStream(props.getProperty("src.tokens"));
             dstTokenOutput = new PrintStream(props.getProperty("dst.tokens"));
+            
             sentenceInfoOutput = new PrintStream(props.getProperty("info_out"));
         }
         else
@@ -112,8 +113,7 @@ public class LDCSentencePairReader extends SentencePairReader {
 	@Override
 	public SentencePair nextPair() {
     	if (objStreamAvailable) return readSentencePair();
-    	
-		// TODO the rest
+
     	if (!sentenceInfoScanner.hasNext()) return null;
     	
     	String info = sentenceInfoScanner.nextLine();
@@ -125,7 +125,6 @@ public class LDCSentencePairReader extends SentencePairReader {
         int id=Integer.parseInt(infoTokens[0]);
         SentencePair sentencePair = new SentencePair(count);
         
-		
 		List<String> srcWords = new ArrayList<String>();
 		List<String> dstWords = new ArrayList<String>();
 
@@ -167,7 +166,7 @@ public class LDCSentencePairReader extends SentencePairReader {
         	
         	srcTokenOutput.println(sentencePair.src.toTokens());
         	dstTokenOutput.println(sentencePair.dst.toTokens());
-        
+        	    
 	        int[] srcAlignmentIdx = new int[alignmentStrs.length];
 	        int[] dstAlignmentIdx = new int[alignmentStrs.length];
 	        
@@ -262,30 +261,33 @@ public class LDCSentencePairReader extends SentencePairReader {
 		return outAlignment;
 	}
 	
+	Scanner closeScanner(Scanner scanner)
+	{
+	    if (scanner!=null) {
+	        scanner.close();
+	        scanner = null;
+        }
+	    return scanner;
+	}
+	
+	PrintStream closeStream(PrintStream stream)
+    {
+        if (stream!=null) {
+            stream.close();
+            stream = null;
+        }
+        return stream;
+    }
+	
 	@Override
     void close()
     {
-	    if (sentenceInfoScanner!=null) {
-	        sentenceInfoScanner.close();
-	        sentenceInfoScanner = null;
-	    }
-	    if (srcTokenScanner!=null) {
-	        srcTokenScanner.close();
-	        srcTokenScanner = null;
-        }
-        if (dstTokenScanner!=null) {
-            dstTokenScanner.close();
-            dstTokenScanner = null;
-        }
-        if (srcAlignmentScanner!=null) {
-            srcAlignmentScanner.close();
-            srcAlignmentScanner = null;
-        }
-        if (dstAlignmentScanner!=null) {
-            dstAlignmentScanner.close();
-            dstAlignmentScanner = null;
-        }
-        
+	    sentenceInfoScanner = closeScanner(sentenceInfoScanner);
+	    srcTokenScanner     = closeScanner(srcTokenScanner);
+	    dstTokenScanner     = closeScanner(dstTokenScanner);
+	    srcAlignmentScanner = closeScanner(srcAlignmentScanner);
+	    dstAlignmentScanner = closeScanner(dstAlignmentScanner);
+	            
         if (!excludeFiles.isEmpty()) {
             try {
                 PrintStream output = new PrintStream(props.getProperty("excludeFileList"));
@@ -297,19 +299,11 @@ public class LDCSentencePairReader extends SentencePairReader {
             }
             excludeFiles.clear();
         }
-
-        if (srcTokenOutput!=null) {
-            srcTokenOutput.close();
-            srcTokenOutput=null;
-        }
-        if (dstTokenOutput!=null) {
-            dstTokenOutput.close();
-            dstTokenOutput=null;
-        }
-        if (sentenceInfoOutput!=null) {
-        	sentenceInfoOutput.close();
-        	sentenceInfoOutput=null;
-        }
+        
+        srcTokenOutput     = closeStream(srcTokenOutput);
+        dstTokenOutput     = closeStream(dstTokenOutput);
+        sentenceInfoOutput = closeStream(sentenceInfoOutput);
+        
         super.close();
     }
 

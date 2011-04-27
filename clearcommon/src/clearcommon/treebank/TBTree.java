@@ -112,7 +112,7 @@ public class TBTree implements Serializable
 	@Override
     public String toString()
 	{
-		return rootNode.toParse();
+		return "( "+rootNode.toParse()+" )";
 	}
 	
 }

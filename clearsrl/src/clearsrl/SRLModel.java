@@ -15,9 +15,6 @@ import clearsrl.LanguageUtil.POS;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -26,14 +23,13 @@ import java.util.BitSet;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class SRLModel implements Serializable {
@@ -52,8 +48,6 @@ public class SRLModel implements Serializable {
 		PREDICATEPOS,
 		VOICE,
 		SUBCATEGORIZATION,
-		PREDICATE_PREDICATEPOS,
-		PREDICATE_VOICE,
 		
 		// Constituent dependent features
 		PATH,
@@ -61,50 +55,33 @@ public class SRLModel implements Serializable {
 		PATHG2,
 		PATHG3,
 		PATHG4,
+		PATHDEP,
 		PHRASETYPE,
 		POSITION,
 		CONSTITUENTDIST,
-		VOICE_POSITION,
-		PREDICATE_POSITION,
-		PREDICATE_VOICE_POSITION,
-		PATH_POSITION,
-		PATH_POSITION_VOICE,
-		PATH_CONSTITUENTDIST,
-		PATH_POSITION_VOICE_CONSTITUENTDIST,
 		FIRSTCONSTITUENTREl,
 		FIRSTCONSTITUENTABS,
 		HEADWORD,
 		HEADWORDPOS,
 		HEADWORDDUPE,
-		HEADWORDDUPE_HEADWORDPOS,
-		PREDICATE_HEADWORD,
 		FIRSTWORD,
 		FIRSTWORDPOS,
 		LASTWORD,
 		LASTWORDPOS,
-		FIRSTWORDPOS_LASTWORDPOS,
 		SYNTACTICFRAME,
 		NAMEDENTITIES
 	};
 	
-	public enum PredicateFeature
+	public enum PredFeature
 	{
 	    PREDICATE,
 	    PREDICATEPOS,
-	    PREDICATE_PREDICATEPOS,
 	    PARENTPOS,
-	    PREDICATE_PARENTPOS,
-	    PREDICATE_PREDICATEPOS_PARENTPOS,
 	    LEFTWORD,
 	    LEFTWORDPOS,
-	    LEFTWORD_PREDICATE,
-	    LEFTWORDPOS_PREDICATE,
 	    RIGHTHEADWORD,
 	    RIGHTHEADWORDPOS,
 	    RIGHTPHASETYPE,
-	    PREDICATE_RIGHTHEADWORD,
-	    PREDICATE_RIGHTHEADWORDPOS,
-	    PREDICATE_RIGHTPHASETYPE
 	};
 	
 	public static String UP_CHAR = "^";
@@ -119,43 +96,77 @@ public class SRLModel implements Serializable {
 	public void setLabeled(boolean labeled) {
 		this.labeled = labeled;
 	}
+    
+	Set<EnumSet<Feature>>                                featureSet;
+	Set<EnumSet<PredFeature>>                            predicateFeatureSet;
+	
+	EnumSet<Feature>                                     featureSetFlat;
+    EnumSet<PredFeature>                                 predicateFeatureSetFlat;
 
-	transient LanguageUtil                            langUtil;
-	EnumSet<Feature>                                  featureSet;
-	EnumSet<PredicateFeature>                         predicateFeatureSet;
+	Classifier                                           classifier;
+	Classifier                                           predicateClassifier;
+	   
+    Map<EnumSet<Feature>, TObjectIntHashMap<String>>     featureStringMap;
+    Map<EnumSet<PredFeature>, TObjectIntHashMap<String>> predicateFeatureStringMap;
 	
-	SortedSet<String>                                 labelStringSet;
+	TObjectIntHashMap<String>                            labelStringMap;
+	TIntObjectHashMap<String>                            labelIndexMap;
 	
-	Map<Feature, SortedSet<String>>                   featureStringSet;
-	Map<PredicateFeature, SortedSet<String>>          predicateFeatureStringSet;
+    transient LanguageUtil                               langUtil;
+	
+	transient double[]                                   labelValues;
+ 
+	transient ArrayList<int[]>                           trainingFeatures;
+	transient ArrayList<String>                          trainingLabels;
+	
+	transient ArrayList<int[]>                           predicateTrainingFeatures;
+	transient TIntArrayList                              predicateTrainingLabels;
 
-	Classifier                                        classifier;
-	Classifier                                        predicateClassifier;
+	transient int                                        hit = 0;
+	transient int                                        total = 0;
 	
-	transient TObjectIntHashMap<String>               labelStringMap;
-	transient TIntObjectHashMap<String>               labelIndexMap;
+//	transient private SRLScore                        score;
 	
-	transient double[]                                labelValues;
+	public static <T extends Enum<T>> String toString(EnumSet<T> feature) {
+	    
+	    Iterator<T> iter = feature.iterator();
+	    
+	    StringBuilder builder = new StringBuilder(iter.next().toString());
+	    for (;iter.hasNext();)
+	        builder.append("-"+iter.next().toString());
+	    return builder.toString();
+	}
 	
-	transient Map<Feature, TObjectIntHashMap<String>> featureStringMap;
-	transient Map<PredicateFeature, TObjectIntHashMap<String>> predicateFeatureStringMap;
+	public static <T extends Enum<T>> EnumSet<T> toEnumSet(Class<T> cType, String fString) throws IllegalArgumentException
+	{
+	    String[] fArray = fString.trim().split("-");
+	    List<T> fList = new ArrayList<T>(fArray.length);
+	    for (String fStr:fArray)
+	        fList.add(T.valueOf(cType,fStr));
+	    return EnumSet.copyOf(fList);
+	}
 	
-	transient ArrayList<int[]>                        trainingFeatures;
-	transient ArrayList<String>                       trainingLabels;
-	
-	transient ArrayList<int[]>                        predicateTrainingFeatures;
-	transient TIntArrayList                           predicateTrainingLabels;
-
-	transient int                                     hit = 0;
-	transient int                                     total = 0;
-	
-	transient private SRLScore                        score;
-	
-	public SRLModel (EnumSet<Feature> featureSet, EnumSet<PredicateFeature> predicateFeatureSet)
+	public SRLModel (Set<EnumSet<Feature>> featureSet, Set<EnumSet<PredFeature>> predicateFeatureSet)
 	{
 		labeled       = true;
+
 		this.featureSet = featureSet;
+		if (featureSet!=null)
+		{
+    		List<Feature> featureList = new ArrayList<Feature>();
+    		for (EnumSet<Feature> feature:featureSet)
+    		    featureList.addAll(feature);
+    		featureSetFlat = EnumSet.copyOf(featureList);
+		}
+		
 		this.predicateFeatureSet = predicateFeatureSet;
+		if (predicateFeatureSet!=null)
+		{
+    		List<PredFeature> predicateFeatureList = new ArrayList<PredFeature>();
+            for (EnumSet<PredFeature> predicateFeature:predicateFeatureSet)
+                predicateFeatureList.addAll(predicateFeature);
+            predicateFeatureSetFlat = EnumSet.copyOf(predicateFeatureList);
+		}
 		
 		trainingFeatures = new ArrayList<int[]>();
 		trainingLabels = new ArrayList<String>();
@@ -172,14 +183,14 @@ public class SRLModel implements Serializable {
 	public void initDictionary()
 	{
 		labelStringMap     = new TObjectIntHashMap<String>();
-		featureStringMap   = new TreeMap<Feature, TObjectIntHashMap<String>>();
-		for (Feature feature:featureSet)
+		featureStringMap   = new HashMap<EnumSet<Feature>, TObjectIntHashMap<String>>();
+		for (EnumSet<Feature> feature:featureSet)
 			featureStringMap.put(feature, new TObjectIntHashMap<String>());
 		
 		if (predicateFeatureSet == null) return;
-		predicateFeatureStringMap = new TreeMap<PredicateFeature, TObjectIntHashMap<String>>();
-		for (PredicateFeature feature:predicateFeatureSet)
-		    predicateFeatureStringMap.put(feature, new TObjectIntHashMap<String>());
+		predicateFeatureStringMap = new HashMap<EnumSet<PredFeature>, TObjectIntHashMap<String>>();
+		for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
+		    predicateFeatureStringMap.put(predFeature, new TObjectIntHashMap<String>());
 		
 	}
 	
@@ -190,16 +201,15 @@ public class SRLModel implements Serializable {
 
 	public void finalizeDictionary(int cutoff)
 	{
-		featureStringSet = new TreeMap<Feature, SortedSet<String>>();
-		for (Feature feature:featureSet)
-			featureStringSet.put(feature, trimMap(featureStringMap.get(feature),cutoff));
-		labelStringSet = trimMap(labelStringMap,35);
+		for (EnumSet<Feature> feature:featureSet)
+			trimMap(featureStringMap.get(feature),cutoff);
+		
+		trimMap(labelStringMap,35);
 	
 		if (predicateFeatureSet!=null)
 		{
-            predicateFeatureStringSet = new TreeMap<PredicateFeature, SortedSet<String>>();
-            for (PredicateFeature feature:predicateFeatureSet)
-                predicateFeatureStringSet.put(feature, trimMap(predicateFeatureStringMap.get(feature),cutoff));		
+            for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
+                trimMap(predicateFeatureStringMap.get(predFeature),cutoff);
 		}
 		/*
 		
@@ -208,38 +218,35 @@ public class SRLModel implements Serializable {
 			labelStringSet.add(str);
 		*/
 		System.out.println("Labels: ");
-		for (String label:labelStringSet)
+		
+		String[] labels = labelStringMap.keys(new String[labelStringMap.size()]);
+		Arrays.sort(labels);
+		for (String label:labels)
 		{
 			System.out.println("  "+label+" "+labelStringMap.get(label));
 		}	
 		rebuildMaps();
-		for (Map.Entry<Feature, SortedSet<String>>entry:featureStringSet.entrySet())
-			System.out.println(entry.getKey()+": "+entry.getValue().size()+(entry.getValue().size()<=50?" "+entry.getValue():""));
-		System.out.println("labels: "+labelStringSet.size()+" "+labelStringSet);
+		for (Map.Entry<EnumSet<Feature>, TObjectIntHashMap<String>>entry:featureStringMap.entrySet())
+			System.out.println(toString(entry.getKey())+": "+entry.getValue().size()+(entry.getValue().size()<=250?" "+Arrays.asList(entry.getValue().keys()):""));
 	}
 	
-    TreeSet<String> trimMap(TObjectIntHashMap<String> featureMap, long threshold)
+    void trimMap(TObjectIntHashMap<String> featureMap, long threshold)
     {
-        TreeSet<String> featureStrings = new TreeSet<String>();
         for (TObjectIntIterator<String> iter = featureMap.iterator(); iter.hasNext();)
         {
             iter.advance();
-            if (iter.value()>=threshold)
-                featureStrings.add(iter.key());
+            if (iter.value()<threshold)
+                iter.remove();
         }
-        return featureStrings;
     }
     
     void rebuildMaps()
     {   
-        featureStringMap = new TreeMap<Feature, TObjectIntHashMap<String>>();
-        for (Map.Entry<Feature, SortedSet<String>> entry: featureStringSet.entrySet())
-        {
-            featureStringMap.put(entry.getKey(), new TObjectIntHashMap<String>());  
-            buildMapIndex(entry.getValue(), featureStringMap.get(entry.getKey()));      
-        }
+        int startIdx=0;
+        for (Map.Entry<EnumSet<Feature>, TObjectIntHashMap<String>> entry: featureStringMap.entrySet())
+            startIdx = buildMapIndex(entry.getValue(), startIdx);      
         
-        buildMapIndex(labelStringSet, labelStringMap = new TObjectIntHashMap<String>());
+        buildMapIndex(labelStringMap, 0);
         
         labelIndexMap = new TIntObjectHashMap<String>();
         for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();)
@@ -251,12 +258,9 @@ public class SRLModel implements Serializable {
         
         if (predicateFeatureSet!=null)
         {
-            predicateFeatureStringMap = new TreeMap<PredicateFeature, TObjectIntHashMap<String>>();
-            for (Map.Entry<PredicateFeature, SortedSet<String>> entry: predicateFeatureStringSet.entrySet())
-            {
-                predicateFeatureStringMap.put(entry.getKey(), new TObjectIntHashMap<String>());  
-                buildMapIndex(entry.getValue(), predicateFeatureStringMap.get(entry.getKey()));      
-            }
+            startIdx=0;
+            for (Map.Entry<EnumSet<PredFeature>, TObjectIntHashMap<String>> entry: predicateFeatureStringMap.entrySet())
+                startIdx = buildMapIndex(entry.getValue(), startIdx);      
         }
     }
 	
@@ -280,7 +284,7 @@ public class SRLModel implements Serializable {
         if (buildDictionary)
         {
             for (TBNode predicateCandidate:predicateCandidates)
-                for(Map.Entry<PredicateFeature,List<String>> entry:extractPredicateFeature(predicateCandidate, nodes).entrySet())
+                for(Map.Entry<EnumSet<PredFeature>,List<String>> entry:extractPredicateFeature(predicateCandidate, nodes).entrySet())
                 {
                     TObjectIntHashMap<String> fMap = predicateFeatureStringMap.get(entry.getKey());
                     for (String fVal:entry.getValue())
@@ -291,7 +295,7 @@ public class SRLModel implements Serializable {
         {
             for (TBNode predicateCandidate:predicateCandidates)
             {
-                predicateTrainingFeatures.add(getPredicateFeatureVector(extractPredicateFeature(predicateCandidate, nodes)));
+                predicateTrainingFeatures.add(getFeatureVector(extractPredicateFeature(predicateCandidate, nodes), predicateFeatureStringMap));
                 predicateTrainingLabels.add(isPredicate.get(predicateCandidate.getTokenIndex())?1:2);
             }
         }
@@ -312,18 +316,18 @@ public class SRLModel implements Serializable {
             labels.add(arg.label);
         }
         
-		ArrayList<EnumMap<Feature,List<String>>> samples = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
+		List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
 		
 		if (buildDictionary)
 		{
 			int c=0;
-			for (EnumMap<Feature,List<String>>sample:samples)
+			for (Map<EnumSet<Feature>,List<String>>sample:samples)
 			{
 				if (!NOT_ARG.equals(labels.get(c)))
 				{
-					for(Map.Entry<Feature,List<String>> entry:sample.entrySet())
+					for(Map.Entry<EnumSet<Feature>,List<String>> entry:sample.entrySet())
 					{
-						TObjectIntHashMap<String> fMap = featureStringMap.get(entry.getKey());
+						TObjectIntHashMap<String> fMap = featureStringMap.get(entry.getKey());						
 						for (String fVal:entry.getValue())
 							fMap.put(fVal, fMap.get(fVal)+1);
 					}
@@ -337,11 +341,11 @@ public class SRLModel implements Serializable {
 		else
 		{
 		    int c=0;
-			for (EnumMap<Feature,List<String>>sample:samples)
+			for (Map<EnumSet<Feature>,List<String>>sample:samples)
 			{
-			    if (labelStringSet.contains(labels.get(c)))
+			    if (labelStringMap.containsKey(labels.get(c)))
 			    {
-			        trainingFeatures.add(getFeatureVector(sample));
+			        trainingFeatures.add(getFeatureVector(sample, featureStringMap));
 			        trainingLabels.add(labels.get(c));
 			    }
 			    ++c;
@@ -350,9 +354,9 @@ public class SRLModel implements Serializable {
 	}
 	
 
-	public ArrayList<EnumMap<Feature,List<String>>> extractSampleFeature(TBNode predicateNode, List<TBNode> argNodes, String[] namedEntities)
+	public List<Map<EnumSet<Feature>,List<String>>> extractSampleFeature(TBNode predicateNode, List<TBNode> argNodes, String[] namedEntities)
 	{
-		ArrayList<EnumMap<Feature,List<String>>> samples = new ArrayList<EnumMap<Feature,List<String>>>();
+		List<Map<EnumSet<Feature>,List<String>>> samples = new ArrayList<Map<EnumSet<Feature>,List<String>>>();
 		
 		//EnumMap<Feature,List<String>> defaultMap = new EnumMap<Feature,List<String>>(Feature.class);
 		
@@ -362,8 +366,9 @@ public class SRLModel implements Serializable {
 			List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
 			if (!stems.isEmpty()) predicateLemma = stems.get(0);
 		}
+
 		
-        List<String> predicateAlternatives = langUtil.getPredicateAlternatives(predicateLemma, featureStringSet==null?null:featureStringSet.get(Feature.PREDICATE));
+        List<String> predicateAlternatives = langUtil.getPredicateAlternatives(predicateLemma, featureStringMap==null?null:featureStringMap.get(EnumSet.of(Feature.PREDICATE)));
 		
 		// build subcategorization feature
 		String subCat = null;
@@ -377,11 +382,10 @@ public class SRLModel implements Serializable {
 		}
 		
 		// figure out whether predicate is passive or not
-		boolean isPassive = langUtil.getPassive(predicateNode)>0;			
-
+		boolean isPassive = langUtil.getPassive(predicateNode)>0;
 
 		EnumMap<Feature,List<String>> defaultMap = new EnumMap<Feature,List<String>>(Feature.class);
-		for (Feature feature:featureSet)
+		for (Feature feature:featureSetFlat)
 		{
 			switch (feature) {
 			case PREDICATE:
@@ -394,19 +398,10 @@ public class SRLModel implements Serializable {
 				break;
 			case VOICE:
 				//if (isPassive) defaultMap.put(feature, Arrays.asList("Passive"));
-			    defaultMap.put(feature, Arrays.asList(isPassive?"Passive":"Active"));
+			    defaultMap.put(feature, Arrays.asList(isPassive?"passive":"active"));
 				break;
 			case SUBCATEGORIZATION:
 				defaultMap.put(feature, Arrays.asList(subCat.toString()));
-				break;
-			case PREDICATE_PREDICATEPOS:
-				if (predicateNode.getPOS().matches("V.*"))
-					//defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+predicateNode.getPOS()));
-					defaultMap.put(feature, permute(predicateAlternatives, Arrays.asList(predicateNode.getPOS())));
-				break;
-			case PREDICATE_VOICE:
-				//defaultMap.put(feature, Arrays.asList(predicateLemma+'_'+(isPassive?"Passive":"Active")));
-				defaultMap.put(feature, permute(predicateAlternatives, Arrays.asList(isPassive?"Passive":"Active")));
 				break;
 			default:
 				break;
@@ -423,6 +418,30 @@ public class SRLModel implements Serializable {
 		    TBNode joinNode = trimPathNodes(argToTopNodes, predToTopNodes);
 			
 			List<String> path = getPath(argToTopNodes, predToTopNodes, joinNode);
+			
+            List<TBNode> argDepToTopNodes = new ArrayList<TBNode>();
+            
+            if (!argToTopNodes.isEmpty()) argDepToTopNodes.add(argToTopNodes.get(0));
+            
+            for (int i=1; i<argToTopNodes.size()-1; ++i)
+                if (argToTopNodes.get(i).getHead()!=argToTopNodes.get(i+1).getHead())
+                    argDepToTopNodes.add(argToTopNodes.get(i));
+            
+            if (argDepToTopNodes.size()>1 && argDepToTopNodes.get(argDepToTopNodes.size()-1).getHead() == joinNode.getHead())
+                argDepToTopNodes.remove(argDepToTopNodes.size()-1);
+            
+            List<TBNode> predDepToTopNodes = new ArrayList<TBNode>();
+            
+            if (!predToTopNodes.isEmpty()) predDepToTopNodes.add(predToTopNodes.get(0));
+            
+            for (int i=1; i<predToTopNodes.size()-1; ++i)
+                if (predToTopNodes.get(i).getHead()!=predToTopNodes.get(i+1).getHead())
+                    predDepToTopNodes.add(predToTopNodes.get(i));
+            
+            if (predDepToTopNodes.size()>1 && predDepToTopNodes.get(predDepToTopNodes.size()-1).getHead() == joinNode.getHead())
+                predDepToTopNodes.remove(predDepToTopNodes.size()-1);
+
+            List<String> depPath = getPath(argDepToTopNodes, predDepToTopNodes, joinNode);
 			
 			// compute head
 			TBNode head = argNode.getHead();
@@ -448,7 +467,7 @@ public class SRLModel implements Serializable {
 			int cstDst = countConstituents(argToTopNodes.get(0).getPOS(), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
 			//System.out.println(cstDst+" "+path);
 			
-			for (Feature feature:featureSet)
+			for (Feature feature:featureSetFlat)
 			{
 				String pathStr=null;
 				{
@@ -478,7 +497,7 @@ public class SRLModel implements Serializable {
 					StringBuilder buffer = new StringBuilder();
 					for (int i=1; i<path.size()-2; i++) 
 					{
-						if (path.get(i).startsWith("S") || path.get(i).equals("LP"))
+						if (path.get(i).startsWith("S") || path.get(i).equals("IP"))
 						{
 							buffer.append("S");
 							if (!path.get(i-1).equals(UP_CHAR)||!path.get(i+1).equals(DOWN_CHAR))
@@ -516,12 +535,21 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(buffer.toString()));
 					break;
 				}
-				
+				case PATHDEP:
+				{
+		            StringBuilder buffer = new StringBuilder();
+                    for (String node:depPath) buffer.append(node);
+                    sample.put(feature, Arrays.asList(buffer.toString()));
+                    
+                    //System.out.println(pathStr+" "+buffer.toString());
+                    
+				    break;
+				}
 				case PHRASETYPE:
 					if (argNode.getPOS().matches("PP.*") && argNode.getHead()!=null && argNode.getHeadword()!=null)
 					{
 						ArrayList<String> list = new ArrayList<String>();
-						list.add("PP"); list.add("PP-"+argNode.getHeadword()); 
+						list.add("PP"); list.add("PP-"+argNode.getHeadword().toLowerCase()); 
 						sample.put(feature, list);
 					}
 					else
@@ -550,20 +578,11 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(head.getPOS()));
 					break;
 				case HEADWORDDUPE:
-				    if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
-				        sample.put(feature, Arrays.asList("HeadDupe"));
+				    //if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
+				    sample.put(feature, Arrays.asList(Boolean.toString(argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())));
 				    //else
 				    //   sample.put(feature, Arrays.asList("HeadUnique"));
                     break;
-				case HEADWORDDUPE_HEADWORDPOS:
-                    if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
-                        sample.put(feature, Arrays.asList("HeadDupe_"+argNode.getHead().getPOS()));
-                    //else
-                    //    sample.put(feature, Arrays.asList("HeadUnique_"+SRLUtil.removeTrace(argNode.head.pos)));
-                    break;
-				case PREDICATE_HEADWORD:
-					sample.put(feature, permute(predicateAlternatives, Arrays.asList(head.getPOS())));
-					break;
 				case FIRSTWORD:
 					sample.put(feature, Arrays.asList(tnodes.get(0).getWord()));
 					break;
@@ -576,35 +595,6 @@ public class SRLModel implements Serializable {
 				case LASTWORDPOS:
 					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).getPOS()));
 					break;
-				case FIRSTWORDPOS_LASTWORDPOS:
-					sample.put(feature, Arrays.asList(tnodes.get(0).getPOS()+"_"+tnodes.get(tnodes.size()-1).getPOS()));
-					break;
-				case VOICE_POSITION:
-				{
-					String vp = (isPassive?"Passive":"Active")+(isBefore?"_before":"_after");
-					if (!vp.isEmpty()) sample.put(feature, Arrays.asList(vp));
-					break;
-				}
-				case PREDICATE_POSITION:
-					//sample.put(feature, Arrays.asList(predicateLemma+(isBefore?"_before":"+_after")));
-					sample.put(feature, permute(predicateAlternatives, Arrays.asList((isBefore?"_before":"+_after"))));
-					break;
-				case PREDICATE_VOICE_POSITION:
-					//sample.put(feature, Arrays.asList(predicateLemma+(isPassive?"_Passive":"_Active")+(isBefore?"_before":"_after")));
-					sample.put(feature, permute(predicateAlternatives, Arrays.asList((isPassive?"_Passive":"_Active")+(isBefore?"_before":"+_after"))));
-					break;
-				case PATH_POSITION:
-					sample.put(feature, Arrays.asList(pathStr+(isBefore?"_before":"_after")));
-					break;
-				case PATH_POSITION_VOICE:
-					sample.put(feature, Arrays.asList(pathStr+(isBefore?"_before":"_after")+(isPassive?"_Passive":"_Active")));
-					break;
-				case PATH_CONSTITUENTDIST:
-				    sample.put(feature, Arrays.asList(pathStr+(cstDst==1?"_closest":"_notclosest")));
-                    break;
-                case PATH_POSITION_VOICE_CONSTITUENTDIST:
-                    sample.put(feature, Arrays.asList(pathStr+(isPassive?"_Passive":"Active")+(isBefore?"_before":"after")+(cstDst==1?"_closest":"_notclosest")));
-                    break;
 				case SYNTACTICFRAME:
 				{
 					StringBuilder builder = new StringBuilder();
@@ -641,36 +631,33 @@ public class SRLModel implements Serializable {
 				}
 			}
 			
-			
-			samples.add(sample);
+			samples.add(convertFlatSample(sample, featureSet));
 		}
 		
 		return samples;
 	}
 
-    int[] getFeatureVector(EnumMap<Feature,List<String>> sample)
+	<T extends Enum<T>> int[] getFeatureVector(Map<EnumSet<T>,List<String>> sample, Map<EnumSet<T>, TObjectIntHashMap<String>> fStringMap)
     {
-        int index = 0;
         TIntHashSet featureSet = new TIntHashSet();
         
-        for(Map.Entry<Feature,List<String>> entry:sample.entrySet())
+        for(Map.Entry<EnumSet<T>,List<String>> entry:sample.entrySet())
         {
-            TObjectIntHashMap<String> fMap = featureStringMap.get(entry.getKey());
+            TObjectIntHashMap<String> fMap = fStringMap.get(entry.getKey());
             for (String fVal:entry.getValue())
             {
                 int mapIdx = fMap.get(fVal);
-                if (mapIdx>0) featureSet.add(index+mapIdx-1);
-            }               
-            index += fMap.size();
+                if (mapIdx>0) featureSet.add(mapIdx-1);
+            }
         }
         int [] features = featureSet.toArray();
         Arrays.sort(features);
         return features;
     }
     
-    public EnumMap<PredicateFeature,List<String>> extractPredicateFeature(TBNode predicateNode, List<TBNode> nodes)
+    public Map<EnumSet<PredFeature>,List<String>> extractPredicateFeature(TBNode predicateNode, List<TBNode> nodes)
     {
-        EnumMap<PredicateFeature,List<String>> sample = new EnumMap<PredicateFeature,List<String>>(PredicateFeature.class);
+        EnumMap<PredFeature,List<String>> sampleFlat = new EnumMap<PredFeature,List<String>>(PredFeature.class);
         
         // find predicate lemma
         String predicateLemma = predicateNode.getWord();
@@ -685,108 +672,105 @@ public class SRLModel implements Serializable {
                 predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
         
-        for (PredicateFeature feature:predicateFeatureSet)
+        for (PredFeature feature:predicateFeatureSetFlat)
         {
             switch (feature)
             {
             case PREDICATE:
-                sample.put(feature, Arrays.asList(predicateLemma));
+                sampleFlat.put(feature, Arrays.asList(predicateLemma));
                 break;
             case PREDICATEPOS:
-                sample.put(feature, Arrays.asList(predicateNode.getPOS()));
-                break;
-            case PREDICATE_PREDICATEPOS:
-                sample.put(feature, Arrays.asList(predicateLemma+"_"+predicateNode.getPOS()));
+                sampleFlat.put(feature, Arrays.asList(predicateNode.getPOS()));
                 break;
             case PARENTPOS:
                 if (parent!=null)
-                    sample.put(feature, Arrays.asList(parent.getPOS()));
-                break;
-            case PREDICATE_PARENTPOS:
-                if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+parent.getPOS()));
-                break;
-            case PREDICATE_PREDICATEPOS_PARENTPOS:
-                if (parent!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+predicateNode.getPOS()+"_"+parent.getPOS()));
+                    sampleFlat.put(feature, Arrays.asList(parent.getPOS()));
                 break;
             case LEFTWORD:
-                if (leftNode!=null) sample.put(feature, Arrays.asList(leftNode.getWord()));   
+                if (leftNode!=null) sampleFlat.put(feature, Arrays.asList(leftNode.getWord()));   
                 break;
             case LEFTWORDPOS:
                 if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(leftNode.getPOS()));
-                break;
-            case LEFTWORD_PREDICATE:
-                if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(leftNode.getWord()+"_"+predicateLemma));
-                break;
-            case LEFTWORDPOS_PREDICATE:
-                if (leftNode!=null)
-                    sample.put(feature, Arrays.asList(leftNode.getPOS()+"_"+predicateLemma));
+                    sampleFlat.put(feature, Arrays.asList(leftNode.getPOS()));
                 break;
             case RIGHTHEADWORD:
-                if (rightHeadnode!=null) sample.put(feature, Arrays.asList(rightHeadnode.getWord()));   
+                if (rightHeadnode!=null) sampleFlat.put(feature, Arrays.asList(rightHeadnode.getWord()));   
                 break;
             case RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null)
-                    sample.put(feature, Arrays.asList(rightHeadnode.getPOS()));
+                    sampleFlat.put(feature, Arrays.asList(rightHeadnode.getPOS()));
                 break;
             case RIGHTPHASETYPE:
                 if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(rightSibling.getPOS()));
-                break;
-            case PREDICATE_RIGHTHEADWORD:
-                if (rightHeadnode!=null) 
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.getWord()));
-                break;
-            case PREDICATE_RIGHTHEADWORDPOS:
-                if (rightHeadnode!=null) 
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightHeadnode.getPOS()));
-                break;
-            case PREDICATE_RIGHTPHASETYPE:
-                if (rightSibling!=null)
-                    sample.put(feature, Arrays.asList(predicateLemma+"_"+rightSibling.getPOS()));
+                    sampleFlat.put(feature, Arrays.asList(rightSibling.getPOS()));
                 break;
             }
-        }
-        return sample;
+        }        
+        return convertFlatSample(sampleFlat, predicateFeatureSet);
     }
     
-    static List<String> permute(List<String> lhs, List<String> rhs)
+    static <T extends Enum<T>> Map<EnumSet<T>,List<String>> convertFlatSample(EnumMap<T,List<String>> sampleFlat, Set<EnumSet<T>> fSet)
+    { 
+        //System.out.println(sampleFlat);
+        Map<EnumSet<T>,List<String>> sample = new HashMap<EnumSet<T>,List<String>>();
+        
+        for (EnumSet<T> feature:fSet)
+        {   
+            Iterator<T> iter = feature.iterator();
+            List<String> sList = sampleFlat.get(iter.next());
+            for (;iter.hasNext() && sList!=null && !sList.isEmpty();)
+                sList = permute(sList, sampleFlat.get(iter.next()));
+            
+            if (sList!=null && !sList.isEmpty())
+            {
+                //if (feature.size()>1) System.out.println(toString(feature)+": "+sList);
+                sample.put(feature, sList);
+            }
+        }
+        
+        return sample;   
+    }
+    
+    /*
+    static List<String> permute(List<String>... args)
     {
+        if (args.length==0) 
+            return new ArrayList<String>();
+        if (args.length==1)
+            return args[0];
+        ArrayList<String> ret = null;
+        List<String> lhs = args[0];
+        for (int i=1; i<args.length; ++i)
+        {
+            ret = new ArrayList<String>(lhs.size()*args[1].size());
+            for (String a1:lhs)
+                for (String a2:args[1])
+                    ret.add(a1+"_"+a2);
+            lhs = ret;
+        }
+
+        return ret;
+    }*/
+    
+    
+    static List<String> permute(List<String> lhs, List<String> rhs)
+    {   
+        if (lhs==null || rhs==null) return new ArrayList<String>(0);
+
     	ArrayList<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
-    	for (String a1:lhs)
-    		for (String a2:rhs)
-    			ret.add(a1+"_"+a2);
+    	for (String a2:rhs)
+    	    for (String a1:lhs)
+    			ret.add(a1+" "+a2);
     	return ret;
     }
     
-    int[] getPredicateFeatureVector(EnumMap<PredicateFeature,List<String>> sample)
+    private int buildMapIndex(TObjectIntHashMap<String> mapObj, int startIdx)
     {
-        int index = 0;
-        TIntHashSet featureSet = new TIntHashSet();
-        
-        for(Map.Entry<PredicateFeature,List<String>> entry:sample.entrySet())
-        {
-            TObjectIntHashMap<String> fMap = predicateFeatureStringMap.get(entry.getKey());
-            for (String fVal:entry.getValue())
-            {
-                int mapIdx = fMap.get(fVal);
-                if (mapIdx>0) featureSet.add(index+mapIdx-1);
-            }               
-            index += fMap.size();
-        }
-        int [] features = featureSet.toArray();
-        Arrays.sort(features);
-        return features;
-    }
-    
-    private void buildMapIndex(SortedSet<String> setObj, TObjectIntHashMap<String> mapObj)
-    {
-        int i=0;
-        for (Iterator<String> iter=setObj.iterator(); iter.hasNext();)
-            mapObj.put(iter.next(), ++i);
+        String[] keys = mapObj.keys(new String[mapObj.size()]);
+        mapObj.clear();
+        for (String key:keys)
+            mapObj.put(key, ++startIdx);
+        return startIdx;
     }
     
     public void train(Properties prop)
@@ -861,7 +845,7 @@ public class SRLModel implements Serializable {
         double[] vals = new double[2];
         for (TBNode node: nodes)
             if (node.getPOS().startsWith("V") &&
-                predicateClassifier.predictValues(getPredicateFeatureVector(extractPredicateFeature(node, nodes)), vals)==1)
+                predicateClassifier.predictValues(getFeatureVector(extractPredicateFeature(node, nodes), predicateFeatureStringMap), vals)==1)
             {
             	List<String> stem = langUtil.findStems(node.getWord(), POS.VERB);
                 predictions.add(new SRInstance(node, parseTree, stem.get(0)+".XX", vals[1]-vals[0]));
@@ -881,12 +865,18 @@ public class SRLModel implements Serializable {
 
     public int predict(SRInstance prediction, /*SRInstance goldSRL,*/ String[] namedEntities)
     {
-        ArrayList<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
-        ArrayList<EnumMap<Feature,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
+        List<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
+        List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
         
         for (int i=0; i<samples.size(); ++i)
         {
-            int labelIndex = classifier.predictValues(getFeatureVector(samples.get(i)), labelValues);
+            //for (Map.Entry<EnumSet<Feature>,List<String>> entry:samples.get(i).entrySet())
+            //    System.out.println(toString(entry.getKey())+": "+entry.getValue());
+            //System.out.println(Arrays.toString(getFeatureVector(samples.get(i), featureStringMap)));
+            
+            if (labelValues==null) labelValues = new double[labelIndexMap.size()];
+            
+            int labelIndex = classifier.predictValues(getFeatureVector(samples.get(i), featureStringMap), labelValues);
             double value = labelValues[classifier.getLabelIdxMap().get(labelIndex)];
             if (labeled)
             {
@@ -916,23 +906,12 @@ public class SRLModel implements Serializable {
         
         return samples.size();
     }
-
+/*
     private void initScore()
     {
         score = new SRLScore(labelStringSet);
     }
-
-    private void writeObject(ObjectOutputStream out) throws IOException
-    {
-        out.defaultWriteObject();
-    }
-    
-    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
-    {
-        in.defaultReadObject();
-        rebuildMaps();
-    }
-
+*/
     void writeData(PrintStream out, int[] featureVec, int label, InstanceFormat format)
     {
         if (format==InstanceFormat.DEFAULT)
@@ -962,7 +941,7 @@ public class SRLModel implements Serializable {
     
     public void writeSample(PrintStream out, TBNode predicateNode, ArrayList<TBNode> argNodes, ArrayList<String> labels, String[] namedEntities, InstanceFormat format)
     {
-        ArrayList<EnumMap<Feature,List<String>>> samples = extractSampleFeature(predicateNode, argNodes, namedEntities);
+        List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(predicateNode, argNodes, namedEntities);
         
         for (int i=0; i<samples.size(); ++i)
         {
@@ -972,7 +951,7 @@ public class SRLModel implements Serializable {
                 System.err.println("Unknown label: "+labels.get(i)+", converting to "+NOT_ARG);
                 lIdx = labelStringMap.get(NOT_ARG);
             }
-            writeData(out, getFeatureVector(samples.get(i)), lIdx, format);
+            writeData(out, getFeatureVector(samples.get(i), featureStringMap), lIdx, format);
         }
     }   
 

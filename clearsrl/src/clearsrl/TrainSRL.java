@@ -6,6 +6,7 @@ import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBFileReader;
+import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
@@ -22,16 +23,17 @@ import java.io.FileReader;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.SortedMap;
-import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.zip.GZIPOutputStream;
 
 import clearsrl.SRLModel.Feature;
-import clearsrl.SRLModel.PredicateFeature;
+import clearsrl.SRLModel.PredFeature;
 
 public class TrainSRL {
 	static final float THRESHOLD=0.90f;
@@ -102,35 +104,41 @@ public class TrainSRL {
         if (!langUtil.init(props))
             System.exit(-1);
 		
-		ArrayList<Feature> features = new ArrayList<Feature>();
+		Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
 		{
-    		StringTokenizer tokenizer = new StringTokenizer(props.getProperty("feature"),",");
-    		while (tokenizer.hasMoreTokens())
-    		{
-    			try {
-    				features.add(Feature.valueOf(tokenizer.nextToken().trim()));
-    			} catch (IllegalArgumentException e) {
-    				System.err.println(e);
-    			}
-    		}
+		    String[] tokens = props.getProperty("feature").trim().split(",");
+		    for (String token:tokens)
+		        try {
+		            features.add(SRLModel.toEnumSet(Feature.class, token));
+		        } catch (IllegalArgumentException e) {
+                    System.err.println(e);
+                }  
 		}
-		System.out.println(EnumSet.copyOf(features));
 		
-        ArrayList<PredicateFeature> predicateFeatures = new ArrayList<PredicateFeature>();
+		Set<EnumSet<PredFeature>> predicateFeatures = new HashSet<EnumSet<PredFeature>>();
         {
-            StringTokenizer tokenizer = new StringTokenizer(props.getProperty("predicateFeature"),",");
-            while (tokenizer.hasMoreTokens())
-            {
+            String[] tokens = props.getProperty("predicateFeature").trim().split(",");
+            for (String token:tokens)
                 try {
-                    predicateFeatures.add(PredicateFeature.valueOf(tokenizer.nextToken().trim()));
+                    predicateFeatures.add(SRLModel.toEnumSet(PredFeature.class, token));
                 } catch (IllegalArgumentException e) {
                     System.err.println(e);
-                }
-            }
+                }  
         }
-        System.out.println(EnumSet.copyOf(predicateFeatures));
 
-		SRLModel model = new SRLModel(EnumSet.copyOf(features), predicateFeatures.isEmpty()?null:EnumSet.copyOf(predicateFeatures));
+		SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
+		
+		System.out.println("Features:");
+        for (EnumSet<SRLModel.Feature> feature:model.featureSet)
+            System.out.println(SRLModel.toString(feature));
+        
+        if (model.predicateFeatureSet!=null)
+        {
+            System.out.println("\nPredicate features:");
+            for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
+                System.out.println(SRLModel.toString(feature));
+        }
+		
 		//model.setLabeled(false);
 		model.setLanguageUtil(langUtil);
 		
@@ -148,39 +156,50 @@ public class TrainSRL {
         TObjectIntHashMap<String> rolesetArg = new TObjectIntHashMap<String>();
 		if (!dataFormat.equals("conll"))
 		{
-			String trainRegex = props.getProperty("regex");
-			//Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
+			String treeRegex = props.getProperty("tb.regex");
+			String propRegex = props.getProperty("pb.regex");
+			Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
 			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = 
 			    PBUtil.readPBDir(props.getProperty("pbdir"), 
-			                     trainRegex, 
-			                     props.getProperty("tbdir"), 
+			                     propRegex, 
+			                     new TBReader(treeBank),
 			                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
 			
 			System.out.println(propBank.size());
 			
-			Map<String, TBTree[]> parsedTreeBank = new TreeMap<String, TBTree[]>();
-			for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:propBank.entrySet())
-			{
-			    try {
-	                TBFileReader tbreader    = new SerialTBFileReader(props.getProperty("parsedir"), entry.getKey());
-	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
-	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
-	                TBTree tree;
-	                while ((tree = tbreader.nextTree()) != null)
-	                    a_tree.add(tree);
-	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
-	            } catch (FileNotFoundException e) {
-	            } catch (ParseException e) {
-	                e.printStackTrace();
-	            }
-			}
+			Map<String, TBTree[]> parsedTreeBank = null;
 			
-            model.initDictionary();
+			if (!props.getProperty("goldparse", "false").equals("false"))
+			    parsedTreeBank = treeBank;
+			else
+			{
+    			parsedTreeBank = new TreeMap<String, TBTree[]>();
+    			for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:propBank.entrySet())
+    			{
+    			    try {
+    	                TBFileReader tbreader    = new SerialTBFileReader(props.getProperty("parsedir"), entry.getKey());
+    	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
+    	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
+    	                TBTree tree;
+    	                while ((tree = tbreader.nextTree()) != null)
+    	                    a_tree.add(tree);
+    	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
+    	            } catch (FileNotFoundException e) {
+    	            } catch (ParseException e) {
+    	                e.printStackTrace();
+    	            }
+    			}
+			}
+
+			model.initDictionary();
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
 			{
-				System.out.println("Processing (p1) "+entry.getKey());
 				SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+				if (pbFileMap==null) continue;
+				
+				System.out.println("Processing (p1) "+entry.getKey());
 			    TBTree[] trees = entry.getValue();
+			    
 			    for (int i=0; i<trees.length; ++i)
 			    {
 			        TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
@@ -188,6 +207,7 @@ public class TrainSRL {
 			        if (modelPredicate)
 			        {
 			            ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
+			            
 			            if (pbInstances!=null)
 			            {
     			            for (PBInstance instance:pbInstances)
@@ -232,8 +252,10 @@ public class TrainSRL {
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
-            	System.out.println("Processing (p2) "+entry.getKey());
             	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+            	if (pbFileMap==null) continue;
+            	
+            	System.out.println("Processing (p2) "+entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {

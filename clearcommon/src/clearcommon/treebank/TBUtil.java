@@ -26,11 +26,12 @@ public final class TBUtil {
             headrule = headrules.getHeadRule(node.pos);
             if (headrule==null)
             {
-                System.err.println(node.pos+": "+node.toParse());
+                //System.err.println(node.pos+": "+node.toParse());
                 headrule = TBHeadRule.DEFAULT;
             }
         }
         List<TBNode> decendants = node.getTokenNodes();
+        if (decendants.isEmpty()) decendants = node.getTerminalNodes();
        
         for (TBNode childNode: node.getChildren())
         	findHeads(childNode, headrules);

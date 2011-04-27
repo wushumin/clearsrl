@@ -4,6 +4,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
+import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.PropertyUtil;
@@ -15,14 +16,17 @@ import java.io.FileReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
+import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 
 public class RunSRL {
@@ -45,7 +49,17 @@ public class RunSRL {
 		ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("model_file"))));
 		SRLModel model = (SRLModel)mIn.readObject();
 		mIn.close();
-		System.out.println(model.featureSet);
+		
+		System.out.println("Features:");
+		for (EnumSet<SRLModel.Feature> feature:model.featureSet)
+		    System.out.println(SRLModel.toString(feature));
+		
+		if (model.predicateFeatureSet!=null)
+		{
+		    System.out.println("\nPredicate features:");
+		    for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
+	            System.out.println(SRLModel.toString(feature));
+		}
 		
 		model.setLanguageUtil(langUtil);
 		
@@ -149,21 +163,29 @@ public class RunSRL {
         else
             output = System.out;
         
-        SRLScore score = new SRLScore(model.labelStringSet);
-        SRLScore score2 = new SRLScore(model.labelStringSet);
+        SRLScore score = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
+        SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         if (!dataFormat.equals("conll"))
         {	
             Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
+            Map<String, TBTree[]> treeBank = null;
             if (props.getProperty("pbdir")!=null)
             {
-                String testRegex = props.getProperty("pb.regex");
+                String treeRegex = props.getProperty("tb.regex");
+                String propRegex = props.getProperty("pb.regex");
+                treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
                 propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
-                                     testRegex, 
-                                     props.getProperty("tbdir"), 
+                                     propRegex, 
+                                     new TBReader(treeBank),
                                      dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
             }
-            Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
+            Map<String, TBTree[]> parsedTreeBank = null;
+            
+            if (!props.getProperty("goldparse", "false").equals("false"))
+                parsedTreeBank = treeBank;
+            else
+                parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
             
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
