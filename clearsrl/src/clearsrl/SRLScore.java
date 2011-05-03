@@ -21,10 +21,13 @@ public class SRLScore {
 		
 		int count=0;
 		for (String argType:labelSet)
-			labelMap.put(argType, count++);
-
-		microCount = new int[count][count];
-		macroCount = new int[count][count];
+		{
+		    if (SRLModel.NOT_ARG.equals(argType))
+		        continue;
+			labelMap.put(argType, ++count);
+		}
+		microCount = new int[count+1][count+1];
+		macroCount = new int[count+1][count+1];
 	}
 	
 	String[] getLabels(List<SRArg> args, int tokenCount)
@@ -35,6 +38,33 @@ public class SRLScore {
 			for (int i=arg.tokenSet.nextSetBit(0); i>=0; i=arg.tokenSet.nextSetBit(i+1))
 				strs[i] = arg.label;
 		return strs;
+	}
+	
+	public static SRInstance getInterection(SRInstance lhs, SRInstance rhs)
+	{
+	    if (!lhs.tree.getFilename().equals(rhs.tree.getFilename()) ||
+	            lhs.tree.getIndex()!=rhs.tree.getIndex() ||
+	            lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
+	        return null;
+	    
+	    SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree);
+	    
+	    List<SRArg> lhsargs = lhs.args;
+	    List<SRArg> rhsargs = rhs.args;
+	    
+	    for (int i=0, j=0; i<lhsargs.size() || j<rhsargs.size();)
+        {
+	        int compare = lhsargs.get(i).compareTo(rhsargs.get(j));
+	        if (compare<0) ++i;
+	        else if (compare>0) ++j;
+	        else
+	        {
+	            instance.args.add(lhsargs.get(i));
+	            ++i; ++j;
+	        }
+        }
+	    
+	    return instance;
 	}
 	
 	public void addResult(SRInstance systemSRL, SRInstance goldSRL)
@@ -94,8 +124,8 @@ public class SRLScore {
 	
 	public void printResults(PrintStream pStream)
 	{
-		System.out.println("\n********** Token Results **********");
-		printResults(pStream, microCount);
+		//System.out.println("\n********** Token Results **********");
+		//printResults(pStream, microCount);
 		System.out.println("---------- Arg Results ------------");
 		printResults(pStream, macroCount);
 		System.out.println("************************\n");
@@ -113,7 +143,7 @@ public class SRLScore {
 			
 			int pArgT=0, rArgT=0, fArgT=0;
 			
-			for (int i:count[idx]) pArgT+=i;
+			for (int i=0; i<count[idx].length; ++i) pArgT+=count[idx][i];
 			for (int i=0; i<count.length; ++i) rArgT+=count[i][idx];
 			
 			fArgT = count[idx][idx];

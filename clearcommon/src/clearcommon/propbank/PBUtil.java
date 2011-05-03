@@ -36,7 +36,7 @@ public final class PBUtil {
 	{   
 		File dir = new File(dirName);
 		
-		List<String> files = FileUtil.getFiles(dir, regex);
+		List<String> files = FileUtil.getFiles(dir, regex, true);
 		
 		int correctCnt=0;
 		int exceptionCnt=0;
@@ -51,12 +51,12 @@ public final class PBUtil {
 		{
 			PBFileReader pbreader=null;
             try {
-                pbreader = new PBFileReader(tbReader, dirName+File.separatorChar+annotationFile, resolver);
+                pbreader = new PBFileReader(tbReader, annotationFile, resolver);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
                 continue;
             }
-			System.out.println("Reading "+dirName+File.separatorChar+annotationFile);
+			System.out.println("Reading "+annotationFile);
 			PBInstance instance=null;
 			//System.out.println(annotationFile);
 			for (;;)
