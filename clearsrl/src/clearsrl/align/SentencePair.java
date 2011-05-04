@@ -1,5 +1,8 @@
 package clearsrl.align;
 
+import gnu.trove.TLongArrayList;
+import gnu.trove.TLongHashSet;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -167,6 +170,50 @@ public 	class SentencePair implements Serializable {
 	public Sentence getSentence(boolean isSrc)
 	{
 		return isSrc?src:dst;
+	}
+	
+	static long makeLong(int a, int b)
+	{
+		return (((long)a)<<32)|b;
+	}
+	
+	public long[] getSrcWordAlignment()
+	{
+		TLongArrayList alignSet = getWordAlignment(srcAlignment, src.indices, true);
+		long[] alignment = alignSet.toNativeArray();
+		Arrays.sort(alignment);
+		return alignment;
+	}
+	
+	public long[] getDstWordAlignment()
+	{
+		TLongArrayList alignSet = getWordAlignment(dstAlignment, dst.indices, false);
+		long[] alignment = alignSet.toNativeArray();
+		Arrays.sort(alignment);
+		return alignment;
+	}
+	
+	public long[] getWordAlignment()
+	{
+		TLongHashSet srcAlignSet = new TLongHashSet(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
+		srcAlignSet.addAll(getDstWordAlignment());
+		
+		long[] alignment = srcAlignSet.toArray();
+		Arrays.sort(alignment);
+		return alignment;
+	}
+	
+	static TLongArrayList getWordAlignment(SortedMap<Long, int[]> alignMap, long[] indices, boolean isSrc)
+	{
+		TLongArrayList alignSet = new TLongArrayList();
+		for (int i=0; i<indices.length; ++i)
+		{
+			int[] targets = alignMap.get(indices[i]);
+			if (targets == null) continue;
+			for (int t:targets)
+				alignSet.add(isSrc?makeLong(i+1,t+1):makeLong(t+1, i+1));
+		}
+		return alignSet;
 	}
 	
 	public String toString()

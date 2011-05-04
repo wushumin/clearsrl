@@ -1,5 +1,7 @@
 package clearsrl.align;
 
+import gnu.trove.TLongHashSet;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -79,8 +81,55 @@ public class RunTrainer {
             iReader.close();
             in.close();
         }
-        gatherSentences(props, "ldcgold.");
-        gatherSentences(props, "ldcsys.");
+        SentencePairReader goldReader = gatherSentences(props, "ldcgold.").reader;
+        SentencePairReader sysReader = gatherSentences(props, "ldcsys.").reader;
         gatherSentences(props, "ldcgold2.");
+        
+        
+        WordAlignmentScorer srcScorer = new WordAlignmentScorer();
+        WordAlignmentScorer dstScorer = new WordAlignmentScorer();
+        WordAlignmentScorer sectScorer = new WordAlignmentScorer();
+        WordAlignmentScorer unionScorer = new WordAlignmentScorer();
+        
+        goldReader.initialize();
+        sysReader.initialize();
+        
+        int cnt = 0;
+        
+        while (true)
+        {
+            SentencePair goldSentence = goldReader.nextPair();
+            SentencePair sysSentence = sysReader.nextPair();
+            if (goldSentence==null) break;
+            
+            long[] goldWA = goldSentence.getSrcWordAlignment();
+            long[] sysSrcWA = sysSentence.getSrcWordAlignment();
+            long[] sysDstWA = sysSentence.getDstWordAlignment();
+            
+            TLongHashSet longSet = new TLongHashSet(sysSrcWA);
+            longSet.addAll(sysDstWA);
+            
+            long[] sysUnionWA = longSet.toArray();
+            
+            longSet.clear();
+            longSet.addAll(sysDstWA);
+            longSet.retainAll(sysSrcWA);
+            
+            long[] sysSectWA = longSet.toArray();
+            
+            
+            srcScorer.addAlignment(goldWA, sysSrcWA);
+            dstScorer.addAlignment(goldWA, sysDstWA);
+            sectScorer.addAlignment(goldWA, sysSectWA);
+            unionScorer.addAlignment(goldWA, sysUnionWA);
+        }
+        goldReader.close();
+        sysReader.close();
+        
+        System.out.print("src: "); srcScorer.printStats(System.out);
+        System.out.print("dst: "); dstScorer.printStats(System.out);
+        System.out.print("intersection: "); sectScorer.printStats(System.out);
+        System.out.print("union: "); unionScorer.printStats(System.out);
+        
 	}
 }

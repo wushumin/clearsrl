@@ -1,6 +1,7 @@
 package clearsrl;
 
 import java.io.FileInputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -59,6 +60,26 @@ public class ScoreSRL {
                              null));
         }
         
+        String outTemplate = props.getProperty("output.propfile");
+        PrintStream goldPropOut = null;
+        PrintStream interPropOut = null;
+        PrintStream unionPropOut = null;
+        List<PrintStream> sysPropOuts = new ArrayList<PrintStream>();
+        if (outTemplate == null)
+        {
+        	interPropOut = unionPropOut = goldPropOut = new PrintStream("/dev/null");
+        	for (String system:systems)
+        		sysPropOuts.add(goldPropOut);
+        }
+        else
+        {
+        	goldPropOut = new PrintStream(outTemplate.replace("SYSTEM", "gold"));
+        	interPropOut = new PrintStream(outTemplate.replace("SYSTEM", "intersection"));
+        	unionPropOut = new PrintStream(outTemplate.replace("SYSTEM", "union"));
+        	for (String system:systems)
+        		sysPropOuts.add(new PrintStream(outTemplate.replace("SYSTEM", system)));
+        }
+        
         for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:goldPB.entrySet())
         {
             SortedMap<Integer, List<PBInstance>> goldMap = entry.getValue();
@@ -101,8 +122,13 @@ public class ScoreSRL {
                     }
                     if (!found) continue;
                     
+                    goldPropOut.println(goldInstance.toPropbankString());
+                    
                     for (int i=0; i<scores.length;++i)
+                    {
                         scores[i].addResult(sysInstances.get(i), goldInstance);
+                        sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
+                    }
                     
                     if (scores.length==1) continue;
                     
@@ -111,13 +137,14 @@ public class ScoreSRL {
                         interInstance = SRLScore.getInterection(interInstance, sysInstances.get(i));
                     
                     iScore.addResult(interInstance, goldInstance);
+                    interPropOut.println(interInstance.toPropbankString());
                     
                     SRInstance unionInstance = sysInstances.get(0);
                     for (int i=1; i<sysInstances.size(); ++i)
                         unionInstance = SRLScore.getUnion(unionInstance, sysInstances.get(i));
                     
                     uScore.addResult(unionInstance, goldInstance);
-                    
+                    unionPropOut.println(unionInstance.toPropbankString());
                 }
             }
         }
@@ -176,9 +203,6 @@ public class ScoreSRL {
             
             System.out.println("union:");
             uScore.printResults(System.out);
-        }
-        
-        
-        
+        } 
     }
 }
