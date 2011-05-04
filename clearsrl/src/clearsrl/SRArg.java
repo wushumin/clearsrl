@@ -55,7 +55,7 @@ public class SRArg implements Comparable<SRArg>{
 	public boolean isPredicate() {
 		return label.equals("rel");
 	}
-
+	
 	@Override
 	public int compareTo(SRArg arg0) {
 		return tokenSet.nextSetBit(0)-arg0.tokenSet.nextSetBit(0);

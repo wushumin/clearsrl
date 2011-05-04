@@ -52,20 +52,61 @@ public class SRLScore {
 	    List<SRArg> lhsargs = lhs.args;
 	    List<SRArg> rhsargs = rhs.args;
 	    
-	    for (int i=0, j=0; i<lhsargs.size() || j<rhsargs.size();)
+	    for (int i=0, j=0; i<lhsargs.size() && j<rhsargs.size();)
         {
 	        int compare = lhsargs.get(i).compareTo(rhsargs.get(j));
 	        if (compare<0) ++i;
 	        else if (compare>0) ++j;
 	        else
 	        {
-	            instance.args.add(lhsargs.get(i));
+	            if (lhsargs.get(i).tokenSet.equals(rhsargs.get(j).tokenSet))
+	                instance.args.add(lhsargs.get(i));
 	            ++i; ++j;
 	        }
         }
 	    
 	    return instance;
 	}
+	
+	
+	public static SRInstance getUnion(SRInstance lhs, SRInstance rhs)
+	{
+	    if (!lhs.tree.getFilename().equals(rhs.tree.getFilename()) ||
+	            lhs.tree.getIndex()!=rhs.tree.getIndex() ||
+	            lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
+	                    return null;
+	            
+	    SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree);
+	    
+	    List<SRArg> lhsargs = lhs.args;
+	    List<SRArg> rhsargs = rhs.args;
+	        
+	    
+	    instance.args.addAll(lhs.args);
+	    int i=0;
+	    int j=0;
+	    for (; i<lhsargs.size() && j<rhsargs.size();)
+	    {
+	        int compare = lhsargs.get(i).compareTo(rhsargs.get(j));
+	        if (compare<0) ++i;
+	        else if (compare>0)
+	        {
+	            instance.args.add(rhsargs.get(j));
+	            ++j;
+	        }
+	        else
+	        {
+	            if (!lhsargs.get(i).tokenSet.equals(rhsargs.get(j).tokenSet))
+	                instance.args.add(rhsargs.get(j));
+	            ++i; ++j;
+            }
+        }
+	    for (;j<rhsargs.size();++j)
+	        instance.args.add(rhsargs.get(j));
+	    
+	        
+        return instance;
+    }
 	
 	public void addResult(SRInstance systemSRL, SRInstance goldSRL)
 	{
@@ -152,7 +193,7 @@ public class SRLScore {
 			r = rArgT==0?0:((double)fArgT)/rArgT;
 			f = p==0?0:(r==0?0:2*p*r/(p+r));
 
-			System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", label, fArgT, pArgT, rArgT, p, r, f);
+			System.out.printf("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", label, fArgT, pArgT, rArgT, p*100, r*100, f*100);
 			
 			pTotal += pArgT;
 			rTotal += rArgT;
@@ -162,6 +203,6 @@ public class SRLScore {
 		p = pTotal==0?0:((double)fTotal)/pTotal;
 		r = rTotal==0?0:((double)fTotal)/rTotal;
 		f = p==0?0:(r==0?0:2*p*r/(p+r));
-		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f, f-measure: %f\n", "all", fTotal, pTotal, rTotal, p, r, f);
+		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", "all", fTotal, pTotal, rTotal, p*100, r*100, f*100);
 	}
 }
