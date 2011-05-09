@@ -212,7 +212,7 @@ public class SRInstance {
     
     public List<SRArg> getScoringArgs() {
     	Map<String, List<SRArg>> argMap = new TreeMap<String, List<SRArg>>();
-    	removeOverlap();
+    	cleanUpArgs();
 
     	for (SRArg arg:args)
         {

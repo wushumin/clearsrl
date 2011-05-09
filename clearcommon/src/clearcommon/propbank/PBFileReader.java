@@ -228,9 +228,11 @@ public class PBFileReader
 	            }
 	            if (found) break;
             }
-	        if (!found) throw new PBFormatException(linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
-	        if (!isSLC) iter.remove();
+	        if (!found || !isSLC) {
+		    if (isSLC) System.err.println("Warning: "+linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
+		    iter.remove();
 
+		}
 		}
 		try {
 		    // process all the main args before the reference args

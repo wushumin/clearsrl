@@ -41,6 +41,7 @@ public class RunSRL {
 		
 		props = PropertyUtil.filterProperties(props, "srl.");
 		props = PropertyUtil.filterProperties(props, "run.", true);
+		System.out.println(props);
 		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
@@ -173,6 +174,7 @@ public class RunSRL {
             {
                 String treeRegex = props.getProperty("tb.regex");
                 String propRegex = props.getProperty("pb.regex");
+
                 treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
                 propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 

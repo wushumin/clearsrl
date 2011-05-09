@@ -17,7 +17,7 @@ public class PropertyUtil {
         {
             if (propName.startsWith(filter))
                 out.setProperty(propName.substring(filter.length()), in.getProperty(propName));
-            else if (inherit)
+            else if (inherit && out.getProperty(propName) == null)
             	out.setProperty(propName, in.getProperty(propName));
         }
         

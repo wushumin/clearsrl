@@ -47,7 +47,7 @@ public class ScoreSRL {
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
                              props.getProperty("gold.pb.regex").trim(), 
                              props.getProperty("gold.tbdir"),
-                             dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+                             dataFormat.equals("gold.ontonotes")?new OntoNoteTreeFileResolver():null);
         
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         
@@ -122,13 +122,12 @@ public class ScoreSRL {
                     }
                     if (!found) continue;
                     
-                    goldPropOut.println(goldInstance.toPropbankString());
-                    
                     for (int i=0; i<scores.length;++i)
                     {
                         scores[i].addResult(sysInstances.get(i), goldInstance);
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
                     }
+		    goldPropOut.println(goldInstance.toPropbankString());
                     
                     if (scores.length==1) continue;
                     
@@ -137,6 +136,7 @@ public class ScoreSRL {
                         interInstance = SRLScore.getInterection(interInstance, sysInstances.get(i));
                     
                     iScore.addResult(interInstance, goldInstance);
+		    interInstance.cleanUpArgs();
                     interPropOut.println(interInstance.toPropbankString());
                     
                     SRInstance unionInstance = sysInstances.get(0);
@@ -144,6 +144,7 @@ public class ScoreSRL {
                         unionInstance = SRLScore.getUnion(unionInstance, sysInstances.get(i));
                     
                     uScore.addResult(unionInstance, goldInstance);
+		    unionInstance.cleanUpArgs();
                     unionPropOut.println(unionInstance.toPropbankString());
                 }
             }
