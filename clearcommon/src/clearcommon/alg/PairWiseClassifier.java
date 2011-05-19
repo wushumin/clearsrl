@@ -5,6 +5,7 @@ import gnu.trove.TObjectIntHashMap;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Properties;
 
 public class PairWiseClassifier extends Classifier implements Serializable {
@@ -16,7 +17,11 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 	Classifier [][] classifiers;
 	Classifier probClassifier;
 	
+	BitSet[] valueMatrix;
+	
 	double[] values;
+	
+	int topN;
 	
 	public PairWiseClassifier(TObjectIntHashMap<String> labelMap, Properties prop)
 	{
@@ -24,6 +29,10 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 		classifiers = new Classifier[labelIdx.length][labelIdx.length];
 		labelMap.getValues();
 		values = new double[labelIdx.length];
+		valueMatrix = new BitSet[labelIdx.length];
+		for (int i=0; i<valueMatrix.length;++i)
+		    valueMatrix[i] = new BitSet(labelIdx.length);
+		topN = ((int)Math.round(labelIdx.length*0.1))+1;
 	}
 	
 	@Override
@@ -36,7 +45,10 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 	public int predictValues(int[] x, double[] values) {
 		//double[] prob = new double[probClassifier.getClassCnt()];
 		//probClassifier.predictProb(x, prob);
+	    for (BitSet valueVec:valueMatrix)
+	        valueVec.clear();
 		Arrays.fill(values, 0);
+		
 		for (int i=0; i<labels.length-1; ++i)
 			for (int j=i+1; j<labels.length; ++j)
 			{
@@ -50,9 +62,15 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 				//values[j]+= b/s;
 				
 				if (label==labelIdx[i])
+				{
 					values[i]++;
+					valueMatrix[i].set(j);
+				}
 				else //if (probs[0]<0)
+				{
 					values[j]++;
+					valueMatrix[j].set(i);
+				}
 				/*
 				if (classifiers[i][j].predict(x)==labelIdx[i])
 					values[i]++;
@@ -77,22 +95,45 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 					values[j]+=prob;
 			}
 		*/
+		
+		if (topN>=1)
+		{
+		    Arrays.sort(values);
+            double cutoffValue = values[values.length-topN];
+            BitSet mask = new BitSet(labelIdx.length);
+           
+            for (int i=0; i<valueMatrix.length; ++i)
+                if (valueMatrix[i].cardinality()>=cutoffValue)
+                    mask.set(i);
+            
+            for (int i=0; i<valueMatrix.length; ++i)
+            {
+                //values[i] = valueMatrix[i].cardinality()/(values.length*100-100.0);
+                valueMatrix[i].and(mask);
+                values[i] = valueMatrix[i].cardinality()/(mask.cardinality()-1.0);
+                //values[i] /= 1.01;
+            }
+		}
+		else
+		{
+		    for (int i=0; i<values.length; ++i)
+		        values[i] /= values.length-1;
+		}
+    
 		int highIdx = 0;
 		for (int i=0; i<values.length; ++i)
 		{
-			values[i] /= values.length-1;
 			if (values[i]>values[highIdx])
 				highIdx = i;
 		}
-		int cnt = 0;
-		for (int i=0; i<values.length; ++i)
-			if (values[i]==values[highIdx])
-				cnt++;
-		
+		//int cnt = 0;
+		//for (int i=0; i<values.length; ++i)
+		//	if (values[i]==values[highIdx])
+		//		cnt++;
 		//if (cnt>1) System.out.print("TIE ");
 			
 		return labelIdx[highIdx];
-		
+
 	}
 	
 	@Override

@@ -31,6 +31,11 @@ public abstract class LanguageUtil {
     	return Arrays.asList(predicate);
     }
     
+    public String resolveAbbreviation(String word, String POS)
+    {
+        return word;
+    }
+    
     public abstract int getPassive(TBNode predicateNode);
     
     

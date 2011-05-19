@@ -108,9 +108,13 @@ public class SRLModel implements Serializable {
 	   
     Map<EnumSet<Feature>, TObjectIntHashMap<String>>     featureStringMap;
     Map<EnumSet<PredFeature>, TObjectIntHashMap<String>> predicateFeatureStringMap;
-	
+    
 	TObjectIntHashMap<String>                            labelStringMap;
 	TIntObjectHashMap<String>                            labelIndexMap;
+	
+	boolean                                              trainGoldParse;
+
+    transient Map<EnumSet<Feature>, TObjectIntHashMap<String>>     noargFeatureStringMap;
 	
     transient LanguageUtil                               langUtil;
 	
@@ -173,12 +177,18 @@ public class SRLModel implements Serializable {
 		
 		predicateTrainingFeatures = new ArrayList<int[]>();
 		predicateTrainingLabels = new TIntArrayList();
+		
+		trainGoldParse =false;
 	}
 	
 	public void setLanguageUtil(LanguageUtil langUtil)
 	{
 	    this.langUtil = langUtil;
 	}
+	
+    public void setTrainGoldParse(boolean trainGoldParse) {
+        this.trainGoldParse = trainGoldParse;
+    }
 	
 	public void initDictionary()
 	{
@@ -187,11 +197,14 @@ public class SRLModel implements Serializable {
 		for (EnumSet<Feature> feature:featureSet)
 			featureStringMap.put(feature, new TObjectIntHashMap<String>());
 		
+	    noargFeatureStringMap   = new HashMap<EnumSet<Feature>, TObjectIntHashMap<String>>();
+	        for (EnumSet<Feature> feature:featureSet)
+	            noargFeatureStringMap.put(feature, new TObjectIntHashMap<String>());
+		
 		if (predicateFeatureSet == null) return;
 		predicateFeatureStringMap = new HashMap<EnumSet<PredFeature>, TObjectIntHashMap<String>>();
 		for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
 		    predicateFeatureStringMap.put(predFeature, new TObjectIntHashMap<String>());
-		
 	}
 	
 	public TObjectIntHashMap<String> getLabelValueMap()
@@ -201,11 +214,27 @@ public class SRLModel implements Serializable {
 
 	public void finalizeDictionary(int cutoff)
 	{
+	    trimMap(labelStringMap,20);
+	    
+	    System.out.println("Labels: ");
+        String[] labels = labelStringMap.keys(new String[labelStringMap.size()]);
+        Arrays.sort(labels);
+        for (String label:labels)
+        {
+            System.out.println("  "+label+" "+labelStringMap.get(label));
+        }   
+        
 		for (EnumSet<Feature> feature:featureSet)
+		{
+		    System.out.print(toString(feature)+": "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
 			trimMap(featureStringMap.get(feature),cutoff);
+			trimMap(noargFeatureStringMap.get(feature),cutoff*10);
+			System.out.print(" "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
+			featureStringMap.get(feature).putAll(noargFeatureStringMap.get(feature));
+			System.out.print(" "+featureStringMap.get(feature).size());
+			System.out.println(featureStringMap.get(feature).size()<=250?" "+Arrays.asList(featureStringMap.get(feature).keys()):"");
+		}
 		
-		trimMap(labelStringMap,35);
-	
 		if (predicateFeatureSet!=null)
 		{
             for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
@@ -217,17 +246,8 @@ public class SRLModel implements Serializable {
 		for (String str:labelStringMap.keys(new String[labelStringMap.size()]))
 			labelStringSet.add(str);
 		*/
-		System.out.println("Labels: ");
 		
-		String[] labels = labelStringMap.keys(new String[labelStringMap.size()]);
-		Arrays.sort(labels);
-		for (String label:labels)
-		{
-			System.out.println("  "+label+" "+labelStringMap.get(label));
-		}	
 		rebuildMaps();
-		for (Map.Entry<EnumSet<Feature>, TObjectIntHashMap<String>>entry:featureStringMap.entrySet())
-			System.out.println(toString(entry.getKey())+": "+entry.getValue().size()+(entry.getValue().size()<=250?" "+Arrays.asList(entry.getValue().keys()):""));
 	}
 	
     void trimMap(TObjectIntHashMap<String> featureMap, long threshold)
@@ -332,6 +352,15 @@ public class SRLModel implements Serializable {
 							fMap.put(fVal, fMap.get(fVal)+1);
 					}
 				}
+				else
+				{
+				    for(Map.Entry<EnumSet<Feature>,List<String>> entry:sample.entrySet())
+                    {
+                        TObjectIntHashMap<String> fMap = noargFeatureStringMap.get(entry.getKey());                      
+                        for (String fVal:entry.getValue())
+                            fMap.put(fVal, fMap.get(fVal)+1);
+                    }
+				}
 				//if (!NOT_ARG.equals(SRLUtil.getMaxLabel(labels.get(c))))
 				//	System.out.println(sample.get(Feature.PATH));
 				labelStringMap.put(labels.get(c), labelStringMap.get(labels.get(c))+1);
@@ -394,7 +423,7 @@ public class SRLModel implements Serializable {
 				break;
 			case PREDICATEPOS:
 				if (predicateNode.getPOS().matches("V.*"))
-					defaultMap.put(feature, Arrays.asList(predicateNode.getPOS()));
+					defaultMap.put(feature, trainGoldParse?predicateNode.getFunctionTaggedPOS():Arrays.asList(predicateNode.getPOS()));
 				break;
 			case VOICE:
 				//if (isPassive) defaultMap.put(feature, Arrays.asList("Passive"));
@@ -546,14 +575,16 @@ public class SRLModel implements Serializable {
 				    break;
 				}
 				case PHRASETYPE:
-					if (argNode.getPOS().matches("PP.*") && argNode.getHead()!=null && argNode.getHeadword()!=null)
+					if (argNode.getPOS().equals("PP") && argNode.getHead()!=null && argNode.getHeadword()!=null)
 					{
 						ArrayList<String> list = new ArrayList<String>();
-						list.add("PP"); list.add("PP-"+argNode.getHeadword().toLowerCase()); 
+						if (trainGoldParse) list.addAll(argNode.getFunctionTaggedPOS());
+						else list.add("PP"); 
+						list.add("PP-"+argNode.getHeadword().toLowerCase()); 
 						sample.put(feature, list);
 					}
 					else
-						sample.put(feature, Arrays.asList(argNode.getPOS()));
+						sample.put(feature, trainGoldParse?argNode.getFunctionTaggedPOS():Arrays.asList(argNode.getPOS()));
 					break;
 				case POSITION:
 					//if (isBefore) sample.put(feature, Arrays.asList("before"));
@@ -575,7 +606,7 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(head.getWord()));
 					break;
 				case HEADWORDPOS:
-					sample.put(feature, Arrays.asList(head.getPOS()));
+					sample.put(feature, trainGoldParse?head.getFunctionTaggedPOS():Arrays.asList(head.getPOS()));
 					break;
 				case HEADWORDDUPE:
 				    //if (argNode.getParent()!=null && argNode.getHead()==argNode.getParent().getHead())
@@ -587,13 +618,13 @@ public class SRLModel implements Serializable {
 					sample.put(feature, Arrays.asList(tnodes.get(0).getWord()));
 					break;
 				case FIRSTWORDPOS:
-					sample.put(feature, Arrays.asList(tnodes.get(0).getPOS()));
+					sample.put(feature, trainGoldParse?tnodes.get(0).getFunctionTaggedPOS():Arrays.asList(tnodes.get(0).getPOS()));
 					break;
 				case LASTWORD:
 					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).getWord()));
 					break;
 				case LASTWORDPOS:
-					sample.put(feature, Arrays.asList(tnodes.get(tnodes.size()-1).getPOS()));
+					sample.put(feature, trainGoldParse?tnodes.get(tnodes.size()-1).getFunctionTaggedPOS():Arrays.asList(tnodes.get(tnodes.size()-1).getPOS()));
 					break;
 				case SYNTACTICFRAME:
 				{
@@ -680,25 +711,25 @@ public class SRLModel implements Serializable {
                 sampleFlat.put(feature, Arrays.asList(predicateLemma));
                 break;
             case PREDICATEPOS:
-                sampleFlat.put(feature, Arrays.asList(predicateNode.getPOS()));
+                sampleFlat.put(feature, trainGoldParse?predicateNode.getFunctionTaggedPOS():Arrays.asList(predicateNode.getPOS()));
                 break;
             case PARENTPOS:
                 if (parent!=null)
-                    sampleFlat.put(feature, Arrays.asList(parent.getPOS()));
+                    sampleFlat.put(feature, trainGoldParse?parent.getFunctionTaggedPOS():Arrays.asList(parent.getPOS()));
                 break;
             case LEFTWORD:
                 if (leftNode!=null) sampleFlat.put(feature, Arrays.asList(leftNode.getWord()));   
                 break;
             case LEFTWORDPOS:
                 if (leftNode!=null)
-                    sampleFlat.put(feature, Arrays.asList(leftNode.getPOS()));
+                    sampleFlat.put(feature, trainGoldParse?leftNode.getFunctionTaggedPOS():Arrays.asList(leftNode.getPOS()));
                 break;
             case RIGHTHEADWORD:
                 if (rightHeadnode!=null) sampleFlat.put(feature, Arrays.asList(rightHeadnode.getWord()));   
                 break;
             case RIGHTHEADWORDPOS:
                 if (rightHeadnode!=null)
-                    sampleFlat.put(feature, Arrays.asList(rightHeadnode.getPOS()));
+                    sampleFlat.put(feature, trainGoldParse?rightHeadnode.getFunctionTaggedPOS():Arrays.asList(rightHeadnode.getPOS()));
                 break;
             case RIGHTPHASETYPE:
                 if (rightSibling!=null)

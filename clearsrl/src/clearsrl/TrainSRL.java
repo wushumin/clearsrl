@@ -170,7 +170,10 @@ public class TrainSRL {
 			Map<String, TBTree[]> parsedTreeBank = null;
 			
 			if (!props.getProperty("goldparse", "false").equals("false"))
+			{
 			    parsedTreeBank = treeBank;
+			    model.setTrainGoldParse(true);
+			}
 			else
 			{
     			parsedTreeBank = new TreeMap<String, TBTree[]>();

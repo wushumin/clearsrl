@@ -25,6 +25,7 @@ package clearcommon.treebank;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Set;
@@ -122,6 +123,16 @@ public class TBNode implements Serializable
 
     public Set<String> getFunctionTags() {
         return functionTags;
+    }
+    
+    public List<String> getFunctionTaggedPOS() {
+        if (functionTags==null) return Arrays.asList(pos);
+        
+        List<String> retList = new ArrayList<String>(1+functionTags.size());
+        retList.add(pos);
+        for (String tag:functionTags)
+            retList.add(pos+"-"+tag);
+        return retList;
     }
     
     public boolean hasFunctionTag(String tag) {

@@ -25,7 +25,7 @@ public class ScoreSRL {
         
         props = PropertyUtil.filterProperties(props, "srl.");
         props = PropertyUtil.filterProperties(props, "score.", true);
-        String dataFormat = props.getProperty("data.format", "default");
+        String dataFormat = props.getProperty("gold.data.format", "default");
      
         String[] systems = props.getProperty("systems").trim().split(",");
         for (int i=0; i< systems.length; ++i)
@@ -47,7 +47,7 @@ public class ScoreSRL {
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
                              props.getProperty("gold.pb.regex").trim(), 
                              props.getProperty("gold.tbdir"),
-                             dataFormat.equals("gold.ontonotes")?new OntoNoteTreeFileResolver():null);
+                             dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
         
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         
@@ -74,8 +74,11 @@ public class ScoreSRL {
         else
         {
         	goldPropOut = new PrintStream(outTemplate.replace("SYSTEM", "gold"));
-        	interPropOut = new PrintStream(outTemplate.replace("SYSTEM", "intersection"));
-        	unionPropOut = new PrintStream(outTemplate.replace("SYSTEM", "union"));
+		if (systems.length>1)
+		{
+		    interPropOut = new PrintStream(outTemplate.replace("SYSTEM", "intersection"));
+		    unionPropOut = new PrintStream(outTemplate.replace("SYSTEM", "union"));
+		}
         	for (String system:systems)
         		sysPropOuts.add(new PrintStream(outTemplate.replace("SYSTEM", system)));
         }

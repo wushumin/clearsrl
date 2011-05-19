@@ -4,7 +4,9 @@ import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import edu.mit.jwi.Dictionary;
@@ -18,6 +20,24 @@ public class EnglishUtil extends LanguageUtil {
     Dictionary dict;
     WordnetStemmer stemmer;
     TBHeadRules headRules;
+    
+    static Map<String, String> abbreviations = new HashMap<String, String>();
+    static {
+        abbreviations.put("& CC", "and");
+        abbreviations.put("'n CC", "and");
+        abbreviations.put("'n' CC", "and");
+        abbreviations.put("'d MD", "would");
+        abbreviations.put("'ll MD", "will");
+        abbreviations.put("'m VBP", "am");
+        abbreviations.put("'re VBP", "are");
+        abbreviations.put("'ve VB", "have");
+        abbreviations.put("'ve VBP", "have");
+        abbreviations.put("'d VBD", "had");
+        abbreviations.put("em PRP", "them");
+        abbreviations.put("n't", "not");
+        abbreviations.put("'til IN", "until");
+        abbreviations.put("'til RB", "until");
+    }
     
     @Override
     public boolean init(Properties props) {
@@ -50,6 +70,13 @@ public class EnglishUtil extends LanguageUtil {
     {
         List<String> stems = stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
         return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+    }
+    
+    @Override
+    public String resolveAbbreviation(String word, String POS)
+    {
+        String full = abbreviations.get(word+" "+POS);
+        return full==null?word:full;
     }
     
     @Override
