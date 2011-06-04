@@ -1,12 +1,16 @@
 package clearcommon.alg;
 
 import gnu.trove.TIntArrayList;
+import gnu.trove.TIntHashSet;
 import gnu.trove.TObjectIntHashMap;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class PairWiseClassifier extends Classifier implements Serializable {
 	/**
@@ -23,6 +27,28 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 	
 	int topN;
 	
+	int threads;
+	
+	class TrainJob implements Runnable{
+        Classifier cf;
+        int[][] X;
+        int[] y;
+        double[] weights;
+        
+        public TrainJob(Classifier cf, int[][] X, int[]y, double[] weights)
+        {
+            this.cf = cf;
+            this.X = X;
+            this.y = y;
+            this.weights = weights;
+        }
+        
+        @Override
+        public void run() {
+            cf.train(X, y, weights);
+        }
+    }
+	
 	public PairWiseClassifier(TObjectIntHashMap<String> labelMap, Properties prop)
 	{
 		super(labelMap, prop);
@@ -33,6 +59,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 		for (int i=0; i<valueMatrix.length;++i)
 		    valueMatrix[i] = new BitSet(labelIdx.length);
 		topN = ((int)Math.round(labelIdx.length*0.1))+1;
+		threads = Integer.parseInt(prop.getProperty("pairwise.threads","1"));
 	}
 	
 	@Override
@@ -157,6 +184,10 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 			probClassifier.train(X, Y);
 		}
 		*/
+
+		ExecutorService executor = null;
+        if (threads>1) executor = Executors.newFixedThreadPool(threads);
+		
 		for (int i=0; i<labels.length-1; ++i)
 		{
 			for (int j=i+1; j<labels.length; ++j)
@@ -190,7 +221,11 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 					    weights[1] = weightY[j];
 					    System.out.println(weights[0]+" "+weights[1]);
 					}
-					classifiers[i][j].train(XPair, YPair, weights);
+					
+					TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights);
+					
+					if (executor !=null) executor.submit(job);
+					else job.run();
 				}
 				/*
 				System.out.println("2 vs rest");
@@ -210,7 +245,25 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 				*/
 			}
 		}
+		
+		if (executor!=null)
+        {
+            executor.shutdown();
+            while (true)
+            {
+                try {
+                    if (executor.awaitTermination(5, TimeUnit.MINUTES)) break;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 	}
 
+    @Override
+    public Classifier getNewInstance() {
+        // TODO Auto-generated method stub
+        return new PairWiseClassifier(labelMap, prop);
+    }
 
 }

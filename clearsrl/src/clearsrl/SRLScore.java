@@ -40,7 +40,7 @@ public class SRLScore {
 		return strs;
 	}
 	
-	public static SRInstance getInterection(SRInstance lhs, SRInstance rhs)
+	public static SRInstance getIntersection(SRInstance lhs, SRInstance rhs)
 	{
 	    if (!lhs.tree.getFilename().equals(rhs.tree.getFilename()) ||
 	            lhs.tree.getIndex()!=rhs.tree.getIndex() ||
@@ -107,6 +107,11 @@ public class SRLScore {
 	        
         return instance;
     }
+	
+	public void addResult(String systemLabel, String goldLabel)
+	{
+	    macroCount[labelMap.get(systemLabel)][labelMap.get(goldLabel)]++;
+	}
 	
 	public void addResult(SRInstance systemSRL, SRInstance goldSRL)
 	{

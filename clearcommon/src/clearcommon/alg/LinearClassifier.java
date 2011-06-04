@@ -145,5 +145,11 @@ public class LinearClassifier extends Classifier implements Serializable {
 		train(convertToProblem(X,Y, weightY, Double.parseDouble(prop.getProperty("liblinear.bias", "-1"))));
 	}
 
+    @Override
+    public Classifier getNewInstance() {
+        // TODO Auto-generated method stub
+        return new LinearClassifier(labelMap, prop);
+    }
+
 
 }

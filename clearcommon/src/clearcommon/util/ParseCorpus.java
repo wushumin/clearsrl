@@ -27,6 +27,7 @@ import java.util.PriorityQueue;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ParseCorpus {
     public ParseCorpus()
@@ -215,6 +216,16 @@ public class ParseCorpus {
 		    }
 		}
         executor.shutdown();
+        
+        while (true)
+        {
+            try {
+                if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        
 	    System.exit(0);
 	}
 }

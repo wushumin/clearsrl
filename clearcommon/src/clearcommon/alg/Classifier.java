@@ -19,6 +19,8 @@ public abstract class Classifier implements Serializable {
     };
     
     transient Properties prop;
+    
+    TObjectIntHashMap<String> labelMap;
     String[] labels;
     TIntIntHashMap labelIdxMap;
 
@@ -26,6 +28,7 @@ public abstract class Classifier implements Serializable {
     
     Classifier(TObjectIntHashMap<String> labelMap, Properties prop)
     {
+        this.labelMap = labelMap;
         this.prop = prop;
         labels = labelMap.keys(new String[labelMap.size()]);
         Arrays.sort(labels);
@@ -52,6 +55,8 @@ public abstract class Classifier implements Serializable {
     public abstract void train(int [][] X, int[] Y, double[] weightY);
     
     public abstract int predict(int[] x);
+    
+    public abstract Classifier getNewInstance();
     
     public int predictProb(int[] x, double[] prob)
     {

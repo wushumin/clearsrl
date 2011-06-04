@@ -96,5 +96,10 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         return stageTwoClassifier.predict(x);
     }
-
+    
+    @Override
+    public Classifier getNewInstance() {
+        // TODO Auto-generated method stub
+        return new TwoStageClassifier(labelMap, cutoff, prop);
+    }
 }

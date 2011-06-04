@@ -115,7 +115,7 @@ public class ScoreSRL {
                     {
                         found = false;
                         for (PBInstance sysProp:sysProps)
-                            if (goldProp.getPredicate().getTerminalIndex()-sysProp.getPredicate().getTerminalIndex()==0)
+                            if (goldProp.getPredicate().getTokenIndex()-sysProp.getPredicate().getTokenIndex()==0)
                             {
                                 found = true;
                                 sysInstances.add(new SRInstance(sysProp));
@@ -136,7 +136,7 @@ public class ScoreSRL {
                     
                     SRInstance interInstance = sysInstances.get(0);
                     for (int i=1; i<sysInstances.size(); ++i)
-                        interInstance = SRLScore.getInterection(interInstance, sysInstances.get(i));
+                        interInstance = SRLScore.getIntersection(interInstance, sysInstances.get(i));
                     
                     iScore.addResult(interInstance, goldInstance);
 		    interInstance.cleanUpArgs();
