@@ -77,7 +77,8 @@ public class SRLModel implements Serializable {
         // Round 2+ label feature
 		ARGLIST,
 		ARGLISTPREVIOUS,
-		ARGTYPEPREVIOUS
+		ARGTYPE,
+		ARGTYPEPREVIOUS,
 	};
 	
 	public enum PredFeature
@@ -285,9 +286,10 @@ public class SRLModel implements Serializable {
     
     void rebuildMaps()
     {   
-        featureStringMap.put(EnumSet.of(Feature.ARGLIST),  (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        featureStringMap.put(EnumSet.of(Feature.ARGLISTPREVIOUS),  (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        featureStringMap.put(EnumSet.of(Feature.ARGTYPEPREVIOUS),  (TObjectIntHashMap<String>)(labelStringMap.clone()));
+        featureStringMap.put(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()));
+        featureStringMap.put(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
+        featureStringMap.put(EnumSet.of(Feature.ARGTYPE), (TObjectIntHashMap<String>)(labelStringMap.clone()));
+        featureStringMap.put(EnumSet.of(Feature.ARGTYPEPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
         
         int startIdx=0;
         for (Map.Entry<EnumSet<Feature>, TObjectIntHashMap<String>> entry: featureStringMap.entrySet())
@@ -401,7 +403,7 @@ public class SRLModel implements Serializable {
             for (int i=0; i<samples.size();++i)
                 if (labelStringMap.containsKey(labels.get(i)))
                 {
-                    int sampleTerminalIndex = argNodes.get(i).getTerminalNodes().get(0).getTerminalIndex();
+                    int sampleTerminalIndex = argNodes.get(i).getHead().getTerminalIndex();
                     sampleList.add(new Sample(getFeatureVector(samples.get(i), featureStringMap), labels.get(i), 
                             sampleTerminalIndex, predTerminalIndex>sampleTerminalIndex));
                 }
@@ -943,7 +945,8 @@ public class SRLModel implements Serializable {
     {
         TObjectIntHashMap<String> argListMap =  featureStringMap.get(EnumSet.of(Feature.ARGLIST));
         TObjectIntHashMap<String> argListPreviousMap =  featureStringMap.get(EnumSet.of(Feature.ARGLISTPREVIOUS));
-        TObjectIntHashMap<String> argTypePreviousMap =  featureStringMap.get(EnumSet.of(Feature.ARGTYPEPREVIOUS));
+        TObjectIntHashMap<String> argTypeMap =  featureStringMap.get(EnumSet.of(Feature.ARGTYPE));
+        TObjectIntHashMap<String> argTypePreviousMap =  featureStringMap.get(EnumSet.of(Feature.ARGTYPE));
         
         int[][] X = new int[samples.length][];
         
@@ -953,7 +956,7 @@ public class SRLModel implements Serializable {
         {
             TIntHashSet featureSet = new TIntHashSet(samples[i].features);
             
-            mapIdx = argTypePreviousMap.get(samples[i].label);
+            mapIdx = argTypeMap.get(samples[i].label);
             if (mapIdx!=0) featureSet.add(mapIdx);
             
             for (int a=0; a<samples.length; ++a)
@@ -969,6 +972,30 @@ public class SRLModel implements Serializable {
                     if (mapIdx!=0) featureSet.add(mapIdx);
                 }
             }
+            
+            if (samples[i].isBeforePredicate)
+            {
+                for (int a=samples.length-1;a>i; --a)
+                    if (samples[i].terminalIndex<samples[a].terminalIndex && samples[a].label.matches("ARG\\d"))
+                    {
+                        mapIdx = argTypePreviousMap.get(samples[a].label);
+                        if (mapIdx!=0) featureSet.add(mapIdx);
+                        break;
+                    }
+            }
+            else
+            {
+                for (int a=i+1;a<samples.length; ++a)
+                {
+                    if (samples[i].terminalIndex>samples[a].terminalIndex && samples[a].label.matches("ARG\\d"))
+                    {
+                        mapIdx = argTypePreviousMap.get(samples[a].label);
+                        if (mapIdx!=0) featureSet.add(mapIdx);
+                        break;
+                    }
+                }
+            }
+            
             X[i] = featureSet.toArray();
             Arrays.sort(X[i]);
         }
@@ -1030,7 +1057,7 @@ public class SRLModel implements Serializable {
             
             if (doStage2)
             {
-                int terminalIndex = argNodes.get(i).getTerminalNodes().get(0).getTerminalIndex();
+                int terminalIndex = argNodes.get(i).getHead().getTerminalIndex();
                 fsamples[i] = new Sample(x, label, terminalIndex, predTerminalIndex>terminalIndex);
             }
             else if (labeled && !label.equals(NOT_ARG))

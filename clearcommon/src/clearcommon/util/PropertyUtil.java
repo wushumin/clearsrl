@@ -1,5 +1,7 @@
 package clearcommon.util;
 
+import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Properties;
 
 public class PropertyUtil {
@@ -22,5 +24,13 @@ public class PropertyUtil {
         }
         
         return out;
+    }
+    
+    public static void printProps(PrintStream out, Properties props)
+    {
+        String[] keys = props.keySet().toArray(new String[0]);
+        Arrays.sort(keys);
+        for(String key:keys)
+            out.println(key+" = "+props.getProperty(key));
     }
 }

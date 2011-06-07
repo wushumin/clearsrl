@@ -41,7 +41,8 @@ public class RunSRL {
 		
 		props = PropertyUtil.filterProperties(props, "srl.");
 		props = PropertyUtil.filterProperties(props, "run.", true);
-		System.out.println(props);
+		
+		PropertyUtil.printProps(System.out, props);
 		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
