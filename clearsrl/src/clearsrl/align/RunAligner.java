@@ -105,6 +105,8 @@ public class RunAligner {
 		    for (Alignment alignment:alignments)
 		    {
 		        alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+			//alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toArgTokenString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+
 		        stat.addAlignment(alignment);
 		    }
 		    

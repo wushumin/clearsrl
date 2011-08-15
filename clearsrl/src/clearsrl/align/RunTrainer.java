@@ -94,8 +94,6 @@ public class RunTrainer {
         goldReader.initialize();
         sysReader.initialize();
         
-        int cnt = 0;
-        
         while (true)
         {
             SentencePair goldSentence = goldReader.nextPair();

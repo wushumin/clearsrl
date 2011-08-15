@@ -70,7 +70,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
         
         for (PBArg arg:args)
         {
-            BitSet bits = arg.getTokenSet();
+            BitSet bits = arg.node.getTokenSet();//arg.getTokenSet();
             if (bits.nextSetBit(0)<0) continue;
             if (bits.nextSetBit(0)>= nodes.size())
             {

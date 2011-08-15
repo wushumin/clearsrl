@@ -2,6 +2,7 @@ package clearcommon.alg;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -57,10 +58,10 @@ public class CrossValidator {
         this.threads = threads;
     }
 
-    public static void randomPermute(int[] perm)
+    public static void randomPermute(int[] perm, Random rand)
     {
         for (int i = 0; i < perm.length; i++) {
-            int r = (int) (Math.random() * (i+1));     // int between 0 and i
+            int r = (int) (rand.nextDouble() * (i+1));     // int between 0 and i
             int swap = perm[r];
             perm[r] = perm[i];
             perm[i] = swap;
@@ -106,7 +107,7 @@ public class CrossValidator {
             perm = seed.clone();
         }
         
-        randomPermute(perm);
+        randomPermute(perm, new Random(y.length));
 
         for (int f=0; f<foldNum; ++f)
         {

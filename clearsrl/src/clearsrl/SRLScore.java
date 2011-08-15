@@ -170,8 +170,8 @@ public class SRLScore {
 	
 	public void printResults(PrintStream pStream)
 	{
-		//System.out.println("\n********** Token Results **********");
-		//printResults(pStream, microCount);
+		System.out.println("\n********** Token Results **********");
+		printResults(pStream, microCount);
 		System.out.println("---------- Arg Results ------------");
 		printResults(pStream, macroCount);
 		System.out.println("************************\n");

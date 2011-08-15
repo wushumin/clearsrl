@@ -2,11 +2,7 @@ package clearsrl.align;
 
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
-import clearsrl.align.AlignmentStat.ObjectScore;
-import gnu.trove.TFloatArrayList;
 import gnu.trove.TLongHashSet;
 
 public class WordAlignmentScorer {

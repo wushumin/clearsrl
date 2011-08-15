@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 public class Scorer {
 
@@ -28,8 +27,7 @@ public class Scorer {
 		long   sentenceId;
 		int    srcSRLId;
 		int    dstSRLId;
-		double score;
-
+		
 		int i=0, j=0;
 		while (scanner.hasNextLine())
 		{
@@ -46,9 +44,6 @@ public class Scorer {
 				sentenceId = Long.parseLong(tokens[0].trim());
 				srcSRLId = Short.parseShort(tokens[1].trim());
 				dstSRLId = Short.parseShort(tokens[2].trim());
-				score = Double.parseDouble(tokens[3].trim());
-				
-
 				scores.put((sentenceId<<32)|(srcSRLId<<16)|dstSRLId,argSet);
 			} 
 			catch (NumberFormatException e)
