@@ -16,7 +16,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -30,14 +33,40 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class ParseCorpus {
-    public ParseCorpus()
+    
+    ExecutorService executor;
+    PriorityQueue<Sentence> parseQueue;
+    Map<Long, CoarseToFineMaxRuleParser> parserMap;
+    Properties props;
+    
+    public ParseCorpus(Properties props)
     {
+        this.props = props;
         
+        int threads = Integer.parseInt(props.getProperty("threads","1"));
+        System.out.printf("Using %d threads\n",threads);
+        
+        executor = Executors.newFixedThreadPool(threads);
+        parseQueue = new PriorityQueue<Sentence>();
+        parserMap = new HashMap<Long, CoarseToFineMaxRuleParser>();
     }
     
-    public static PriorityQueue<Sentence> parseQueue = new PriorityQueue<Sentence>();
+    public void close()
+    {
+        executor.shutdown();
+        
+        while (true)
+        {
+            try {
+                if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        
+    }
 
-    public class Sentence implements Comparable<Sentence>, Runnable  {
+    class Sentence implements Comparable<Sentence>, Runnable  {
         int linenum;
         String line;
         String parse;
@@ -85,10 +114,7 @@ public class ParseCorpus {
         }
     }
     
-    public static Map<Long, CoarseToFineMaxRuleParser> parserMap = new HashMap<Long, CoarseToFineMaxRuleParser>();
-    
-    public static Properties props;
-    public static CoarseToFineMaxRuleParser getParser()
+    CoarseToFineMaxRuleParser getParser()
     {
         CoarseToFineMaxRuleParser parser;
         if ((parser=parserMap.get(Thread.currentThread().getId()))==null)
@@ -150,10 +176,40 @@ public class ParseCorpus {
 		return buffer.toString();
 	}
 	
+	public void parse(InputStream in, OutputStream out) throws IOException, InterruptedException
+	{
+	    BufferedReader inputData = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+        PrintWriter outputData = new PrintWriter(new OutputStreamWriter(out, "UTF-8"), true);
+
+        String line;
+        int lineCount = 0;
+        int lineNum = 0;
+        while((line=inputData.readLine()) != null){
+            executor.execute(new Sentence(lineCount++, line));                  
+        }
+        while (lineNum!=lineCount)
+        {
+            Sentence sentence;
+            synchronized (parseQueue) {
+                sentence = parseQueue.peek();
+                if (sentence==null || sentence.linenum!=lineNum)
+                {
+                    parseQueue.wait();
+                    continue;
+                }
+                sentence = parseQueue.remove();
+            }
+            outputData.write(sentence.parse);
+            //System.out.println(lineNum+" "+sentence.parse);
+            ++lineNum;
+        }
+        
+        outputData.flush();
+	}
+	
 	public static void main(String[] args) throws Exception
 	{
-	    ParseCorpus parseCorpus = new ParseCorpus();
-		props = new Properties();
+	    Properties props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		in.close();
@@ -161,8 +217,8 @@ public class ParseCorpus {
 		
 		int threads = Integer.parseInt(props.getProperty("threads","1"));
 		System.out.printf("Using %d threads\n",threads);
-		
-		ExecutorService executor = Executors.newFixedThreadPool(threads);
+
+		ParseCorpus parser = new ParseCorpus(props);
         
 		String txtDir = props.getProperty("tbtxtdir");
 	    String parseDir = props.getProperty("parsedir");
@@ -182,49 +238,20 @@ public class ParseCorpus {
 			outputFile.getParentFile().mkdirs();
 			
 			System.out.println("Parsing: "+fileName);
+			FileInputStream inStream = new FileInputStream(inputFile);
+			FileOutputStream outStream = new FileOutputStream(outputFile);
+			
 		    try{
-		    	BufferedReader inputData = new BufferedReader(new InputStreamReader(new FileInputStream(inputFile), "UTF-8"));
-		    	PrintWriter outputData = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"), true);
-	
-		    	String line;
-		    	int lineCount = 0;
-		    	int lineNum = 0;
-		    	while((line=inputData.readLine()) != null){
-		    	    executor.execute(parseCorpus.new Sentence(lineCount++, line));		    	    
-		    	}
-		    	while (lineNum!=lineCount)
-		    	{
-		    	    Sentence sentence;
-		    	    synchronized (parseQueue) {
-		    	        sentence = parseQueue.peek();
-                        if (sentence==null || sentence.linenum!=lineNum)
-                        {
-                            parseQueue.wait();
-                            continue;
-                        }
-		    	        sentence = parseQueue.remove();
-		    	    }
-	    	        outputData.write(sentence.parse);
-	    	        //System.out.println(lineNum+" "+sentence.parse);
-	    	        ++lineNum;
-		    	}
-		    	
-		    	outputData.flush();
-		    	outputData.close();
+		        parser.parse(inStream, outStream);
 		    } catch (Exception ex) {
 		    	ex.printStackTrace();
+		    } finally {
+		        inStream.close();
+		        outStream.close();
 		    }
 		}
-        executor.shutdown();
-        
-        while (true)
-        {
-            try {
-                if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+
+		parser.close();
         
 	    System.exit(0);
 	}

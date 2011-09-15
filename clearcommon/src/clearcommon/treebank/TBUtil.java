@@ -65,7 +65,31 @@ public final class TBUtil {
             return child.head;
         return null;
     }
-	
+
+    public static TBTree[] readTBFile(String dirName, String treeFile)
+    {
+        ArrayList<TBTree>  a_tree = new ArrayList<TBTree>();
+        try {
+            TBFileReader tbreader     = new SerialTBFileReader(dirName, treeFile);
+            TBTree       tree         = null;
+            
+            while ((tree = tbreader.nextTree()) != null)
+            {
+                a_tree.add(tree);
+                if (tree.index!=0 && tree.index%10000==0)
+                {
+                    System.out.println(tree.index);
+                    System.out.flush();
+                }
+            }
+            return a_tree.toArray(new TBTree[a_tree.size()]);
+        } catch(Exception e)
+        {
+            System.err.println(e);
+            return null;
+        }
+    }
+    
 	public static Map<String, TBTree[]> readTBDir(String dirName, String regex)
 	{
 		File dir = new File(dirName);
@@ -75,32 +99,13 @@ public final class TBUtil {
 			files.add(dir.getName());
 		
 		Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
-		
-		TBFileReader          tbreader = null;
-		ArrayList<TBTree> a_tree   = null;
-		TBTree            tree     = null;
 		for (String treeFile: files)
 		{
 			System.out.println("Reading "+dirName+File.separatorChar+treeFile);
-			try {
-				tbreader    = new SerialTBFileReader(dirName, treeFile);
 			
-				a_tree = new ArrayList<TBTree>();
-				
-				while ((tree = tbreader.nextTree()) != null)
-				{
-					a_tree.add(tree);
-					if (tree.index!=0 && tree.index%10000==0)
-	                {
-	                    System.out.println(tree.index);
-	                    System.out.flush();
-	                }
-				}
-				tbMap.put(treeFile, a_tree.toArray(new TBTree[a_tree.size()]));
-			} catch(Exception e)
-			{
-				System.err.println(e);
-			}
+			TBTree[] trees = readTBFile(dirName, treeFile);
+			
+			if (trees!=null) tbMap.put(treeFile, trees);
 		}
 		
 		return tbMap;

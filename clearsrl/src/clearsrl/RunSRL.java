@@ -27,22 +27,174 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeSet;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.zip.GZIPInputStream;
 
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+
 public class RunSRL {
+    
+    @Option(name="-prop",usage="properties file")
+    private File propFile = null; 
+    
+    @Option(name="-in",usage="input file/directory")
+    private File inFile = null; 
+ 
+    @Option(name="-out",usage="output file/directory")
+    private File outFile = null; 
+    
+    @Option(name="-parsed",usage="input is parse trees")
+    private boolean parsed = false;
+    
+    @Option(name="-h",usage="help message")
+    private boolean help = false;
+
 	static final float THRESHOLD=0.8f;
+
+	static class Runner implements Runnable
+	{
+	    BlockingQueue<TBTree> treeQueue;
+        SortedMap<Integer, List<PBInstance>> pbFileMap;
+        SRLModel model; 
+        LanguageUtil langUtil;
+        PrintStream output;
+        SRInstance.OutputFormat outputFormat;
+        SRLScore score;
+        SRLScore score2;
+	    
+	    public Runner(BlockingQueue<TBTree> treeQueue, 
+                SortedMap<Integer, List<PBInstance>> pbFileMap, 
+                SRLModel model, LanguageUtil langUtil,
+                PrintStream output, SRInstance.OutputFormat outputFormat, 
+                SRLScore score, SRLScore score2)
+	    {
+	        this.treeQueue = treeQueue;
+	        this.pbFileMap = pbFileMap;
+	        this.model = model;
+	        this.langUtil = langUtil;
+	        this.output = output;
+	        this.outputFormat = outputFormat;
+	        this.score = score;
+	        this.score2 = score2;
+	    }
+	    
+        public void run() {
+            while (true)
+            {
+                TBTree tree;
+                try {
+                    tree = treeQueue.take();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    continue;
+                }
+                if (tree.getRootNode()==null) break;
+
+                //System.out.println(i+" "+trees[i].getRootNode().toParse());
+                //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
+                //for (TBNode node:nodes)
+                //    System.out.println(node.toParse());
+                TBUtil.findHeads(tree.getRootNode(), langUtil.getHeadRules());
+                List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(tree.getIndex());
+                SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
+                for (int j=0; j<goldInstances.length; ++j)
+                    goldInstances[j] = new SRInstance(pbInstances.get(j));
+                
+                List<SRInstance> predictions = null;
+                
+                if (pbFileMap!=null)
+                {
+                    predictions = model.predict(tree, goldInstances, null);
+                    
+                    /*
+                    BitSet goldPredicates = new BitSet();
+                    for (SRInstance instance:goldInstances)
+                        goldPredicates.set(instance.getPredicateNode().getTokenIndex());
+                
+                    BitSet predPredicates = new BitSet();
+                    for (SRInstance instance:predictions)
+                        predPredicates.set(instance.getPredicateNode().getTokenIndex());
+
+                    if (!goldPredicates.equals(predPredicates))
+                    {
+                        System.out.print(entry.getKey()+","+i+": ");
+                        List<TBNode> nodes = trees[i].getRootNode().getTokenNodes();
+                        for (int j=0; j<nodes.size(); ++j)
+                        {
+                            if (goldPredicates.get(j)&& predPredicates.get(j))
+                                System.out.print("["+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"] ");
+                            else if (goldPredicates.get(j))
+                                System.out.print("("+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+") ");
+                            else if (predPredicates.get(j))
+                                System.out.print("{"+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"} ");
+                            else
+                                System.out.print(nodes.get(j).getWord()+" ");
+                        }
+                        System.out.print("\n");
+                    }*/
+                }
+                else
+                {
+                    predictions = new LinkedList<SRInstance>();
+                    for (SRInstance goldInstance:goldInstances)
+                    {
+                        List<String> stem = langUtil.findStems(goldInstance.predicateNode.getWord(), POS.VERB);
+                        predictions.add(new SRInstance(goldInstance.predicateNode, tree, stem.get(0)+".XX", 1.0));
+                        model.predict(predictions.get(predictions.size()-1), null);
+                        score.addResult(predictions.get(predictions.size()-1), goldInstance);
+                        
+                        
+                        ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
+                        ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
+                        SRLUtil.getSamplesFromParse(goldInstance, tree, THRESHOLD, argNodes, labels);
+                        
+                        SRInstance trainInstance = new SRInstance(goldInstance.predicateNode, tree, goldInstance.getRolesetId(), 1.0);
+                        for (int l=0; l<labels.size(); ++l)
+                        {
+                            if (SRLUtil.getMaxLabel(labels.get(l)).equals(SRLModel.NOT_ARG)) continue;
+                            trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
+                        }
+                        score2.addResult(trainInstance, goldInstance);
+                    }
+
+                }
+                for (SRInstance instance:predictions)
+                    output.println(instance.toString(outputFormat));
+                
+            }
+        }
+	}
 	
 	public static void main(String[] args) throws Exception
 	{	
+	    RunSRL options = new RunSRL();
+	    CmdLineParser parser = new CmdLineParser(options);
+	    parser.parseArgument(args);
+	    
+	    if (options.help){
+	        parser.printUsage(System.err);
+	        System.exit(0);
+	    }
+	    
+	    System.out.println("prop="+options.propFile.getAbsolutePath());
+	    System.out.println("parsed="+options.parsed);
+	    
 		Properties props = new Properties();
-		FileInputStream in = new FileInputStream(args[0]);
+		FileInputStream in = new FileInputStream(options.propFile);
 		props.load(in);
 		in.close();
 		
 		props = PropertyUtil.filterProperties(props, "srl.");
 		props = PropertyUtil.filterProperties(props, "run.", true);
 		
+		if (options.inFile!=null) props.setProperty("txtdir", options.inFile.getAbsolutePath());
+		if (options.outFile!=null) props.setProperty("output.dir", options.outFile.getAbsolutePath());
+		
 		PropertyUtil.printProps(System.out, props);
+	      
+		System.exit(0);
 		
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
@@ -68,6 +220,11 @@ public class RunSRL {
 		int cCount = 0;
 		int pCount = 0;
 		String dataFormat = props.getProperty("data.format", "default");
+		if (!options.parsed) 
+		{
+		    dataFormat = "default";
+		    props.remove("pbdir");
+		}
 		/*
 		if (dataFormat.equals("default"))
 		{		
@@ -141,7 +298,9 @@ public class RunSRL {
 			}
 		}
 		*/
-        boolean predictPredicate = (props.getProperty("predict_predicate")!=null && !props.getProperty("predict_predicate").equals("false"));
+        boolean predictPredicate = (props.getProperty("predict_predicate")!=null && 
+                !props.getProperty("predict_predicate").equals("false") &&
+                props.getProperty("pbdir")!=null);
         
         if (predictPredicate==true && model.predicateClassifier==null)
         {
@@ -169,128 +328,64 @@ public class RunSRL {
         SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         if (!dataFormat.equals("conll"))
         {	
-            Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
-            Map<String, TBTree[]> treeBank = null;
-            if (props.getProperty("pbdir")!=null)
+            if (options.parsed)
             {
-                String treeRegex = props.getProperty("tb.regex");
-                String propRegex = props.getProperty("pb.regex");
-
-                treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
-                //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-                propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
-                                     propRegex, 
-                                     new TBReader(treeBank),
-                                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
-            }
-            Map<String, TBTree[]> parsedTreeBank = null;
-            
-            if (!props.getProperty("goldparse", "false").equals("false"))
-                parsedTreeBank = treeBank;
-            else
-                parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
-            
-            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-            {
-            	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
-                TBTree[] trees = entry.getValue();
-                
-                System.out.println("Processing "+entry.getKey());
-                
-                boolean closeStream = false;
-                if (output==null && outputDir.isDirectory())
+                Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
+                Map<String, TBTree[]> treeBank = null;
+                if (props.getProperty("pbdir")!=null)
                 {
-                    String fName = entry.getKey();
-                    if (fName.endsWith("parse")) fName = fName.substring(0, fName.length()-5)+"prop";
-                    File propFile = new File(outputDir, fName);
-                    propFile.getParentFile().mkdirs();
-                    closeStream = true;
-                    output = new PrintStream(propFile);
+                    String treeRegex = props.getProperty("tb.regex");
+                    String propRegex = props.getProperty("pb.regex");
+    
+                    treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
+                    //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
+                    propBank = PBUtil.readPBDir(props.getProperty("pbdir"), 
+                                         propRegex, 
+                                         new TBReader(treeBank),
+                                         dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
                 }
-                    
-                for (int i=0; i<trees.length; ++i)
+                Map<String, TBTree[]> parsedTreeBank = null;
+                
+                if (!props.getProperty("goldparse", "false").equals("false"))
+                    parsedTreeBank = treeBank!=null?treeBank:TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("tb.regex"));
+                else
+                    parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
+
+                for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
                 {
-                    //System.out.println(i+" "+trees[i].getRootNode().toParse());
-                    //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
-                    //for (TBNode node:nodes)
-                    //    System.out.println(node.toParse());
-                    TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
-                    List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(i);
-                    SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
-                    for (int j=0; j<goldInstances.length; ++j)
-                        goldInstances[j] = new SRInstance(pbInstances.get(j));
+                	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
+                    TBTree[] trees = entry.getValue();
                     
-                    List<SRInstance> predictions = null;
+                    System.out.println("Processing "+entry.getKey());
                     
-                    if (predictPredicate)
+                    boolean closeStream = false;
+                    if (output==null && outputDir.isDirectory())
                     {
-                        predictions = model.predict(trees[i], goldInstances, null);
+                        String fName = entry.getKey();
+                        if (fName.endsWith("parse")) fName = fName.substring(0, fName.length()-5)+"prop";
+                        File propFile = new File(outputDir, fName);
+                        propFile.getParentFile().mkdirs();
+                        closeStream = true;
+                        output = new PrintStream(propFile);
+                    }
                         
-                        /*
-                    	BitSet goldPredicates = new BitSet();
-                    	for (SRInstance instance:goldInstances)
-                    		goldPredicates.set(instance.getPredicateNode().getTokenIndex());
+                    BlockingQueue<TBTree> queue = new ArrayBlockingQueue<TBTree>(100);
                     
-                    	BitSet predPredicates = new BitSet();
-                    	for (SRInstance instance:predictions)
-                    		predPredicates.set(instance.getPredicateNode().getTokenIndex());
+                    Thread srlThread = new Thread(new Runner(queue, pbFileMap, model, langUtil, output, outputFormat, score2, score2));
+                    srlThread.start();
+                    
+                    for (TBTree tree:trees) queue.put(tree);
+                    queue.put(new TBTree(null, 0, null, 0, 0));
+                    
+                    srlThread.join();  
 
-                        if (!goldPredicates.equals(predPredicates))
-                        {
-                            System.out.print(entry.getKey()+","+i+": ");
-                            List<TBNode> nodes = trees[i].getRootNode().getTokenNodes();
-                            for (int j=0; j<nodes.size(); ++j)
-                            {
-                                if (goldPredicates.get(j)&& predPredicates.get(j))
-                                    System.out.print("["+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"] ");
-                                else if (goldPredicates.get(j))
-                                    System.out.print("("+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+") ");
-                                else if (predPredicates.get(j))
-                                    System.out.print("{"+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"} ");
-                                else
-                                    System.out.print(nodes.get(j).getWord()+" ");
-                            }
-                            System.out.print("\n");
-                        }*/
-                    }
-                    else
+                    if (closeStream)
                     {
-                    	predictions = new LinkedList<SRInstance>();
-                    	for (SRInstance goldInstance:goldInstances)
-                    	{
-                    		List<String> stem = langUtil.findStems(goldInstance.predicateNode.getWord(), POS.VERB);
-                            predictions.add(new SRInstance(goldInstance.predicateNode, trees[i], stem.get(0)+".XX", 1.0));
-                            model.predict(predictions.get(predictions.size()-1), null);
-                            score.addResult(predictions.get(predictions.size()-1), goldInstance);
-                            
-                            
-                            ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-        					ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-        					SRLUtil.getSamplesFromParse(goldInstance, trees[i], THRESHOLD, argNodes, labels);
-                            
-                            SRInstance trainInstance = new SRInstance(goldInstance.predicateNode, trees[i], goldInstance.getRolesetId(), 1.0);
-        					for (int l=0; l<labels.size(); ++l)
-        					{
-        						if (SRLUtil.getMaxLabel(labels.get(l)).equals(SRLModel.NOT_ARG)) continue;
-        						trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-        					}
-        					score2.addResult(trainInstance, goldInstance);
-                    	}
-                    	
-                    	
-                    	
-                    	
+                        output.close();
+                        output = null;
                     }
-                    for (SRInstance instance:predictions)
-                        output.println(instance.toString(outputFormat));
-                    
                 }
-                if (closeStream)
-                {
-                    output.close();
-                    output = null;
-                }
-            }      
+            }
         }		
 		else if (dataFormat.equals("conll"))
 		{
