@@ -7,11 +7,15 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+import java.util.logging.Logger;
 
+import clearcommon.propbank.PBFileReader;
 import clearcommon.util.FileTokenizer;
 
 public class SerialTBFileReader extends TBFileReader
 {
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
 	FileTokenizer scanner;
 	int           treeCount;
 	TBTree        lastTree;
@@ -139,7 +143,7 @@ public class SerialTBFileReader extends TBFileReader
                 lastTree = nextTree();
                 if (lastTree==null) return null;
             } catch (ParseException e) {
-                System.err.println(e);
+            	logger.severe(e.getMessage());
             }
         }
     }

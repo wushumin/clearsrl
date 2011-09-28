@@ -14,9 +14,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 public final class PBUtil {
-    
+	
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
     public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir)
     {
         return readPBDir(dirName, regex, tbDir, null);
@@ -56,7 +59,7 @@ public final class PBUtil {
                 e1.printStackTrace();
                 continue;
             }
-			System.out.println("Reading "+annotationFile);
+            logger.info("Reading "+annotationFile);
 			PBInstance instance=null;
 			//System.out.println(annotationFile);
 			for (;;)
@@ -72,8 +75,7 @@ public final class PBUtil {
 				    pbreader.close();
 				    break;
 				} catch (Exception e) {
-					System.err.print(annotationFile+": ");
-                    e.printStackTrace();
+					logger.severe(annotationFile+": "+e.getMessage());
 					continue;
 				}
 				
@@ -106,7 +108,7 @@ public final class PBUtil {
 				//System.out.print("\n");	
 			}
 		}
-		System.out.printf("%d props read, %d format exceptions encountered\n", correctCnt, exceptionCnt);
+		logger.info(String.format("%d props read, %d format exceptions encountered\n", correctCnt, exceptionCnt));
 		
 		return pbMap;		
 	}

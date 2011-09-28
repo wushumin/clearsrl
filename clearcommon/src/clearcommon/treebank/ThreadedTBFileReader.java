@@ -4,9 +4,14 @@ import java.io.FileNotFoundException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
+
+import clearcommon.propbank.PBFileReader;
 
 public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
 	SerialTBFileReader tbReader;
     TBTree lastTree;
     BlockingQueue<TBTree> treeQueue;
@@ -43,7 +48,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
             try {
                 tree = tbReader.nextTree();
             } catch(Exception e) {
-                System.err.println(e);
+            	logger.severe(e.getMessage());
             }
             try {
                 if (tree==null)
@@ -51,12 +56,12 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
                     try {
                         tree = new TBTree(null, Integer.MAX_VALUE, null, 0, 0);
                     } catch (ParseException e) {
-                        e.printStackTrace();
+                    	logger.severe(e.getMessage());
                     }
                 }
                 treeQueue.put(tree);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+            	logger.severe(e.getMessage());
             }
             
             // the last tree inserted will be null, indicating there are no more trees

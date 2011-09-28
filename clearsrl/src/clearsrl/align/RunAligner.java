@@ -45,7 +45,7 @@ public class RunAligner {
 		
 		props = PropertyUtil.filterProperties(props, baseFilter+"align.");
 		
-		PropertyUtil.printProps(System.out, props);
+		System.out.print(PropertyUtil.toString(props));
 		
 		SentencePairReader sentencePairReader = null;
 		

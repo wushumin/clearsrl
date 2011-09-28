@@ -197,16 +197,16 @@ public class ScoreSRL {
         for (int i=0; i<scores.length; ++i)
         {
             System.out.println(systems[i]+":");
-            scores[i].printResults(System.out);
+            System.out.println(scores[i]);
         }
         
         if (scores.length>1)
         {
             System.out.println("intersection:");
-            iScore.printResults(System.out);
+            System.out.println(iScore);
             
             System.out.println("union:");
-            uScore.printResults(System.out);
+            System.out.println(uScore);
         } 
     }
 }

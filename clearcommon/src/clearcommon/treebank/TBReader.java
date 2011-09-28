@@ -5,8 +5,14 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Logger;
+
+import clearcommon.propbank.PBFileReader;
 
 public class TBReader {
+	
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
     String               dir;
     boolean              cached;
     ThreadedTBFileReader reader;
@@ -57,7 +63,7 @@ public class TBReader {
             if ((trees = treeMap.get(fileName))==null)
             {
                 if (dir==null) return null;
-                System.out.println("Reading "+dir+File.separatorChar+fileName);
+                logger.info("Reading "+dir+File.separatorChar+fileName);
                 try {
                     TBFileReader tbreader = new SerialTBFileReader(dir, fileName);
                     ArrayList<TBTree> a_tree = new ArrayList<TBTree>();

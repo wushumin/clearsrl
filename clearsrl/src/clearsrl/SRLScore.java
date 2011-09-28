@@ -168,17 +168,22 @@ public class SRLScore {
 		}
 	}
 	
-	public void printResults(PrintStream pStream)
+	public String toString()
 	{
-		System.out.println("\n********** Token Results **********");
-		printResults(pStream, microCount);
-		System.out.println("---------- Arg Results ------------");
-		printResults(pStream, macroCount);
-		System.out.println("************************\n");
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append("\n********** Token Results **********");
+		builder.append(toString(microCount));
+		builder.append("---------- Arg Results ------------");
+		builder.append(toString(macroCount));
+		builder.append("************************\n\n");
+		
+		return builder.toString();
 	}
 		
-	void printResults(PrintStream pStream, int[][] count)	
+	String toString(int[][] count)	
 	{
+		StringBuilder builder = new StringBuilder();
 		int pTotal=0, rTotal=0, fTotal=0;
 		double p, r, f;
 		for (String label: labelSet)
@@ -198,7 +203,7 @@ public class SRLScore {
 			r = rArgT==0?0:((double)fArgT)/rArgT;
 			f = p==0?0:(r==0?0:2*p*r/(p+r));
 
-			System.out.printf("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", label, fArgT, pArgT, rArgT, p*100, r*100, f*100);
+			builder.append(String.format("\n%s(%d,%d,%d): precision: %f recall: %f f-measure: %f", label, fArgT, pArgT, rArgT, p*100, r*100, f*100));
 			
 			pTotal += pArgT;
 			rTotal += rArgT;
@@ -208,6 +213,9 @@ public class SRLScore {
 		p = pTotal==0?0:((double)fTotal)/pTotal;
 		r = rTotal==0?0:((double)fTotal)/rTotal;
 		f = p==0?0:(r==0?0:2*p*r/(p+r));
-		System.out.printf("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", "all", fTotal, pTotal, rTotal, p*100, r*100, f*100);
+		
+		builder.append(String.format("\n%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", "all", fTotal, pTotal, rTotal, p*100, r*100, f*100));
+		
+		return builder.toString();
 	}
 }

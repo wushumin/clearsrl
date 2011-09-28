@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 
 public class SRLModel implements Serializable {
 	/**
@@ -152,6 +153,8 @@ public class SRLModel implements Serializable {
 	transient int                                        hit = 0;
 	transient int                                        total = 0;
 	
+	transient Logger                                     logger;
+	
 //	transient private SRLScore                        score;
 	
 	public static <T extends Enum<T>> String toString(EnumSet<T> feature) {
@@ -175,6 +178,8 @@ public class SRLModel implements Serializable {
 	
 	public SRLModel (Set<EnumSet<Feature>> featureSet, Set<EnumSet<PredFeature>> predicateFeatureSet)
 	{
+		logger = Logger.getLogger("clearsrl");
+		
 		labeled       = true;
 
 		this.featureSet = featureSet;
@@ -238,23 +243,24 @@ public class SRLModel implements Serializable {
 	{
 	    trimMap(labelStringMap,20);
 	    
-	    System.out.println("Labels: ");
+	    logger.info("Labels: ");
         String[] labels = labelStringMap.keys(new String[labelStringMap.size()]);
         Arrays.sort(labels);
         for (String label:labels)
         {
-            System.out.println("  "+label+" "+labelStringMap.get(label));
+            logger.info("  "+label+" "+labelStringMap.get(label));
         }   
         
 		for (EnumSet<Feature> feature:featureSet)
 		{
-		    System.out.print(toString(feature)+": "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
+			StringBuilder builder = new StringBuilder(toString(feature)+": "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
 			trimMap(featureStringMap.get(feature),cutoff);
 			trimMap(noargFeatureStringMap.get(feature),cutoff*10);
-			System.out.print(" "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
+			builder.append(" "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
 			featureStringMap.get(feature).putAll(noargFeatureStringMap.get(feature));
-			System.out.print(" "+featureStringMap.get(feature).size());
-			System.out.println(featureStringMap.get(feature).size()<=250?" "+Arrays.asList(featureStringMap.get(feature).keys()):"");
+			builder.append(" "+featureStringMap.get(feature).size());
+			builder.append(featureStringMap.get(feature).size()<=250?" "+Arrays.asList(featureStringMap.get(feature).keys()):"");
+			logger.info(builder.toString());
 		}
 		
 		if (predicateFeatureSet!=null)
@@ -832,7 +838,7 @@ public class SRLModel implements Serializable {
             
             for (int i=0; i<predicateTrainingLabels.size(); ++i)
                 dist += (predicateTrainingLabels.get(i)==1)?1:0;
-            System.out.printf("Training predicates: %d/%d/%d\n", dist, predicateTrainingLabels.size()-dist, predicateTrainingLabels.size());
+            logger.info(String.format("Training predicates: %d/%d/%d\n", dist, predicateTrainingLabels.size()-dist, predicateTrainingLabels.size()));
                 
             predicateClassifier = new LinearClassifier(predicateLabelMap, prop);
             predicateClassifier.train(predicateTrainingFeatures.toArray(new int[predicateTrainingFeatures.size()][]),
@@ -841,7 +847,7 @@ public class SRLModel implements Serializable {
             double score = 0;
             for (int i=0; i<predicateTrainingFeatures.size(); ++i)
                 score += (predicateClassifier.predict(predicateTrainingFeatures.get(i))==predicateTrainingLabels.get(i))?1:0;
-            System.out.printf("Predicate training accuracy: %f\n", score/predicateTrainingLabels.size());
+            logger.info(String.format("Predicate training accuracy: %f\n", score/predicateTrainingLabels.size()));
         }
         
         int[][] X = null;
@@ -918,7 +924,7 @@ public class SRLModel implements Serializable {
         }
         for (int i=0; i<y.length; ++i)
             scorer.addResult(labelIndexMap.get(yV[i]),labelIndexMap.get(y[i]));
-        scorer.printResults(System.out);
+        logger.info(scorer.toString());
         
         {
             List<int[]> xList = new ArrayList<int[]>();
@@ -1141,7 +1147,7 @@ public class SRLModel implements Serializable {
             int lIdx = labelStringMap.get(labels.get(i));
             if (lIdx==0)
             {
-                System.err.println("Unknown label: "+labels.get(i)+", converting to "+NOT_ARG);
+                logger.severe("Unknown label: "+labels.get(i)+", converting to "+NOT_ARG);
                 lIdx = labelStringMap.get(NOT_ARG);
             }
             writeData(out, getFeatureVector(samples.get(i), featureStringMap), lIdx, format);

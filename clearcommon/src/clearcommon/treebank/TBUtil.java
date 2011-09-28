@@ -1,5 +1,6 @@
 package clearcommon.treebank;
 
+import clearcommon.propbank.PBFileReader;
 import clearcommon.util.FileUtil;
 
 import java.io.File;
@@ -8,10 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public final class TBUtil {
 
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
 	public static TBNode findHeads(TBNode node, TBHeadRules headrules)
     {
 		if (node.isTerminal()) return node.head=node;
@@ -25,10 +29,7 @@ public final class TBUtil {
                 node.pos = "S";
             headrule = headrules.getHeadRule(node.pos);
             if (headrule==null)
-            {
-                //System.err.println(node.pos+": "+node.toParse());
                 headrule = TBHeadRule.DEFAULT;
-            }
         }
         List<TBNode> decendants = node.getTokenNodes();
         if (decendants.isEmpty()) decendants = node.getTerminalNodes();
@@ -77,15 +78,12 @@ public final class TBUtil {
             {
                 a_tree.add(tree);
                 if (tree.index!=0 && tree.index%10000==0)
-                {
-                    System.out.println(tree.index);
-                    System.out.flush();
-                }
+                	logger.info("reading tree "+tree.index);
             }
             return a_tree.toArray(new TBTree[a_tree.size()]);
         } catch(Exception e)
         {
-            System.err.println(e);
+        	logger.severe(e.getMessage());
             return null;
         }
     }
@@ -101,7 +99,7 @@ public final class TBUtil {
 		Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
 		for (String treeFile: files)
 		{
-			System.out.println("Reading "+dirName+File.separatorChar+treeFile);
+			logger.info("Reading "+dirName+File.separatorChar+treeFile);
 			
 			TBTree[] trees = readTBFile(dirName, treeFile);
 			
@@ -132,7 +130,7 @@ public final class TBUtil {
 				pStream.close();
 			} catch (Exception e)
 			{
-				System.err.print(e);
+				logger.severe(e.getMessage());
 			}
 		}
 	}

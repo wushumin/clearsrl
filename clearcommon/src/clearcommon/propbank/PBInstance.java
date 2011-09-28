@@ -3,6 +3,7 @@ package clearcommon.propbank;
 import java.io.Serializable;
 import java.util.BitSet;
 import java.util.List;
+import java.util.logging.Logger;
 
 import clearcommon.treebank.*;
 
@@ -12,6 +13,8 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
      * 
      */
     private static final long serialVersionUID = -1966998836839085182L;
+    
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     TBNode      predicateNode;
 	String      rolesetId;
@@ -73,10 +76,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
             BitSet bits = arg.node.getTokenSet();//arg.getTokenSet();
             if (bits.nextSetBit(0)<0) continue;
             if (bits.nextSetBit(0)>= nodes.size())
-            {
-                System.err.println(nodes);
-                System.err.println(arg.label+": "+bits);
-            }
+            	logger.warning(nodes.toString()+"\n"+arg.label+": "+bits);
             
             tokens[bits.nextSetBit(0)] = '['+arg.label+' '+tokens[bits.nextSetBit(0)];
             tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
@@ -86,10 +86,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
                 bits = carg.getTokenSet();
                 if (bits.nextSetBit(0)<0) continue;
                 if (bits.nextSetBit(0)>= nodes.size())
-                {
-                    System.err.println(nodes);
-                    System.err.println(carg.label+": "+bits);
-                }
+                	logger.warning(nodes.toString()+"\n"+carg.label+": "+bits);
                 
                 tokens[bits.nextSetBit(0)] = '['+carg.label+' '+tokens[bits.nextSetBit(0)];
                 tokens[bits.length()-1] = tokens[bits.length()-1]+"]";

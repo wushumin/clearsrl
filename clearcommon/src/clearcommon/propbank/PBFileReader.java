@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 
 /**
@@ -67,6 +68,8 @@ import java.util.Scanner;
  */
 public class PBFileReader
 {
+	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
     String                annotationFile;
 	Scanner               scanner;
 	TreeFileResolver      filenameResolver;
@@ -229,7 +232,7 @@ public class PBFileReader
 	            if (found) break;
             }
 	        if (!found || !isSLC) {
-		    if (isSLC) System.err.println("Warning: "+linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
+		    if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
 		    iter.remove();
 
 		}
@@ -297,15 +300,14 @@ public class PBFileReader
                     }
                 }
             } catch (PBFormatException e) {
-                e.printStackTrace();
+            	logger.severe(e.getMessage());
                 continue;
             } catch (ParseException e) {
-                e.printStackTrace();
+            	logger.severe(e.getMessage());
                 close();
                 return retList.isEmpty()?null:retList;
             } catch (Exception e) {
-                System.err.print(annotationFile+": ");
-                e.printStackTrace();
+            	logger.severe(annotationFile+": "+e.getMessage());
                 return retList.isEmpty()?null:retList;
             }
         }

@@ -12,6 +12,7 @@ import clearsrl.LanguageUtil.POS;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
@@ -29,13 +30,18 @@ import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
+import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 public class RunSRL {
-    
+	private static Logger logger = Logger.getLogger("clearsrl");
+
     @Option(name="-prop",usage="properties file")
     private File propFile = null; 
     
@@ -171,15 +177,18 @@ public class RunSRL {
 	{	
 	    RunSRL options = new RunSRL();
 	    CmdLineParser parser = new CmdLineParser(options);
-	    parser.parseArgument(args);
-	    
+	    try {
+	    	parser.parseArgument(args);
+	    } catch (CmdLineException e)
+	    {
+	    	System.err.println(e+"\nvalid options:");
+	    	parser.printUsage(System.err);
+	        System.exit(0);
+	    }
 	    if (options.help){
 	        parser.printUsage(System.err);
 	        System.exit(0);
 	    }
-	    
-	    System.out.println("prop="+options.propFile.getAbsolutePath());
-	    System.out.println("parsed="+options.parsed);
 	    
 		Properties props = new Properties();
 		FileInputStream in = new FileInputStream(options.propFile);
@@ -192,27 +201,28 @@ public class RunSRL {
 		if (options.inFile!=null) props.setProperty("txtdir", options.inFile.getAbsolutePath());
 		if (options.outFile!=null) props.setProperty("output.dir", options.outFile.getAbsolutePath());
 		
-		PropertyUtil.printProps(System.out, props);
-	      
-		System.exit(0);
-		
+		logger.info(PropertyUtil.toString(props));
+
 		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
 		if (!langUtil.init(props))
+		{
+			logger.severe(String.format("Language utility (%s) initialization failed",props.getProperty("language.util-class")));
 		    System.exit(-1);
-
+		}
+		
 		ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("model_file"))));
 		SRLModel model = (SRLModel)mIn.readObject();
 		mIn.close();
 		
-		System.out.println("Features:");
-		for (EnumSet<SRLModel.Feature> feature:model.featureSet)
-		    System.out.println(SRLModel.toString(feature));
+		logger.info("Features: "+model.featureSet);
+		//for (EnumSet<SRLModel.Feature> feature:model.featureSet)
+		//	logger.info(SRLModel.toString(feature));
 		
 		if (model.predicateFeatureSet!=null)
 		{
-		    System.out.println("\nPredicate features:");
-		    for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
-	            System.out.println(SRLModel.toString(feature));
+			logger.info("Predicate features: "+model.predicateFeatureSet);
+		    //for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
+		    //	logger.info(SRLModel.toString(feature));
 		}
 		
 		model.setLanguageUtil(langUtil);
@@ -304,22 +314,33 @@ public class RunSRL {
         
         if (predictPredicate==true && model.predicateClassifier==null)
         {
-        	System.err.println("Predicate Classifier not trained!");
+        	logger.severe("Predicate Classifier not trained!");
         	System.exit(-1);
         }
 		
         SRInstance.OutputFormat outputFormat = SRInstance.OutputFormat.valueOf(props.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
         
-        File outputDir = null;
-        {
-            String outputDirName = props.getProperty("output.dir");
-            if (outputDirName != null) outputDir = new File(outputDirName);
-        }
-        
+        //File outputDir = null;
+        //{
+        //    String outputDirName = props.getProperty("output.dir");
+        //    if (outputDirName != null) outputDir = new File(outputDirName);
+        //}
+
         PrintStream output = null;
-        if (outputDir.exists())
+        if (options.outFile!=null)
         {
-            if (!outputDir.isDirectory()) output = new PrintStream(outputDir);
+        	if (!options.inFile.isDirectory())
+        		try {
+        			output = new PrintStream(options.outFile);
+        		} catch (FileNotFoundException e) {
+        			logger.severe("Cannot create output file "+options.outFile.getAbsolutePath());
+        			System.exit(1);
+        		}
+        	else if (!options.outFile.mkdirs())
+        	{
+        		logger.severe("Cannot create output directory "+options.outFile.getAbsolutePath());
+        		System.exit(1);
+        	}
         }
         else
             output = System.out;
@@ -356,14 +377,14 @@ public class RunSRL {
                 	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
                     TBTree[] trees = entry.getValue();
                     
-                    System.out.println("Processing "+entry.getKey());
+                    logger.info("Processing "+entry.getKey());
                     
                     boolean closeStream = false;
-                    if (output==null && outputDir.isDirectory())
+                    if (output==null && options.outFile.isDirectory())
                     {
                         String fName = entry.getKey();
                         if (fName.endsWith("parse")) fName = fName.substring(0, fName.length()-5)+"prop";
-                        File propFile = new File(outputDir, fName);
+                        File propFile = new File(options.outFile, fName);
                         propFile.getParentFile().mkdirs();
                         closeStream = true;
                         output = new PrintStream(propFile);
@@ -514,10 +535,10 @@ public class RunSRL {
             
         }		
 		*/
-		score2.printResults(System.out);
-		score.printResults(System.out);
-		System.out.println("Constituents predicted: "+pCount);
-		System.out.println("Constituents considered: "+cCount);
+        logger.info(score2.toString());
+        logger.info(score.toString());
+		logger.info("Constituents predicted: "+pCount);
+		logger.info("Constituents considered: "+cCount);
 
 		//System.out.printf("%d/%d %.2f%%\n", count, y.length, count*100.0/y.length);
 		

@@ -24,7 +24,10 @@
 package clearcommon.treebank;
 
 import java.io.Serializable;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
+
+import clearcommon.propbank.PBFileReader;
 
 /**
  * Tree as in Penn Treebank.
@@ -37,6 +40,8 @@ public class TBTree implements Serializable
      * 
      */
     private static final long serialVersionUID = 8010593996914604986L;
+    
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     String filename;
     int    index;
@@ -88,10 +93,10 @@ public class TBTree implements Serializable
         {
             node.indexingNode = rootNode.findIndexedNode(Integer.parseInt(idxStr.substring(1)));
             if (node.indexingNode==null)
-	    {
-		node.pos = node.pos+"-"+idxStr.substring(1);
-		System.err.println("Warning: "+filename+", "+index+": Missing antecedent: "+idxStr);
-	    }
+		    {
+				node.pos = node.pos+"-"+idxStr.substring(1);
+				logger.warning(filename+", "+index+": Missing antecedent: "+idxStr);
+		    }
         }
         else if (node.isEC())
         {    
