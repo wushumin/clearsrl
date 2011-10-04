@@ -1041,8 +1041,8 @@ public class SRLModel implements Serializable {
         List<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
         List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
 
-        //boolean doStage2 = false;
-        boolean doStage2 = classifier2!=null;
+        boolean doStage2 = false;
+        //boolean doStage2 = classifier2!=null;
         
         int predTerminalIndex = prediction.predicateNode.getTerminalIndex();
         

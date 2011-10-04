@@ -6,19 +6,23 @@ import java.io.FileReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Stack;
 import java.util.logging.Logger;
 
 import clearcommon.propbank.PBFileReader;
-import clearcommon.util.FileTokenizer;
 
 public class SerialTBFileReader extends TBFileReader
 {
 	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+
+	private static String WHITESPACE = " \t\n\r\f";
 	
-	FileTokenizer scanner;
+	
+	Scanner       scanner;
 	int           treeCount;
 	TBTree        lastTree;
+	StringBuilder inputStr;
 	
 	/**
 	 * Initializes the Treebank reader.
@@ -43,11 +47,13 @@ public class SerialTBFileReader extends TBFileReader
 	public SerialTBFileReader(Reader reader, String fileName)
 	{
 		super(fileName);
-	    String delim = TBLib.LRB + TBLib.RRB + FileTokenizer.WHITE;
-        scanner      = new FileTokenizer(reader, delim, true);
+        scanner      = new Scanner(reader);
+        scanner.useDelimiter(String.format("((?<=[\\(\\)%s])|(?=[\\(\\)%s]))",WHITESPACE, WHITESPACE));
+        
         treeCount     = 0;
         lastTree      = null;
         closed        = false;
+        inputStr      = new StringBuilder();
 	}
 	
 	/**
@@ -57,15 +63,18 @@ public class SerialTBFileReader extends TBFileReader
 	 */
 	@Override
     public TBTree nextTree() throws ParseException
-	{
+    {    
 		String str;
 		
-		do
-		{
+		do {
 			str = nextToken();
-			if (str == null)	return lastTree=null;
-		}
-		while (!str.equals(TBLib.LRB));
+			if (str == null)
+			{
+			    inputStr = new StringBuilder();
+			    logger.fine("Read "+treeCount+" trees, done.");
+			    return lastTree=null;
+			}
+		} while (!str.equals(TBLib.LRB));
 		
 		Stack<List<TBNode>> childNodeStack = new Stack<List<TBNode>>();
 		childNodeStack.push(new ArrayList<TBNode>());
@@ -75,17 +84,14 @@ public class SerialTBFileReader extends TBFileReader
 		TBNode head       = new TBNode(null, "FRAG");		// dummy-head
 		TBNode curr       = head;						// pointer to the current node
 		
-		do
-		{
+		do {
 			if ((str = nextToken()) == null)
 				throw new ParseException(fileName+", "+treeCount+": more tokens needed");
 			//System.out.println(str);
 			
-			if (str.equals(TBLib.LRB))
-			{
-
+			if (str.equals(TBLib.LRB)) {
 				if ((str = nextToken()) == null)		// str = pos-tag
-					throw new ParseException(fileName+", "+treeCount+": POS-tag is missing");
+					throw new ParseException(fileName+", "+treeCount+": POS-tag is missing, Read \""+inputStr.toString()+"\"");
 				if (!TBNode.POS_PATTERN.matcher(str).matches())
 				    throw new ParseException(fileName+", "+treeCount+": Malformed POS tag: "+str);
 				
@@ -94,11 +100,8 @@ public class SerialTBFileReader extends TBFileReader
 				
 				curr = childNode;                           // move to child
 				childNodeStack.push(new ArrayList<TBNode>());
-			}
-			else if (str.equals(TBLib.RRB))
-			{
-				if (curr.terminalIndex<0)
-				{
+			} else if (str.equals(TBLib.RRB)) {
+				if (curr.terminalIndex<0) {
 				    curr.terminalIndex = -(terminalIndex+1);
 	                curr.tokenIndex = -(tokenIndex+1);
 				}
@@ -106,13 +109,9 @@ public class SerialTBFileReader extends TBFileReader
 				curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
 				curr = curr.getParent();				// move to parent
 				
-			}
-			else if (head==curr)
-			{
+			} else if (head==curr) {
 				head.pos = str;
-			}
-			else
-			{
+			} else {
 				curr.word = str;						// str = word
 				curr.terminalIndex = terminalIndex++;
 				if (!curr.isEC())	curr.tokenIndex = tokenIndex++;
@@ -124,6 +123,7 @@ public class SerialTBFileReader extends TBFileReader
 		TBNode tmp = head.children.length==1?head.children[0]:head;
 		
 		tmp.parent=null;
+		inputStr = new StringBuilder();
 		return lastTree=new TBTree(fileName, treeCount++, tmp, terminalIndex, tokenIndex);
 	}
 	
@@ -166,11 +166,13 @@ public class SerialTBFileReader extends TBFileReader
 	
 	private String nextToken()
 	{
-		while (scanner.hasMoreTokens())
+		while (scanner.hasNext())
 		{
-			String str = scanner.nextToken();
+			String str = scanner.next();
 			
-			if (FileTokenizer.WHITE.indexOf(str) == -1)
+			inputStr.append(str);
+			
+			if (WHITESPACE.indexOf(str) == -1)
 				return str;
 		}
 		close();

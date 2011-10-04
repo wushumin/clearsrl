@@ -41,7 +41,7 @@ public class AlignedSentenceReader extends SentenceReader {
     {
         close();
         
-        tbReader = new ThreadedTBFileReader(null, props.getProperty("tbfile"), 1000);
+        tbReader = new ThreadedTBFileReader(props.getProperty("tbfile"), 1000);
         pbReader = new PBFileReader(new TBReader(props.getProperty("tbfile"), false), 
         		props.getProperty("pbfile"), null);
         

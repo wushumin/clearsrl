@@ -8,6 +8,7 @@ import edu.berkeley.nlp.PCFGLA.Lexicon;
 import edu.berkeley.nlp.PCFGLA.ParserData;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
+import clearcommon.propbank.PBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 
@@ -17,11 +18,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,8 +32,11 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class ParseCorpus {
+    
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     ExecutorService executor;
     PriorityQueue<Sentence> parseQueue;
@@ -44,7 +48,7 @@ public class ParseCorpus {
         this.props = props;
         
         int threads = Integer.parseInt(props.getProperty("threads","1"));
-        System.out.printf("Using %d threads\n",threads);
+        logger.info(String.format("Using %d threads\n",threads));
         
         executor = Executors.newFixedThreadPool(threads);
         parseQueue = new PriorityQueue<Sentence>();
@@ -60,7 +64,7 @@ public class ParseCorpus {
             try {
                 if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.severe(e.getMessage());
             }
         }
         
@@ -91,29 +95,67 @@ public class ParseCorpus {
             }
             else {
                 Tree<String> parsedTree = null;
-		try {
-		    parsedTree = getParser().getBestConstrainedParse(words,null,null);
-		} catch (Exception e) {
-		    e.printStackTrace();
-		} finally {
-		    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
-		    {
-			removeUselessNodes(parsedTree.getChildren().get(0));
-			parse="( "+parsedTree.getChildren().get(0)+" )\n";
-		    }
-		    else
-			parse=makeDefaultParse(words);
-		}
+        		try {
+        		    parsedTree = getParser().getBestConstrainedParse(words,null,null);
+        		} catch (Exception e) {
+        		    logger.severe(e.toString());
+        		    e.printStackTrace();
+        		} finally {
+        		    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
+        		    {
+        			removeUselessNodes(parsedTree.getChildren().get(0));
+        			parse="( "+parsedTree.getChildren().get(0)+" )\n";
+        		    }
+        		    else
+        			parse=makeDefaultParse(words);
+        		}
             }
             synchronized (parseQueue)
             {
-                //System.out.println(linenum+" "+line);
                 parseQueue.add(this);
                 parseQueue.notify();
             }
         }
     }
     
+    public class SentenceWriter extends Thread {
+        Writer outputData;
+        int lineCount;
+        
+        public SentenceWriter(Writer outputData, int lineCount) {
+            this.outputData = outputData;
+            this.lineCount = lineCount;
+        }
+
+        public void run() {
+            int lineNum = 0;
+            while (lineNum!=lineCount)
+            {
+                Sentence sentence;
+                synchronized (parseQueue) {
+                    sentence = parseQueue.peek();
+                    if (sentence==null || sentence.linenum!=lineNum)
+                    {
+                        try {
+                            parseQueue.wait();
+                        } catch (InterruptedException e) {
+                            logger.severe(e.toString());
+                        }
+                        continue;
+                    }
+                    sentence = parseQueue.remove();
+                }
+                try {
+                    outputData.write(sentence.parse);outputData.flush();
+                    //System.out.println(lineNum+" "+sentence.parse);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                ++lineNum;
+            }
+        }
+    }
+
     CoarseToFineMaxRuleParser getParser()
     {
         CoarseToFineMaxRuleParser parser;
@@ -122,7 +164,7 @@ public class ParseCorpus {
             double threshold = 1.0;
             ParserData pData = ParserData.Load(props.getProperty("grammar"));
             if (pData==null) {
-                System.err.println("Failed to load grammar from file"+props.getProperty("grammar")+".");
+                logger.severe("Failed to load grammar from file"+props.getProperty("grammar")+".");
                 System.exit(1);
             }
             Grammar grammar = pData.getGrammar();
@@ -176,41 +218,28 @@ public class ParseCorpus {
 		return buffer.toString();
 	}
 	
-	public void parse(InputStream in, OutputStream out) throws IOException, InterruptedException
+	public SentenceWriter parse(Reader reader, Writer writer) throws IOException
 	{
-	    BufferedReader inputData = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-        PrintWriter outputData = new PrintWriter(new OutputStreamWriter(out, "UTF-8"), true);
+	    BufferedReader inputData = new BufferedReader(reader);
 
         String line;
         int lineCount = 0;
-        int lineNum = 0;
+
         while((line=inputData.readLine()) != null){
             executor.execute(new Sentence(lineCount++, line));                  
         }
-        while (lineNum!=lineCount)
-        {
-            Sentence sentence;
-            synchronized (parseQueue) {
-                sentence = parseQueue.peek();
-                if (sentence==null || sentence.linenum!=lineNum)
-                {
-                    parseQueue.wait();
-                    continue;
-                }
-                sentence = parseQueue.remove();
-            }
-            outputData.write(sentence.parse);
-            //System.out.println(lineNum+" "+sentence.parse);
-            ++lineNum;
-        }
         
-        outputData.flush();
+        SentenceWriter sentWriter = new SentenceWriter(writer, lineCount);
+        sentWriter.start();
+        
+        return sentWriter;
+
 	}
 	
 	public static void main(String[] args) throws Exception
 	{
 	    Properties props = new Properties();
-		FileInputStream in = new FileInputStream(args[0]);
+		Reader in = new InputStreamReader(new FileInputStream(args[0]), "UTF-8");
 		props.load(in);
 		in.close();
 		props = PropertyUtil.filterProperties(props, "parser.");
@@ -238,16 +267,16 @@ public class ParseCorpus {
 			outputFile.getParentFile().mkdirs();
 			
 			System.out.println("Parsing: "+fileName);
-			FileInputStream inStream = new FileInputStream(inputFile);
-			FileOutputStream outStream = new FileOutputStream(outputFile);
+			Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8");
+			Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8");
 			
 		    try{
-		        parser.parse(inStream, outStream);
+		        parser.parse(reader, writer);
 		    } catch (Exception ex) {
 		    	ex.printStackTrace();
 		    } finally {
-		        inStream.close();
-		        outStream.close();
+		        reader.close();
+		        writer.close();
 		    }
 		}
 
