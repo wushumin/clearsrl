@@ -101,6 +101,8 @@ public class SRLModel implements Serializable {
 	        this.label = label;
 	        this.terminalIndex = terminalIndex;
 	        this.isBeforePredicate = isBeforePredicate;
+	        
+	        if (this.label==null) this.label = NOT_ARG;
 	    }
 	    int[] features;
 	    String label;
@@ -913,7 +915,7 @@ public class SRLModel implements Serializable {
         {
             int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","2"));
             CrossValidator validator = new CrossValidator(classifier, threads);
-            yV =  validator.validate(10, X, y, seed, true);
+            yV =  validator.validate(folds, X, y, seed, true);
         }
         else
         {
@@ -922,8 +924,19 @@ public class SRLModel implements Serializable {
             for (int i=0; i<y.length; ++i)
                 yV[i] = classifier.predict(X[i]);
         }
+        
+        //System.err.println("labels: ");
+        //for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();)
+        //{
+        //    iter.advance();
+        //    System.err.println(""+iter.value()+" "+labelIndexMap.get(iter.value()));
+        //}
         for (int i=0; i<y.length; ++i)
+        {
+            if (labelIndexMap.get(yV[i])==null)
+                logger.warning("unknown label encountered: "+yV[i]);
             scorer.addResult(labelIndexMap.get(yV[i]),labelIndexMap.get(y[i]));
+        }
         logger.info(scorer.toString());
         
         {
@@ -1041,8 +1054,8 @@ public class SRLModel implements Serializable {
         List<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
         List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
 
-        boolean doStage2 = false;
-        //boolean doStage2 = classifier2!=null;
+        //boolean doStage2 = false;
+        boolean doStage2 = classifier2!=null;
         
         int predTerminalIndex = prediction.predicateNode.getTerminalIndex();
         

@@ -10,7 +10,6 @@ import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
-import clearcommon.treebank.ThreadedTBFileReader;
 import clearcommon.util.FileUtil;
 import clearcommon.util.ParseCorpus;
 import clearcommon.util.PropertyUtil;
@@ -451,7 +450,8 @@ public class RunSRL {
                     {
                         foutName = options.inFile.isFile()?options.outFile.getPath():fName.replaceAll("\\.(parse|txt)\\z", ".prop");
                         File outFile = new File(options.inFile.isFile()?null:options.outFile, foutName);
-                        outFile.getParentFile().mkdirs();
+                        if (outFile.getParentFile()!=null)
+                            outFile.getParentFile().mkdirs();
                         writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outFile), "UTF-8"));
                         foutName = outFile.getPath();
                     }
