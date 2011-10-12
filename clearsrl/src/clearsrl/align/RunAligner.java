@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Map.Entry;
 
 import clearcommon.util.PropertyUtil;
 
@@ -40,9 +39,7 @@ public class RunAligner {
 		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
-		String baseFilter = "";
-		if (args.length>1) baseFilter = args[1];
-		
+		String baseFilter = args.length>1?args[1]:"";
 		props = PropertyUtil.filterProperties(props, baseFilter+"align.");
 		
 		System.out.print(PropertyUtil.toString(props));

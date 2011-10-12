@@ -32,7 +32,7 @@ public class WordAlignmentScorer {
 		rCount += intersection.size();
 	}
 	
-	static void printAlignment(PrintStream out, long[] align)
+	static public void printAlignment(PrintStream out, long[] align)
 	{
 		Arrays.sort(align);
 		for (long a:align)
@@ -40,12 +40,12 @@ public class WordAlignmentScorer {
 		out.print("\n");
 	}
 	
-	void printStats(PrintStream out)
+	public void printStats(PrintStream out)
     {
 		double p = pTotal==0?0:pCount*1.0/pTotal;
 		double r = rTotal==0?0:rCount*1.0/rTotal;
 		double f = p==0?0:(r==0?0:2*p*r/(p+r));
-		System.out.printf("precision(%d): %.3f, recall(%d): %.3f, f-score: %.3f\n", (int)pTotal, p, (int)rTotal, r, f);
+		out.printf("precision(%d): %.3f, recall(%d): %.3f, f-score: %.3f\n", (int)pTotal, p, (int)rTotal, r, f);
     }
 	
 }

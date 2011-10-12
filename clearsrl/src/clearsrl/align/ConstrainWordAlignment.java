@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Properties;
 
-public class CompareSRL {
+public class ConstrainWordAlignment {
     public static void main(String[] args) throws IOException
     {
         Properties props = new Properties();
@@ -40,6 +40,9 @@ public class CompareSRL {
                 
                 String sysSrc = sysSentence.src.pbInstances[alignment.srcPBIdx].toText();
                 String sysDst = sysSentence.dst.pbInstances[alignment.dstPBIdx].toText();
+                
+                
+                
                 
                 if (!goldSrc.equals(sysSrc) || !goldDst.equals(sysDst))
                 {
