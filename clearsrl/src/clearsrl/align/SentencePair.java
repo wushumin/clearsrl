@@ -3,7 +3,9 @@ package clearsrl.align;
 import gnu.trove.TLongArrayList;
 import gnu.trove.TLongHashSet;
 
+import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -13,6 +15,8 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import clearcommon.treebank.TBNode;
 
 public 	class SentencePair implements Serializable {
 
@@ -75,18 +79,18 @@ public 	class SentencePair implements Serializable {
 		return getAlignmentString(dstAlignment, dst.tokens, src.tokens);
 	}
 	
-	private String getAlignmentString(SortedMap<Long, int[]> alignment, String[] src, String[] dst)
+	private String getAlignmentString(SortedMap<Long, int[]> alignment, TBNode[] src, TBNode[] dst)
 	{
 		StringBuilder ret = new StringBuilder();
 
 		int i=0;
 		for (SortedMap.Entry<Long, int[]> entry:alignment.entrySet())
 		{
-			ret.append(src[i++]); 
+			ret.append(src[i++].getWord()); 
 			ret.append(' ');
 			for (int dstKey:entry.getValue())
 			{
-				ret.append(dst[dstKey]);
+				ret.append(dst[dstKey].getWord());
 				ret.append(' ');
 			}
 			ret.append('|');
@@ -216,15 +220,24 @@ public 	class SentencePair implements Serializable {
 		return alignSet;
 	}
 	
+	public void printPredicates(PrintStream out)
+	{
+	    for (int i=0; i<src.tokens.length; ++i)
+	    {
+	        if (src.tokens[i].getPOS().startsWith("V"))
+	            out.printf("%d %d %s\n", id, i, src.tokens[i].getWord());
+	    }
+	}
+	
 	public String toString()
 	{
 		StringBuilder builder = new StringBuilder(src+"\n"+dst+"\n");
 		int cnt=0;
 		for (Map.Entry<Long, int[]> entry:srcAlignment.entrySet())
 		{
-			builder.append(src.tokens[cnt++]+" [");
+			builder.append(src.tokens[cnt++].getWord()+" [");
 			for (int id:entry.getValue())
-				builder.append(dst.tokens[id]+' ');
+				builder.append(dst.tokens[id].getWord()+' ');
 			builder.append("] ");
 		}
 		builder.append('\n');
@@ -232,9 +245,9 @@ public 	class SentencePair implements Serializable {
 		cnt=0;
 		for (Map.Entry<Long, int[]> entry:dstAlignment.entrySet())
 		{
-			builder.append(dst.tokens[cnt++]+" [");
+			builder.append(dst.tokens[cnt++].getWord()+" [");
 			for (int id:entry.getValue())
-				builder.append(src.tokens[id]+' ');
+				builder.append(src.tokens[id].getWord()+' ');
 			builder.append("] ");
 		}
 		builder.append('\n');

@@ -15,7 +15,6 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -462,11 +461,11 @@ public class Aligner {
 	{
         stream.printf("<h3>%d</h3>\n", sentencePair.id);
         
-        for (String s:sentencePair.src.tokens)
-            stream.print(" "+s);
+        for (TBNode s:sentencePair.src.tokens)
+            stream.print(" "+s.getWord());
         stream.println("<br>");
-        for (String s:sentencePair.dst.tokens)
-            stream.print(" "+s);
+        for (TBNode s:sentencePair.dst.tokens)
+            stream.print(" "+s.getWord());
         stream.println("<br>");
         
         stream.printf("<!-- %s -->\n", sentencePair.getSrcAlignmentIndex());

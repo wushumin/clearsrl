@@ -26,7 +26,7 @@ public class Sentence implements Serializable{
 	   
     public String   tbFile;
     public Map<Integer, TBTree> treeMap;
-    public String[] tokens;
+    public TBNode[] tokens;
     public long[]   indices;
     PBInstance[]    pbInstances; 
     
@@ -39,11 +39,11 @@ public class Sentence implements Serializable{
 		
 	    List<TBNode> nodes = tree.getRootNode().getTokenNodes();
 	    sentence.indices = new long[nodes.size()];
-	    sentence.tokens = new String[nodes.size()];
+	    sentence.tokens = new TBNode[nodes.size()];
 	    for (int i=0; i<nodes.size();++i)
 	    {
 	    	sentence.indices[i] = makeIndex(tree.getIndex(),nodes.get(i).getTerminalIndex());
-	    	sentence.tokens[i] = nodes.get(i).getWord();
+	    	sentence.tokens[i] = nodes.get(i);
 	    }
 	                        
 	    sentence.pbInstances = pbInstanceList==null?new PBInstance[0]:pbInstanceList.toArray(new PBInstance[pbInstanceList.size()]);
@@ -79,8 +79,7 @@ public class Sentence implements Serializable{
 		
 		int treeIdx,terminalIdx;
 		TLongArrayList a_idx = new TLongArrayList();
-		List<String> a_token = new ArrayList<String>();
-		List<TBNode> a_terminals = new ArrayList<TBNode>();
+		List<TBNode> a_token = new ArrayList<TBNode>();
 		
 		while (tok.hasMoreTokens())
 		{
@@ -93,15 +92,14 @@ public class Sentence implements Serializable{
 				terminalIdx = Integer.parseInt(matcher.group(2));
 				
 				a_idx.add(makeIndex(treeIdx,terminalIdx));
-				a_terminals.add(trees[treeIdx].getRootNode().getNodeByTerminalIndex(terminalIdx));
-				a_token.add(a_terminals.get(a_token.size()).getWord());
+				a_token.add(trees[treeIdx].getRootNode().getNodeByTerminalIndex(terminalIdx));
 				
 				//System.out.print(" "+sIdx+"-"+tIdx);
 			}
 		}
 
 		sentence.indices = a_idx.toNativeArray();
-		sentence.tokens = a_token.toArray(new String[a_token.size()]);
+		sentence.tokens = a_token.toArray(new TBNode[a_token.size()]);
 		
 		List<PBInstance> pbList = new ArrayList<PBInstance>();
 		
@@ -136,8 +134,8 @@ public class Sentence implements Serializable{
 	public String toTokens()
 	{
 	    StringBuilder builder = new StringBuilder();
-	    for (String token:tokens)
-            builder.append(token+" ");
+	    for (TBNode token:tokens)
+            builder.append(token.getWord()+" ");
 	    return builder.toString();
 	}
 	
@@ -145,8 +143,8 @@ public class Sentence implements Serializable{
 	{
 		StringBuilder builder = new StringBuilder();
 		builder.append(tbFile+":");
-		for (String token:tokens)
-			builder.append(" "+token);
+		for (TBNode token:tokens)
+			builder.append(" "+token.getWord());
 		builder.append("\n");
 		for (PBInstance instance:pbInstances)
 			builder.append(instance.toText()+"\n");

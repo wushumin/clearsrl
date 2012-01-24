@@ -6,6 +6,7 @@ import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Grammar;
 import edu.berkeley.nlp.PCFGLA.Lexicon;
 import edu.berkeley.nlp.PCFGLA.ParserData;
+import edu.berkeley.nlp.io.PTBLineLexer;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import clearcommon.propbank.PBFileReader;
@@ -42,17 +43,35 @@ public class ParseCorpus {
     PriorityQueue<Sentence> parseQueue;
     Map<Long, CoarseToFineMaxRuleParser> parserMap;
     Properties props;
+    PTBLineLexer tokenizer;
     
     public ParseCorpus(Properties props)
     {
         this.props = props;
-        
-        int threads = Integer.parseInt(props.getProperty("threads","1"));
+
+        int threads = -1;
+
+        String threadCnt = props.getProperty("threads","auto");
+
+        if (threadCnt.equals("auto"))
+            threads = Runtime.getRuntime().availableProcessors();
+        else 
+            try {
+                threads = Integer.parseInt(threadCnt);
+            } catch (NumberFormatException e) {
+                threads = -1;
+            } finally {
+                if (threads <=0) threads = Runtime.getRuntime().availableProcessors();
+            }
+        if (threads>40) threads=40;
         logger.info(String.format("Using %d threads\n",threads));
         
         executor = Executors.newFixedThreadPool(threads);
         parseQueue = new PriorityQueue<Sentence>();
         parserMap = new HashMap<Long, CoarseToFineMaxRuleParser>();
+        
+        if (props.getProperty("tokenize")!=null && !props.getProperty("tokenize").equals("false"))
+            tokenizer = new PTBLineLexer();
     }
     
     public void close()
@@ -72,12 +91,12 @@ public class ParseCorpus {
 
     class Sentence implements Comparable<Sentence>, Runnable  {
         int linenum;
-        String line;
+        List<String> words;
         String parse;
         
-        public Sentence(int linenum, String line){
+        public Sentence(int linenum, List<String> words){
             this.linenum = linenum;
-            this.line = line;
+            this.words = words;
         }
         @Override
         public int compareTo(Sentence arg0) {
@@ -86,7 +105,6 @@ public class ParseCorpus {
         
         @Override
         public void run() {
-            List<String> words = Arrays.asList(line.split(" "));
             if (words.isEmpty())
                 parse=makeDefaultParse(words);
             else if (words.size()>=250) { 
@@ -226,7 +244,9 @@ public class ParseCorpus {
         int lineCount = 0;
 
         while((line=inputData.readLine()) != null){
-            executor.execute(new Sentence(lineCount++, line));                  
+            List<String> words = tokenizer==null?Arrays.asList(line.split(" ")):tokenizer.tokenizeLine(line);
+            executor.execute(new Sentence(lineCount++, words));
+            //System.out.println(lineCount);
         }
         
         SentenceWriter sentWriter = new SentenceWriter(writer, lineCount);
@@ -243,9 +263,6 @@ public class ParseCorpus {
 		props.load(in);
 		in.close();
 		props = PropertyUtil.filterProperties(props, "parser.");
-		
-		int threads = Integer.parseInt(props.getProperty("threads","1"));
-		System.out.printf("Using %d threads\n",threads);
 
 		ParseCorpus parser = new ParseCorpus(props);
         
@@ -256,8 +273,8 @@ public class ParseCorpus {
 		    Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex"));
 		    TBUtil.extractText(txtDir, treeBank);
 		}
-
-		List<String> fileNames = FileUtil.getFiles(new File(txtDir), ".*\\..*");
+		
+		List<String> fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
 		
 		for (String fileName:fileNames)
 		{
@@ -271,7 +288,8 @@ public class ParseCorpus {
 			Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8");
 			
 		    try{
-		        parser.parse(reader, writer);
+		        SentenceWriter sWriter = parser.parse(reader, writer);
+		        sWriter.join();
 		    } catch (Exception ex) {
 		    	ex.printStackTrace();
 		    } finally {
