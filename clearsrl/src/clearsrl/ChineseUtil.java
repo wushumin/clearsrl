@@ -5,15 +5,32 @@ import gnu.trove.TObjectIntHashMap;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
 
 public class ChineseUtil extends LanguageUtil {
 
+	static final Set<String> NOUN_POS = new HashSet<String>();
+	static {
+		NOUN_POS.add("NR");
+		NOUN_POS.add("NT");
+		NOUN_POS.add("NN");
+	};
+	
+	static final Set<String> VERB_POS = new HashSet<String>();
+	static {
+		VERB_POS.add("VA");
+		VERB_POS.add("VC");
+		VERB_POS.add("VE");
+		VERB_POS.add("VV");
+	};
+	
     TBHeadRules headRules;
     
     @Override
@@ -114,5 +131,15 @@ public class ChineseUtil extends LanguageUtil {
     public TBHeadRules getHeadRules() {
         return headRules;
     }
+
+	@Override
+	public boolean isAdjective(String POS) {
+		return POS.equals("JJ");
+	}
+
+	@Override
+	public boolean isAdverb(String POS) {
+		return POS.equals("AD");
+	}
 
 }

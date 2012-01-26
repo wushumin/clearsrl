@@ -220,5 +220,15 @@ public class EnglishUtil extends LanguageUtil {
         return headRules;
     }
 
+	@Override
+	public boolean isAdjective(String POS) {
+		return POS.charAt(0)=='J';
+	}
+
+	@Override
+	public boolean isAdverb(String POS) {
+		return POS.startsWith("RB");
+	}
+
 
 }

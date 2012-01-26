@@ -25,6 +25,13 @@ public 	class SentencePair implements Serializable {
      */
     private static final long serialVersionUID = 1L;
     
+    public enum WordAlignmentType {
+    	SRC,
+    	DST,
+    	UNION,
+    	INTERSECTION
+    };
+    
     static final Pattern alignPattern = Pattern.compile("\\(\\{([0-9 ]+)\\}\\)");
 	static final int[] EMPTY_INT_ARRAY = new int[0];
 
@@ -180,7 +187,7 @@ public 	class SentencePair implements Serializable {
 	{
 		return (((long)a)<<32)|b;
 	}
-	
+	/*
 	public long[] getSrcWordAlignment()
 	{
 		TLongArrayList alignSet = getWordAlignment(srcAlignment, src.indices, true);
@@ -196,7 +203,35 @@ public 	class SentencePair implements Serializable {
 		Arrays.sort(alignment);
 		return alignment;
 	}
-	
+	*/
+	public long[] getWordAlignment(WordAlignmentType type)
+	{
+		long[] alignment = null;
+		switch (type)
+		{
+		case SRC:
+			alignment = getWordAlignment(srcAlignment, src.indices, true).toNativeArray();
+			break;
+		case DST:
+			alignment = getWordAlignment(dstAlignment, dst.indices, false).toNativeArray();
+			break;
+		case UNION:
+			TLongHashSet unionSet = new TLongHashSet();
+			unionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
+			unionSet.addAll(getWordAlignment(dstAlignment, dst.indices, false).toNativeArray());
+			alignment = unionSet.toArray();
+			break;
+		case INTERSECTION:
+			TLongHashSet intersectionSet = new TLongHashSet();
+			intersectionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
+			intersectionSet.retainAll(getWordAlignment(dstAlignment, dst.indices, false).toNativeArray());
+			alignment = intersectionSet.toArray();
+			break;
+		}
+		Arrays.sort(alignment);
+		return alignment;
+	}
+	/*
 	public long[] getWordAlignment()
 	{
 		TLongHashSet srcAlignSet = new TLongHashSet(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
@@ -206,7 +241,7 @@ public 	class SentencePair implements Serializable {
 		Arrays.sort(alignment);
 		return alignment;
 	}
-	
+	*/
 	static TLongArrayList getWordAlignment(SortedMap<Long, int[]> alignMap, long[] indices, boolean isSrc)
 	{
 		TLongArrayList alignSet = new TLongArrayList();
