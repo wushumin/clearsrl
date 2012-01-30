@@ -8,5 +8,6 @@
 	<classpathentry kind="lib" path="lib/blas.jar"/>
 	<classpathentry kind="lib" path="lib/liblinearbinary.jar"/>
 	<classpathentry kind="lib" path="lib/berkeleyParser.jar"/>
+	<classpathentry kind="lib" path="lib/edu.mit.jwi_2.1.5_jdk.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

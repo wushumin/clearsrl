@@ -10,6 +10,7 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
+import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 
 import gnu.trove.TObjectIntHashMap;

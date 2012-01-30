@@ -2,6 +2,7 @@ package clearcommon.treebank;
 
 import clearcommon.propbank.PBFileReader;
 import clearcommon.util.FileUtil;
+import clearcommon.util.LanguageUtil;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -12,9 +13,124 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
+/**
+ * @author shumin
+ *
+ */
 public final class TBUtil {
 
 	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+	
+	/**
+	 * Finds subject, direct object and indirect object of predicate node if present
+	 * @param predicateNode
+	 * @param langUtil
+	 * @return
+	 */
+	public static TBNode[] findConstituents(TBNode predicateNode, LanguageUtil langUtil)
+	{
+		TBNode[] nodes = new TBNode[3];
+		
+		int passive = langUtil.getPassive(predicateNode);
+		
+		
+		if (passive==0)
+		{
+			if (predicateNode.parent!=null)
+			{
+				if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
+						predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
+				{
+					nodes[0] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
+				}
+				TBNode firstPP = null;
+				TBNode firstNP = null;
+				TBNode secondNP = null;
+				
+				for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
+				{
+					if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
+						firstPP = predicateNode.parent.children[i];
+					if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
+						if (firstNP==null)
+							firstNP = predicateNode.parent.children[i];
+						else
+							secondNP = predicateNode.parent.children[i];		
+				}
+				
+				if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
+				{
+					nodes[1] = firstNP==null?null:firstNP.getHead();
+					nodes[2] = firstPP==null?null:getPPHead(firstPP);
+				}
+				else
+				{
+					nodes[1] = secondNP==null?null:secondNP.getHead();
+					nodes[2] = firstNP==null?null:firstNP.getHead();
+				}
+			}
+		}
+		else
+		{
+			if (predicateNode.parent!=null)
+			{
+				if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
+						predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
+				{
+					nodes[1] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
+				}
+				TBNode firstPP = null;
+				TBNode firstNP = null;
+				TBNode secondNP = null;
+				
+				for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
+				{
+					if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
+						firstPP = predicateNode.parent.children[i];
+					if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
+						if (firstNP==null)
+							firstNP = predicateNode.parent.children[i];
+						else
+							secondNP = predicateNode.parent.children[i];		
+				}
+				
+				if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
+				{
+					nodes[1] = firstNP==null?null:firstNP.getHead();
+					nodes[2] = firstPP==null?null:getPPHead(firstPP);
+				}
+				else
+				{
+					nodes[1] = secondNP==null?null:secondNP.getHead();
+					nodes[2] = firstNP==null?null:firstNP.getHead();
+				}
+			}
+
+		}
+		
+		
+		return nodes;
+	}
+	
+	public static TBNode getPPHead(TBNode node)
+	{
+		TBNode head = null;
+	    int i = node.getChildren().length-1;
+		for (; i>=0; --i)
+		{
+			if (node.getChildren()[i].getPOS().matches("NP.*"))
+			{
+				if (node.getChildren()[i].getHead()!=null && node.getChildren()[i].getHeadword()!=null)
+					head = node.getChildren()[i].getHead();
+				break;
+			}
+		}
+		if (i<0 && node.getChildren()[node.getChildren().length-1].getHead()!=null && 
+				node.getChildren()[node.getChildren().length-1].getHeadword()!=null)
+		    head = node.getChildren()[node.getChildren().length-1].getHead();
+		
+		return head;
+	}
 	
 	public static TBNode findHeads(TBNode node, TBHeadRules headrules)
     {

@@ -1,4 +1,4 @@
-package clearsrl;
+package clearcommon.util;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
@@ -11,7 +11,7 @@ import java.util.Properties;
 
 public abstract class LanguageUtil {
     
-    enum POS
+    public enum POS
     {
         NOUN,
         VERB,

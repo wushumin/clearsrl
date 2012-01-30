@@ -11,9 +11,10 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.FileUtil;
+import clearcommon.util.LanguageUtil;
 import clearcommon.util.ParseCorpus;
 import clearcommon.util.PropertyUtil;
-import clearsrl.LanguageUtil.POS;
+import clearcommon.util.LanguageUtil.POS;
 
 import java.io.File;
 import java.io.FileInputStream;

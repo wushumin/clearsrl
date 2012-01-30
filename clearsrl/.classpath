@@ -5,7 +5,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/clearcommon"/>
 	<classpathentry kind="lib" path="/clearcommon/lib/trove-2.1.0.jar"/>
-	<classpathentry kind="lib" path="/clearcommon/lib/edu.mit.jwi_2.1.5_jdk.jar"/>
 	<classpathentry kind="lib" path="/clearcommon/lib/args4j-2.0.18.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

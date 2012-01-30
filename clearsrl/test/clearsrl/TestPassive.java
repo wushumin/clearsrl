@@ -9,6 +9,7 @@ import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
+import clearcommon.util.LanguageUtil;
 
 import java.io.File;
 import java.io.FileInputStream;

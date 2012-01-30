@@ -1,4 +1,4 @@
-package clearsrl;
+package clearcommon.util;
 
 import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
@@ -17,8 +17,8 @@ import clearcommon.treebank.TBNode;
 
 public class EnglishUtil extends LanguageUtil {
 
-    Dictionary dict;
-    WordnetStemmer stemmer;
+    public Dictionary dict;
+    public WordnetStemmer stemmer;
     TBHeadRules headRules;
     
     static Map<String, String> abbreviations = new HashMap<String, String>();

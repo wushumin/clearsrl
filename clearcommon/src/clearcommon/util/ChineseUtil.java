@@ -1,4 +1,4 @@
-package clearsrl;
+package clearcommon.util;
 
 import gnu.trove.TObjectIntHashMap;
 

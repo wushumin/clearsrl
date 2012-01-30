@@ -12,7 +12,8 @@ import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
-import clearsrl.LanguageUtil.POS;
+import clearcommon.util.LanguageUtil;
+import clearcommon.util.LanguageUtil.POS;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
