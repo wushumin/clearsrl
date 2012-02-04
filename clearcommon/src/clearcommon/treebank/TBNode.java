@@ -53,6 +53,7 @@ public class TBNode implements Serializable
     //public static final Pattern POS_PATTERN = Pattern.compile("([a-zA-Z]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)(\\-\\d+)?");    
     
     TBNode            parent;
+    TBNode            headConstituent;
 	String            pos;
 	Set<String>       functionTags;
 	String            word;
@@ -411,4 +412,20 @@ public class TBNode implements Serializable
 		
 		return str.toString();
 	}
+
+    void linkDependency() {
+        headConstituent = this;
+        while (headConstituent.head==head && headConstituent.parent!=null)
+            headConstituent = headConstituent.parent;
+    }
+    
+    public TBNode getHeadConstituent()
+    {
+        return headConstituent;
+    }
+    
+    public TBNode getDependingNode()
+    {
+        return headConstituent.parent==null?null:headConstituent.parent.head;
+    }
 }
