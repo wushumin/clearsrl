@@ -1,6 +1,7 @@
 package clearcommon.treebank;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.Reader;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -34,13 +35,13 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         init(capacity);
     }
     
-    public ThreadedTBFileReader(String fileName, int capacity) throws FileNotFoundException {
+    public ThreadedTBFileReader(String fileName, int capacity) throws IOException {
         super(fileName);
         tbReader = new SerialTBFileReader(fileName);
         init(capacity);
     }
     
-    public ThreadedTBFileReader(String dirName, String fileName, int capacity) throws FileNotFoundException {
+    public ThreadedTBFileReader(String dirName, String fileName, int capacity) throws IOException {
         super(fileName);
         tbReader = new SerialTBFileReader(dirName, fileName);
         init(capacity);

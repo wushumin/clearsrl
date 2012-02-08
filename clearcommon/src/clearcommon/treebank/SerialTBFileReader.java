@@ -1,14 +1,19 @@
 package clearcommon.treebank;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Stack;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 
 import clearcommon.propbank.PBFileReader;
 
@@ -27,16 +32,16 @@ public class SerialTBFileReader extends TBFileReader
 	/**
 	 * Initializes the Treebank reader.
 	 * @param filename name of the Treebank file
-	 * @throws FileNotFoundException 
+	 * @throws IOException 
 	 */
-	public SerialTBFileReader(String fileName) throws FileNotFoundException
-	{
-	    this(new FileReader(fileName), null);
-	}
-	
-	public SerialTBFileReader(String dirName, String fileName) throws FileNotFoundException
+	public SerialTBFileReader(String fileName) throws IOException
     {
-	    this(new FileReader(new File(dirName, fileName)), fileName);
+	    this(fileName.endsWith(".gz")?new InputStreamReader(new GZIPInputStream(new FileInputStream(fileName))):new FileReader(fileName), fileName);
+    }
+	
+	public SerialTBFileReader(String dirName, String fileName) throws IOException
+    {
+	    this(fileName.endsWith(".gz")?new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(dirName, fileName)))):new FileReader(new File(dirName, fileName)), fileName);
     }
 
 	public SerialTBFileReader(Reader reader)

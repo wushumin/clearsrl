@@ -44,7 +44,7 @@ public abstract class SentencePairReader {
         }
     }
 
-    public void initialize() throws FileNotFoundException
+    public void initialize() throws IOException
     {
         close();
 

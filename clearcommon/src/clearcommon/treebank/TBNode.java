@@ -415,17 +415,29 @@ public class TBNode implements Serializable
 
     void linkDependency() {
         headConstituent = this;
-        while (headConstituent.head==head && headConstituent.parent!=null)
+        while (headConstituent.parent!=null && headConstituent.parent.head==head)
             headConstituent = headConstituent.parent;
     }
     
-    public TBNode getHeadConstituent()
+    public TBNode getConstituentByHead()
     {
         return headConstituent;
     }
     
-    public TBNode getDependingNode()
+    public TBNode getHeadOfToken()
     {
         return headConstituent.parent==null?null:headConstituent.parent.head;
     }
+    
+    public List<TBNode> getDependentTokens()
+    {
+        ArrayList<TBNode> dependents = new ArrayList<TBNode>();
+        
+        for (TBNode token:headConstituent.getTokenNodes())
+            if (token.getHeadOfToken()==this && token!=this)
+                dependents.add(token);
+        
+        return dependents;
+    }
+    
 }

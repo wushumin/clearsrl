@@ -1,6 +1,7 @@
 package clearsrl.align;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Properties;
 
 public abstract class SentenceReader {
@@ -10,7 +11,7 @@ public abstract class SentenceReader {
         this.props = props;
     }
     
-	public abstract void initialize() throws FileNotFoundException;
+	public abstract void initialize() throws FileNotFoundException, IOException;
 	public abstract Sentence nextSentence();
 	public abstract void close();
 }

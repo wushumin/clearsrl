@@ -26,6 +26,11 @@ public abstract class LanguageUtil {
         return Arrays.asList(word);
     }
 
+    public List<String> findStems(TBNode node)
+    {
+        return Arrays.asList(node.getWord());
+    }
+    
     public List<String> getPredicateAlternatives(String predicate, TObjectIntHashMap<String> predicateSet)
     {
     	return Arrays.asList(predicate);

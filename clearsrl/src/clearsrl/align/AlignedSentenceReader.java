@@ -1,6 +1,7 @@
 package clearsrl.align;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
@@ -37,7 +38,7 @@ public class AlignedSentenceReader extends SentenceReader {
     }
 
     @Override
-    public void initialize() throws FileNotFoundException
+    public void initialize() throws IOException
     {
         close();
         

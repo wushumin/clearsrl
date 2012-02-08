@@ -30,82 +30,39 @@ public final class TBUtil {
 	public static TBNode[] findConstituents(TBNode predicateNode, LanguageUtil langUtil)
 	{
 		TBNode[] nodes = new TBNode[3];
-		
-		int passive = langUtil.getPassive(predicateNode);
-		
-		
-		if (passive==0)
-		{
-			if (predicateNode.parent!=null)
-			{
-				if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
-						predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
-				{
-					nodes[0] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
-				}
-				TBNode firstPP = null;
-				TBNode firstNP = null;
-				TBNode secondNP = null;
-				
-				for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
-				{
-					if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
-						firstPP = predicateNode.parent.children[i];
-					if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
-						if (firstNP==null)
-							firstNP = predicateNode.parent.children[i];
-						else
-							secondNP = predicateNode.parent.children[i];		
-				}
-				
-				if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
-				{
-					nodes[1] = firstNP==null?null:firstNP.getHead();
-					nodes[2] = firstPP==null?null:getPPHead(firstPP);
-				}
-				else
-				{
-					nodes[1] = secondNP==null?null:secondNP.getHead();
-					nodes[2] = firstNP==null?null:firstNP.getHead();
-				}
-			}
-		}
-		else
-		{
-			if (predicateNode.parent!=null)
-			{
-				if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
-						predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
-				{
-					nodes[1] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
-				}
-				TBNode firstPP = null;
-				TBNode firstNP = null;
-				TBNode secondNP = null;
-				
-				for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
-				{
-					if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
-						firstPP = predicateNode.parent.children[i];
-					if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
-						if (firstNP==null)
-							firstNP = predicateNode.parent.children[i];
-						else
-							secondNP = predicateNode.parent.children[i];		
-				}
-				
-				if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
-				{
-					nodes[1] = firstNP==null?null:firstNP.getHead();
-					nodes[2] = firstPP==null?null:getPPHead(firstPP);
-				}
-				else
-				{
-					nodes[1] = secondNP==null?null:secondNP.getHead();
-					nodes[2] = firstNP==null?null:firstNP.getHead();
-				}
-			}
 
+		if (predicateNode.parent!=null)
+		{
+			if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
+					predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
+			{
+				nodes[0] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
+			}
+			
+			TBNode firstPP = null;
+			TBNode firstNP = null;
+			TBNode secondNP = null;
+			
+			for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
+			{
+				if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
+					firstPP = predicateNode.parent.children[i];
+				if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
+					if (firstNP==null)
+						firstNP = predicateNode.parent.children[i];
+					else
+						secondNP = predicateNode.parent.children[i];		
+			}
+			
+			if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
+			{
+				nodes[1] = firstNP==null?null:firstNP.getHead();
+			}
+			else
+			{
+				nodes[1] = secondNP==null?null:secondNP.getHead();
+				nodes[2] = firstNP==null?null:firstNP.getHead();
+			}
 		}
 		
 		

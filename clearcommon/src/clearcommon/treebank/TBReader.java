@@ -2,6 +2,7 @@ package clearcommon.treebank;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
@@ -73,7 +74,7 @@ public class TBReader {
                     trees = a_tree.toArray(new TBTree[a_tree.size()]);
                     
                     treeMap.put(fileName, trees);
-                } catch (FileNotFoundException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                     return null;
                 }
@@ -92,7 +93,7 @@ public class TBReader {
             {
                 try {
                     reader = new ThreadedTBFileReader(dir, fileName, 1000);
-                } catch (FileNotFoundException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                     return null;
                 }

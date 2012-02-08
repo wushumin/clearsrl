@@ -3,6 +3,7 @@ package clearsrl.align;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -44,7 +45,7 @@ public class DefaultSentencePairReader extends SentencePairReader{
     }
     
     @Override
-    public void initialize() throws FileNotFoundException
+    public void initialize() throws IOException
     {
         close();
         super.initialize();

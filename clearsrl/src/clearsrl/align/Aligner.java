@@ -11,6 +11,7 @@ import clearcommon.treebank.TBNode;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -719,7 +720,7 @@ public class Aligner {
 	{
 		try {
 			reader.initialize();
-		} catch (FileNotFoundException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		int srcCoverageCnt = 0;

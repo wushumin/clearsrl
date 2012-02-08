@@ -73,6 +73,23 @@ public class EnglishUtil extends LanguageUtil {
     }
     
     @Override
+    public List<String> findStems(TBNode node)
+    {
+        String pos = node.getPOS();
+        List<String> stems = null;
+        if (isNoun(pos))
+            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.NOUN);
+        else if (isVerb(pos))
+            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.VERB);
+        else if (isAdjective(pos))
+            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.ADJECTIVE);
+        else if (isAdverb(pos))
+            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.ADVERB);
+        
+        return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(node.getWord()):stems;
+    }
+    
+    @Override
     public String resolveAbbreviation(String word, String POS)
     {
         String full = abbreviations.get(word+" "+POS);
@@ -215,6 +232,25 @@ public class EnglishUtil extends LanguageUtil {
 
     }
 
+    public TBNode getPPHead(TBNode ppNode)
+    {
+        TBNode head = null;
+        int i = ppNode.getChildren().length-1;
+        for (; i>=0; --i)
+        {
+            if (ppNode.getChildren()[i].getPOS().matches("NP.*"))
+            {
+                if (ppNode.getChildren()[i].getHead()!=null && ppNode.getChildren()[i].getHeadword()!=null)
+                    head = ppNode.getChildren()[i].getHead();
+                break;
+            }
+        }
+        if (i<0 && ppNode.getChildren()[ppNode.getChildren().length-1].getHead()!=null && 
+                ppNode.getChildren()[ppNode.getChildren().length-1].getHeadword()!=null)
+            head = ppNode.getChildren()[ppNode.getChildren().length-1].getHead();
+        return head;
+    }
+    
     @Override
     public TBHeadRules getHeadRules() {
         return headRules;
