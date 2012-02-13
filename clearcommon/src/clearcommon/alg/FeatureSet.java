@@ -6,6 +6,7 @@ import gnu.trove.TObjectIntIterator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,7 +18,7 @@ import java.util.TreeSet;
 public class FeatureSet<T extends Enum<T>> {
     
     Set<EnumSet<T>>                                      features;
-    EnumSet<T>                                           featuresFlat;
+    private EnumSet<T>                                           featuresFlat;
     Map<EnumSet<T>, TObjectIntHashMap<String>>           featureStrMap;
     
     boolean                                              dictionaryFinalized;
@@ -57,7 +58,49 @@ public class FeatureSet<T extends Enum<T>> {
             noArgFeatureStrMap.put(feature, new TObjectIntHashMap<String>());
             featureList.addAll(feature);
         }
-        featuresFlat = EnumSet.copyOf(featureList);
+        setFeaturesFlat(EnumSet.copyOf(featureList));
+    }
+    
+    public static <T extends Enum<T>> EnumSet<T> toEnumSet(Class<T> cType, String fString) throws IllegalArgumentException
+    {
+        String[] fArray = fString.trim().split("-");
+        List<T> fList = new ArrayList<T>(fArray.length);
+        for (String fStr:fArray)
+            fList.add(T.valueOf(cType,fStr));
+        return EnumSet.copyOf(fList);
+    }
+    
+    public Map<EnumSet<T>,List<String>> convertFlatSample(EnumMap<T,List<String>> sampleFlat)
+    { 
+        //System.out.println(sampleFlat);
+        Map<EnumSet<T>,List<String>> sample = new HashMap<EnumSet<T>,List<String>>();
+        
+        for (EnumSet<T> feature:features)
+        {   
+            Iterator<T> iter = feature.iterator();
+            List<String> sList = sampleFlat.get(iter.next());
+            for (;iter.hasNext() && sList!=null && !sList.isEmpty();)
+                sList = permute(sList, sampleFlat.get(iter.next()));
+            
+            if (sList!=null && !sList.isEmpty())
+            {
+                //if (feature.size()>1) System.out.println(toString(feature)+": "+sList);
+                sample.put(feature, sList);
+            }
+        }
+        
+        return sample;   
+    }
+
+    static List<String> permute(List<String> lhs, List<String> rhs)
+    {   
+        if (lhs==null || rhs==null) return new ArrayList<String>(0);
+
+        ArrayList<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
+        for (String a2:rhs)
+            for (String a1:lhs)
+                ret.add(a1+" "+a2);
+        return ret;
     }
     
     public int[] getFeatureVector(Map<EnumSet<T>,List<String>> sample)
@@ -154,6 +197,14 @@ public class FeatureSet<T extends Enum<T>> {
         for (;iter.hasNext();)
             builder.append("-"+iter.next().toString());
         return builder.toString();
+    }
+
+    public void setFeaturesFlat(EnumSet<T> featuresFlat) {
+        this.featuresFlat = featuresFlat;
+    }
+
+    public EnumSet<T> getFeaturesFlat() {
+        return featuresFlat;
     }
     
 }
