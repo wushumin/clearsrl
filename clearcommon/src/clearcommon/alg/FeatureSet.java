@@ -6,6 +6,7 @@ import gnu.trove.TObjectIntIterator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -18,11 +19,12 @@ import java.util.TreeSet;
 public class FeatureSet<T extends Enum<T>> {
     
     Set<EnumSet<T>>                                      features;
-    private EnumSet<T>                                           featuresFlat;
+    EnumSet<T>                                           featuresFlat;
     Map<EnumSet<T>, TObjectIntHashMap<String>>           featureStrMap;
     
     boolean                                              dictionaryFinalized;
     int                                                  dimension;
+
     transient Map<EnumSet<T>, TObjectIntHashMap<String>> noArgFeatureStrMap;
     
     public FeatureSet(Set<EnumSet<T>> features) {
@@ -58,7 +60,7 @@ public class FeatureSet<T extends Enum<T>> {
             noArgFeatureStrMap.put(feature, new TObjectIntHashMap<String>());
             featureList.addAll(feature);
         }
-        setFeaturesFlat(EnumSet.copyOf(featureList));
+        featuresFlat = EnumSet.copyOf(featureList);
     }
     
     public static <T extends Enum<T>> EnumSet<T> toEnumSet(Class<T> cType, String fString) throws IllegalArgumentException
@@ -199,12 +201,20 @@ public class FeatureSet<T extends Enum<T>> {
         return builder.toString();
     }
 
-    public void setFeaturesFlat(EnumSet<T> featuresFlat) {
-        this.featuresFlat = featuresFlat;
+    public Set<EnumSet<T>> getFeatures() {
+        return Collections.unmodifiableSet(features);
     }
 
     public EnumSet<T> getFeaturesFlat() {
         return featuresFlat;
     }
     
+    public Map<EnumSet<T>, TObjectIntHashMap<String>> getFeatureStrMap() {
+        return Collections.unmodifiableMap(featureStrMap);
+    }
+
+    public int getDimension() {
+        return dimension;
+    }
+
 }
