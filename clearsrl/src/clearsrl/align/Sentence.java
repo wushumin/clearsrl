@@ -27,6 +27,7 @@ public class Sentence implements Serializable{
     public String   tbFile;
     public Map<Integer, TBTree> treeMap;
     public TBNode[] tokens;
+    public TBNode[] terminals;
     public long[]   indices;
     PBInstance[]    pbInstances; 
     
@@ -100,14 +101,105 @@ public class Sentence implements Serializable{
 
 		sentence.indices = a_idx.toNativeArray();
 		sentence.tokens = a_token.toArray(new TBNode[a_token.size()]);
+		sentence.findTerminals();
 		
+		sentence.addPBInstances(pbMap);
+		
+		return sentence;
+		
+	}
+	
+	public static Sentence parseSentence(long[] tokenIndices, String tbFile, TBTree[] trees, SortedMap<Integer, List<PBInstance>> pbMap)
+	{
+		Sentence sentence = new Sentence();
+
+		sentence.tbFile = tbFile;
+		sentence.treeMap = new TreeMap<Integer, TBTree>();
+		
+		int treeIdx,tokenIdx;
+		TLongArrayList a_idx = new TLongArrayList();
+		List<TBNode> a_token = new ArrayList<TBNode>();
+		
+		for (long idx:tokenIndices)
+		{
+			treeIdx = (int) (idx>>32);
+			tokenIdx = (int) (idx&0xffffffff);
+			
+			sentence.treeMap.put(treeIdx, trees[treeIdx]);
+			a_token.add(trees[treeIdx].getRootNode().getNodeByTokenIndex(tokenIdx));
+			a_idx.add(makeIndex(treeIdx,a_token.get(a_token.size()-1).getTerminalIndex()));
+		}
+
+		sentence.indices = a_idx.toNativeArray();
+		sentence.tokens = a_token.toArray(new TBNode[a_token.size()]);
+		
+		sentence.addPBInstances(pbMap);
+		sentence.findTerminals();
+		
+		return sentence;
+		
+	}
+
+	void findTerminals()
+	{
+		if (tokens.length<=1){
+			terminals = tokens;
+			return;
+		}
+		
+		List<TBNode> terminalList = new ArrayList<TBNode>();
+		
+		TBTree startTree = treeMap.get((int)(indices[0]>>32));
+		TBTree endTree = treeMap.get((int)(indices[indices.length-1]>>32));
+		
+		TBNode startToken = tokens[0];
+		TBNode endToken = tokens[tokens.length-1];
+		
+		int startTerminalIdx = startToken.getTerminalIndex();
+		int endTerminalIdx = endToken.getTerminalIndex();
+		
+		
+		List<TBNode> startTerminals = startTree.getRootNode().getTerminalNodes();
+		List<TBNode> endTerminals = endTree.getRootNode().getTerminalNodes();
+		
+		for (int i=startTerminalIdx-1; i>=0;--i)
+		{
+			if (startTerminals.get(i).isToken()) break;
+			TBNode ancestor = startTerminals.get(i).getLowestCommonAncestor(startToken);
+			if (ancestor.getTokenNodes().get(0)!=startToken) break;
+		}
+		
+		for (int i=endToken.getTerminalIndex()+1; i<endTerminals.size(); ++i)
+		{
+			if (endTerminals.get(i).isToken()) break;
+			TBNode ancestor = endTerminals.get(i).getLowestCommonAncestor(endToken);
+			List<TBNode> nodes = ancestor.getTokenNodes();
+			if (nodes.get(nodes.size()-1)!=endToken) break;
+		}
+		
+		for (int i=startTree.getIndex(); i<=endTree.getIndex(); ++i)
+		{
+			TBTree tree = treeMap.get(i);
+			for (TBNode terminal : tree.getRootNode().getTerminalNodes())
+			{
+				if (tree==startTree && terminal.getTerminalIndex()<startTerminalIdx) continue;
+				if (tree==endTree && terminal.getTerminalIndex()>endTerminalIdx) continue;
+				terminalList.add(terminal);
+			}
+		}
+
+		terminals = terminalList.toArray(new TBNode[terminalList.size()]);		
+	}
+	
+	void addPBInstances(SortedMap<Integer, List<PBInstance>> pbMap)
+	{
 		List<PBInstance> pbList = new ArrayList<PBInstance>();
 		
 		List<PBInstance> instances;
-		for (long i:sentence.indices)
+		for (long i:indices)
 		{
-		    treeIdx = getTreeIndex(i);
-			terminalIdx = getTerminalIndex(i);
+		    int treeIdx = getTreeIndex(i);
+			int terminalIdx = getTerminalIndex(i);
 			if ((instances=pbMap.get(treeIdx))!=null)
 			{
 			    for (PBInstance instance:instances)
@@ -116,11 +208,9 @@ public class Sentence implements Serializable{
 				//System.out.println("------------------------");
 			}
 		}
-		sentence.pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
-		
-		return sentence;
-		
+		pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
 	}
+	
 	
 	public String toTokenIdx()
 	{
@@ -143,11 +233,13 @@ public class Sentence implements Serializable{
 	{
 		StringBuilder builder = new StringBuilder();
 		builder.append(tbFile+":");
-		for (TBNode token:tokens)
+		for (TBNode token:terminals)
+		{
 			builder.append(" "+token.getWord());
+		}
 		builder.append("\n");
 		for (PBInstance instance:pbInstances)
-			builder.append(instance.toText()+"\n");
+			builder.append(instance.toText(true)+"\n");
 		return builder.toString();
 	}
 

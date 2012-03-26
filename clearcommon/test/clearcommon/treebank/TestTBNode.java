@@ -3,6 +3,8 @@ package clearcommon.treebank;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 
 import org.junit.Before;
@@ -56,5 +58,15 @@ public class TestTBNode {
         node.cleanUpPOS();
         assertEquals("POS:", node.getPOS(), "-NONE-");
         assertEquals(node.getFunctionTags(), null);
+        
+        TBNode nodes[] = {new TBNode(null,""), new TBNode(null,""), new TBNode(null,"sdfse")};
+        Set<TBNode> nodeSet = new HashSet<TBNode>();
+        
+        nodeSet.addAll(Arrays.asList(nodes));
+        
+        assertTrue(nodeSet.contains(nodes[0]));
+        assertTrue(nodeSet.contains(nodes[2]));
+        assertTrue(!nodeSet.contains(new TBNode(null,"")));
+        
     }
 }

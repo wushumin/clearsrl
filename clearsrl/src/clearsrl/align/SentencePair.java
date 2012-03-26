@@ -1,11 +1,13 @@
 package clearsrl.align;
 
+import gnu.trove.TIntHashSet;
+import gnu.trove.TIntObjectHashMap;
+import gnu.trove.TIntObjectIterator;
 import gnu.trove.TLongArrayList;
 import gnu.trove.TLongHashSet;
 
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.io.Writer;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -132,7 +134,7 @@ public 	class SentencePair implements Serializable {
 		return ret.toString();	
 	}
 	
-	private void parseAlign(String line, SortedMap<Long, int[]> alignment, int dstLen)  throws BadInstanceException
+	void parseAlign(String line, SortedMap<Long, int[]> alignment, int dstLen)  throws BadInstanceException
 	{
 		Matcher matcher = alignPattern.matcher(line);
 		int srcCnt = -1;
@@ -171,6 +173,47 @@ public 	class SentencePair implements Serializable {
 		//for (int i:align)
 		//	System.out.print(" "+i);
 		//System.out.print("\n");
+	}
+	
+	public void setAlignment(int[] srcAlignmentIdx, int[] dstAlignmentIdx)
+	{
+		TIntObjectHashMap<TIntHashSet> srcAlignmentMap = new TIntObjectHashMap<TIntHashSet>();
+        TIntObjectHashMap<TIntHashSet> dstAlignmentMap = new TIntObjectHashMap<TIntHashSet>();
+        for (int i=0; i<srcAlignmentIdx.length; ++i)
+        {
+        	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
+        		continue;
+        	TIntHashSet srcSet = srcAlignmentMap.get(srcAlignmentIdx[i]);
+        	if (srcSet==null) srcAlignmentMap.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
+        	srcSet.add(dstAlignmentIdx[i]);
+        	
+        	TIntHashSet dstSet = dstAlignmentMap.get(dstAlignmentIdx[i]);
+        	if (dstSet==null) dstAlignmentMap.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
+        	dstSet.add(srcAlignmentIdx[i]);
+        }
+        srcAlignment = convertAlignment(src.indices, srcAlignmentMap);
+        dstAlignment = convertAlignment(dst.indices, dstAlignmentMap);
+        
+	}
+
+	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectHashMap<TIntHashSet> inAlignment)
+	{
+		SortedMap<Long, int[]> outAlignment = new TreeMap<Long, int[]>();
+		for (long index:indices)
+			outAlignment.put(index, SentencePair.EMPTY_INT_ARRAY);
+		
+		for (TIntObjectIterator<TIntHashSet> iter = inAlignment.iterator(); iter.hasNext();)
+		{
+			iter.advance();
+			if (!iter.value().isEmpty())
+			{
+				int[] iArray = iter.value().toArray();
+				Arrays.sort(iArray);
+				outAlignment.put(indices[iter.key()], iArray);
+			}
+		}
+		
+		return outAlignment;
 	}
 	
 	public SortedMap<Long, int[]> getAlignment(boolean isSrc)

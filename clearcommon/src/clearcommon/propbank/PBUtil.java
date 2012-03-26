@@ -36,11 +36,12 @@ public final class PBUtil {
     }
     
 	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader, TreeFileResolver resolver)
+	{ 
+		return readPBDir(FileUtil.getFiles(new File(dirName), regex, true), tbReader, resolver);		
+	}
+	
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(List<String> files, TBReader tbReader, TreeFileResolver resolver)
 	{   
-		File dir = new File(dirName);
-		
-		List<String> files = FileUtil.getFiles(dir, regex, true);
-		
 		int correctCnt=0;
 		int exceptionCnt=0;
 		

@@ -5,7 +5,6 @@ import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TIntObjectIterator;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -177,23 +176,8 @@ public class LDCSentencePairReader extends SentencePairReader {
 	        	srcAlignmentIdx[i] = srcTerminaltoToken[Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1))];
 	        }
 	        
-	        TIntObjectHashMap<TIntHashSet> srcAlignment = new TIntObjectHashMap<TIntHashSet>();
-	        TIntObjectHashMap<TIntHashSet> dstAlignment = new TIntObjectHashMap<TIntHashSet>();
-	        for (int i=0; i<srcAlignmentIdx.length; ++i)
-	        {
-	        	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
-	        		continue;
-	        	TIntHashSet srcSet = srcAlignment.get(srcAlignmentIdx[i]);
-	        	if (srcSet==null) srcAlignment.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
-	        	srcSet.add(dstAlignmentIdx[i]);
-	        	
-	        	TIntHashSet dstSet = dstAlignment.get(dstAlignmentIdx[i]);
-	        	if (dstSet==null) dstAlignment.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
-	        	dstSet.add(srcAlignmentIdx[i]);
-	        }
-	        
-	        sentencePair.srcAlignment = convertAlignment(sentencePair.src.indices, srcAlignment);
-	        sentencePair.dstAlignment = convertAlignment(sentencePair.dst.indices, dstAlignment);
+	        sentencePair.setAlignment(srcAlignmentIdx, dstAlignmentIdx);
+
 	        excludeFiles.add(treeFilename);
 	        sentenceInfoOutput.println(info);
 	        

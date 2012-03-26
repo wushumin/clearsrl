@@ -169,7 +169,12 @@ public final class TBUtil {
 		if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
 			files.add(dir.getName());
 		
-		Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
+		return readTBDir(dirName, files);
+	}
+	
+    public static Map<String, TBTree[]> readTBDir(String dirName, List<String> files)
+	{
+    	Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
 		for (String treeFile: files)
 		{
 			logger.info("Reading "+dirName+File.separatorChar+treeFile);
@@ -181,7 +186,7 @@ public final class TBUtil {
 		
 		return tbMap;
 	}
-	
+
 	public static void extractText(String outputDir, Map<String, TBTree[]> trees)
 	{
 		File dir = new File(outputDir);

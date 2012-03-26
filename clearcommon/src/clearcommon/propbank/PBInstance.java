@@ -59,21 +59,26 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
     {
         return allArgs;
     }
-
+    
     public String toText()
+    {
+    	return toText(false);
+    }
+    
+    public String toText(boolean includeTerminals)
     {
         StringBuilder buffer = new StringBuilder();
         buffer.append(tree.getFilename()); buffer.append(" ");
         buffer.append(tree.getIndex()); buffer.append(" ");
         
-        List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        List<TBNode> nodes = includeTerminals?tree.getRootNode().getTerminalNodes():tree.getRootNode().getTokenNodes();
         String[] tokens = new String[nodes.size()];
         for (int i=0; i<tokens.length; ++i)
             tokens[i] = nodes.get(i).getWord();
         
-        for (PBArg arg:args)
+        for (PBArg arg:includeTerminals?allArgs:args)
         {
-            BitSet bits = arg.node.getTokenSet();//arg.getTokenSet();
+            BitSet bits = includeTerminals?arg.node.getTerminalSet():arg.node.getTokenSet();//arg.getTokenSet();
             if (bits.nextSetBit(0)<0) continue;
             if (bits.nextSetBit(0)>= nodes.size())
             	logger.warning(nodes.toString()+"\n"+arg.label+": "+bits);
@@ -83,7 +88,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
             
             for (PBArg carg:arg.nestedArgs)
             {
-                bits = carg.getTokenSet();
+                bits = includeTerminals?carg.node.getTerminalSet():carg.getTokenSet();
                 if (bits.nextSetBit(0)<0) continue;
                 if (bits.nextSetBit(0)>= nodes.size())
                 	logger.warning(nodes.toString()+"\n"+carg.label+": "+bits);
