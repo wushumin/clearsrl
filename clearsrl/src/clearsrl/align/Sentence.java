@@ -29,7 +29,11 @@ public class Sentence implements Serializable{
     public TBNode[] tokens;
     public TBNode[] terminals;
     public long[]   indices;
+    public long[]   terminalIndices;
+    int[]           tokenToTerminalMap;
     PBInstance[]    pbInstances; 
+    
+    
     
 	public static Sentence parseSentence(TBTree tree, List<PBInstance> pbInstanceList)
 	{
@@ -53,7 +57,7 @@ public class Sentence implements Serializable{
 	
 	public static long makeIndex(int treeIndex, int terminalIndex)
 	{
-	    return (((long)treeIndex)<<32)|((long)terminalIndex);
+	    return (((long)treeIndex)<<32)|terminalIndex;
 	}
 	
 	public static int getTreeIndex(long index)
@@ -144,51 +148,67 @@ public class Sentence implements Serializable{
 	{
 		if (tokens.length<=1){
 			terminals = tokens;
-			return;
+			terminalIndices = indices;
 		}
-		
-		List<TBNode> terminalList = new ArrayList<TBNode>();
-		
-		TBTree startTree = treeMap.get((int)(indices[0]>>32));
-		TBTree endTree = treeMap.get((int)(indices[indices.length-1]>>32));
-		
-		TBNode startToken = tokens[0];
-		TBNode endToken = tokens[tokens.length-1];
-		
-		int startTerminalIdx = startToken.getTerminalIndex();
-		int endTerminalIdx = endToken.getTerminalIndex();
-		
-		
-		List<TBNode> startTerminals = startTree.getRootNode().getTerminalNodes();
-		List<TBNode> endTerminals = endTree.getRootNode().getTerminalNodes();
-		
-		for (int i=startTerminalIdx-1; i>=0;--i)
+		else
 		{
-			if (startTerminals.get(i).isToken()) break;
-			TBNode ancestor = startTerminals.get(i).getLowestCommonAncestor(startToken);
-			if (ancestor.getTokenNodes().get(0)!=startToken) break;
-		}
 		
-		for (int i=endToken.getTerminalIndex()+1; i<endTerminals.size(); ++i)
-		{
-			if (endTerminals.get(i).isToken()) break;
-			TBNode ancestor = endTerminals.get(i).getLowestCommonAncestor(endToken);
-			List<TBNode> nodes = ancestor.getTokenNodes();
-			if (nodes.get(nodes.size()-1)!=endToken) break;
-		}
-		
-		for (int i=startTree.getIndex(); i<=endTree.getIndex(); ++i)
-		{
-			TBTree tree = treeMap.get(i);
-			for (TBNode terminal : tree.getRootNode().getTerminalNodes())
+			TLongArrayList terminalIndexList = new TLongArrayList();
+			List<TBNode> terminalList = new ArrayList<TBNode>();
+			
+			TBTree startTree = treeMap.get((int)(indices[0]>>32));
+			TBTree endTree = treeMap.get((int)(indices[indices.length-1]>>32));
+			
+			TBNode startToken = tokens[0];
+			TBNode endToken = tokens[tokens.length-1];
+			
+			int startTerminalIdx = startToken.getTerminalIndex();
+			int endTerminalIdx = endToken.getTerminalIndex();
+			
+			
+			List<TBNode> startTerminals = startTree.getRootNode().getTerminalNodes();
+			List<TBNode> endTerminals = endTree.getRootNode().getTerminalNodes();
+			
+			while (startTerminalIdx>0)
 			{
-				if (tree==startTree && terminal.getTerminalIndex()<startTerminalIdx) continue;
-				if (tree==endTree && terminal.getTerminalIndex()>endTerminalIdx) continue;
-				terminalList.add(terminal);
+				if (startTerminals.get(startTerminalIdx-1).isToken()) break;
+				TBNode ancestor = startTerminals.get(startTerminalIdx-1).getLowestCommonAncestor(startToken);
+				if (ancestor.getTokenNodes().get(0)!=startToken) break;
+				--startTerminalIdx;
 			}
+	
+			while (endTerminalIdx<endTerminals.size()-1)
+			{
+				if (endTerminals.get(endTerminalIdx+1).isToken()) break;
+				TBNode ancestor = endTerminals.get(endTerminalIdx+1).getLowestCommonAncestor(endToken);
+				List<TBNode> nodes = ancestor.getTokenNodes();
+				if (nodes.get(nodes.size()-1)!=endToken) break;
+				++endTerminalIdx;
+			}
+			
+			for (int i=startTree.getIndex(); i<=endTree.getIndex(); ++i)
+			{
+				TBTree tree = treeMap.get(i);
+				for (TBNode terminal : tree.getRootNode().getTerminalNodes())
+				{
+					if (tree==startTree && terminal.getTerminalIndex()<startTerminalIdx) continue;
+					if (tree==endTree && terminal.getTerminalIndex()>endTerminalIdx) continue;
+					terminalList.add(terminal);
+					terminalIndexList.add(makeIndex(i, terminal.getTerminalIndex()));
+				}
+			}
+	
+			terminals = terminalList.toArray(new TBNode[terminalList.size()]);
+			terminalIndices = terminalIndexList.toNativeArray();
 		}
-
-		terminals = terminalList.toArray(new TBNode[terminalList.size()]);		
+		tokenToTerminalMap = new int[indices.length];
+		int count = 0;
+		
+		for (int i=0; i<terminals.length; ++i)
+		{
+			if (terminals[i].isToken())
+				tokenToTerminalMap[count++] = i;
+		}
 	}
 	
 	void addPBInstances(SortedMap<Integer, List<PBInstance>> pbMap)
@@ -210,7 +230,6 @@ public class Sentence implements Serializable{
 		}
 		pbInstances = pbList.toArray(new PBInstance[pbList.size()]);
 	}
-	
 	
 	public String toTokenIdx()
 	{

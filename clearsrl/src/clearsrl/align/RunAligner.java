@@ -21,6 +21,7 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import clearcommon.treebank.TBNode;
 import clearcommon.util.PropertyUtil;
 
 public class RunAligner {
@@ -47,9 +48,16 @@ public class RunAligner {
 		SentencePairReader sentencePairReader = null;
 		
 		if (baseFilter.startsWith("ldc"))
-		    sentencePairReader = new LDCSentencePairReader(props, false);
+		{
+			if (baseFilter.startsWith("ldc09"))
+				sentencePairReader = new LDC09SentencePairReader(props, false);
+			else
+				sentencePairReader = new LDCSentencePairReader(props, false);
+		}
 		else
 		    sentencePairReader = new DefaultSentencePairReader(props, false);
+		
+		boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
 		
 		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
 		
@@ -86,14 +94,27 @@ public class RunAligner {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
-		    
-            srcTokenCnt += sentencePair.srcAlignment.size();
-            dstTokenCnt += sentencePair.dstAlignment.size();
-		    
+
 		    if (sentencePair.id%1000==999)
 		    {
 		    	System.out.println(sentencePair.id+1);
 		    }
+		    
+		    if (baseFilter.startsWith("ldc09"))
+		    {
+		    	boolean skip = true;
+		    	for (TBNode terminal:sentencePair.src.terminals)
+		    		if (terminal.getWord().equals("*pro*"))
+		    		{
+		    			skip = false;
+		    			break;
+		    		}
+		    	if (skip) continue;
+		    }
+		    
+		    srcTokenCnt += sentencePair.srcAlignment.size();
+            dstTokenCnt += sentencePair.dstAlignment.size();
+
 		    //System.out.println("*****************");
 		    //System.out.println(sentencePair);
 		    
@@ -107,7 +128,7 @@ public class RunAligner {
 		        stat.addAlignment(alignment);
 		    }
 		    
-		    Aligner.printAlignment(htmlStream, sentencePair, alignments);
+		    Aligner.printAlignment(htmlStream, sentencePair, alignments, alignPro);
 
             TObjectIntHashMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)

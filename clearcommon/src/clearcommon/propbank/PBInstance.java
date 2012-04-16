@@ -19,6 +19,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
     TBNode      predicateNode;
 	String      rolesetId;
 	PBArg[]     args;
+	PBArg[]     emptyArgs;
 	PBArg[]     allArgs;
 	TBTree      tree;
 
@@ -51,6 +52,15 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
 		return args;
 	}
 	
+	/**
+	 * Gets empty (word) arguments 
+	 * @return empty (word) arguments 
+	 */
+	public PBArg[] getEmptyArgs()
+	{
+		return emptyArgs;
+	}
+
     /**
      * Gets all arguments, including ones without words
      * @return all arguments, including ones without words

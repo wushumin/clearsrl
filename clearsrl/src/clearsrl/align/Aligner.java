@@ -16,6 +16,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -89,8 +90,13 @@ public class Aligner {
 			
 		for (int i=0; i<alignMatrix.length; ++i)
 			for (int j=0; j<alignMatrix[i].length; ++j)
+			{
 				costMatrix[i][j] = MAX_SIMILARITY-alignMatrix[i][j].getCompositeScore();
-		
+				
+				// don't align predicate only prop unless it's to another predicate only prop
+				if (srcInstances[i].getAllArgs().length==1 ^ dstInstances[j].getAllArgs().length==1)
+					costMatrix[i][j] = MAX_SIMILARITY;
+			}
 		int[][] alignIdx = HungarianAlgorithm.computeAssignments(costMatrix);
 		
 		int i=0;
@@ -460,13 +466,60 @@ public class Aligner {
 	
 	public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments)
 	{
+		printAlignment(stream, sentencePair, alignments, false);
+	}
+	
+	public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments, boolean printEC)
+	{
+		printAlignment(stream, sentencePair, alignments, printEC, new long[0]);
+	}
+	
+	public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments, boolean printEC, long[] proAlignments)
+	{
         stream.printf("<h3>%d</h3>\n", sentencePair.id);
         
-        for (TBNode s:sentencePair.src.tokens)
-            stream.print(" "+s.getWord());
+        BitSet srcHighLight = new BitSet();
+        BitSet dstHighLight = new BitSet();
+        
+        for (long a:proAlignments)
+        {
+        	int srcBit = (int)(a>>>32);
+        	int dstBit = (int)(a&0xffffffff);
+        	
+        	if (srcBit>0 && dstBit>0) 
+        	{
+        		srcHighLight.set(srcBit-1);
+        		dstHighLight.set(dstBit-1);
+        	}
+        }
+        
+        BitSet srcHighLight2 = new BitSet();
+        
+        for (long a:proAlignments)
+        {
+        	int srcBit = (int)(a>>>32);
+        	int dstBit = (int)(a&0xffffffff);
+        	
+        	if (srcBit>0 && dstBit==0) 
+        		srcHighLight2.set(srcBit-1);
+        }
+        
+        TBNode[] nodes = printEC?sentencePair.src.terminals:sentencePair.src.tokens;
+        for (int i=0; i<nodes.length; ++i)
+        	if (srcHighLight.get(i))
+        		stream.print(" <font style=\"BACKGROUND:FFFF00\">"+nodes[i].getWord()+"</font>");
+        	else if (srcHighLight2.get(i))
+        		stream.print(" <font style=\"BACKGROUND:FF0000\">"+nodes[i].getWord()+"</font>");
+        	else
+        		stream.print(" "+nodes[i].getWord());
         stream.println("<br>");
-        for (TBNode s:sentencePair.dst.tokens)
-            stream.print(" "+s.getWord());
+        
+        nodes = printEC?sentencePair.dst.terminals:sentencePair.dst.tokens;
+        for (int i=0; i<nodes.length; ++i)
+        	if (dstHighLight.get(i))
+        		stream.print(" <font style=\"BACKGROUND:FFFF00\">"+nodes[i].getWord()+"</font>");
+        	else
+        		stream.print(" "+nodes[i].getWord());
         stream.println("<br>");
         
         stream.printf("<!-- %s -->\n", sentencePair.getSrcAlignmentIndex());
@@ -475,16 +528,18 @@ public class Aligner {
         stream.println("<br><font size=\"-1\">Source:\n<ol>");
         for (int i=0; i<sentencePair.src.pbInstances.length; ++i)
         {
-            stream.println("<li> "+toHTMLPB(sentencePair.src.pbInstances[i], sentencePair.src));
+            stream.println("<li> "+toHTMLPB(sentencePair.src.pbInstances[i], sentencePair.src, printEC));
             stream.printf("<!-- %s: %d,%d -->\n", sentencePair.src.pbInstances[i].getTree().getFilename(), sentencePair.src.pbInstances[i].getTree().getIndex(), sentencePair.src.pbInstances[i].getPredicate().getTerminalIndex());
+            stream.printf("<!-- %s -->\n", sentencePair.src.pbInstances[i].toText(true));        
         }
         stream.println("</ol>");
         
         stream.println("Dest:\n<ol>");
         for (int i=0; i<sentencePair.dst.pbInstances.length; ++i)
         {
-            stream.println("<li> "+toHTMLPB(sentencePair.dst.pbInstances[i], sentencePair.dst));
+            stream.println("<li> "+toHTMLPB(sentencePair.dst.pbInstances[i], sentencePair.dst, printEC));
             stream.printf("<!-- %s: %d,%d -->\n", sentencePair.dst.pbInstances[i].getTree().getFilename(), sentencePair.dst.pbInstances[i].getTree().getIndex(), sentencePair.dst.pbInstances[i].getPredicate().getTerminalIndex());
+            stream.printf("<!-- %s -->\n", sentencePair.dst.pbInstances[i].toText(true));        
         }
         stream.println("</ol></font>");
         
@@ -680,27 +735,93 @@ public class Aligner {
 		argColorMap.put("ARGM", "#EEE8AA");
 	}
 	
-	public static String toHTMLPB(PBInstance instance, Sentence sentence)
+	
+	static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String color, boolean printEC)
+	{
+		List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();
+		preMarkup[nodes.get(0).getTerminalIndex()] = "<font style=\"BACKGROUND:"+color+"\">";
+		postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = "</font>";		
+	}
+	
+	static void markArg(PBArg arg, String[] preMarkup, String[] postMarkup, String color, boolean printEC)
+	{
+		if (printEC)
+			for (TBNode node:arg.getAllNodes())
+				markNode(node, preMarkup, postMarkup, color, printEC);
+		else
+			markNode(arg.getNode(), preMarkup, postMarkup, color, printEC);
+		
+		for (PBArg narg:arg.getNestedArgs())
+			markArg(narg, preMarkup, postMarkup, color, printEC);
+	}
+	
+	public static String toHTMLPB(PBInstance instance, Sentence sentence, boolean printEC)
 	{
 		StringBuilder buffer = new StringBuilder();
+
+		String[] preMarkup = new String[instance.getTree().getTerminalCount()];
+		String[] postMarkup = new String[instance.getTree().getTerminalCount()];
 		
+		Arrays.fill(preMarkup, "");
+		Arrays.fill(postMarkup, "");
+		
+		String color;
+		for (PBArg arg : (printEC?instance.getAllArgs():instance.getArgs()))
+		{
+			if ((color=argColorMap.get(arg.getBaseLabel()))==null)
+				color=argColorMap.get("ARGM");
+			
+			markArg(arg, preMarkup, postMarkup, color, printEC);
+
+		}
+		
+		long[] indices = printEC?sentence.terminalIndices:sentence.indices;
+		TBNode[] nodes = printEC?sentence.terminals:sentence.tokens;
+		for (int i=0; i<indices.length; ++i)
+		{
+		    int treeIndex = Sentence.getTreeIndex(indices[i]);
+		    int terminalIndex = Sentence.getTerminalIndex(indices[i]);
+			if (treeIndex != instance.getTree().getIndex())
+			{
+				buffer.append(nodes[i].getWord());
+				buffer.append(" ");
+			}
+			else
+			{
+				buffer.append(preMarkup[terminalIndex]);
+				buffer.append(nodes[i].getWord());
+				buffer.append(postMarkup[terminalIndex]);
+				buffer.append(" ");
+			}
+		}
+		
+		return buffer.toString();
+	}
+	/*
+	public static String toHTMLPB(PBInstance instance, Sentence sentence, boolean printEC)
+	{
+		StringBuilder buffer = new StringBuilder();
+
 		String[] colors = new String[instance.getTree().getTerminalCount()];
 		String color;
-		for (PBArg arg : instance.getArgs())
+		for (PBArg arg : (printEC?instance.getAllArgs():instance.getArgs()))
 		{
 			if ((color=argColorMap.get(arg.getLabel()))==null)
 				color=argColorMap.get("ARGM");
-			for (TBNode node:arg.getTokenNodes())
+			for (TBNode node:(printEC?arg.getTerminalNodes():arg.getTokenNodes()))
 				colors[node.getTerminalIndex()] = color;
 		}
-		for (int i=0; i<sentence.tokens.length; ++i)
+		
+		long[] indices = printEC?sentence.terminalIndices:sentence.indices;
+		TBNode[] nodes = printEC?sentence.terminals:sentence.tokens;
+		for (int i=0; i<indices.length; ++i)
 		{
-		    int treeIndex = Sentence.getTreeIndex(sentence.indices[i]);
-		    int terminalIndex = Sentence.getTerminalIndex(sentence.indices[i]);
+		    int treeIndex = Sentence.getTreeIndex(indices[i]);
+		    int terminalIndex = Sentence.getTerminalIndex(indices[i]);
 			if (treeIndex != instance.getTree().getIndex() || 
 					colors[terminalIndex]==null)
 			{
-				buffer.append(sentence.tokens[i]);
+				buffer.append(nodes[i].getWord());
 				buffer.append(" ");
 			}
 			else
@@ -708,13 +829,14 @@ public class Aligner {
 				buffer.append("<font style=\"BACKGROUND:");
 				buffer.append(colors[terminalIndex]);
 				buffer.append("\">");
-				buffer.append(sentence.tokens[i]);
+				buffer.append(nodes[i].getWord());
 				buffer.append("</font> ");
 			}
 		}
 		
 		return buffer.toString();
 	}
+	*/
 	
 	public void collectStats()
 	{

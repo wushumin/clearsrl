@@ -2,7 +2,6 @@ package clearcommon.treebank;
 
 import clearcommon.propbank.PBFileReader;
 import clearcommon.util.FileUtil;
-import clearcommon.util.LanguageUtil;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -27,44 +26,54 @@ public final class TBUtil {
 	 * @param langUtil
 	 * @return
 	 */
-	public static TBNode[] findConstituents(TBNode predicateNode, LanguageUtil langUtil)
+	public static TBNode[] findConstituents(TBNode predicateNode)
 	{
 		TBNode[] nodes = new TBNode[3];
 
-		if (predicateNode.parent!=null)
+		TBNode vpNode = predicateNode;
+		
+		while (vpNode.parent!=null && vpNode.parent.pos.equals("VP"))
+			vpNode = vpNode.parent;
+		
+		TBNode searchNode = vpNode.pos.equals("VP")?vpNode:vpNode.parent;
+		
+		TBNode firstPP = null;
+		TBNode firstNP = null;
+		TBNode secondNP = null;
+		
+		for (int i=0; i<searchNode.children.length; ++i)
 		{
-			if (predicateNode.parent.parent !=null && predicateNode.parent.childIndex !=0 &&
-					predicateNode.parent.parent.children[predicateNode.parent.childIndex].pos.equals("NP"))
+			if (firstPP==null && searchNode.children[i].pos.equals("PP"))
+				firstPP = searchNode.children[i];
+			if ((firstNP==null || secondNP==null) && searchNode.children[i].pos.equals("NP"))
+				if (firstNP==null)
+					firstNP = searchNode.children[i];
+				else
+					secondNP = searchNode.children[i];		
+		}
+		
+		if (vpNode.parent != null)
+		{
+			if (vpNode.parent.getPOS().startsWith("SQ"))
 			{
-				nodes[0] = predicateNode.parent.parent.children[predicateNode.parent.childIndex].getHead();
+				nodes[0] = firstNP;
+				return nodes;
 			}
-			
-			TBNode firstPP = null;
-			TBNode firstNP = null;
-			TBNode secondNP = null;
-			
-			for (int i=predicateNode.childIndex+1; i<predicateNode.parent.children.length; ++i)
-			{
-				if (firstPP==null && predicateNode.parent.children[i].pos.equals("PP"))
-					firstPP = predicateNode.parent.children[i];
-				if ((firstNP==null || secondNP==null) && predicateNode.parent.children[i].pos.equals("NP"))
-					if (firstNP==null)
-						firstNP = predicateNode.parent.children[i];
-					else
-						secondNP = predicateNode.parent.children[i];		
-			}
-			
+			if (vpNode.childIndex!=0 && vpNode.parent.children[vpNode.childIndex-1].getPOS().equals("NP"))
+				nodes[0] = vpNode.parent.children[vpNode.childIndex-1];
+		}
+		if (vpNode.pos.equals("VP"))
+		{	
 			if (secondNP==null || (firstPP!=null && secondNP.childIndex<firstPP.childIndex))
 			{
-				nodes[1] = firstNP==null?null:firstNP.getHead();
+				nodes[1] = firstNP==null?null:firstNP;
 			}
 			else
 			{
-				nodes[1] = secondNP==null?null:secondNP.getHead();
-				nodes[2] = firstNP==null?null:firstNP.getHead();
+				nodes[1] = secondNP==null?null:secondNP;
+				nodes[2] = firstNP==null?null:firstNP;
 			}
 		}
-		
 		
 		return nodes;
 	}

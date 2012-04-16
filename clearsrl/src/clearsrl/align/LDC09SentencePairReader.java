@@ -64,8 +64,6 @@ public class LDC09SentencePairReader extends SentencePairReader {
     @Override
     public void initialize() throws IOException
     {
-    	System.out.println(props);
-    	
         close();
         super.initialize();
         if (objStreamAvailable) return;
@@ -169,6 +167,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
 			return nextPair();
 		}
 		
+		writeSentencePair(sentenceQueue.getFirst());
 		return sentenceQueue.removeFirst();
 	}
 	

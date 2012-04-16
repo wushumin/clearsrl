@@ -177,7 +177,7 @@ public class PBFileReader
             }
             
             PBArg arg = new PBArg(label);
-            arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);
+            arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
             
             if (!nestedNodeList.isEmpty())
             {
@@ -185,8 +185,8 @@ public class PBFileReader
                 for (int i=0; i<nestedNodeList.size(); ++i)
                 {
                     arg.nestedArgs[i] = new PBArg("C-"+label);
-                    arg.nestedArgs[i].tokenNodes = new TBNode[1];
-                    arg.nestedArgs[i].tokenNodes[0] = nestedNodeList.get(i);
+                    arg.nestedArgs[i].allNodes = new TBNode[1];
+                    arg.nestedArgs[i].allNodes[0] = nestedNodeList.get(i);
                 }
             }
             argList.add(arg);
@@ -200,14 +200,14 @@ public class PBFileReader
 
 	        boolean found = false;
 	        boolean isSLC = linkArg.isLabel("LINK-SLC");
-	        if (isSLC && linkArg.tokenNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.tokenNodes);
+	        if (isSLC && linkArg.allNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.allNodes);
 
 	        for (PBArg arg:argList)
             {
 	            if (linkArg==arg) continue;
-	            for (TBNode node: arg.tokenNodes)
+	            for (TBNode node: arg.allNodes)
 	            {
-	                for (TBNode linkNode:linkArg.tokenNodes)
+	                for (TBNode linkNode:linkArg.allNodes)
 	                {
 	                    if (node == linkNode)
 	                    {
@@ -215,14 +215,14 @@ public class PBFileReader
 	                        if (isSLC)
 	                        {
 	                            linkArg.label = arg.label;
-	                            linkArg.tokenNodes = Arrays.asList(linkArg.tokenNodes[0]==node?linkArg.tokenNodes[1]:linkArg.tokenNodes[0]).toArray(new TBNode[1]);
+	                            linkArg.allNodes = Arrays.asList(linkArg.allNodes[0]==node?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
 	                            arg.label = "R-"+linkArg.label;
 	                            arg.linkingArg = linkArg;
 	                        } else {
-	                            List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.tokenNodes));
-	                            for (TBNode aNode:linkArg.tokenNodes)
+	                            List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.allNodes));
+	                            for (TBNode aNode:linkArg.allNodes)
 	                                if (aNode!=linkNode) nodeList.add(aNode);
-	                            arg.tokenNodes = nodeList.toArray(new TBNode[nodeList.size()]);
+	                            arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
 	                        }
 	                        break;
 	                    }
@@ -232,7 +232,7 @@ public class PBFileReader
 	            if (found) break;
             }
 	        if (!found || !isSLC) {
-		    if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.tokenNodes+"\n"+Arrays.toString(tokens));
+		    if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.allNodes+"\n"+Arrays.toString(tokens));
 		    iter.remove();
 
 		}
@@ -250,12 +250,17 @@ public class PBFileReader
 		instance.allArgs = argList.toArray(new PBArg[argList.size()]); 
 		Arrays.sort(instance.allArgs);
 		
+		List<PBArg> emptyArgList = new LinkedList<PBArg>();
 		argList.clear();
 		for (PBArg arg:instance.allArgs)
 		    if (!arg.isEmpty()) argList.add(arg);
+		    else emptyArgList.add(arg);
 		
 		instance.args = argList.toArray(new PBArg[argList.size()]);
 		Arrays.sort(instance.args);
+		
+		instance.emptyArgs = emptyArgList.toArray(new PBArg[emptyArgList.size()]);
+		Arrays.sort(instance.emptyArgs);
 		//System.out.println(instance);
 
 		BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());

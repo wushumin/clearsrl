@@ -230,6 +230,7 @@ public 	class SentencePair implements Serializable {
 	{
 		return (((long)a)<<32)|b;
 	}
+
 	/*
 	public long[] getSrcWordAlignment()
 	{

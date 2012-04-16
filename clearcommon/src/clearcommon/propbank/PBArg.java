@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
 
 import clearcommon.treebank.*;
@@ -22,10 +23,12 @@ public class PBArg implements Comparable<PBArg>, Serializable
     
 	String       label;
 	TBNode       node;
+	TBNode[]     allNodes;
 	PBArg        linkingArg;
 	PBArg[]      nestedArgs;
 	   
 	TBNode[]     tokenNodes;
+	
 
 	BitSet       terminalSet;
 	BitSet       tokenSet;
@@ -46,7 +49,7 @@ public class PBArg implements Comparable<PBArg>, Serializable
 	    //System.out.print("\n");
 	    
 	    // link traces
-	    List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(tokenNodes));
+	    List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(allNodes));
 
 	    TBNode traceNode;
 	    boolean addedNodes;
@@ -145,6 +148,12 @@ public class PBArg implements Comparable<PBArg>, Serializable
         return label;
     }
 	
+	public String getBaseLabel() {
+		String l = (label.startsWith("R-") || label.startsWith("C-"))?label.substring(2):label;
+		
+		return l.length()>4?l.substring(0, 4):l;
+	}
+	
 	public boolean isPredicate()
 	{
 		return label.equals("rel");
@@ -170,6 +179,11 @@ public class PBArg implements Comparable<PBArg>, Serializable
 		return node;
 	}
 	
+	public TBNode[] getAllNodes()
+	{
+		return allNodes;
+	}
+	
 	public PBArg[] getNestedArgs()
 	{
 	    return nestedArgs;
@@ -178,11 +192,13 @@ public class PBArg implements Comparable<PBArg>, Serializable
 	public TBNode[] getTerminalNodes()
 	{
 		ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
-		tnodes.addAll(node.getTerminalNodes());
+		
+		for (TBNode aNode:allNodes)
+			tnodes.addAll(aNode.getTerminalNodes());
 
 		for (PBArg nestedArg:nestedArgs)
 			tnodes.addAll(nestedArg.node.getTerminalNodes());
-		
+
 		return tnodes.toArray(new TBNode[tnodes.size()]);
 	}
 	
