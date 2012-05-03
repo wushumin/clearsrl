@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
@@ -275,6 +276,46 @@ public 	class SentencePair implements Serializable {
 		Arrays.sort(alignment);
 		return alignment;
 	}
+	
+	public Map<BitSet, BitSet> getWordAlignmentSet(WordAlignmentType type)
+	{
+		Map<BitSet, BitSet> alignSet1 = new HashMap<BitSet, BitSet>();
+		
+		long[] alignArray = getWordAlignment(type);
+		
+		for (long a:getWordAlignment(type))
+		{
+			int src = (int)(a>>>32);
+			int dst = (int)(0xffffffff&a);
+			BitSet dSet  = new BitSet();
+			dSet.set(dst);
+			
+			BitSet sSet;
+			
+			if ((sSet=alignSet1.get(dSet))==null)
+			{
+				sSet = new BitSet();
+				alignSet1.put(dSet, sSet);
+			}
+			
+			sSet.set(src);
+		}
+		
+		Map<BitSet, BitSet> alignSet2 = new HashMap<BitSet, BitSet>();
+		
+		for (Map.Entry<BitSet, BitSet> entry:alignSet1.entrySet())
+		{
+			BitSet dSet;
+			
+			if ((dSet = alignSet2.get(entry.getValue()))==null)
+				alignSet2.put(entry.getValue(), entry.getKey());
+			else
+				dSet.or(entry.getKey());
+		}
+		
+		return alignSet2;
+	}
+	
 	/*
 	public long[] getWordAlignment()
 	{

@@ -1,6 +1,7 @@
 package clearcommon.propbank;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.logging.Logger;
@@ -70,11 +71,56 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
         return allArgs;
     }
     
+	static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String pre, String post,  boolean printEC)
+	{
+		List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();
+		preMarkup[nodes.get(0).getTerminalIndex()] = pre;
+		postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = post;		
+	}
+	
+	public static void markArg(PBArg arg, String[] preMarkup, String[] postMarkup, String pre, String post, boolean printEC)
+	{
+		if (printEC)
+			for (TBNode node:arg.getAllNodes())
+				markNode(node, preMarkup, postMarkup, pre, post, printEC);
+		else
+			markNode(arg.getNode(), preMarkup, postMarkup, pre, post, printEC);
+		
+		for (PBArg narg:arg.getNestedArgs())
+			markArg(narg, preMarkup, postMarkup, pre, post, printEC);
+	}
+
+	public String toText(boolean printEC)
+	{
+		StringBuilder buffer = new StringBuilder();
+
+		List<TBNode> nodes = printEC?tree.getRootNode().getTerminalNodes() : tree.getRootNode().getTokenNodes();
+		
+		String[] preMarkup = new String[nodes.size()];
+		String[] postMarkup = new String[nodes.size()];
+		
+		Arrays.fill(preMarkup, "");
+		Arrays.fill(postMarkup, "");
+		
+		String color;
+		for (PBArg arg : (printEC?getAllArgs():getArgs()))	
+			markArg(arg, preMarkup, postMarkup, "["+arg.getLabel()+" ", "]", printEC);
+		
+		for (int i=0; i<nodes.size(); ++i)
+		{
+			buffer.append(preMarkup[i]);
+			buffer.append(nodes.get(i).getWord());
+			buffer.append(postMarkup[i]);
+			buffer.append(" ");
+		}
+		return buffer.toString();
+	}
+
     public String toText()
     {
     	return toText(false);
     }
-    
+    /*
     public String toText(boolean includeTerminals)
     {
         StringBuilder buffer = new StringBuilder();
@@ -114,7 +160,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
         return buffer.toString();
     }
 
-    
+    */
     
 	@Override
     public String toString() {
