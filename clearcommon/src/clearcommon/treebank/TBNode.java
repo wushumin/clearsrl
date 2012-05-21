@@ -95,9 +95,11 @@ public class TBNode implements Serializable
 	{
 		return isPos(TBLib.POS_EC);
 	}
-	
+
 	public boolean isTrace()
 	{
+		if (children.length==1)
+			return children[0].isTrace();
 	    return isPos(TBLib.POS_EC)&&indexingNode!=null;
 	}
 	

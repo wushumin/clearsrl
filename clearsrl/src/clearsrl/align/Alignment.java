@@ -12,7 +12,7 @@ import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 
-public class Alignment{
+public class Alignment implements Comparable<Alignment>{
 
 	private static final float ARGNUMFACTOR = 1.5f;
 	private static final float ARGFACTOR = 1.0f;
@@ -404,6 +404,12 @@ public class Alignment{
 	    builder.append("]");
 	    
 	    return builder.toString();
+	}
+
+	@Override
+	public int compareTo(Alignment rhs) {
+		float scoreDiff = getCompositeScore()-rhs.getCompositeScore();
+		return scoreDiff>0?-1:(scoreDiff==0?0:1);
 	}
 	
 }

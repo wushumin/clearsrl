@@ -16,6 +16,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -108,6 +109,8 @@ public class Aligner {
 			if (alignIdx[i][0]<alignMatrix.length && alignMatrix[alignIdx[i][0]][i].getCompositeScore()>=alignThreshold)
 				alignments.add(alignMatrix[alignIdx[i][0]][i]);
 		}
+		
+		Collections.sort(alignments);
 		
 		return alignments.toArray(new Alignment[alignments.size()]);
 	}

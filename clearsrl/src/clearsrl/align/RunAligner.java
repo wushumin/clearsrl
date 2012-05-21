@@ -128,7 +128,7 @@ public class RunAligner {
 		        stat.addAlignment(alignment);
 		    }
 		    
-		    Aligner.printAlignment(htmlStream, sentencePair, alignments, alignPro);
+		    Aligner.printAlignment(htmlStream, sentencePair, alignments, true);
 
             TObjectIntHashMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)

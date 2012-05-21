@@ -78,6 +78,8 @@ public class PBArg implements Comparable<PBArg>, Serializable
     	        }
     	    }
 	    } while (addedNodes);
+	    
+	    allNodes = mainNodes.toArray(new TBNode[mainNodes.size()]);
 
 	    // assign single node to represent this argument
 	    node = null;

@@ -252,10 +252,11 @@ public class PBFileReader
 		
 		List<PBArg> emptyArgList = new LinkedList<PBArg>();
 		argList.clear();
+		
 		for (PBArg arg:instance.allArgs)
 		    if (!arg.isEmpty()) argList.add(arg);
 		    else emptyArgList.add(arg);
-		
+
 		instance.args = argList.toArray(new PBArg[argList.size()]);
 		Arrays.sort(instance.args);
 		

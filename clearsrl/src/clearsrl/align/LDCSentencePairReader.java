@@ -153,7 +153,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         
         if (sentencePair.src.indices.length != srcWords.size() || sentencePair.dst.indices.length != dstWords.size())
         {
-            System.err.println("Mismatch: "+id);
+            System.err.println("Mismatch: "+id+" "+Arrays.asList(infoTokens));
+            
             sentencePair.id = -id;
             // read the alignment line off
             srcAlignmentScanner.nextLine();
