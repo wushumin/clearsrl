@@ -40,7 +40,7 @@ import clearcommon.util.LanguageUtil.POS;
 
 public class RunProMatcher {
 	
-	static final Set<String> UNIQUE_DET = new TreeSet<String>(Arrays.asList("the","this","that","these","those"));
+	static final Set<String> UNIQUE_DET_SET = new TreeSet<String>(Arrays.asList("the","this","that","these","those"));
 	
 	static class ProAlignment implements Comparable<ProAlignment>{
 		public enum Type
@@ -48,8 +48,11 @@ public class RunProMatcher {
 			PRO,
 			PRONOUN,
 			EXISTENTIAL,
-			NP,
+			UNIQUE_DET,
+			RELATIVECLAUSE,
 			PASSIVE,
+			COORDINATION,
+			NOMINALIZE,
 			UNSPECIFIED
 		}
 		
@@ -172,12 +175,17 @@ public class RunProMatcher {
 			//PBArg[] srcEmptyArgs = srcPB.getEmptyArgs();
 			//PBArg[] dstEmptyArgs = dstPB.getEmptyArgs();
 			
+			BitSet dstTokenAligned = new BitSet();
+			
 			List<PBArg> unAlignedDstArgs = new ArrayList<PBArg>();
 			{
 				BitSet dstArgAligned = new BitSet();
 				
 				for (ArgAlignmentPair argPair:a.getArgAlignmentPairs())
+				{
 					dstArgAligned.set(argPair.dstArgIdx);
+					dstTokenAligned.or(dstPB.getArgs()[argPair.dstArgIdx].getTokenSet());
+				}
 				
 				for (int i=0; i<dstPB.getArgs().length; ++i)
 					if (!dstArgAligned.get(i)) unAlignedDstArgs.add(dstPB.getArgs()[i]);
@@ -256,14 +264,18 @@ public class RunProMatcher {
 						markedProSet.set(proIdx);
 						break;
 					}
-					if (tokens.length==1 && tokens[0].getPOS().startsWith("WDT"))
+					if (tokens.length==1 && tokens[0].getPOS().matches("WDT|WP.*"))
 					{
-						//found = true;
-						//addIndex(pAlignSet, ProAlignment.Type.PRONOUN, s, srcPB.getTree(), proNode, dstPB.getTree(), tokens[0], a.getCompositeScore());
-						//markedProSet.set(proIdx);
-						System.out.println(s.id+" "+srcPB.toText(true));
-						System.out.println(s.id+" "+dstPB.toText(true));
-						break;
+						//if (!tokens[0].getWord().toLowerCase().equals("which"))
+						{
+							found = true;
+							addIndex(pAlignSet, ProAlignment.Type.RELATIVECLAUSE, s, srcPB.getTree(), proNode, dstPB.getTree(), tokens[0], a.getCompositeScore());
+							markedProSet.set(proIdx);
+						
+							//System.out.println(s.id+" "+srcPB.toText(true));
+							//System.out.println(s.id+" "+dstPB.toText(true));
+							break;
+						}
 					}
 
 					List<TBNode> terminals = dstArg.getAllNodes()[0].getTerminalNodes();
@@ -301,7 +313,7 @@ public class RunProMatcher {
 					{
 						List<TBNode> tokens = nodes[0].getTokenNodes();
 						
-						if (tokens.size()==1 && (tokens.get(0).getPOS().equals("EX")||tokens.get(0).getPOS().equals("PRP")))
+						if (tokens.size()==1 && !dstTokenAligned.get(tokens.get(0).getTokenIndex()) && (tokens.get(0).getPOS().equals("EX")||tokens.get(0).getPOS().equals("PRP")))
 						{
 							addIndex(pAlignSet, ProAlignment.Type.EXISTENTIAL, s, srcPB.getTree(), proNode, dstPB.getTree(), tokens.get(0), a.getCompositeScore());
 							markedProSet.set(proIdx);
@@ -316,7 +328,7 @@ public class RunProMatcher {
 					if (!dstArg.getLabel().matches("ARG[01]")) continue;
 					
 					List<TBNode> tokens = dstArg.getNode().getTokenNodes();
-					if (UNIQUE_DET.contains(tokens.get(0).getWord().toLowerCase()))
+					if (UNIQUE_DET_SET.contains(tokens.get(0).getWord().toLowerCase()))
 					{	
 						List<TBNode> tokenList = tokens.get(0).getParent().getTokenNodes();
 						
@@ -336,7 +348,7 @@ public class RunProMatcher {
 							//System.out.println(s.id+" "+dstPB.toText(true));
 						}
 						
-						addIndex(pAlignSet, ProAlignment.Type.NP, s, srcPB.getTree(), proNode, dstPB.getTree(), tokens.get(0), a.getCompositeScore());
+						addIndex(pAlignSet, ProAlignment.Type.UNIQUE_DET, s, srcPB.getTree(), proNode, dstPB.getTree(), tokens.get(0), a.getCompositeScore());
 						markedProSet.set(proIdx);
 						break;
 					}
@@ -360,6 +372,34 @@ public class RunProMatcher {
 					}
 					
 					addIndex(pAlignSet, ProAlignment.Type.PASSIVE, s, srcPB.getTree(), proNode, dstPB.getTree(), null, a.getCompositeScore());
+					markedProSet.set(proIdx);
+					break;
+				}
+				
+				for (PBArg dstArg:unAlignedDstArgs)
+				{
+					if (!dstArg.getLabel().matches("ARG[01]")) continue;
+					
+					if (dstArg.getNode().getTerminalNodes().get(0).getTerminalIndex()>dstPB.getPredicate().getTerminalIndex()) continue;
+					
+					TBNode ancestor = dstArg.getNode().getLowestCommonAncestor(dstPB.getPredicate());
+					
+					if (dstArg.getNode().getParent()!=ancestor) continue;
+						
+					TBNode predicateParent = dstPB.getPredicate();
+					while (predicateParent.getParent()!=ancestor)
+						predicateParent = predicateParent.getParent();
+					
+					List<TBNode> nodes = dstPB.getPredicate().getPathToAncestor(ancestor);
+					
+					if (nodes.size()<3) continue;
+					
+					if (nodes.get(nodes.size()-3).getChildIndex()==0 || !nodes.get(nodes.size()-2).getChildren()[nodes.get(nodes.size()-3).getChildIndex()-1].getPOS().matches("CC.*")) continue;
+					
+					//System.out.println(s.id+" "+srcPB.toText(true));
+					//System.out.println(s.id+" "+dstPB.toText(true));
+					
+					addIndex(pAlignSet, ProAlignment.Type.COORDINATION, s, srcPB.getTree(), proNode, null, null, a.getCompositeScore());
 					markedProSet.set(proIdx);
 					break;
 				}
@@ -438,8 +478,9 @@ public class RunProMatcher {
 							else
 								System.out.println(s.id+" "+srcPB.getPredicate().getWord()+" "+node.getWord()+" "+Arrays.asList(verbs));
 								*/
-							//if (!isMainArg)
-							//	markedProSet.set(proIdx);
+							if (!isMainArg)
+								addIndex(pAlignSet, ProAlignment.Type.NOMINALIZE, s, srcPB.getTree(), proNode, null, null, 0.05);
+								markedProSet.set(proIdx);
 						}
 					    	 
 					}
@@ -450,10 +491,12 @@ public class RunProMatcher {
 		
 		}
 		
+		/*
 		if (proSet.cardinality()!=markedProSet.cardinality())
 		{
 			System.out.println(s.id);
 		}
+		*/
 		
 		BitSet srcSet = new BitSet();
 		List<ProAlignment> aList = new ArrayList<ProAlignment>();
@@ -568,8 +611,9 @@ public class RunProMatcher {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
-		    long[] wa = sentencePair.getWordAlignment(SentencePair.WordAlignmentType.UNION);
 		    /*
+		    long[] wa = sentencePair.getWordAlignment(SentencePair.WordAlignmentType.UNION);
+		    
 		    for (long a:wa)
 		    	System.out.printf("%d-%d ", (int)(a>>>32)-1, (int)(a&0xffffffff)-1);
 		    System.out.print("\n");
@@ -628,7 +672,7 @@ public class RunProMatcher {
     		}
 		    System.out.print("\n");
 */
-		    if (baseFilter.startsWith("ldc09"))
+		    //if (baseFilter.startsWith("ldc09"))
 		    {
 		    	srcTokenCnt +=sentencePair.src.tokens.length;
 		    	dstTokenCnt +=sentencePair.dst.tokens.length;
@@ -640,7 +684,7 @@ public class RunProMatcher {
 		    			skip = false;
 		    			++proCnt;
 		    		}
-		    	if (skip) continue;
+		    	//if (skip) continue;
 		    }
 		    
 		    sentenceCnt++;
@@ -743,15 +787,19 @@ public class RunProMatcher {
 		    
 		    ProAlignment[] proMatches = findProAlignments(sentencePair, alignments, srcLangUtil, dstLangUtil);
 		    
-		    for (ProAlignment a:proMatches)
-		    	proTypeCnt.put(a.type.ordinal(), proTypeCnt.get(a.type.ordinal())+1);
 		    
-		    /*
+		    BitSet dstMapped = new BitSet();
+		    
 		    System.out.print(sentencePair.id);
 		    for (ProAlignment a:proMatches)
+		    {
+		    	if (dstMapped.get(a.dst)) continue;
+		    	dstMapped.set(a.dst);
+		    	proTypeCnt.put(a.type.ordinal(), proTypeCnt.get(a.type.ordinal())+1);
 		    	System.out.print(" "+a);
+		    }
 		    System.out.print("\n");
-		    */
+		    
 		    long[] matches = new long[proMatches.length];
 		    for (int i=0; i<matches.length; ++i)
 		    	matches[i] = proMatches[i].toLong();
@@ -825,9 +873,9 @@ public class RunProMatcher {
 		System.out.println("mapped pro count: "+mappedProCnt);
 		for (ProAlignment.Type t:ProAlignment.Type.values())
 			System.out.println(t+": "+proTypeCnt.get(t.ordinal()));
+		
+		
 		*/
-		
-		
 		//System.out.printf("sentences: %d, pros: %d\n", sentenceCnt, proCnt);
 		
 		//System.out.printf("src tokens: %d, dst tokens: %d\n", srcTokenCnt, dstTokenCnt);

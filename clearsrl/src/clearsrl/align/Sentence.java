@@ -22,7 +22,7 @@ public class Sentence implements Serializable{
      */
     private static final long serialVersionUID = 1L;
 
-    static final Pattern sentPattern = Pattern.compile("(\\d+)~(\\d+)");
+    static final Pattern sentPattern = Pattern.compile("(\\d+)[~-](\\d+)");
 	   
     public String   tbFile;
     public Map<Integer, TBTree> treeMap;
@@ -70,7 +70,7 @@ public class Sentence implements Serializable{
         return (int)(index&0xffffffff);
     }
 	
-	public static Sentence parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData)
+	public static Sentence parseSentence(String line, Map<String, TBTree[]> tbData, Map<String, SortedMap<Integer, List<PBInstance>>> pbData, boolean tokenIndexed)
 	{
 		Sentence sentence = new Sentence();
 		
@@ -96,8 +96,10 @@ public class Sentence implements Serializable{
 				
 				terminalIdx = Integer.parseInt(matcher.group(2));
 				
-				a_idx.add(makeIndex(treeIdx,terminalIdx));
-				a_token.add(trees[treeIdx].getRootNode().getNodeByTerminalIndex(terminalIdx));
+				TBNode node = tokenIndexed?trees[treeIdx].getRootNode().getNodeByTokenIndex(terminalIdx):trees[treeIdx].getRootNode().getNodeByTerminalIndex(terminalIdx);
+				
+				a_idx.add(makeIndex(treeIdx,node.getTerminalIndex()));
+				a_token.add(node);
 				
 				//System.out.print(" "+sIdx+"-"+tIdx);
 			}

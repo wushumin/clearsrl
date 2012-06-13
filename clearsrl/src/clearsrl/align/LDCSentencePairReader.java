@@ -224,7 +224,7 @@ public class LDCSentencePairReader extends SentencePairReader {
 				builder.append(" "+tree.getIndex()+'~'+node.getTerminalIndex());
 		}
 		
-		return Sentence.parseSentence(builder.toString(), tbData, pbData);	
+		return Sentence.parseSentence(builder.toString(), tbData, pbData, false);	
 	}
 	
 	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectHashMap<TIntHashSet> inAlignment)

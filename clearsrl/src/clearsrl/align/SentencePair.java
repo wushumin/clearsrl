@@ -1,5 +1,6 @@
 package clearsrl.align;
 
+import gnu.trove.TIntArrayList;
 import gnu.trove.TIntHashSet;
 import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TIntObjectIterator;
@@ -77,6 +78,27 @@ public 	class SentencePair implements Serializable {
 		for (int i=0; i<dst.indices.length; ++i)
 			dstAlignment.put(dst.indices[i], EMPTY_INT_ARRAY);
 		parseAlign(line, dstAlignment, src.indices.length);
+	}
+	
+	public void parseAlign(String line, boolean zeroIndexed) throws BadInstanceException
+	{
+    	String[] alignmentStrs = line.trim().split("[ \t]+");
+    	    
+        int[] srcAlignmentIdx = new int[alignmentStrs.length];
+        int[] dstAlignmentIdx = new int[alignmentStrs.length];
+        
+        for (int i=0; i<alignmentStrs.length; ++i)
+        {
+        	srcAlignmentIdx[i] = Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')));
+        	dstAlignmentIdx[i] = Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1));
+        	
+        	if (!zeroIndexed)
+        	{
+        		srcAlignmentIdx[i]--;
+        		dstAlignmentIdx[i]--;
+        	}
+        }
+        setAlignment(srcAlignmentIdx, dstAlignmentIdx);
 	}
 	
 	public String getSrcAlignmentString()
@@ -174,6 +196,21 @@ public 	class SentencePair implements Serializable {
 		//for (int i:align)
 		//	System.out.print(" "+i);
 		//System.out.print("\n");
+	}
+	
+	public void mergeAlignment()
+	{
+
+		long[] idx = getWordAlignment(WordAlignmentType.SRC);
+		int[] src = new int[idx.length];
+		int[] dst = new int[idx.length];
+		
+		for (int i=0; i<idx.length; ++i)
+		{
+			src[i] = (int)(idx[i]>>>32)-1;
+			dst[i] = (int)(idx[i]&0xffffffff)-1;
+		}
+		setAlignment(src, dst);
 	}
 	
 	public void setAlignment(int[] srcAlignmentIdx, int[] dstAlignmentIdx)

@@ -169,7 +169,7 @@ public class ProAlignmentScorer {
 		for (Map.Entry<Integer, String[]> goldEntry:goldAlignment.entrySet())
 		{
 			String[] sysVal = sysAlignment.get(goldEntry.getKey());
-			if (sysVal==null) continue;
+			if (sysVal==null) sysVal = new String[0];
 			
 			s = sentenceMap.get(goldEntry.getKey());
 			
