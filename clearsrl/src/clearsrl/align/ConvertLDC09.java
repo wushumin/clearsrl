@@ -372,6 +372,8 @@ public class ConvertLDC09 {
 
         PrintStream srcTokenOut = new PrintStream(props.getProperty("src.token.file"));
         PrintStream dstTokenOut = new PrintStream(props.getProperty("dst.token.file"));
+        PrintStream srcTextOut = new PrintStream(props.getProperty("src.text.file"));
+        PrintStream dstTextOut = new PrintStream(props.getProperty("dst.text.file"));
         PrintStream tokenAlign = new PrintStream(props.getProperty("token.alignment.file"));
         PrintStream srcTerminalOut = new PrintStream(props.getProperty("src.terminal.file"));
         PrintStream dstTerminalOut = new PrintStream(props.getProperty("dst.terminal.file"));
@@ -404,6 +406,9 @@ public class ConvertLDC09 {
 		    	tokenAlign.printf("%d-%d ", (int)(a>>>32), (int)(a&0xffffffff));
 		    tokenAlign.print("\n");
 
+		    srcTextOut.println(s.src.toTokens());
+		    dstTextOut.println(s.dst.toTokens());
+		    
 		    //------------------------------------------------------------------------------------------
 		    
 		    srcTerminalOut.print(s.src.tbFile);
@@ -451,18 +456,29 @@ public class ConvertLDC09 {
 		    	else if (tree!=treeidx)
 		    	{
 		    		oneTree = false;
-		    		break;
+		    		
 		    	}
 		    	tokenSet.set(tokenIdx);
 		    }
 		    
-		    if (oneTree && tokenSet.get(0) && tokenSet.cardinality()==s.dst.treeMap.get(tree).getTokenCount())
+		    if (!tokenSet.get(0)) continue;
+		    
+		    System.out.print(s.dst.tbFile.substring(0, s.dst.tbFile.length()-5)+tree);
+		    
+		    if (!oneTree) 
 		    {
-		    	System.out.print(s.dst.tbFile.substring(0, s.dst.tbFile.length()-5)+tree);
-		    	for (TBNode node:s.src.tokens)
-		    		System.out.print(" "+node.getWord());
-		    	System.out.print("\n");
+		    	System.out.println(" ON TOO LONG");
+		    	continue;
 		    }
+		    
+		    if (tokenSet.cardinality()!=s.dst.treeMap.get(tree).getTokenCount())
+		    {
+		    	System.out.println(" ON TOO SHORT");
+		    }
+		    
+	    	for (TBNode node:s.src.tokens)
+	    		System.out.print(" "+node.getWord());
+	    	System.out.print("\n");
 		    
         } 
         srcTokenOut.close();

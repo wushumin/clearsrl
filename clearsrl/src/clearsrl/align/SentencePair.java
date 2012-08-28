@@ -82,7 +82,7 @@ public 	class SentencePair implements Serializable {
 	
 	public void parseAlign(String line, boolean zeroIndexed) throws BadInstanceException
 	{
-    	String[] alignmentStrs = line.trim().split("[ \t]+");
+    	String[] alignmentStrs = line.trim().isEmpty()?new String[0]:line.trim().split("[ \t]+");
     	    
         int[] srcAlignmentIdx = new int[alignmentStrs.length];
         int[] dstAlignmentIdx = new int[alignmentStrs.length];

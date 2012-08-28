@@ -4,6 +4,7 @@ import gnu.trove.TIntHashSet;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,9 +17,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-public class FeatureSet<T extends Enum<T>> {
+public class FeatureSet<T extends Enum<T>> implements Serializable {
     
-    Set<EnumSet<T>>                                      features;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	Set<EnumSet<T>>                                      features;
     EnumSet<T>                                           featuresFlat;
     Map<EnumSet<T>, TObjectIntHashMap<String>>           featureStrMap;
     
@@ -105,11 +111,11 @@ public class FeatureSet<T extends Enum<T>> {
         return ret;
     }
     
-    public int[] getFeatureVector(Map<EnumSet<T>,List<String>> sample)
+    public int[] addToFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap, int[] vec)
     {
-        TIntHashSet featureSet = new TIntHashSet();
-    
-        for(Map.Entry<EnumSet<T>,List<String>> entry:sample.entrySet())
+    	TIntHashSet featureSet = vec==null?new TIntHashSet():new TIntHashSet(vec);
+    	
+    	for(Map.Entry<EnumSet<T>,List<String>> entry:featureValueMap.entrySet())
         {
             TObjectIntHashMap<String> fMap = featureStrMap.get(entry.getKey());
             for (String fVal:entry.getValue())
@@ -122,7 +128,11 @@ public class FeatureSet<T extends Enum<T>> {
         Arrays.sort(features);
         
         return features;
-        
+    }
+    
+    public int[] getFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap)
+    {
+        return addToFeatureVector(featureValueMap, null);
     }
     
     public void addToDictionary(EnumSet<T> type, List<String> values, boolean isNoArg)

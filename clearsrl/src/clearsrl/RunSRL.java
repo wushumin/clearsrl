@@ -240,7 +240,7 @@ public class RunSRL {
 	    	parser.parseArgument(args);
 	    } catch (CmdLineException e)
 	    {
-	    	System.err.println(e+"\nvalid options:");
+	    	System.err.println("invalid options:"+e);
 	    	parser.printUsage(System.err);
 	        System.exit(0);
 	    }
@@ -276,13 +276,13 @@ public class RunSRL {
 		
 		logger.info("model loaded");
 		
-		logger.info("Features: "+options.model.featureSet);
+		logger.info("Features: "+options.model.features.getFeatures());
 		//for (EnumSet<SRLModel.Feature> feature:model.featureSet)
 		//	logger.info(SRLModel.toString(feature));
 		
-		if (options.model.predicateFeatureSet!=null)
+		if (options.model.predFeatures!=null)
 		{
-			logger.info("Predicate features: "+options.model.predicateFeatureSet);
+			logger.info("Predicate features: "+options.model.predFeatures.getFeatures());
 		    //for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
 		    //	logger.info(SRLModel.toString(feature));
 		}

@@ -145,6 +145,14 @@ public class TBNode implements Serializable
     public String getWord() {
         return word;
     }
+    
+    public String getECType() {
+    	if (!isEC()) return word;
+    	
+    	Matcher m = WORD_PATTERN.matcher(word);
+    	m.matches();
+    	return m.group(1);
+    }
 
     public int getTerminalIndex() {
         return terminalIndex;
@@ -418,6 +426,14 @@ public class TBNode implements Serializable
 		return str.toString();
 	}
 	
+	public String toText()
+	{
+		StringBuilder str = new StringBuilder();
+		for (TBNode node:getTokenNodes())
+			str.append(node.getWord()+' ');
+		return str.toString();
+	}
+
 	@Override
     public String toString()
 	{

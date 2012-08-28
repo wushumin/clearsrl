@@ -19,6 +19,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
     
     TBNode      predicateNode;
 	String      rolesetId;
+	String      verbnetId;
 	PBArg[]     args;
 	PBArg[]     emptyArgs;
 	PBArg[]     allArgs;
@@ -37,6 +38,14 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
 	public String getRoleset()
 	{
 	    return rolesetId;
+	}
+	
+	public String getVerbnetId() {
+		return verbnetId;
+	}
+
+	public void setVerbnetId(String verbnetId) {
+		this.verbnetId = verbnetId;
 	}
 	
 	public TBTree getTree()
@@ -74,8 +83,8 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
 	static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String pre, String post,  boolean printEC)
 	{
 		List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();
-		preMarkup[nodes.get(0).getTerminalIndex()] = pre;
-		postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = post;		
+		preMarkup[printEC?nodes.get(0).getTerminalIndex():nodes.get(0).getTokenIndex()] = pre;
+		postMarkup[printEC?nodes.get(nodes.size()-1).getTerminalIndex():nodes.get(nodes.size()-1).getTokenIndex()] = post;		
 	}
 	
 	public static void markArg(PBArg arg, String[] preMarkup, String[] postMarkup, String pre, String post, boolean printEC)

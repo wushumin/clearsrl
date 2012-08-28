@@ -191,6 +191,7 @@ public class Sentence implements Serializable{
 			for (int i=startTree.getIndex(); i<=endTree.getIndex(); ++i)
 			{
 				TBTree tree = treeMap.get(i);
+				if (tree==null) continue;
 				for (TBNode terminal : tree.getRootNode().getTerminalNodes())
 				{
 					if (tree==startTree && terminal.getTerminalIndex()<startTerminalIdx) continue;
@@ -222,7 +223,7 @@ public class Sentence implements Serializable{
 		{
 		    int treeIdx = getTreeIndex(i);
 			int terminalIdx = getTerminalIndex(i);
-			if ((instances=pbMap.get(treeIdx))!=null)
+			if (pbMap!=null && (instances=pbMap.get(treeIdx))!=null)
 			{
 			    for (PBInstance instance:instances)
 			        if (instance.getPredicate().getTerminalIndex()==terminalIdx) pbList.add(instance);

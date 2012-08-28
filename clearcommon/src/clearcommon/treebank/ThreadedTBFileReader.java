@@ -87,8 +87,8 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
                     	logger.severe(e.toString());
                     }
                 }
-                else 
-                    logger.info("Read tree "+tree.index);
+                //else 
+                //    logger.info("Read tree "+tree.index);
                 treeQueue.put(tree);
             } catch (InterruptedException e) {
             	logger.severe(e.toString());

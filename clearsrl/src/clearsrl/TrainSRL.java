@@ -1,5 +1,6 @@
 package clearsrl;
 
+import clearcommon.alg.FeatureSet;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.OntoNoteTreeFileResolver;
@@ -110,7 +111,7 @@ public class TrainSRL {
 		    String[] tokens = props.getProperty("feature").trim().split(",");
 		    for (String token:tokens)
 		        try {
-		            features.add(SRLModel.toEnumSet(Feature.class, token));
+		            features.add(FeatureSet.toEnumSet(Feature.class, token));
 		        } catch (IllegalArgumentException e) {
                     System.err.println(e);
                 }  
@@ -121,7 +122,7 @@ public class TrainSRL {
             String[] tokens = props.getProperty("predicateFeature").trim().split(",");
             for (String token:tokens)
                 try {
-                    predicateFeatures.add(SRLModel.toEnumSet(PredFeature.class, token));
+                    predicateFeatures.add(FeatureSet.toEnumSet(PredFeature.class, token));
                 } catch (IllegalArgumentException e) {
                     System.err.println(e);
                 }  
@@ -130,14 +131,14 @@ public class TrainSRL {
 		SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
 		
 		System.out.println("Features:");
-        for (EnumSet<SRLModel.Feature> feature:model.featureSet)
-            System.out.println(SRLModel.toString(feature));
+        for (EnumSet<SRLModel.Feature> feature:model.features.getFeatures())
+            System.out.println(feature.toString());
         
-        if (model.predicateFeatureSet!=null)
+        if (model.predFeatures!=null)
         {
             System.out.println("\nPredicate features:");
-            for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
-                System.out.println(SRLModel.toString(feature));
+            for (EnumSet<SRLModel.PredFeature> feature:model.predFeatures.getFeatures())
+                System.out.println(feature.toString());
         }
 		
 		//model.setLabeled(false);
