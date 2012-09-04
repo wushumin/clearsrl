@@ -202,10 +202,10 @@ public class SRLModel implements Serializable {
             logger.info("  "+label+" "+labelStringMap.get(label));
         }   
         
-        features.getFeatureStrMap().put(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        features.getFeatureStrMap().put(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        features.getFeatureStrMap().put(EnumSet.of(Feature.ARGTYPE), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        features.getFeatureStrMap().put(EnumSet.of(Feature.ARGTYPEPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
+        features.addFeatures(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
+        features.addFeatures(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
+        features.addFeatures(EnumSet.of(Feature.ARGTYPE), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
+        features.addFeatures(EnumSet.of(Feature.ARGTYPEPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
         features.rebuildMap(cutoff, cutoff*10);
         
         

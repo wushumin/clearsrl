@@ -219,6 +219,14 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return featuresFlat;
     }
     
+    public void addFeatures(EnumSet<T> key, TObjectIntHashMap<String> value, boolean isNoArg)
+    {
+    	if (isNoArg)
+    		noArgFeatureStrMap.put(key, value);
+    	else
+    		featureStrMap.put(key, value);
+    }
+    
     public Map<EnumSet<T>, TObjectIntHashMap<String>> getFeatureStrMap() {
         return Collections.unmodifiableMap(featureStrMap);
     }
