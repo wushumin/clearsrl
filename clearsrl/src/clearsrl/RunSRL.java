@@ -253,6 +253,7 @@ public class RunSRL {
         Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
         props.load(in);
         in.close();
+        props = PropertyUtil.resolveEnvironmentVariables(props);
         
         logger.info(PropertyUtil.toString(props));
         
