@@ -109,7 +109,8 @@ public class ParseCorpus {
                 parse=makeDefaultParse(words);
             else if (words.size()>=250) { 
                 parse=makeDefaultParse(words);
-                System.err.println("Skipping sentence with "+words.size()+" words since it is too long.");
+                
+                logger.warning("Skipping sentence with "+words.size()+" words since it is too long.");
             }
             else {
                 Tree<String> parsedTree = null;
@@ -191,7 +192,7 @@ public class ParseCorpus {
         
             if (props.getProperty("Chinese")!=null && !props.getProperty("Chinese").equals("false")) 
             {
-                System.out.println("Chinese parsing features enabled.");
+            	logger.info("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
             }
             parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
