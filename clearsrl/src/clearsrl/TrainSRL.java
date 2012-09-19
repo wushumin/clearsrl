@@ -241,7 +241,7 @@ public class TrainSRL {
 			        }
 			    }
 			}
-            model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
+            model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
 			
             System.out.println("***************************************************");
             for (TObjectIntIterator<String> iter = rolesetEmpty.iterator(); iter.hasNext();)
@@ -362,14 +362,14 @@ public class TrainSRL {
 		}*/
         else if (dataFormat.equals("conll"))
         {
-            ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
+            ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("input")), true);
             model.initDictionary();
             for (CoNLLSentence sentence:training)
             {
                 TBUtil.findHeads(sentence.parse.getRootNode(), langUtil.getHeadRules());
                 addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, true);
             }
-            model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
+            model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
 
             for (CoNLLSentence sentence:training)
                 addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, false);
