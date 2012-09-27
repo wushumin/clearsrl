@@ -540,7 +540,7 @@ public class RunProMatcher {
 			in.close();
 		}
 		LanguageUtil srcLangUtil  = (LanguageUtil) Class.forName(props.getProperty("src.language.util-class")).newInstance();
-		if (!srcLangUtil.init(PropertyUtil.filterProperties(props, "dst.")))
+		if (!srcLangUtil.init(PropertyUtil.filterProperties(props, "src.")))
 		    System.exit(-1);
 
 		LanguageUtil dstLangUtil  = (LanguageUtil) Class.forName(props.getProperty("dst.language.util-class")).newInstance();
