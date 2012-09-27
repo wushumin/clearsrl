@@ -26,7 +26,7 @@ public class ConvertProSentence {
 			int terminalIdx = (int)(s.terminalIndices[i]&0xffffffff);
 			
 			terminalOut.printf(" %d-%d", treeIdx, terminalIdx);
-			if (s.terminals[i].isTerminal() && !s.terminals[i].getWord().matches("\\*[pP].+"))
+			if (!s.terminals[i].isToken() && !s.terminals[i].getWord().matches("\\*[pP].+"))
 				continue;
 			proTermOut.printf(" %d-%d", treeIdx, terminalIdx);
 			proTextOut.printf(" %s", s.terminals[i].getWord());
@@ -70,7 +70,7 @@ public class ConvertProSentence {
 		srcProTextOut.close();
 		
 		SentenceReader dstReader = new TokenedSentenceReader(dstProp);
-		srcReader.initialize();
+		dstReader.initialize();
 		
 		PrintStream dstTerminalOut = new PrintStream(dstProp.getProperty("out.terminal"));
 		PrintStream dstProTermOut = new PrintStream(dstProp.getProperty("out.proTerminal"));
