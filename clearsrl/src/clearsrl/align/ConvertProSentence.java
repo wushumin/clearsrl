@@ -48,23 +48,40 @@ public class ConvertProSentence {
 			iReader.close();
 			in.close();
 		}
+		System.err.println(PropertyUtil.toString(props));
 		
-		Properties srcProp = PropertyUtil.filterProperties(props, "src.");
-		Properties dstProp = PropertyUtil.filterProperties(props, "dst.");
+		Properties srcProp = PropertyUtil.filterProperties(props, "src.", true);
+		Properties dstProp = PropertyUtil.filterProperties(props, "dst.", true);
 		
 		Sentence s=null;
 		
 		SentenceReader srcReader = new TokenedSentenceReader(srcProp);
 		srcReader.initialize();
+		
+		PrintStream srcTerminalOut = new PrintStream(srcProp.getProperty("out.terminal"));
+		PrintStream srcProTermOut = new PrintStream(srcProp.getProperty("out.proTerminal"));
+		PrintStream srcProTextOut = new PrintStream(srcProp.getProperty("out.proText"));
+		
 		while ((s = srcReader.nextSentence())!=null)
-			processSentence(s, System.out,System.out,System.out );
+			processSentence(s, srcTerminalOut, srcProTermOut, srcProTextOut);
 		srcReader.close();
+		srcTerminalOut.close();
+		srcProTermOut.close();
+		srcProTextOut.close();
 		
 		SentenceReader dstReader = new TokenedSentenceReader(dstProp);
 		srcReader.initialize();
+		
+		PrintStream dstTerminalOut = new PrintStream(dstProp.getProperty("out.terminal"));
+		PrintStream dstProTermOut = new PrintStream(dstProp.getProperty("out.proTerminal"));
+		PrintStream dstProTextOut = new PrintStream(dstProp.getProperty("out.proText"));
+
 		while ((s = dstReader.nextSentence())!=null)
-			processSentence(s, System.out,System.out,System.out );
+			processSentence(s, dstTerminalOut,dstProTermOut,dstProTextOut);
 		dstReader.close();
+		dstTerminalOut.close();
+		dstProTermOut.close();
+		dstProTextOut.close();
 		
 	}
 }
