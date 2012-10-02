@@ -29,6 +29,12 @@ public 	class SentencePair implements Serializable {
      */
     private static final long serialVersionUID = 1L;
     
+    public enum WordAlignmentIndex {
+    	TOKEN,
+    	TERMINAL,
+    	PRO
+    }
+    
     public enum WordAlignmentType {
     	SRC,
     	DST,
