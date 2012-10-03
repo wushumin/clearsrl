@@ -1,8 +1,6 @@
 package clearsrl.align;
 
-import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -19,7 +17,6 @@ public class ConvertProSentence {
 		terminalOut.print(s.tbFile);
 		proTermOut.print(s.tbFile);
 		
-		
 		for (int i=0; i<s.terminals.length; ++i)
 		{
 			int treeIdx = (int)(s.terminalIndices[i]>>>32);
@@ -29,12 +26,22 @@ public class ConvertProSentence {
 			if (!s.terminals[i].isToken() && !s.terminals[i].getWord().matches("\\*[pP].+"))
 				continue;
 			proTermOut.printf(" %d-%d", treeIdx, terminalIdx);
-			proTextOut.printf(" %s", s.terminals[i].getWord());
+			
+			if (s.terminals[i].isToken()) proTextOut.printf("%s ", s.terminals[i].getWord());
+			else if (s.terminals[i].getWord().startsWith("*pro")) proTextOut.print("LPRO ");
+			else proTextOut.print("BPRO ");
 		}
 		
 		terminalOut.print("\n");
 		proTermOut.print("\n");
 		proTextOut.print("\n");
+		
+		if (s.tokens.length > s.terminals.length || s.terminals.length==0)
+		{
+			System.err.println(s.tokens.length+" "+s.terminals.length+" "+s.toTokens());
+			System.exit(1);
+		}
+		
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -58,9 +65,9 @@ public class ConvertProSentence {
 		SentenceReader srcReader = new TokenedSentenceReader(srcProp);
 		srcReader.initialize();
 		
-		PrintStream srcTerminalOut = new PrintStream(srcProp.getProperty("out.terminal"));
-		PrintStream srcProTermOut = new PrintStream(srcProp.getProperty("out.proTerminal"));
-		PrintStream srcProTextOut = new PrintStream(srcProp.getProperty("out.proText"));
+		PrintStream srcTerminalOut = new PrintStream(srcProp.getProperty("out.terminal", "/dev/null"));
+		PrintStream srcProTermOut = new PrintStream(srcProp.getProperty("out.proTerminal", "/dev/null"));
+		PrintStream srcProTextOut = new PrintStream(srcProp.getProperty("out.proText", "/dev/null"));
 		
 		while ((s = srcReader.nextSentence())!=null)
 			processSentence(s, srcTerminalOut, srcProTermOut, srcProTextOut);
@@ -72,9 +79,9 @@ public class ConvertProSentence {
 		SentenceReader dstReader = new TokenedSentenceReader(dstProp);
 		dstReader.initialize();
 		
-		PrintStream dstTerminalOut = new PrintStream(dstProp.getProperty("out.terminal"));
-		PrintStream dstProTermOut = new PrintStream(dstProp.getProperty("out.proTerminal"));
-		PrintStream dstProTextOut = new PrintStream(dstProp.getProperty("out.proText"));
+		PrintStream dstTerminalOut = new PrintStream(dstProp.getProperty("out.terminal", "/dev/null"));
+		PrintStream dstProTermOut = new PrintStream(dstProp.getProperty("out.proTerminal", "/dev/null"));
+		PrintStream dstProTextOut = new PrintStream(dstProp.getProperty("out.proText", "/dev/null"));
 
 		while ((s = dstReader.nextSentence())!=null)
 			processSentence(s, dstTerminalOut,dstProTermOut,dstProTextOut);

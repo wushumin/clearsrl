@@ -57,6 +57,9 @@ public class RunSRL {
     @Option(name="-in",usage="input file/directory")
     private File inFile = null; 
  
+    @Option(name="-gzipped",usage="indicate input is gzipped files")
+    private boolean inputCompressed = false; 
+    
     @Option(name="-out",usage="output file/directory")
     private File outFile = null; 
     
@@ -442,7 +445,7 @@ public class RunSRL {
                 for (String fName:fileList)
                 {
                     File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
-                    Reader reader = new InputStreamReader(new FileInputStream(file), "UTF-8");
+                    Reader reader = new InputStreamReader(options.inputCompressed?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
 
                     String foutName=null;
                     PrintWriter writer=null;
