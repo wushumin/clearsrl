@@ -440,7 +440,7 @@ public class RunSRL {
                 options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null);
             }
             else {
-                List<String> fileList = FileUtil.getFiles(options.inFile, props.getProperty("regex",".*\\.(parse|txt)"));
+                List<String> fileList = FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"));
 
                 for (String fName:fileList)
                 {
