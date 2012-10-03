@@ -43,6 +43,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -57,8 +58,8 @@ public class RunSRL {
     @Option(name="-in",usage="input file/directory")
     private File inFile = null; 
  
-    @Option(name="-gzipped",usage="indicate input is gzipped files")
-    private boolean inputCompressed = false; 
+    @Option(name="-compressOutput",usage="Compress the SRL output")
+    private boolean compressOutput = false; 
     
     @Option(name="-out",usage="output file/directory")
     private File outFile = null; 
@@ -445,7 +446,8 @@ public class RunSRL {
                 for (String fName:fileList)
                 {
                     File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
-                    Reader reader = new InputStreamReader(options.inputCompressed?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
+                    
+                    Reader reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
 
                     String foutName=null;
                     PrintWriter writer=null;
@@ -453,11 +455,17 @@ public class RunSRL {
                         writer = new PrintWriter(System.out);
                     else
                     {
-                        foutName = options.inFile.isFile()?options.outFile.getPath():fName.replaceAll("\\.(parse|txt)\\z", ".prop");
+                    	foutName = fName.endsWith(".gz")?fName.substring(0, fName.length()-3):fName;
+                    	foutName = foutName.replaceAll("\\.(parse|txt)\\z", ".prop");
+
+                    	if (options.compressOutput) foutName=foutName+".gz";
+                    	
+                    	foutName = options.inFile.isFile()?options.outFile.getPath():foutName;
+
                         File outFile = new File(options.inFile.isFile()?null:options.outFile, foutName);
                         if (outFile.getParentFile()!=null)
                             outFile.getParentFile().mkdirs();
-                        writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outFile), "UTF-8"));
+                        writer = new PrintWriter(new OutputStreamWriter(options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile), "UTF-8"));
                         foutName = outFile.getPath();
                     }
                     
