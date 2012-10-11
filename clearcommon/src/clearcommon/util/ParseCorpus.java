@@ -262,6 +262,7 @@ public class ParseCorpus {
 	    Properties props = new Properties();
 		Reader in = new InputStreamReader(new FileInputStream(args[0]), "UTF-8");
 		props.load(in);
+		props = PropertyUtil.resolveEnvironmentVariables(props);
 		in.close();
 		props = PropertyUtil.filterProperties(props, "parser.");
 
