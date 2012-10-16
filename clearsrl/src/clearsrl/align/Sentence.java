@@ -31,6 +31,7 @@ public class Sentence implements Serializable{
     public long[]   indices;
     public long[]   terminalIndices;
     int[]           tokenToTerminalMap;
+    int[]           terminalToTokenMap;
     PBInstance[]    pbInstances; 
     
     
@@ -205,10 +206,12 @@ public class Sentence implements Serializable{
 			terminalIndices = terminalIndexList.toNativeArray();
 		}
 		tokenToTerminalMap = new int[indices.length];
+		terminalToTokenMap = new int[terminals.length];
 		int count = 0;
 		
 		for (int i=0; i<terminals.length; ++i)
 		{
+			terminalToTokenMap[i] = count;
 			if (terminals[i].isToken())
 				tokenToTerminalMap[count++] = i;
 		}

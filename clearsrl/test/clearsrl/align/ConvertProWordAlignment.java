@@ -9,34 +9,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.util.BitSet;
 import java.util.Properties;
 
 import clearcommon.util.PropertyUtil;
 
 public class ConvertProWordAlignment {
-	
-	static void processSentence(Sentence s, PrintStream terminalOut, PrintStream proTermOut, PrintStream proTextOut) {
-		terminalOut.print(s.tbFile);
-		proTermOut.print(s.tbFile);
-		
-		
-		for (int i=0; i<s.terminals.length; ++i)
-		{
-			int treeIdx = (int)(s.terminalIndices[i]>>>32);
-			int terminalIdx = (int)(s.terminalIndices[i]&0xffffffff);
-			
-			terminalOut.printf(" %d-%d", treeIdx, terminalIdx);
-			if (!s.terminals[i].isToken() && !s.terminals[i].getWord().matches("\\*[pP].+"))
-				continue;
-			proTermOut.printf(" %d-%d", treeIdx, terminalIdx);
-			proTextOut.printf(" %s", s.terminals[i].getWord());
-		}
-		
-		terminalOut.print("\n");
-		proTermOut.print("\n");
-		proTextOut.print("\n");
-	}
-	
+
 	static int[] convertIndices(Sentence s)
 	{
 		TIntArrayList nIdx = new TIntArrayList();
@@ -72,6 +51,9 @@ public class ConvertProWordAlignment {
 		BufferedReader waReader = new BufferedReader(new FileReader(props.getProperty("pro_alignment")));
 		
 		PrintStream waOut = new PrintStream(props.getProperty("terminal_alignment"));
+		PrintStream waTokenOut = new PrintStream(props.getProperty("token_alignment"));
+		
+		int sCnt = 0;
 		
 		while ((srcS = srcReader.nextSentence())!=null)
 		{
@@ -85,6 +67,13 @@ public class ConvertProWordAlignment {
 			String[] alignmentStrs = line.isEmpty()?new String[0]:line.split("[ \t]+");
     	    
 	        int srcI, dstI;
+	        System.out.print(sCnt);
+	        
+	        BitSet proSet = new BitSet();
+	        
+	        for (int i=0; i<srcS.terminals.length; ++i)
+	        	if (srcS.terminals[i].getWord().startsWith("*pro"))
+	        		proSet.set(i);
 	        
 	        for (String s : alignmentStrs)
 	        {
@@ -92,15 +81,24 @@ public class ConvertProWordAlignment {
 	        	dstI = Integer.parseInt(s.substring(s.indexOf('-')+1));
 	        	
 	        	waOut.printf("%d-%d ", srcIdx[srcI], dstIdx[dstI]);
+	        	if (proSet.get(srcIdx[srcI]))
+	        		System.out.printf(" %d:%d:unspec", srcIdx[srcI]+1, dstIdx[dstI]+1);
+	        	else
+	        		waTokenOut.printf("%d-%d ", srcS.terminalToTokenMap[srcIdx[srcI]], dstS.terminalToTokenMap[dstIdx[dstI]]);
+	        	
 	        }
 	        waOut.print("\n");
+	        waTokenOut.print("\n");
+	        System.out.print("\n");
+	        
+	        ++sCnt;
 		}
 		
 		srcReader.close();
 		dstReader.close();
 		waReader.close();
 		waOut.close();
-		
+		waTokenOut.close();
 	}
 
 }
