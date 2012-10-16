@@ -280,10 +280,11 @@ public class RunSRL {
 		mIn.close();
 		
 		logger.info("model loaded");
-		logger.info("model classifier 2 = "+(options.model.classifier2!=null));
 		
 		if (runSRLProps.getProperty("useTwoStageClassification", "true").equals("false"))
 			options.model.classifier2 = null;
+		
+		logger.info("model classifier 2 = "+(options.model.classifier2!=null));
 		
 		logger.info("Features: "+options.model.features.getFeatures());
 		//for (EnumSet<SRLModel.Feature> feature:model.featureSet)
