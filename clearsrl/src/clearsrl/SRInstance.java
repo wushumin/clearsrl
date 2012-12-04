@@ -1,6 +1,7 @@
 package clearsrl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -18,7 +19,8 @@ public class SRInstance {
 
     enum OutputFormat {
         TEXT,
-        PROPBANK
+        PROPBANK,
+        CONLL
     };
     
 	TBNode predicateNode;
@@ -338,6 +340,62 @@ public class SRInstance {
 	}
 */
 	
+    public String toCONLLString()
+	{
+		StringBuilder buffer = new StringBuilder();
+		
+		List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+		String[] tokens = new String[nodes.size()];
+		for (int i=0; i<tokens.length; ++i)
+			tokens[i] = nodes.get(i).getWord();
+		
+		String[] labels = new String[tree.getTokenCount()];
+		
+		for (SRArg arg:args)
+		{
+		    if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+			BitSet bits = arg.getTokenSet();
+			
+			for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i+1))
+			    labels[i] = arg.label;
+		}
+		
+		String previousLabel = null;
+		for (int i=0; i<labels.length; ++i)
+		{
+		    if (labels[i]!=null && labels[i].startsWith("C-") && labels[i].substring(2).equals(previousLabel))
+	            labels[i] = labels[i].substring(2);
+		    previousLabel = labels[i];
+		}
+		
+		for (int i=0; i<labels.length; ++i)
+		{
+			if (labels[i]==null) continue;
+			if (labels[i].equals("rel"))
+				labels[i] = "V";
+			else if (labels[i].startsWith("ARG"))
+				labels[i] = "A"+labels[i].substring(3);
+			else if (labels[i].startsWith("C-ARG"))
+				labels[i] = "C-A"+labels[i].substring(5);
+			else if (labels[i].startsWith("R-ARG"))
+				labels[i] = "R-A"+labels[i].substring(5);
+		}
+		
+		for (int i=0; i<labels.length; ++i)
+        {	
+            if (labels[i]!=null && (i==0 || !labels[i].equals(labels[i-1])))
+                buffer.append('('+labels[i]);
+            buffer.append('*');
+            if (labels[i]!=null && (i==labels.length-1 || !labels[i].equals(labels[i+1])))
+                buffer.append(')');
+                    
+            buffer.append(' ');      
+        }
+		
+		return buffer.toString();
+	}
+
+	
 	@Override
     public String toString()
 	{
@@ -383,6 +441,9 @@ public class SRInstance {
 		return buffer.toString();
 	}
 	
+	
+	
+	
     public String toString(OutputFormat outputFormat) {
         switch (outputFormat)
         {
@@ -390,6 +451,8 @@ public class SRInstance {
             return toString();
         case PROPBANK:
             return toPropbankString();
+        case CONLL:
+        	return toCONLLString();
         }
         return toString();
     }

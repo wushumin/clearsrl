@@ -15,6 +15,7 @@ import clearcommon.util.LanguageUtil;
 import clearcommon.util.ParseCorpus;
 import clearcommon.util.PropertyUtil;
 import clearcommon.util.LanguageUtil.POS;
+import clearsrl.SRInstance.OutputFormat;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -175,8 +176,12 @@ public class RunSRL {
                     }
 
                 }
-                for (SRInstance instance:predictions)
-                    writer.println(instance.toString(outputFormat));
+                
+                if (outputFormat.equals(OutputFormat.CONLL))
+                	writer.println(CoNLLSentence.toString(tree, predictions.toArray(new SRInstance[predictions.size()])));
+                else
+	                for (SRInstance instance:predictions)
+	                    writer.println(instance.toString(outputFormat));
                 
             }
             logger.info("done");

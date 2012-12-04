@@ -13,6 +13,9 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 public class CoNLLSentence {
@@ -20,6 +23,98 @@ public class CoNLLSentence {
 	TBTree       parse;
 	String[]     namedEntities;
 	SRInstance[] srls;
+	
+	public static String toString(TBTree parse, SRInstance[] predictedSRLs)
+	{
+		StringBuilder buffer = new StringBuilder();
+		String[][] outStr = new String[parse.getTokenCount()][predictedSRLs.length+1];
+		
+		for (int i=0; i<outStr.length; ++i)
+			outStr[i][0] = "-";
+		for (int j=0; j<predictedSRLs.length; ++j)
+		{
+			outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][0] = predictedSRLs[j].rolesetId;
+			//System.out.println(predictedSRLs[j].toCONLLString());
+			String[] vals = predictedSRLs[j].toCONLLString().trim().split(" ");
+			for (int i=0; i<outStr.length; ++i)
+				outStr[i][j+1] = vals[i];
+		}
+		/*
+		
+		for (int i=0; i<outStr.length; ++i)
+		{
+			outStr[i][0] = "-";
+			for (int j=1; j<outStr[i].length; ++j)
+				outStr[i][j] = "*";
+		}
+		for (int j=1; j<=predictedSRLs.length; ++j)
+		//for (SRInstance instance:sentence.srls)
+		{
+			SRInstance instance = predictedSRLs[j-1];
+			outStr[instance.predicateNode.getTokenIndex()][0] = instance.rolesetId;
+			
+			Map<String, BitSet> argBitSet = new HashMap<String, BitSet>();
+			for (SRArg arg:instance.args)
+			{
+				if (arg.isPredicate()) continue;
+				BitSet bits = argBitSet.get(arg.label);
+				if (bits!=null)
+					bits.or(arg.getTokenSet());
+				else
+					argBitSet.put(arg.label, arg.getTokenSet());
+			}
+			//pCount += instance.getArgs().size()-1;
+			//System.out.println(instance);
+			//System.out.println(pInstance+"\n");
+			//String a = instance.toString().trim();
+			//String b = pInstance.toString().trim();
+
+			Collections.sort(instance.args);
+			//Map<String, SRArg> labelMap= new HashMap<String, SRArg>();
+			for (SRArg arg:instance.args)
+			{
+				String label = arg.label;
+				if (label.equals("rel"))
+					label = "V";
+				else if (label.startsWith("ARG"))
+					label = "A"+label.substring(3);
+				else if (label.startsWith("C-ARG"))
+					label = "C-A"+label.substring(5);
+				else if (label.startsWith("R-ARG"))
+					label = "R-A"+label.substring(5);
+		
+				BitSet bitset = arg.getTokenSet();
+				if (bitset.cardinality()==1)
+				{
+					outStr[bitset.nextSetBit(0)][j] = "("+label+"*)";
+				}
+				else
+				{
+					int start = bitset.nextSetBit(0);
+					outStr[start][j] = "("+label+"*";
+					outStr[bitset.nextClearBit(start+1)-1][j] = "*)";
+				}
+			}
+		}
+		*/
+		int[] maxlength = new int[outStr[0].length];
+		for (int i=0; i<outStr.length; ++i)
+			for (int j=0; j<outStr[i].length; ++j)
+				if (maxlength[j]<outStr[i][j].length())
+					maxlength[j] = outStr[i][j].length();
+
+		for (int i=0; i<outStr.length; ++i)
+		{		
+			for (int j=0; j<outStr[i].length; ++j)
+			{
+				buffer.append(outStr[i][j]);
+				for (int k=outStr[i][j].length(); k<=maxlength[j]; ++k)
+					buffer.append(' ');
+			}
+			buffer.append("\n");
+		}
+		return buffer.toString();
+	}
 	
 	@Override
     public String toString()

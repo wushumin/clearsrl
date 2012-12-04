@@ -862,7 +862,7 @@ public class RunProMatcher {
 		Aligner.finalizeAlignmentOutput(htmlStream);
 		if (alignmentStream!=System.out) alignmentStream.close();
 		
-		/*
+		
 		
 		System.out.println("src tokens: "+srcTokenCnt);
 		System.out.println("dst tokens: "+dstTokenCnt);
@@ -875,7 +875,7 @@ public class RunProMatcher {
 			System.out.println(t+": "+proTypeCnt.get(t.ordinal()));
 		
 		
-		*/
+		
 		//System.out.printf("sentences: %d, pros: %d\n", sentenceCnt, proCnt);
 		
 		//System.out.printf("src tokens: %d, dst tokens: %d\n", srcTokenCnt, dstTokenCnt);

@@ -65,27 +65,7 @@ public class JArrays
 		
 		return arr;
 	}
-	
-	static public int[] toArray(ArrayList<Integer> arrlist)
-	{
-		int[] arr = new int[arrlist.size()];
-		
-		for (int i=0; i<arrlist.size(); i++)
-			arr[i] = arrlist.get(i);
-		
-		return arr;
-	}
-	
-	static public double[] toArray(ArrayList<Double> arrlist)
-	{
-		double[] arr = new double[arrlist.size()];
-		
-		for (int i=0; i<arrlist.size(); i++)
-			arr[i] = arrlist.get(i);
-		
-		return arr;
-	}
-	
+
 	static public ArrayList<Integer> toArrayList(StringTokenizer tok)
 	{
 		ArrayList<Integer> arrlist = new ArrayList<Integer>(tok.countTokens());
