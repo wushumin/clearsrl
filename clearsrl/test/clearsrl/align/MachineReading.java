@@ -231,6 +231,7 @@ public class MachineReading {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
+		    sentencePair.mergeAlignment();
 		    
 		    for (PBInstance pb:sentencePair.dst.pbInstances)
 		    {
