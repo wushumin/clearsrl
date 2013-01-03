@@ -231,7 +231,6 @@ public class MachineReading {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
-
 		    
 		    for (PBInstance pb:sentencePair.dst.pbInstances)
 		    {
@@ -293,6 +292,7 @@ public class MachineReading {
 		    
 		    if (options.useWA)
 		    {
+		    	
 		    	PBInstance[] srcPBs = new PBInstance[sentencePair.src.tokens.length];
 		    	
 		    	for (PBInstance srcPB:sentencePair.src.pbInstances)
@@ -515,7 +515,6 @@ public class MachineReading {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
-
 		    
 		    for (PBInstance pb:sentencePair.dst.pbInstances)
 		    {

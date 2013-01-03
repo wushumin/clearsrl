@@ -207,7 +207,7 @@ public 	class SentencePair implements Serializable {
 	public void mergeAlignment()
 	{
 
-		long[] idx = getWordAlignment(WordAlignmentType.SRC);
+		long[] idx = getWordAlignment(WordAlignmentType.UNION);
 		int[] src = new int[idx.length];
 		int[] dst = new int[idx.length];
 		
