@@ -7,6 +7,7 @@ import gnu.trove.TObjectIntIterator;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -28,14 +29,40 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.PropertyUtil;
+import clearsrl.RunSRL;
 
 public class MachineReading {
-
+	
+	@Option(name="-prop",usage="properties file")
+    private File propFile = null; 
+	
+	@Option(name="-prefix",usage="prefix")
+    private String prefix = "";
+	
+	@Option(name="-vnMember",usage="VerbNet member file")
+    private String vnmFilename = null;
+	
+	@Option(name="-threshold",usage="cutoff threshold")
+	private int threshold = 1;
+    
+    @Option(name="-printFull",usage="whether to print full example")
+	private boolean printFull = false;
+    
+    @Option(name="-useWA",usage="whether to use word alignment")
+	private boolean useWA = false;
+    
+    @Option(name="-h",usage="help message")
+    private boolean help = false;
+	
 	static Map<String, String> readMonoVerbNet(String file) throws IOException
 	{
 		Map<String, String> verbMap = new HashMap<String, String>();
@@ -111,26 +138,42 @@ public class MachineReading {
 	
 	public static void main(String[] args) throws IOException
 	{	
-		boolean printFull = false;
-		boolean useWA = false;
+	    MachineReading options = new MachineReading();
+	    CmdLineParser parser = new CmdLineParser(options);
+	    try {
+	    	parser.parseArgument(args);
+	    } catch (CmdLineException e)
+	    {
+	    	System.err.println("invalid options:"+e);
+	    	parser.printUsage(System.err);
+	        System.exit(0);
+	    }
+	    if (options.help){
+	        parser.printUsage(System.err);
+	        System.exit(0);
+	    }
+		
+		
+		//boolean printFull = false;
+		//boolean useWA = false;
 		
 		Properties props = new Properties();
 		{
-			FileInputStream in = new FileInputStream(args[0]);
+			FileInputStream in = new FileInputStream(options.propFile);
 			InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
 			props.load(iReader);
 			iReader.close();
 			in.close();
 		}
 		
-		Map<String, String> verbMap = readMonoVerbNet(args[2]);
+		Map<String, String> verbMap = readMonoVerbNet(options.vnmFilename);
 		
 		
 		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, Map<String, List<String>>> vnetMapping = new TreeMap<String, Map<String, List<String>>>();
 		
-		String baseFilter = args.length>1?args[1]:"";
+		String baseFilter = options.prefix;
 		if (!baseFilter.isEmpty())
 			props = PropertyUtil.filterProperties(props, baseFilter,true);
 		props = PropertyUtil.filterProperties(props, "align.");
@@ -248,7 +291,7 @@ public class MachineReading {
 		    Aligner.printAlignment(htmlStream, sentencePair, alignments, true);
 
 		    
-		    if (useWA)
+		    if (options.useWA)
 		    {
 		    	PBInstance[] srcPBs = new PBInstance[sentencePair.src.tokens.length];
 		    	
@@ -336,7 +379,7 @@ public class MachineReading {
                 }
                 tgtMap.put(srcRole, tgtMap.get(srcRole)+1);
                 
-                if (!useWA)
+                if (!options.useWA)
                 {
                 
 	                String vnId = sentencePair.dst.pbInstances[a.dstPBIdx].getVerbnetId();
@@ -413,7 +456,7 @@ public class MachineReading {
 			for (Iterator<Map.Entry<String, List<String>>> i2 = entry.getValue().entrySet().iterator(); i2.hasNext();)
 			{
 				Map.Entry<String, List<String>> e2 = i2.next();
-				if (e2.getValue().size()<=1 || srcLightVerbs.contains(e2.getKey())) i2.remove();
+				if (e2.getValue().size()<=options.threshold || srcLightVerbs.contains(e2.getKey())) i2.remove();
 			}
 
 			if (entry.getValue().isEmpty()) iter.remove();
@@ -433,7 +476,7 @@ public class MachineReading {
 				else
 					allCVerbs.add(e2.getKey());
 				
-				if (printFull)
+				if (options.printFull)
 				{
 					for (int i=0; i<e2.getValue().size();++i)
 						System.out.println("\t"+e2.getKey()+"."+i+" "+e2.getValue().get(i));
@@ -494,7 +537,7 @@ public class MachineReading {
 		    	*/
 		    }
 		    
-		    if (useWA)
+		    if (options.useWA)
 		    {		    	
 		    	PBInstance[] dstPBs = new PBInstance[sentencePair.dst.tokens.length];
 		    	
@@ -563,7 +606,7 @@ public class MachineReading {
     				else if (a.getDstPBArg(p.dstArgIdx).isPredicate()&& a.getSrcPBArg(p.srcArgIdx).isMainArg())
     					apMatch = true;
                 
-    			if (!useWA)
+    			if (!options.useWA)
     			{
 	                
 	                // strip roleset id
