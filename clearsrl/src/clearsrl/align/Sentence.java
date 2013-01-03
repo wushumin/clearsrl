@@ -51,7 +51,8 @@ public class Sentence implements Serializable{
 	    	sentence.indices[i] = makeIndex(tree.getIndex(),nodes.get(i).getTerminalIndex());
 	    	sentence.tokens[i] = nodes.get(i);
 	    }
-	                        
+	    sentence.findTerminals();
+ 
 	    sentence.pbInstances = pbInstanceList==null?new PBInstance[0]:pbInstanceList.toArray(new PBInstance[pbInstanceList.size()]);
 	    return sentence;
 	}
