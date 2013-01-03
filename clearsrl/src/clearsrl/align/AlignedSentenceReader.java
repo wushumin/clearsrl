@@ -73,7 +73,7 @@ public class AlignedSentenceReader extends SentenceReader {
 		
 		List<PBInstance> tmp = lastInstanceSet;
 		lastInstanceSet = null;
-		return Sentence.parseSentence(tree, tmp);
+		return Sentence.parseSentence(tmp.get(0).getTree(), tmp);
 
     }
     
