@@ -494,7 +494,7 @@ public class MachineReading {
 		System.out.println("verbs: "+polyCVerbs.size()+"/"+allCVerbs.size());
 		System.out.println(polyCVerbs);
 		
-		System.exit(0);
+		//System.exit(0);
 
 		TObjectIntHashMap<String> cntMap = new TObjectIntHashMap<String>();
 		Map<String, String> chVerbId = new TreeMap<String, String>();
@@ -516,6 +516,7 @@ public class MachineReading {
 		{
 		    SentencePair sentencePair = sentencePairReader.nextPair();
 		    if (sentencePair==null) break;
+		    sentencePair.mergeAlignment();
 		    
 		    for (PBInstance pb:sentencePair.dst.pbInstances)
 		    {
