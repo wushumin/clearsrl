@@ -972,6 +972,19 @@ public class SRLModel implements Serializable {
         List<SRInstance> predictions = new ArrayList<SRInstance>();
         
         List<TBNode> nodes = parseTree.getRootNode().getTokenNodes();
+        
+        //debug block
+        for (int i=0; i<nodes.size();++i)
+        	if (nodes.get(i).getTokenIndex()!=i)
+        	{
+        		System.err.println(parseTree.getFilename()+" "+parseTree.getIndex()+": "+parseTree.toString());
+        		for (int j=0; j<nodes.size();++j)
+        			System.err.print(nodes.get(j).getWord()+"/"+nodes.get(j).getTokenIndex()+" ");
+        		System.err.print("\n");
+        		System.err.flush();
+        		System.exit(1);
+        	}
+        
         double[] vals = new double[2];
         for (TBNode node: nodes)
             if (node.getPOS().startsWith("V") &&
