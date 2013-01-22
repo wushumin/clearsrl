@@ -117,6 +117,23 @@ public class SerialTBFileReader extends TBFileReader
 			} else if (head==curr) {
 				head.pos = str;
 			} else {
+				if (curr.terminalIndex >= 0)
+				{
+					// code to fix Berkeley parser anomaly 
+					if (curr.pos.equals("CD")) {
+						curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
+						curr = curr.getParent();
+						
+						TBNode childNode = new TBNode(curr, str, (short)(childNodeStack.peek().size()));
+						childNodeStack.peek().add(childNode);
+						
+						curr = childNode;                           // move to child
+						childNodeStack.push(new ArrayList<TBNode>());
+						curr.pos = "CD";
+					}
+					else
+						throw new ParseException(fileName+", "+treeCount+": multi-word token: "+curr.word+" "+str);
+				}
 				curr.word = str;						// str = word
 				curr.terminalIndex = terminalIndex++;
 				if (!curr.isEC())	curr.tokenIndex = tokenIndex++;

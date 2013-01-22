@@ -56,6 +56,20 @@ public class TestTBReader {
             }
         assertEquals(count, 4);
         List<TBTree> trees = new ArrayList<TBTree>();
+        /*
+        try {
+            TBFileReader tbReader = new SerialTBFileReader("/home/verbs/student/shumin/test.txt");
+            while ((tree=tbReader.nextTree())!=null)
+            {
+                trees.add(tree);
+            }
+        } catch (Exception e) {
+            // TODO Auto-generated catch blockassertFalse
+            e.printStackTrace();
+            assertFalse(true);
+        }
+        trees.clear();
+        */
         try {
             TBFileReader tbReader = new SerialTBFileReader("/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations","nw/wsj/23/wsj_2356.parse");
             while ((tree=tbReader.nextTree())!=null)
