@@ -415,8 +415,7 @@ public class SRInstance {
 		    if (arg.label.equals(SRLModel.NOT_ARG)) continue;
 			BitSet bits = arg.getTokenSet();
 			
-			//TODO: occasional null pointer, fix this bug!!!
-			for (int i = bits.nextSetBit(0); i >= 0 && i<labels.length ; i = bits.nextSetBit(i+1))
+			for (int i = bits.nextSetBit(0); i >= 0 ; i = bits.nextSetBit(i+1))
 			    labels[i] = arg.label;
 		}
 		
