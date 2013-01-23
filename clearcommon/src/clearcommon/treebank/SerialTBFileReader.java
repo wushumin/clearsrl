@@ -120,7 +120,7 @@ public class SerialTBFileReader extends TBFileReader
 				if (curr.terminalIndex >= 0)
 				{
 					// code to fix Berkeley parser anomaly 
-					String pos = curr.pos;
+					TBNode pNode = curr;
 					curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
 					curr = curr.getParent();
 					
@@ -129,8 +129,8 @@ public class SerialTBFileReader extends TBFileReader
 					
 					curr = childNode;                           // move to child
 					childNodeStack.push(new ArrayList<TBNode>());
-					curr.pos = pos;
-					logger.warning(fileName+", "+treeCount+": multi-word token: "+curr.word+" "+str);
+					curr.pos = pNode.pos;
+					logger.warning(fileName+", "+treeCount+": multi-word token: "+pNode.word+" "+str+"("+pNode.pos+")");
 				}
 				curr.word = str;						// str = word
 				curr.terminalIndex = terminalIndex++;
