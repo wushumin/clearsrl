@@ -108,7 +108,10 @@ public class TBTree implements Serializable
     	    {
     	        node.indexingNode = rootNode.findIndexedNode(Integer.parseInt(idxStr.substring(1)));
     	        if (node.indexingNode==null)
-    	            throw new ParseException(filename+", "+index+": Missing antecedent: "+idxStr);
+    	        {
+    	        	node.pos = node.pos+"-"+idxStr.substring(1);
+    	            logger.warning(filename+", "+index+": Missing antecedent: "+idxStr);
+    	        }
     	    }
         }
 	    
