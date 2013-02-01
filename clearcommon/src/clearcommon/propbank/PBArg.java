@@ -83,41 +83,33 @@ public class PBArg implements Comparable<PBArg>, Serializable
 
 	    // assign single node to represent this argument
 	    node = null;
-	    for (TBNode mainNode:mainNodes)
-	        if (!mainNode.isEC() && !mainNode.getTokenSet().isEmpty())
-	        {
-	            if (node!=null)
-	            {
-	            	// just find the WH node for R- arguments
-	            	if (label.startsWith("R-"))
-	            	{
-	            		node = null;
+	    
+	    // just find the WH node for R- arguments
+	    if (label.startsWith("R-"))
+    	{
+	    	for (TBNode aNode:mainNodes)
+    			if (aNode.getPOS().startsWith("WH"))
+    			{
+    				node = aNode;
+    				break;
+    			}
+    	}
+	    else {
+		    for (TBNode mainNode:mainNodes)
+		        if (!mainNode.isEC() && !mainNode.getTokenSet().isEmpty())
+		        {
+		            if (node!=null)
+		            {	
+	            		StringBuilder builder = new StringBuilder();
 	            		for (TBNode aNode:mainNodes)
-	            			if (aNode.getPOS().startsWith("WH") && !aNode.getTokenSet().isEmpty())
-	            				if (node!=null)
-	            				{
-	            					node = null;
-	            					break;
-	            				}
-	            				else
-	            					node = aNode;
-	            		if (node!=null) 
-            			{	
-	            			allNodes = new TBNode[1];
-	            			allNodes[0] = node;
-	            			break;
-            			}
-	            	}
-
-            		StringBuilder builder = new StringBuilder();
-            		for (TBNode aNode:mainNodes)
-            			builder.append("\n    "+aNode.toParse());
-            		throw new PBFormatException(label+": multiple non-EC node detected"+builder.toString());
-	            }
-	            node = mainNode;
-	        }
-	    // We have an empty argument
-	    if (node==null) node = mainNodes.get(0);
+	            			builder.append("\n    "+aNode.toParse());
+	            		throw new PBFormatException(label+": multiple non-EC node detected"+builder.toString());
+		            }
+		            node = mainNode;
+		        }
+		    // We have an empty argument
+		    if (node==null) node = mainNodes.get(0);
+	    }
 	    
 	    // populate token nodes, etc
         terminalSet = node.getTerminalSet();
