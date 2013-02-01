@@ -96,7 +96,8 @@ public class TrainSRL {
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
 		in.close();
-		
+        props = PropertyUtil.resolveEnvironmentVariables(props);
+        
 		props = PropertyUtil.filterProperties(props, "srl.");
 		props = PropertyUtil.filterProperties(props, "train.", true);
 		

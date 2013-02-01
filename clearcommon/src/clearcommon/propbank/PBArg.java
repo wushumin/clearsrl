@@ -88,10 +88,26 @@ public class PBArg implements Comparable<PBArg>, Serializable
 	        {
 	            if (node!=null)
 	            {
-	                StringBuilder builder = new StringBuilder();
-	                for (TBNode node:mainNodes)
-	                    builder.append("\n    "+node.toParse());
-	                throw new PBFormatException(label+": multiple non-EC node detected"+builder.toString());
+	            	// just find the WH node for R- arguments
+	            	if (label.startsWith("R-"))
+	            	{
+	            		node = null;
+	            		for (TBNode aNode:mainNodes)
+	            			if (aNode.getPOS().startsWith("WH") && !aNode.getTokenSet().isEmpty())
+	            				if (node!=null)
+	            				{
+	            					node = null;
+	            					break;
+	            				}
+	            				else
+	            					node = aNode;
+	            		if (node!=null) break;
+	            	}
+
+            		StringBuilder builder = new StringBuilder();
+            		for (TBNode aNode:mainNodes)
+            			builder.append("\n    "+aNode.toParse());
+            		throw new PBFormatException(label+": multiple non-EC node detected"+builder.toString());
 	            }
 	            node = mainNode;
 	        }

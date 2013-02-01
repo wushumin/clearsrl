@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +33,8 @@ import java.util.TreeSet;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+
+import com.sun.net.ssl.SSLContext;
 
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
@@ -135,6 +138,22 @@ public class MachineReading {
 		
 	}
 	
+	static class Sort implements Comparable<Sort> {
+		
+		public Sort(String key, double val)
+		{
+			this.key=key;
+			this.val=val;
+		}
+		
+		String key;
+		double val;
+		
+		@Override
+		public int compareTo(Sort rhs) {
+			return val==rhs.val?0:(val<rhs.val?-1:1);
+		}
+	}
 	
 	public static void main(String[] args) throws IOException
 	{	
@@ -638,19 +657,44 @@ public class MachineReading {
 		int total = 0;
 		int correct = 0;
 		
+		Sort[] sorts = new Sort[vvnetMapping.size()];
+		
+		/*
+		String[] keys = vvnetMapping.keySet().toArray(new String[vvnetMapping.size()]);
+		double[] scores = 
+		*/
+		int c = 0;
+		
 		for (Map.Entry<String, TObjectIntHashMap<String>>entry:vvnetMapping.entrySet())
 		{
+			int ltotal = 0;
+			int lcorrect = 0;
+			
 			System.out.println(entry.getKey());
 			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
 			{
 				tIter.advance();
-				total += tIter.value();
+				ltotal += tIter.value();
 				if (tIter.key().startsWith(entry.getKey())) 
-					correct+=tIter.value();
+					lcorrect+=tIter.value();
 				System.out.println("\t"+tIter.key()+" "+tIter.value());
 			}
+			sorts[c++] = new Sort(entry.getKey(), 1.0*lcorrect/ltotal);
+			
+			total += ltotal;
+			correct += lcorrect;
 		}
 		System.out.println(correct+"/"+total+" "+vvnetMapping.size());
+		
+		Arrays.sort(sorts);
+
+		for (Sort s:sorts)
+		{
+			System.out.printf("%s: %f\n", s.key, s.val);
+
+			for (Map.Entry<String, List<String>> e2:vnetMapping.get(s.key).entrySet())
+				System.out.println("\t"+e2.getKey()+" "+e2.getValue().size());
+		}
 			
 		System.exit(0);
 
