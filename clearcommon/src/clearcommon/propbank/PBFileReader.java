@@ -268,7 +268,7 @@ public class PBFileReader
 		for (PBArg arg:instance.allArgs)
 		{
 		    if (terminalSet.intersects(arg.terminalSet))
-		        throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens));
+		        throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens)+"\n"+instance);
 		    terminalSet.or(arg.terminalSet);
 		}
 		return instance;
