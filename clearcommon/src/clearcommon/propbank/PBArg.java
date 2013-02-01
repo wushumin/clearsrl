@@ -101,7 +101,12 @@ public class PBArg implements Comparable<PBArg>, Serializable
 	            				}
 	            				else
 	            					node = aNode;
-	            		if (node!=null) break;
+	            		if (node!=null) 
+            			{	
+	            			allNodes = new TBNode[1];
+	            			allNodes[0] = node;
+	            			break;
+            			}
 	            	}
 
             		StringBuilder builder = new StringBuilder();
