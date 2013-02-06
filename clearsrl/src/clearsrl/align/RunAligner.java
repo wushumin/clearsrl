@@ -38,28 +38,28 @@ public class RunAligner {
     @Option(name="-prop",usage="properties file")
     private File propFile = null; 
     
-    @Option(name="-st",usage="input file/directory")
+    @Option(name="-st",usage="source treebank file")
     private String srcTreeFile = null; 
     
-    @Option(name="-sp",usage="input file/directory")
+    @Option(name="-sp",usage="source propbank file")
     private String srcPropFile = null; 
     
-    @Option(name="-dt",usage="input file/directory")
+    @Option(name="-dt",usage="destination (translation) treebank file")
     private String dstTreeFile = null; 
     
-    @Option(name="-dp",usage="input file/directory")
+    @Option(name="-dp",usage="destination (translation) propbank file")
     private String dstPropFile = null; 
     
-    @Option(name="-a",usage="alignment")
+    @Option(name="-wa",usage="word alignment file")
     private String alignmentFile = null; 
  
-    @Option(name="-t",usage="threshold")
+    @Option(name="-t",usage="threshold [0.0, 1.0]")
     private double threshold = -1; 
     
     @Option(name="-out",usage="output file/directory")
     private String outFile = null; 
 
-    @Option(name="-filter",usage="output file/directory")
+    @Option(name="-filter",usage="filters the set of properties in the properties file")
     private String filter = ""; 
     
     @Option(name="-h",usage="help message")
@@ -101,11 +101,11 @@ public class RunAligner {
 		if (options.srcPropFile != null) props.setProperty("src.pbfile", options.srcPropFile);
 		if (options.dstTreeFile != null) props.setProperty("dst.tbfile", options.dstTreeFile);
 		if (options.dstPropFile != null) props.setProperty("dst.pbfile", options.dstPropFile);
-		if (options.alignmentFile != null) props.setProperty("alignment", options.alignmentFile);
+		if (options.alignmentFile != null) props.setProperty("token_alignment", options.alignmentFile);
 		if (options.threshold > 0) props.setProperty("threshold", Double.toString(options.threshold));
 		if (options.outFile != null) props.setProperty("output.txt", options.outFile);
 		
-		System.out.print(PropertyUtil.toString(props));
+		logger.info(PropertyUtil.toString(props));
 		
 		SentencePairReader sentencePairReader = null;
 		
@@ -245,8 +245,8 @@ public class RunAligner {
 		if (alignmentStream!=System.out) alignmentStream.close();
 		
 		logger.info(String.format("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt));
-		stat.printStats(System.out);
-		aligner.collectStats();
+		//stat.printStats(System.out);
+		//aligner.collectStats();
 	}
 }
 

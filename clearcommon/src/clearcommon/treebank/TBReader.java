@@ -31,7 +31,7 @@ public class TBReader {
     {
     	File dirFile = new File(dir);
     	if (dirFile.isFile())
-    		this.dir = dirFile.getParentFile().getAbsolutePath();
+    		this.dir = dirFile.getAbsoluteFile().getParentFile().getAbsolutePath();
     	else
     		this.dir = dir;
     	

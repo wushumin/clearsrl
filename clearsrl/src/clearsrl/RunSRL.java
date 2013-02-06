@@ -76,10 +76,12 @@ public class RunSRL {
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
-
+    
+    @Option(name="-format",usage="srl output format: TEXT/PROPBANK")
+    private SRInstance.OutputFormat outputFormat = null;
+    
     private SRLModel model; 
     private LanguageUtil langUtil;
-    private SRInstance.OutputFormat outputFormat;
     
 	static final float THRESHOLD=0.8f;
 
@@ -393,8 +395,9 @@ public class RunSRL {
         	logger.severe("Predicate Classifier not trained!");
         	System.exit(-1);
         }
-		
-        options.outputFormat = SRInstance.OutputFormat.valueOf(runSRLProps.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
+        
+		if (options.outputFormat==null)
+			options.outputFormat = SRInstance.OutputFormat.valueOf(runSRLProps.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
         
         //File outputDir = null;
         //{

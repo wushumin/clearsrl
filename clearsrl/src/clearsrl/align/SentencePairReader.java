@@ -51,7 +51,7 @@ public abstract class SentencePairReader {
         if (objStreamAvailable)
         {
             try {
-                inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
+                inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("sentencePair_file", "")),GZIP_BUFFER),GZIP_BUFFER*4));
                 return;
             } catch (FileNotFoundException e) {
                 objStreamAvailable = false;
@@ -62,9 +62,9 @@ public abstract class SentencePairReader {
         }
         
 		try {
-            outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file")),GZIP_BUFFER),GZIP_BUFFER*4));
+            outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file", "")),GZIP_BUFFER),GZIP_BUFFER*4));
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 		
     }
