@@ -213,12 +213,11 @@ public class RunSRL {
             
             if (outputParse)
             {
-                String fName = null;
                 if (outName==null)
-                    fName = "stdout.parse";
+                	inName = "stdout.parse";
                 else
-                    fName = (outName.endsWith(".prop") ? outName.substring(0, outName.length()-5) : outName) + ".parse";
-                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(fName), "UTF-8"));
+                	inName = (outName.endsWith(".prop") ? outName.substring(0, outName.length()-5) : outName) + ".parse";
+                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(inName), "UTF-8"));
             }
         }
         

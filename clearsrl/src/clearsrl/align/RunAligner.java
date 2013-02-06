@@ -6,6 +6,7 @@ import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,36 +21,97 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.Logger;
+
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.util.PropertyUtil;
+import clearsrl.RunSRL;
 
 public class RunAligner {
+	
+	private static Logger logger = Logger.getLogger("clearsrl");
 
+    @Option(name="-prop",usage="properties file")
+    private File propFile = null; 
+    
+    @Option(name="-st",usage="input file/directory")
+    private String srcTreeFile = null; 
+    
+    @Option(name="-sp",usage="input file/directory")
+    private String srcPropFile = null; 
+    
+    @Option(name="-dt",usage="input file/directory")
+    private String dstTreeFile = null; 
+    
+    @Option(name="-dp",usage="input file/directory")
+    private String dstPropFile = null; 
+    
+    @Option(name="-a",usage="alignment")
+    private String alignmentFile = null; 
+ 
+    @Option(name="-t",usage="threshold")
+    private double threshold = -1; 
+    
+    @Option(name="-out",usage="output file/directory")
+    private String outFile = null; 
+
+    @Option(name="-filter",usage="output file/directory")
+    private String filter = ""; 
+    
+    @Option(name="-h",usage="help message")
+    private boolean help = false;
+    
 	public static void main(String[] args) throws IOException
-	{			
+	{	
+		RunAligner options = new RunAligner();
+	    CmdLineParser parser = new CmdLineParser(options);
+	    try {
+	    	parser.parseArgument(args);
+	    } catch (CmdLineException e)
+	    {
+	    	System.err.println("invalid options:"+e);
+	    	parser.printUsage(System.err);
+	        System.exit(0);
+	    }
+	    if (options.help){
+	        parser.printUsage(System.err);
+	        System.exit(0);
+	    }
+		
 		Properties props = new Properties();
 		{
-			FileInputStream in = new FileInputStream(args[0]);
+			FileInputStream in = new FileInputStream(options.propFile);
 			InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
 			props.load(iReader);
 			iReader.close();
 			in.close();
+			props = PropertyUtil.resolveEnvironmentVariables(props);
 		}
 		
 		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
 		
-		String baseFilter = args.length>1?args[1]:"";
-		props = PropertyUtil.filterProperties(props, baseFilter+"align.");
+		props = PropertyUtil.filterProperties(props, options.filter+"align.");
+		
+		if (options.srcTreeFile != null) props.setProperty("src.tbfile", options.srcTreeFile);
+		if (options.srcPropFile != null) props.setProperty("src.pbfile", options.srcPropFile);
+		if (options.dstTreeFile != null) props.setProperty("dst.tbfile", options.dstTreeFile);
+		if (options.dstPropFile != null) props.setProperty("dst.pbfile", options.dstPropFile);
+		if (options.alignmentFile != null) props.setProperty("alignment", options.alignmentFile);
+		if (options.threshold > 0) props.setProperty("threshold", Double.toString(options.threshold));
+		if (options.outFile != null) props.setProperty("output.txt", options.outFile);
 		
 		System.out.print(PropertyUtil.toString(props));
 		
 		SentencePairReader sentencePairReader = null;
 		
-		if (baseFilter.startsWith("ldc"))
+		if (options.filter.startsWith("ldc"))
 		{
-			if (baseFilter.startsWith("ldc09"))
+			if (options.filter.startsWith("ldc09"))
 				sentencePairReader = new LDC09SentencePairReader(props, false);
 			else
 				sentencePairReader = new LDCSentencePairReader(props, false);
@@ -68,8 +130,6 @@ public class RunAligner {
 		
 		int srcTokenCnt = 0;
 		int dstTokenCnt = 0;
-
-		System.out.println("#****************************");
 		
 		String htmlOutfile = props.getProperty("output.html", null);
 		
@@ -96,11 +156,9 @@ public class RunAligner {
 		    if (sentencePair==null) break;
 
 		    if (sentencePair.id%1000==999)
-		    {
-		    	System.out.println(sentencePair.id+1);
-		    }
+		    	logger.info(String.format("processing line %d",sentencePair.id+1));
 		    
-		    if (baseFilter.startsWith("ldc09"))
+		    if (options.filter.startsWith("ldc09"))
 		    {
 		    	boolean skip = true;
 		    	for (TBNode terminal:sentencePair.src.terminals)
@@ -186,237 +244,9 @@ public class RunAligner {
 		Aligner.finalizeAlignmentOutput(htmlStream);
 		if (alignmentStream!=System.out) alignmentStream.close();
 		
-		System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
+		logger.info(String.format("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt));
 		stat.printStats(System.out);
 		aligner.collectStats();
-		
-		System.exit(0);
-		
-		// Get rid of singleton mapping and light verbs
-		Set<String> srcLightVerbs = new HashSet<String>();
-		{
-			StringTokenizer tok = new StringTokenizer(props.getProperty("aligner.srcLightVerbs"),",");
-			while(tok.hasMoreTokens())
-				srcLightVerbs.add(tok.nextToken().trim()+".");
-			System.out.println(srcLightVerbs);
-		}
-		
-		Set<String> dstLightVerbs = new HashSet<String>();
-		{
-			StringTokenizer tok = new StringTokenizer(props.getProperty("aligner.dstLightVerbs"),",");
-			while(tok.hasMoreTokens())
-				dstLightVerbs.add(tok.nextToken().trim()+".");
-			System.out.println(dstLightVerbs);
-		}
-		
-		for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = srcDstMapping.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
-			
-			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
-			{
-				tIter.advance();
-				if (tIter.value()==1 || dstLightVerbs.contains(tIter.key().substring(0,tIter.key().lastIndexOf('.')+1)))
-					tIter.remove();
-			}
-			if (entry.getValue().isEmpty() || srcLightVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-				iter.remove();
-		}
-		for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = dstSrcMapping.entrySet().iterator(); iter.hasNext();)
-		{
-			Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
-			
-			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
-			{
-				tIter.advance();
-				if (tIter.value()==1 || srcLightVerbs.contains(tIter.key().substring(0,tIter.key().lastIndexOf('.')+1)))
-					tIter.remove();
-			}
-			if (entry.getValue().isEmpty() || dstLightVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-				iter.remove();
-		}
-
-		Set<String> dstVerbs = new TreeSet<String>();
-		{
-			StringTokenizer tok = new StringTokenizer(props.getProperty("aligner.dstVerbs"),",");
-			while(tok.hasMoreTokens())
-				dstVerbs.add(tok.nextToken().trim()+".");
-		}
-		
-		/*
-		int idx =0;
-		{
-			int []cnt = new int[dstSrcMapping.size()];
-			for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-				cnt[idx++] = -entry.getValue().size();
-			Arrays.sort(cnt);
-			idx = cnt.length>=60?-cnt[59]:-cnt[cnt.length-1];
-		}
-		
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-		{
-			if (entry.getValue().size()>=idx)
-				dstVerbs.add(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1));
-		}
-
-		if (dstVerbs.size()>50)
-		{
-			idx = 0;
-			int []cnt = new int[dstSrcMapping.size()];
-			for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-			{
-				if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-					continue;
-				
-				for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-				{
-					iter.advance();
-					cnt[idx]-= iter.value();
-				}
-				++idx;
-			}
-			Arrays.sort(cnt);
-			idx = cnt.length>=65?-cnt[64]:-cnt[cnt.length-1];
-			
-			for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-			{
-				if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-					continue;
-				
-				int size = 0;
-				TObjectIntIterator<String> iter=entry.getValue().iterator();
-				while(iter.hasNext())
-				{
-					iter.advance();
-					size += iter.value();
-				}
-				if (size<idx)
-					dstVerbs.remove(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1));
-			}
-		}
-*/	
-		System.out.print(dstVerbs.size()+" [");
-		for (String word:dstVerbs)
-			System.out.print(word.substring(0,word.length()-1)+" ");
-		System.out.println("]");
-
-
-		Set<String> srcRoles = new TreeSet<String>();
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-		{
-			if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-				continue;
-
-			System.out.println(entry.getKey()+":");
-			for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-			{
-				iter.advance();
-				System.out.printf("\t%s %d\n", iter.key(), iter.value());
-				srcRoles.add(iter.key());
-			}
-		}		
-		Set<String> dstVerbsMapped = new TreeSet<String>();
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
-		{
-			if (!srcRoles.contains(entry.getKey()))
-				continue;
-			//System.out.println(entry.getKey()+":");
-			TObjectIntIterator<String> iter=entry.getValue().iterator();
-			while(iter.hasNext())
-			{
-				iter.advance();
-				dstVerbsMapped.add(iter.key().substring(0,iter.key().lastIndexOf('.')+1));
-
-			}
-		}
-		dstVerbsMapped.removeAll(dstLightVerbs);
-		
-		System.out.print(dstVerbsMapped.size()+" [");
-		for (String word:dstVerbsMapped)
-			System.out.print(word.substring(0,word.length()-1)+" ");
-		System.out.println("]");
-		
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
-		{
-			if (srcRoles.contains(entry.getKey()))
-				continue;
-
-			System.out.println(entry.getKey()+":");
-			for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-			{
-				iter.advance();
-				System.out.printf("\t%s %d\n", iter.key(), iter.value());
-			}
-		}
-		
-		Map<String, TObjectDoubleHashMap<String>> srcDstMap2 = new TreeMap<String, TObjectDoubleHashMap<String>>();
-		Map<String, TObjectDoubleHashMap<String>> dstDstMap2 = new TreeMap<String, TObjectDoubleHashMap<String>>();
-		
-		for (String key:srcRoles)
-			srcDstMap2.put(key, new TObjectDoubleHashMap<String>());
-		
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
-		{
-			TObjectDoubleHashMap<String> map = srcDstMap2.get(entry.getKey());
-			if (map==null) continue;
-			double cnt = 0;
-			for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-			{
-				iter.advance();
-				cnt += iter.value();
-			}
-			
-			for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-			{
-				iter.advance();
-				map.put(iter.key(),iter.value()/cnt);
-			}			
-		}
-
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
-		{
-			if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
-				continue;
-			TObjectDoubleHashMap<String> map = new TObjectDoubleHashMap<String>();
-			dstDstMap2.put(entry.getKey(), map);
-			
-			for (TObjectIntIterator<String> sIter=entry.getValue().iterator();sIter.hasNext();)
-			{
-				sIter.advance();
-				for (TObjectDoubleIterator<String> iter=srcDstMap2.get(sIter.key()).iterator();iter.hasNext();)
-				{
-					iter.advance();
-					map.put(iter.key(),map.get(iter.key())+iter.value()*sIter.value());
-				}
-			}
-		}
-		{
-			double []cnt = new double[dstDstMap2.size()];
-			int idx=0; 
-			for (Map.Entry<String, TObjectDoubleHashMap<String>> entry:dstDstMap2.entrySet())
-			{
-				for (TObjectDoubleIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-				{
-					iter.advance();
-					cnt[idx] = cnt[idx]>iter.value()?cnt[idx]:iter.value();
-				}
-				idx++;
-			}
-			idx=0;
-			for (Map.Entry<String, TObjectDoubleHashMap<String>> entry:dstDstMap2.entrySet())
-			{
-				System.out.println(entry.getKey()+":");
-				for (TObjectDoubleIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
-				{
-					iter.advance();
-					if (iter.value() >= cnt[idx]*0.1)
-						System.out.printf("\t%s %.3f\n", iter.key(), iter.value());
-					else if (iter.value()>=2 && iter.value() >= cnt[idx]*0.05)
-						System.out.printf("\t[%s %.3f]\n", iter.key(), iter.value());
-				}
-				idx++;
-			}
-		}
 	}
 }
 
