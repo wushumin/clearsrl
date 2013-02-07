@@ -63,7 +63,7 @@ public class RunSRL {
     private boolean compressOutput = false; 
     
     @Option(name="-out",usage="output file/directory")
-    private File outFile = null; 
+    private File outFile = null;
     
     @Option(name="-usePropBank",usage="use PropBank to find predicates")
     private boolean usePropBank = false; 

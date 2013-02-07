@@ -878,7 +878,7 @@ public class SRLModel implements Serializable {
         for (int i=0; i<y.length; ++i)
         {
             if (labelIndexMap.get(yV[i])==null)
-                logger.warning("unknown label encountered: "+yV[i]);
+                logger.warning("unknown label encountered: "+yV[i]+"training label is "+labelIndexMap.get(y[i])+"/"+y[i]);
             scorer.addResult(labelIndexMap.get(yV[i]),labelIndexMap.get(y[i]));
         }
         logger.info(scorer.toString());
