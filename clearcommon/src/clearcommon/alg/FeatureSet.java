@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,36 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         for (String fStr:fArray)
             fList.add(T.valueOf(cType,fStr));
         return EnumSet.copyOf(fList);
+    }
+    
+    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input)
+    {
+    	return getBigramSet(input, false);
+    }
+    
+    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input, boolean allPairing)
+    {
+    	Set<EnumSet<T>> output = new HashSet<EnumSet<T>>(input);
+    	if (allPairing) {
+    		List<EnumSet<T>> enumList = new ArrayList<EnumSet<T>>(input);
+    		for (int i=0; i<enumList.size()-1; ++i)
+	        	for (int j=i+1; j<enumList.size(); ++j)
+	        	{
+	        		List<T> featureList = new ArrayList<T>(enumList.get(i));
+	        		featureList.addAll(enumList.get(j));
+	        		output.add(EnumSet.copyOf(featureList));
+	        	}
+    	} else {
+	    	List<T> featureList = new ArrayList<T>();
+	        for (EnumSet<T> feature:input)
+	        	featureList.addAll(feature);
+	        
+	        for (int i=0; i<featureList.size()-1; ++i)
+	        	for (int j=i+1; j<featureList.size(); ++j)
+	        		output.add(EnumSet.of(featureList.get(i), featureList.get(j)));
+    	}
+        
+    	return output;
     }
     
     public Map<EnumSet<T>,List<String>> convertFlatSample(EnumMap<T,List<String>> sampleFlat)
