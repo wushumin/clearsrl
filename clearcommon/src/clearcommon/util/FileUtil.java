@@ -1,9 +1,14 @@
 package clearcommon.util;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class FileUtil
@@ -12,6 +17,24 @@ public class FileUtil
     {
         return getFiles(dir, regex, false);
     }
+    
+    static public List<String> getFileList(File dir, File file)
+    {
+    	Set<String> fileList = new TreeSet<String>();
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(file));
+			String line;
+	    	while ((line=reader.readLine())!=null)
+	    		if (new File(dir, line).isFile())
+	    			fileList.add(line);
+	    	reader.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+    	
+        return new ArrayList<String>(fileList);
+    }
+    
 	static public List<String> getFiles(File dir, String regex, boolean fullName)
 	{
 		List<String> fileNames = new ArrayList<String>();

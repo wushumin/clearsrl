@@ -35,9 +35,34 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+
 public class ParseCorpus {
     
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+    
+    @Option(name="-prop",usage="properties file")
+    private File propFile = null; 
+    
+    @Option(name="-in",usage="input file/directory")
+    private String treeDir = null; 
+    
+    @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
+    private String inFileList = null; 
+    
+    @Option(name="-txtdir",usage="list of files in the input directory to process (overwrites regex)")
+    private String txtDir = null; 
+    
+    @Option(name="-model",usage="list of files in the input directory to process (overwrites regex)")
+    private String grammar = null; 
+    
+    @Option(name="-out",usage="output file/directory")
+    private String outDir = null;
+    
+    @Option(name="-h",usage="help message")
+    private boolean help = false;
     
     ExecutorService executor;
     PriorityQueue<Sentence> parseQueue;
@@ -45,7 +70,11 @@ public class ParseCorpus {
     Properties props;
     PTBLineLexer tokenizer;
     
-    public ParseCorpus(Properties props)
+    public ParseCorpus()
+    {
+    }
+    
+    public void initialize(Properties props)
     {
         this.props = props;
 
@@ -259,24 +288,56 @@ public class ParseCorpus {
 	
 	public static void main(String[] args) throws Exception
 	{
+		ParseCorpus parser = new ParseCorpus();
+		CmdLineParser cmdParser = new CmdLineParser(parser);
+		
+		try {
+			cmdParser.parseArgument(args);
+	    } catch (CmdLineException e) {
+	    	System.err.println("invalid options:"+e);
+	    	cmdParser.printUsage(System.err);
+	        System.exit(0);
+	    }
+	    if (parser.help){
+	    	cmdParser.printUsage(System.err);
+	        System.exit(0);
+	    }
+
 	    Properties props = new Properties();
-		Reader in = new InputStreamReader(new FileInputStream(args[0]), "UTF-8");
+		Reader in = new InputStreamReader(new FileInputStream(parser.propFile), "UTF-8");
 		props.load(in);
 		props = PropertyUtil.resolveEnvironmentVariables(props);
 		in.close();
 		props = PropertyUtil.filterProperties(props, "parser.");
 
-		ParseCorpus parser = new ParseCorpus(props);
+		if (parser.treeDir!=null) props.setProperty("tbdir", parser.treeDir);
+		if (parser.txtDir!=null) props.setProperty("tbtxtdir", parser.txtDir);
+		if (parser.inFileList!=null) props.setProperty("filelist", parser.inFileList);
+		if (parser.outDir!=null) props.setProperty("parsedir", parser.outDir);
+		if (parser.grammar!=null) props.setProperty("grammar",parser.grammar);
+		
+		parser.initialize(props);
         
 		String txtDir = props.getProperty("tbtxtdir");
 	    String parseDir = props.getProperty("parsedir");
+	    
+	    List<String> fileNames = null;
+	    
 		if (props.getProperty("tbdir")!=null)
 		{
-		    Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex"));
+			String fileList = props.getProperty("filelist");
+			
+			if (fileList != null)
+				fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
+			
+		    Map<String, TBTree[]> treeBank = fileList==null?
+		    		TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
+		    		TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
 		    TBUtil.extractText(txtDir, treeBank);
 		}
 		
-		List<String> fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
+		if (fileNames==null)
+			fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
 		
 		for (String fileName:fileNames)
 		{

@@ -58,6 +58,9 @@ public class RunSRL {
     
     @Option(name="-in",usage="input file/directory")
     private File inFile = null; 
+    
+    @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
+    private File inFileList = null; 
  
     @Option(name="-compressOutput",usage="Compress the SRL output")
     private boolean compressOutput = false; 
@@ -446,15 +449,18 @@ public class RunSRL {
             ParseCorpus phraseParser = null;
             
             if (!options.parsed)
-                phraseParser = new ParseCorpus(PropertyUtil.filterProperties(props, "parser."));
-                
+            {
+                phraseParser = new ParseCorpus();
+                phraseParser.initialize(PropertyUtil.filterProperties(props, "parser."));
+            }   
             if (options.inFile==null)
             {
                 options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null);
             }
             else {
-                List<String> fileList = FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"));
-
+                List<String> fileList = options.inFileList==null?FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"))
+                		:FileUtil.getFileList(options.inFile, options.inFileList);
+                	
                 for (String fName:fileList)
                 {
                     File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);

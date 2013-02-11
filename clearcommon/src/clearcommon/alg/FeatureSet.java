@@ -223,6 +223,10 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }
     
     public String toString() {
+        return toString(features);
+    }
+    
+    public static <T extends Enum<T>> String toString(Set<EnumSet<T>> features) {
         StringBuilder builder = new StringBuilder();
         for (EnumSet<T> feature:features)
         {
@@ -232,13 +236,10 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return builder.toString();
     }
     
-    public String toString(EnumSet<T> feature) {
-        
-        Iterator<T> iter = feature.iterator();
-        
-        StringBuilder builder = new StringBuilder(iter.next().toString());
-        for (;iter.hasNext();)
-            builder.append("-"+iter.next().toString());
+    public static <T extends Enum<T>> String toString(EnumSet<T> feature) {
+        StringBuilder builder = new StringBuilder();
+        for (T t:feature)
+            builder.append("-"+t.toString());
         return builder.toString();
     }
 
