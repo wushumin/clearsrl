@@ -342,6 +342,11 @@ public class ParseCorpus {
 		for (String fileName:fileNames)
 		{
 			File inputFile = new File(txtDir, fileName);
+			if (!inputFile.exists()) {
+				logger.severe(inputFile.getAbsolutePath()+" does not exist");
+				continue;
+			}
+			
 			File outputFile = new File(parseDir, fileName);
 			
 			outputFile.getParentFile().mkdirs();
