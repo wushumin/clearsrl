@@ -175,8 +175,8 @@ public class TrainSRL {
 				String treeRegex = srcProps.getProperty("tb.regex");
 				Map<String, TBTree[]> srcTreeBank = TBUtil.readTBDir(srcProps.getProperty("tbdir"), treeRegex);
 				
-				String filename = srcProps.getProperty("pb.fileList");
-				List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"))
+				String filename = srcProps.getProperty("pb.filelist");
+				List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"), true)
                 		:FileUtil.getFileList(new File(srcProps.getProperty("pbdir")), new File(filename), true);
 				
 				Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank),
