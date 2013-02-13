@@ -18,15 +18,22 @@ public class FileUtil
         return getFiles(dir, regex, false);
     }
     
-    static public List<String> getFileList(File dir, File file)
+    static public List<String> getFileList(File dir, File file) {
+    	return getFileList(dir, file, false);
+
+    }
+    
+    static public List<String> getFileList(File dir, File file, boolean fullPath)
     {
     	Set<String> fileList = new TreeSet<String>();
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			String line;
 	    	while ((line=reader.readLine())!=null)
-	    		if (new File(dir, line).isFile())
-	    			fileList.add(line);
+	    	{
+	    		File f = new File(dir, line);
+	    		if (f.isFile()) fileList.add(fullPath?f.getAbsolutePath():line);
+	    	}
 	    	reader.close();
 		} catch (IOException e) {
 			e.printStackTrace();

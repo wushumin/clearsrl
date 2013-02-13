@@ -148,6 +148,8 @@ public class SRLModel implements Serializable {
 
 	transient int                                        hit = 0;
 	transient int                                        total = 0;
+
+	
 	
 	transient Logger                                     logger;
 	
@@ -881,7 +883,7 @@ public class SRLModel implements Serializable {
                 logger.warning("unknown label encountered: "+yV[i]+"training label is "+labelIndexMap.get(y[i])+"/"+y[i]);
             scorer.addResult(labelIndexMap.get(yV[i]),labelIndexMap.get(y[i]));
         }
-        logger.info(scorer.toString());
+        logger.info("Cross validation score: \n"+scorer.toString());
         
         {
             List<int[]> xList = new ArrayList<int[]>();

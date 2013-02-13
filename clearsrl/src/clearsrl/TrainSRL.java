@@ -11,6 +11,7 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.treebank.ParseException;
+import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 
@@ -159,42 +160,59 @@ public class TrainSRL {
         TObjectIntHashMap<String> rolesetArg = new TObjectIntHashMap<String>();
 		if (!dataFormat.equals("conll"))
 		{
-			String treeRegex = props.getProperty("tb.regex");
-			String propRegex = props.getProperty("pb.regex");
-			Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), treeRegex);
-			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = 
-			    PBUtil.readPBDir(props.getProperty("pbdir"), 
-			                     propRegex, 
-			                     new TBReader(treeBank),
-			                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+			String sourceList = props.getProperty("sources","");
+			String[] sources = sourceList.trim().split("\\s*,\\s*");
 			
+			Map<String, TBTree[]> treeBank = null;
+			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
+			Map<String, TBTree[]> parsedTreeBank = props.getProperty("goldparse", "false").equals("true")?null:new TreeMap<String, TBTree[]>();
+			
+			for (String source:sources) {
+				System.out.println("Processing source "+source);
+				Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
+				System.out.println(PropertyUtil.toString(srcProps));
+				
+				String treeRegex = srcProps.getProperty("tb.regex");
+				Map<String, TBTree[]> srcTreeBank = TBUtil.readTBDir(srcProps.getProperty("tbdir"), treeRegex);
+				
+				String filename = srcProps.getProperty("pb.fileList");
+				List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"))
+                		:FileUtil.getFileList(new File(srcProps.getProperty("pbdir")), new File(filename), true);
+				
+				Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank),
+	                     srcProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+
+				if (parsedTreeBank!=null)
+					for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:srcPropBank.entrySet())
+	    			{
+	    			    try {
+	    	                TBFileReader tbreader    = new SerialTBFileReader(srcProps.getProperty("parsedir"), entry.getKey());
+	    	                System.out.println("Reading "+srcProps.getProperty("parsedir")+File.separatorChar+entry.getKey());
+	    	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
+	    	                TBTree tree;
+	    	                while ((tree = tbreader.nextTree()) != null)
+	    	                    a_tree.add(tree);
+	    	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
+	    	            } catch (FileNotFoundException e) {
+	    	            } catch (ParseException e) {
+	    	                e.printStackTrace();
+	    	            }
+	    			}
+				
+				if (treeBank==null) treeBank = srcTreeBank;
+				else treeBank.putAll(srcTreeBank);
+				
+				if (propBank==null) propBank = srcPropBank;
+				else propBank.putAll(srcPropBank);
+			}
+
 			System.out.println(propBank.size());
+
 			
-			Map<String, TBTree[]> parsedTreeBank = null;
-			
-			if (!props.getProperty("goldparse", "false").equals("false"))
+			if (parsedTreeBank==null)
 			{
 			    parsedTreeBank = treeBank;
 			    model.setTrainGoldParse(true);
-			}
-			else
-			{
-    			parsedTreeBank = new TreeMap<String, TBTree[]>();
-    			for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:propBank.entrySet())
-    			{
-    			    try {
-    	                TBFileReader tbreader    = new SerialTBFileReader(props.getProperty("parsedir"), entry.getKey());
-    	                System.out.println("Reading "+props.getProperty("parsedir")+File.separatorChar+entry.getKey());
-    	                ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
-    	                TBTree tree;
-    	                while ((tree = tbreader.nextTree()) != null)
-    	                    a_tree.add(tree);
-    	                parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
-    	            } catch (FileNotFoundException e) {
-    	            } catch (ParseException e) {
-    	                e.printStackTrace();
-    	            }
-    			}
 			}
 
 			model.initDictionary();
