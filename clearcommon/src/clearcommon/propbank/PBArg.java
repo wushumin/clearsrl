@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 import clearcommon.treebank.*;
 
@@ -15,6 +16,8 @@ public class PBArg implements Comparable<PBArg>, Serializable
      * 
      */
     private static final long serialVersionUID = 3167382729194529990L;
+ 
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     static final String LABEL_PATTERN = "(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
     static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
@@ -84,8 +87,10 @@ public class PBArg implements Comparable<PBArg>, Serializable
 	    // assign single node to represent this argument
 	    node = null;
 	    
+	    if (mainNodes.size()==1)
+	    	node = mainNodes.get(0);
 	    // just find the WH node for R- arguments
-	    if (label.startsWith("R-"))
+	    else if (label.startsWith("R-"))
     	{
 	    	for (TBNode aNode:mainNodes)
     			if (aNode.getPOS().startsWith("WH"))
@@ -93,6 +98,13 @@ public class PBArg implements Comparable<PBArg>, Serializable
     				node = aNode;
     				break;
     			}
+	    	if (node==null) {
+	    		node = mainNodes.get(0);
+	    		StringBuilder builder = new StringBuilder(":");
+	    		for (TBNode aNode:mainNodes)
+	    			builder.append(" "+aNode.toParse());
+	    		logger.warning("Didn't find WH node for "+label+builder.toString());
+	    	}
     	}
 	    else {
 		    for (TBNode mainNode:mainNodes)

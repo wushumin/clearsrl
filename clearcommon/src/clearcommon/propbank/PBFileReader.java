@@ -215,7 +215,11 @@ public class PBFileReader
 	                        if (isSLC)
 	                        {
 	                            linkArg.label = arg.label;
-	                            linkArg.allNodes = Arrays.asList(linkArg.allNodes[0].getPOS().startsWith("WH")?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
+	                            
+	                            if (arg.allNodes.length==1)
+	                            	linkArg.allNodes = Arrays.asList(linkArg.allNodes[0]==node?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
+	                            else
+	                            	linkArg.allNodes = Arrays.asList(linkArg.allNodes[0].getPOS().startsWith("WH")?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
 	                            arg.label = "R-"+linkArg.label;
 	                            arg.linkingArg = linkArg;
 	                        } else {
