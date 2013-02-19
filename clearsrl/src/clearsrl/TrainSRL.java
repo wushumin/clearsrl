@@ -166,6 +166,8 @@ public class TrainSRL {
 			Map<String, TBTree[]> treeBank = null;
 			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
 			Map<String, TBTree[]> parsedTreeBank = props.getProperty("goldparse", "false").equals("true")?null:new TreeMap<String, TBTree[]>();
+			Map<String, Integer> trainWeights =new TreeMap<String, Integer>();
+			
 			
 			for (String source:sources) {
 				System.out.println("Processing source "+source);
@@ -182,6 +184,8 @@ public class TrainSRL {
 				Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank),
 	                     srcProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNoteTreeFileResolver():null);
 
+				int weight = Integer.parseInt(srcProps.getProperty("weight", "1"));
+				
 				if (parsedTreeBank!=null)
 					for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:srcPropBank.entrySet())
 	    			{
@@ -202,6 +206,9 @@ public class TrainSRL {
 				if (treeBank==null) treeBank = srcTreeBank;
 				else treeBank.putAll(srcTreeBank);
 				
+				for (String key:srcPropBank.keySet())
+					trainWeights.put(key, weight);
+				
 				if (propBank==null) propBank = srcPropBank;
 				else propBank.putAll(srcPropBank);
 			}
@@ -220,6 +227,8 @@ public class TrainSRL {
 			{
 				SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
 				if (pbFileMap==null) continue;
+				int weight = trainWeights.get(entry.getKey());
+				
 				
 				System.out.println("Processing (p1) "+entry.getKey());
 			    TBTree[] trees = entry.getValue();
@@ -247,7 +256,8 @@ public class TrainSRL {
     			                }
     			            }
 			            }
-                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, true);
+			            for (int w=0; w<weight; ++w)
+	                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, true);
                     }
 			        else if (pbInstances!=null)
 			        {
@@ -255,7 +265,8 @@ public class TrainSRL {
                         {
                             //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
                             SRInstance instance = new SRInstance(pbInstance);
-                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, true);
+                            for (int w=0; w<weight; ++w)
+                            	addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, true);
                         }
 			        }
 			    }
@@ -278,6 +289,7 @@ public class TrainSRL {
             {
             	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
             	if (pbFileMap==null) continue;
+            	int weight = trainWeights.get(entry.getKey());
             	
             	System.out.println("Processing (p2) "+entry.getKey());
                 TBTree[] trees = entry.getValue(); 
@@ -295,8 +307,8 @@ public class TrainSRL {
                                     srls.add(new SRInstance(instance));
                             }
                         }
-                        
-                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, false);
+			            for (int w=0; w<weight; ++w)
+			            	addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, false);
                     }
                     else if (pbInstances!=null)
                     {
@@ -304,7 +316,8 @@ public class TrainSRL {
                         {
                             //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
                             SRInstance instance = new SRInstance(pbInstance);
-                            addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, false);
+    			            for (int w=0; w<weight; ++w)
+    			            	addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, false);
                         }
                     }
                 }
