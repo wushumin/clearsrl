@@ -299,7 +299,23 @@ public class TBNode implements Serializable
         return null;
     }
     
-   
+    
+    public TBNode getNodeByTokenIndex(int tokenIndex)
+    {
+        if (tokenIndex<0) return null;
+        if (this.tokenIndex == tokenIndex)
+            return this;
+        if (isTerminal()) return null;
+        if (-this.tokenIndex<=tokenIndex)
+            return null;
+        TBNode retNode;
+        for (TBNode node:children)
+            if ((retNode=node.getNodeByTokenIndex(tokenIndex))!=null)
+                return retNode;
+
+        return null;
+    }
+    
     /**
      * Returns the Node Id in PropBank format
      * id[0] is the terminal index of the left most terminal
@@ -319,27 +335,18 @@ public class TBNode implements Serializable
     	return id;
     }
     
+    /**
+     * Equivalent to getNodeByTerminalIndex(terminalIndex).getAncestor(ancestorLevel) but with null checking
+     * @param terminalIndex
+     * @param ancestorLevel
+     * @return
+     */
     public TBNode getNode(int terminalIndex, int ancestorLevel)
     {
         TBNode node = getNodeByTerminalIndex(terminalIndex);
         return node==null?null:node.getAncestor(ancestorLevel);
     }
-    
-    public TBNode getNodeByTokenIndex(int tokenIndex)
-    {
-        if (tokenIndex<0) return null;
-        if (this.tokenIndex == tokenIndex)
-            return this;
-        if (isTerminal()) return null;
-        if (-this.tokenIndex<=tokenIndex)
-            return null;
-        TBNode retNode;
-        for (TBNode node:children)
-            if ((retNode=node.getNodeByTokenIndex(tokenIndex))!=null)
-                return retNode;
 
-        return null;
-    }
 	
 	public BitSet getTerminalSet()
 	{
@@ -355,29 +362,56 @@ public class TBNode implements Serializable
         return tokenSet;
     }
 
-	public int getTokenIndexStart()
+	/**
+	 * get the first token in the constituent
+	 * @return the first token in the constituent
+	 */
+	public TBNode getStartToken()
 	{
-		return getIndex(false, true);
+		return findBoundaryNode(false, true);
+	}
+
+	/**
+	 * get the last token in the constituent
+	 * @return the last token in the constituent
+	 */	
+	public TBNode getEndToken()
+	{
+		return findBoundaryNode(false, false);
 	}
 	
-	public int getTokenIndexEnd()
+	/**
+	 * get the first terminal in the constituent
+	 * @return the first terminal in the constituent
+	 */
+	public TBNode getStartTerminal()
 	{
-		return getIndex(false, false);
+		return findBoundaryNode(true, true);
 	}
 	
-	public int getTerminalIndexStart()
+	/**
+	 * get the last terminal in the constituent
+	 * @return the last terminal in the constituent
+	 */	
+	public TBNode getEndTerminal()
 	{
-		return getIndex(true, true);
+		return findBoundaryNode(true, false);
 	}
 	
-	public int getTerminalIndexEnd()
+	TBNode findBoundaryNode(boolean onTerminal, boolean start)
 	{
-		return getIndex(true, false);
-	}
-	
-	int getIndex(boolean onTerminal, boolean start)
-	{
-		return 0;
+		if (isTerminal())
+			return onTerminal||isToken()?this:null;
+		
+		TBNode node;
+		if (start) {
+			for (TBNode child:children)
+				if ((node=child.findBoundaryNode(onTerminal, start))!=null) return node;
+		} else {
+			for (int i=children.length-1; i>=0; --i)
+				if ((node=children[i].findBoundaryNode(onTerminal, start))!=null) return node;
+		}
+		return null;
 	}
 	
 	void getIndexSet(boolean onTerminal, BitSet indexSet)
@@ -451,12 +485,21 @@ public class TBNode implements Serializable
 		return str.toString();
 	}
 	
-	public String toText()
+	/**
+	 * Similar to toString() but w/o trace expansion
+	 * @return
+	 */
+	public String toText(boolean wTerminal)
 	{
 		StringBuilder str = new StringBuilder();
-		for (TBNode node:getTokenNodes())
+		for (TBNode node:(wTerminal?getTerminalNodes():getTokenNodes()))
 			str.append(node.getWord()+' ');
 		return str.toString();
+	}
+
+	public String toText()
+	{
+		return toText(false);
 	}
 
 	@Override
@@ -480,10 +523,15 @@ public class TBNode implements Serializable
             headConstituent = headConstituent.parent;
     }
     
+    /**
+     * returns the highest level constituent with the same head
+     * @return
+     */
     public TBNode getConstituentByHead()
     {
         return headConstituent;
     }
+    
     
     public TBNode getHeadOfToken()
     {

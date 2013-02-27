@@ -127,7 +127,7 @@ public class TBTree implements Serializable
         return;
     }
 	
-	public String toText() {
+	public String toText(boolean wTerminal) {
 		return rootNode.toText();
 	}
 	
