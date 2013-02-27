@@ -127,6 +127,9 @@ public class TBTree implements Serializable
         return;
     }
 	
+	public String toText() {
+		return rootNode.toText();
+	}
 	
 	@Override
     public String toString()

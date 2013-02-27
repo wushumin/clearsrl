@@ -355,6 +355,31 @@ public class TBNode implements Serializable
         return tokenSet;
     }
 
+	public int getTokenIndexStart()
+	{
+		return getIndex(false, true);
+	}
+	
+	public int getTokenIndexEnd()
+	{
+		return getIndex(false, false);
+	}
+	
+	public int getTerminalIndexStart()
+	{
+		return getIndex(true, true);
+	}
+	
+	public int getTerminalIndexEnd()
+	{
+		return getIndex(true, false);
+	}
+	
+	int getIndex(boolean onTerminal, boolean start)
+	{
+		return 0;
+	}
+	
 	void getIndexSet(boolean onTerminal, BitSet indexSet)
 	{
 	    if (onTerminal) {
