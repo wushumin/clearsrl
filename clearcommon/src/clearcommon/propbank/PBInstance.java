@@ -80,6 +80,22 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
         return allArgs;
     }
     
+	/**
+	 * Returns the Node Id in PropBank format id[0] is the terminal index of the
+	 * left most terminal id[1] is the tree level (from the left most terminal)
+	 * @param node the input treebank node
+	 * @return the Node Id in PropBank format
+	 */
+    public static int[] getNodeId(TBNode node) {
+		int[] id = new int[2];
+		while (node.getChildren().length != 0) {
+			++id[1];
+			node = node.getChildren()[0];
+		}
+		id[0] = node.getTerminalIndex();
+		return id;
+    }
+    
 	static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String pre, String post,  boolean printEC)
 	{
 		List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();

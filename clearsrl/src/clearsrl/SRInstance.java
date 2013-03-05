@@ -274,7 +274,7 @@ public class SRInstance {
                argMap.put(label, argOut);
            }
            
-           int[] id = arg.node.getPBId();
+           int[] id = PBInstance.getNodeId(arg.node);
            if (arg.label.startsWith("C-"))
         	   argOut.get(argOut.size()-1).append(","+id[0]+":"+id[1]);
            else
