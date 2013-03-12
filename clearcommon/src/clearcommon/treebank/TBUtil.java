@@ -163,9 +163,9 @@ public final class TBUtil {
                 	logger.info("reading tree "+tree.index);
             }
             return a_tree.toArray(new TBTree[a_tree.size()]);
-        } catch(Exception e)
-        {
+        } catch(Exception e) {
         	logger.severe(e.getMessage());
+        	e.printStackTrace();
             return null;
         }
     }

@@ -84,7 +84,7 @@ public class TBTree implements Serializable {
 
 	void linkIndices(TBNode node) throws ParseException {
 		Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
-		matcher.matches();
+		if (!matcher.matches()) return;
 		String idxStr = matcher.group(6);
 		if (idxStr != null) {
 			node.indexingNode = rootNode.findIndexedNode(Integer

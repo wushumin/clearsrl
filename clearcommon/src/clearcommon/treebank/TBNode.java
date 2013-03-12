@@ -94,7 +94,7 @@ public class TBNode implements Serializable {
 	// this should only be called once when tree is read in
 	void cleanUpPOS() {
 		Matcher matcher = POS_PATTERN.matcher(pos);
-		matcher.matches();
+		if (!matcher.matches()) return;
 		pos = matcher.group(1);
 		String[] fTags = matcher.group(2).split("\\-");
 		if (fTags.length > 1) {
