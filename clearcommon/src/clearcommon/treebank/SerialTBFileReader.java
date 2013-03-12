@@ -98,7 +98,7 @@ public class SerialTBFileReader extends TBFileReader
 				if ((str = nextToken()) == null)		// str = pos-tag
 					throw new ParseException(fileName+", "+treeCount+": POS-tag is missing, Read \""+inputStr.toString()+"\"");
 				if (!TBNode.POS_PATTERN.matcher(str).matches())
-				    throw new ParseException(fileName+", "+treeCount+": Malformed POS tag: "+str);
+					logger.warning(fileName+", "+treeCount+": Malformed POS tag: "+str);
 				
 				TBNode childNode = new TBNode(curr, str, (short)(childNodeStack.peek().size()));
 				childNodeStack.peek().add(childNode);
