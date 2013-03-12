@@ -532,4 +532,11 @@ public class TBNode implements Serializable {
 		return str.toString();
 	}
 
+	public String toDependence(boolean wTerminal) {
+		StringBuilder str = new StringBuilder();
+		for (TBNode node : (wTerminal ? getTerminalNodes() : getTokenNodes()))
+			str.append(node.getWord() + "_" + (wTerminal?node.getTerminalIndex():node.getTokenIndex())+"/"+(node.getHeadOfHead()==null?-1:(wTerminal?node.getHeadOfHead().getTerminalIndex():node.getHeadOfHead().getTokenIndex()))+' ');
+		return str.toString();
+	}
+
 }

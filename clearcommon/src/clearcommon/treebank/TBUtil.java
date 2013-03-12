@@ -98,13 +98,17 @@ public final class TBUtil {
 		return head;
 	}
 	
-	public static TBNode findHeads(TBNode node, TBHeadRules headrules)
-    {
+	public static void linkHeads(TBTree tree, TBHeadRules headrules) {
+		findHeads(tree.getRootNode(), headrules);
+		for (TBNode aNode : tree.getRootNode().getTerminalNodes())
+			aNode.linkDependency();
+	}
+
+	static TBNode findHeads(TBNode node, TBHeadRules headrules) {
 		if (node.isTerminal()) return node.head=node;
 		
         TBHeadRule headrule = headrules.getHeadRule(node.pos);
-        if (headrule==null)
-        {
+        if (headrule==null) {
             if (node.pos.equals("NML"))
                 node.pos = "NP";
             else if (node.pos.equals("SG"))
@@ -119,16 +123,12 @@ public final class TBUtil {
         for (TBNode childNode: node.getChildren())
         	findHeads(childNode, headrules);
 
-        for (int r=0; r<headrule.rules.length; ++r)
-        {
-            if (headrule.dirs[r] == TBHeadRule.Direction.LEFT)
-            {
+        for (int r=0; r<headrule.rules.length; ++r) {
+            if (headrule.dirs[r] == TBHeadRule.Direction.LEFT) {
                 for (int i=0; i<node.children.length; i++)
                     if ((node.head = findHeadsAux(node, node.children[i], headrule.rules[r]))!=null)
                         return node.head;
-            }
-            else
-            {
+            } else {
                 for (int i=node.children.length-1; i>=0; i--)
                 	if ((node.head = findHeadsAux(node, node.children[i], headrule.rules[r]))!=null)
                         return node.head;
@@ -195,6 +195,14 @@ public final class TBUtil {
 		
 		return tbMap;
 	}
+    
+    public static void extractText(PrintStream out, TBTree[] trees) {
+    	for (TBTree tree:trees) {
+			for (TBNode node: tree.getRootNode().getTokenNodes())
+				out.print(node.word+" ");
+			out.print('\n');
+		}
+    }
 
 	public static void extractText(String outputDir, Map<String, TBTree[]> trees)
 	{
@@ -208,12 +216,7 @@ public final class TBUtil {
 				File file = new File(dir, entry.getKey());
 				file.getParentFile().mkdirs();
 				PrintStream pStream = new PrintStream(file, "UTF-8");
-				for (TBTree tree:entry.getValue())
-				{
-					for (TBNode node: tree.getRootNode().getTokenNodes())
-						pStream.print(node.word+" ");
-					pStream.print('\n');
-				}
+				extractText(pStream, entry.getValue());
 				pStream.close();
 			} catch (Exception e)
 			{

@@ -82,12 +82,6 @@ public class TBTree implements Serializable {
 		return tokenCount;
 	}
 
-	public void linkDependency() {
-		for (TBNode aNode : rootNode.getTokenNodes())
-			aNode.linkDependency();
-		return;
-	}
-
 	void linkIndices(TBNode node) throws ParseException {
 		Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
 		matcher.matches();
@@ -131,4 +125,9 @@ public class TBTree implements Serializable {
 		return rootNode.toText(wTerminal);
 	}
 
+	public String toDependence(boolean wTerminal) {
+		return rootNode.toDependence(wTerminal);
+	}
+
+	
 }
