@@ -180,9 +180,13 @@ public class TBNode implements Serializable {
 	 * @return
 	 */
 	public List<TBNode> getDependentNodes() {
+		return getDependentNodes(false);
+	}
+	
+	public List<TBNode> getDependentNodes(boolean terminal) {
 		ArrayList<TBNode> dependents = new ArrayList<TBNode>();
 
-		for (TBNode token : headConstituent.getTokenNodes())
+		for (TBNode token : terminal?headConstituent.getTerminalNodes():headConstituent.getTokenNodes())
 			if (token.getHeadOfHead() == this && token != this)
 				dependents.add(token);
 

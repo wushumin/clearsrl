@@ -53,6 +53,8 @@ public class ExtractCorpusText {
 		for (String fName:files) {
 			TBTree[] trees =  TBUtil.readTBFile(options.treeDir.getPath(), fName);
 			
+			if (trees==null) continue;
+			
 			if (fName.endsWith(".parse"))
 				fName = fName.substring(0, fName.length()-5)+"txt";
 

@@ -235,7 +235,7 @@ public class TrainSRL {
 			    
 			    for (int i=0; i<trees.length; ++i)
 			    {
-			        TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
+			        TBUtil.linkHeads(trees[i], langUtil.getHeadRules());
 			        List<PBInstance> pbInstances = pbFileMap.get(i);
 			        if (modelPredicate)
 			        {
@@ -398,7 +398,7 @@ public class TrainSRL {
             model.initDictionary();
             for (CoNLLSentence sentence:training)
             {
-                TBUtil.findHeads(sentence.parse.getRootNode(), langUtil.getHeadRules());
+                TBUtil.linkHeads(sentence.parse, langUtil.getHeadRules());
                 addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, true);
             }
             model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));

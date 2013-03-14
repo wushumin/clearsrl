@@ -92,7 +92,7 @@ public class TestPassive {
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
-                    TBUtil.findHeads(trees[i].getRootNode(), langUtil.getHeadRules());
+                    TBUtil.linkHeads(trees[i], langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap.get(i);
                     if (pbInstances==null) continue;
                     for (PBInstance instance:pbInstances)
@@ -113,7 +113,7 @@ public class TestPassive {
     		
     		for (CoNLLSentence sentence:training)
     		{
-    			TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
+    			TBUtil.linkHeads(sentence.parse, headrules);
     			for (SRInstance instance:sentence.srls)
     			{
     				if (instance.getPredicateNode().getPOS().matches("V.*"))

@@ -120,7 +120,7 @@ public class RunSRL {
                 //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
                 //for (TBNode node:nodes)
                 //    System.out.println(node.toParse());
-                TBUtil.findHeads(tree.getRootNode(), langUtil.getHeadRules());
+                TBUtil.linkHeads(tree, langUtil.getHeadRules());
                 List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(tree.getIndex());
                 SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
                 for (int j=0; j<goldInstances.length; ++j)
@@ -554,7 +554,7 @@ public class RunSRL {
 			
 			for (CoNLLSentence sentence:testing)
 			{
-			    TBUtil.findHeads(sentence.parse.getRootNode(), options.langUtil.getHeadRules());
+			    TBUtil.linkHeads(sentence.parse, options.langUtil.getHeadRules());
 				for (SRInstance instance:sentence.srls)
 				{
 					ArrayList<TBNode> argNodes = new ArrayList<TBNode>();

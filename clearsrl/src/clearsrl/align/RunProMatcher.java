@@ -136,10 +136,10 @@ public class RunProMatcher {
 	public static ProAlignment[] findProAlignments(SentencePair s, Alignment[] alignments, LanguageUtil srcLangUtil, LanguageUtil dstLangUtil)
 	{
 		for (PBInstance pb:s.src.pbInstances)
-			TBUtil.findHeads(pb.getTree().getRootNode(), srcLangUtil.getHeadRules());  
+			TBUtil.linkHeads(pb.getTree(), srcLangUtil.getHeadRules());  
 
 		for (PBInstance pb:s.dst.pbInstances)
-			TBUtil.findHeads(pb.getTree().getRootNode(), dstLangUtil.getHeadRules());  
+			TBUtil.linkHeads(pb.getTree(), dstLangUtil.getHeadRules());  
 
 		TreeSet<ProAlignment> pAlignSet = new TreeSet<ProAlignment>();
 		
