@@ -38,24 +38,36 @@ public class WriteSentencePro {
     	TERMINAL,
     }
     
-	static void printProLine(Type type, Sentence sentence, LanguageUtil langUtil, PrintStream out) {
+	static void printProLine(Type type, Sentence sentence, LanguageUtil langUtil, PrintStream textOut, PrintStream terminalOut) {
 		switch(type) {
 		case TERMINAL:
 			for (TBNode node:sentence.terminals)
-				out.print(node.getECType()+" ");
+				textOut.print(node.getECType()+" ");
+			for (long index:sentence.terminalIndices)
+				terminalOut.printf("%d-%d ", Sentence.getTreeIndex(index), Sentence.getTerminalIndex(index));
 			break;
 		case TOKEN:
 			for (TBNode node:sentence.tokens)
-				out.print(node.getWord()+" ");
+				textOut.print(node.getWord()+" ");
+			for (long index:sentence.indices)
+				terminalOut.printf("%d-%d ", Sentence.getTreeIndex(index), Sentence.getTerminalIndex(index));
 			break;
 		case PRO:
-			for (TBNode node:sentence.terminals)
-				if (node.isToken()) out.print(node.getWord()+" ");
-				else if (node.getECType().toLowerCase().equals("*pro*"))  out.print(node.getECType()+" ");
+			for (int i=0; i<sentence.terminals.length; ++i) {
+				if (sentence.terminals[i].isToken()) {
+					textOut.print(sentence.terminals[i].getWord()+" ");
+					terminalOut.printf("%d-%d ", Sentence.getTreeIndex(sentence.terminalIndices[i]), Sentence.getTerminalIndex(sentence.terminalIndices[i]));
+				} else if (sentence.terminals[i].getECType().toLowerCase().equals("*pro*")) {
+					textOut.print(sentence.terminals[i].getECType()+" ");
+					terminalOut.printf("%d-%d ", Sentence.getTreeIndex(sentence.terminalIndices[i]), Sentence.getTerminalIndex(sentence.terminalIndices[i]));
+				}
+			}
 			break;
 		case DEPPRO:
 			TBNode[] sbjDep = new TBNode[sentence.tokens.length];
 			TBNode[] objDep = new TBNode[sentence.tokens.length];
+			long[] sbjIdx = new long[sentence.tokens.length];
+			long[] objIdx = new long[sentence.tokens.length];
 			
 			int idx;
 			for (TBTree tree:sentence.treeMap.values()) {
@@ -64,24 +76,30 @@ public class WriteSentencePro {
 					if ((idx=Arrays.binarySearch(sentence.indices, Sentence.makeIndex(tree.getIndex(), dep.getPredicate().getTerminalIndex())))<0) continue;
 					
 					if (sbjDep[idx]==null && dep.getSubject()!=null && 
-							Arrays.binarySearch(sentence.terminalIndices, Sentence.makeIndex(tree.getIndex(), dep.getSubject().getTerminalIndex()))>=0) 
+							Arrays.binarySearch(sentence.terminalIndices, sbjIdx[idx]=Sentence.makeIndex(tree.getIndex(), dep.getSubject().getTerminalIndex()))>=0) 
 						sbjDep[idx] = dep.getSubject();
 					
 					if (objDep[idx]==null && dep.getObject()!=null && 
-							Arrays.binarySearch(sentence.terminalIndices, Sentence.makeIndex(tree.getIndex(), dep.getObject().getTerminalIndex()))>=0)
+							Arrays.binarySearch(sentence.terminalIndices, objIdx[idx]=Sentence.makeIndex(tree.getIndex(), dep.getObject().getTerminalIndex()))>=0)
 						objDep[idx] = dep.getObject();
 				}
 			}
 			
 			for (int i=0; i<sentence.tokens.length; ++i) {
-				if (sbjDep[i]!=null && sbjDep[i].getECType().toLowerCase().equals("*pro*"))
-					out.print("sbj-"+sbjDep[i].getECType()+" ");
-				out.print(sentence.tokens[i].getWord()+" ");
-				if (objDep[i]!=null && objDep[i].getECType().toLowerCase().equals("*pro*"))
-					out.print("obj-"+objDep[i].getECType()+" ");
+				if (sbjDep[i]!=null && sbjDep[i].getECType().toLowerCase().equals("*pro*")) {
+					textOut.print("sbj-"+sbjDep[i].getECType()+" ");
+					terminalOut.printf("%d-%d ", Sentence.getTreeIndex(sbjIdx[i]), Sentence.getTerminalIndex(sbjIdx[i]));
+				}
+				textOut.print(sentence.tokens[i].getWord()+" ");
+				terminalOut.printf("%d-%d ", Sentence.getTreeIndex(sentence.indices[i]), Sentence.getTerminalIndex(sentence.indices[i]));
+				if (objDep[i]!=null && objDep[i].getECType().toLowerCase().equals("*pro*")) {
+					textOut.print("obj-"+objDep[i].getECType()+" ");
+					terminalOut.printf("%d-%d ", Sentence.getTreeIndex(objIdx[i]), Sentence.getTerminalIndex(objIdx[i]));
+				}
 			}
 		}
-		out.print("\n");
+		textOut.print("\n");
+		terminalOut.print("\n");
 	}
 	
 	public static void main(String[] args) throws IOException{
@@ -126,19 +144,27 @@ public class WriteSentencePro {
 		Sentence src;
 		Sentence dst;
 		
-		PrintStream srcOut = new PrintStream(srcProps.getProperty("protext"));
-		PrintStream dstOut = new PrintStream(dstProps.getProperty("protext"));
+		String prefix = options.type.toString().toLowerCase()+'.';
+		
+		PrintStream srcOut = new PrintStream(srcProps.getProperty(prefix+"text"));
+		PrintStream dstOut = new PrintStream(dstProps.getProperty(prefix+"text"));
+		
+		PrintStream srcTerminalOut = new PrintStream(srcProps.getProperty(prefix+"terminal"));
+		PrintStream dstTerminalOut = new PrintStream(dstProps.getProperty(prefix+"terminal"));
+
 		
 		while ((src=srcReader.nextSentence())!=null && (dst=dstReader.nextSentence())!=null)
 		{
-			printProLine(options.type, src, chLangUtil, srcOut);
-			printProLine(options.type.equals(Type.DEPPRO)?Type.PRO:options.type, dst, null, dstOut);
+			printProLine(options.type, src, chLangUtil, srcOut, srcTerminalOut);
+			printProLine(options.type.equals(Type.DEPPRO)?Type.PRO:options.type, dst, null, dstOut, dstTerminalOut);
 		}
 		
 		srcReader.close();
 		dstReader.close();
 		srcOut.close();
 		dstOut.close();
+		srcTerminalOut.close();
+		dstTerminalOut.close();
 		
 	}
 }
