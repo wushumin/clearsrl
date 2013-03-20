@@ -72,7 +72,7 @@ public class WriteSentencePro {
 			int idx;
 			for (TBTree tree:sentence.treeMap.values()) {
 				TBUtil.linkHeads(tree, langUtil.getHeadRules());
-				for (ECDependent dep:ECDependent.getECDependents(tree)) {
+				for (ECDependent dep:ECDependent.getDependents(tree)) {
 					if ((idx=Arrays.binarySearch(sentence.indices, Sentence.makeIndex(tree.getIndex(), dep.getPredicate().getTerminalIndex())))<0) continue;
 					
 					if (sbjDep[idx]==null && dep.getSubject()!=null && 

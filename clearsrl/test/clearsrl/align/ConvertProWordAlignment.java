@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Properties;
 
@@ -22,6 +23,20 @@ public class ConvertProWordAlignment {
 		for (int i=0; i<s.terminals.length; ++i)
 			if (s.terminals[i].isToken() || s.terminals[i].getWord().matches("\\*[pP].*"))
 				nIdx.add(i);
+
+		return nIdx.toNativeArray();
+	}
+	
+	static int[] convertIndices(Sentence s, String line)
+	{
+		String[] texts = line.split("\\s+");
+
+		TIntArrayList nIdx = new TIntArrayList();
+		for (int i=0; i<texts.length; ++i) {
+			int treeIdx = Integer.parseInt(texts[i].substring(0,texts[i].indexOf('-')));
+			int terminalIdx = Integer.parseInt(texts[i].substring(texts[i].indexOf('-')+1));
+			nIdx.add(Arrays.binarySearch(s.terminalIndices, Sentence.makeIndex(treeIdx, terminalIdx)));
+		}
 
 		return nIdx.toNativeArray();
 	}
@@ -48,7 +63,11 @@ public class ConvertProWordAlignment {
 		SentenceReader dstReader = new TokenedSentenceReader(dstProp);
 		dstReader.initialize();
 		
-		BufferedReader waReader = new BufferedReader(new FileReader(props.getProperty("pro_alignment")));
+		String prefix = args[1];
+		
+		BufferedReader waReader = new BufferedReader(new FileReader(props.getProperty(prefix+"alignment")));
+		BufferedReader srcTerminalReader = new BufferedReader(new FileReader(props.getProperty("src."+prefix+"terminal")));
+		BufferedReader dstTerminalReader = new BufferedReader(new FileReader(props.getProperty("dst."+prefix+"terminal")));
 		
 		PrintStream waOut = new PrintStream(props.getProperty("terminal_alignment"));
 		PrintStream waTokenOut = new PrintStream(props.getProperty("token_alignment"));
@@ -59,8 +78,11 @@ public class ConvertProWordAlignment {
 		{
 			dstS = dstReader.nextSentence();
 			
-			int[] srcIdx = convertIndices(srcS);
-			int[] dstIdx = convertIndices(dstS);
+			//int[] srcIdx = convertIndices(srcS);
+			//int[] dstIdx = convertIndices(dstS);
+			
+			int[] srcIdx = convertIndices(srcS, srcTerminalReader.readLine().trim());
+			int[] dstIdx = convertIndices(dstS, dstTerminalReader.readLine().trim());
 			
 			String line = waReader.readLine().trim();
 			
@@ -69,11 +91,14 @@ public class ConvertProWordAlignment {
 	        int srcI, dstI;
 	        System.out.print(sCnt);
 	        
-	        BitSet proSet = new BitSet();
+
 	        
+	        BitSet proSet = new BitSet();	        
 	        for (int i=0; i<srcS.terminals.length; ++i)
 	        	if (srcS.terminals[i].getWord().startsWith("*pro"))
 	        		proSet.set(i);
+	        
+	        //System.err.println(Arrays.asList(srcS.terminals));
 	        
 	        for (String s : alignmentStrs)
 	        {
@@ -96,6 +121,8 @@ public class ConvertProWordAlignment {
 		
 		srcReader.close();
 		dstReader.close();
+		srcTerminalReader.close();
+		dstTerminalReader.close();
 		waReader.close();
 		waOut.close();
 		waTokenOut.close();

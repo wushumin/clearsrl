@@ -56,10 +56,10 @@ public class ECDependent {
 		return nodes;
 	}
 	
-	public static List<ECDependent> getECDependents(TBTree tree) {
+	public static List<ECDependent> getDependents(List<TBNode> nodes) {
 		List<ECDependent> labels = new ArrayList<ECDependent>(); 
 
-		for (TBNode node:getECCandidates(tree)) {
+		for (TBNode node:nodes) {
 			ECDependent label = new ECDependent(node);
 			for (TBNode dependent:node.getDependentNodes(true)) {
 				if (dependent.isEC()) {
@@ -73,6 +73,10 @@ public class ECDependent {
 			labels.add(label);
 		}
 		return labels;
+	}
+	
+	public static List<ECDependent> getDependents(TBTree tree) {
+		return getDependents(getECCandidates(tree));
 	}
 
 	public String toString() {
