@@ -117,7 +117,7 @@ public abstract class SentencePairReader {
             }
     }
     
-    void close()
+    public void close()
     {
         if (inStream != null)
             try {

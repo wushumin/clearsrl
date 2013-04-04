@@ -89,6 +89,7 @@ public class SRLModel implements Serializable {
 	    PREDICATE,
 	    PREDICATEPOS,
 	    PARENTPOS,
+	    HEADOFVP,
 	    LEFTWORD,
 	    LEFTWORDPOS,
 	    RIGHTHEADWORD,
@@ -683,8 +684,7 @@ public class SRLModel implements Serializable {
         EnumMap<PredFeature,List<String>> sampleFlat = new EnumMap<PredFeature,List<String>>(PredFeature.class);
         
         // find predicate lemma
-        String predicateLemma = predicateNode.getWord();
-        {
+        String predicateLemma = predicateNode.getWord(); {
             List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
             if (!stems.isEmpty()) predicateLemma = stems.get(0);
         }
@@ -694,6 +694,12 @@ public class SRLModel implements Serializable {
         TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().length-1)?
                 predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
+        
+        TBNode vpAncestor = predicateNode;
+        while (vpAncestor != null && !vpAncestor.getPOS().equals("VP"))
+        	vpAncestor = vpAncestor.getParent();
+        if (vpAncestor!=null && !vpAncestor.getPOS().equals("VP"))
+        	vpAncestor = null;
         
         for (PredFeature feature:predFeatures.getFeaturesFlat())
         {
@@ -709,6 +715,10 @@ public class SRLModel implements Serializable {
                 if (parent!=null)
                     sampleFlat.put(feature, trainGoldParse?parent.getFunctionTaggedPOS():Arrays.asList(parent.getPOS()));
                 break;
+            case HEADOFVP:
+            	if (vpAncestor != null)
+            		sampleFlat.put(feature, Arrays.asList(Boolean.toString(vpAncestor.getHead()==predicateNode)));
+            	break;
             case LEFTWORD:
                 if (leftNode!=null) sampleFlat.put(feature, Arrays.asList(leftNode.getWord()));   
                 break;

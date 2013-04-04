@@ -24,15 +24,15 @@ public class Sentence implements Serializable{
 
     static final Pattern sentPattern = Pattern.compile("(\\d+)[~-](\\d+)");
 	   
-    public String   tbFile;
+    public String               tbFile;
     public Map<Integer, TBTree> treeMap;
-    public TBNode[] tokens;
-    public TBNode[] terminals;
-    public long[]   indices;
-    public long[]   terminalIndices;
-    int[]           tokenToTerminalMap;
-    int[]           terminalToTokenMap;
-    PBInstance[]    pbInstances; 
+    public TBNode[]             tokens;
+    public TBNode[]             terminals;
+    public long[]               indices;
+    public long[]               terminalIndices;
+    public int[]                tokenToTerminalMap;
+    public int[]                terminalToTokenMap;
+    public PBInstance[]         pbInstances; 
     
     
     

@@ -146,7 +146,7 @@ public class TBNode implements Serializable {
 
 		return null;
 	}
-
+	
 	public TBNode getAncestor(int level) {
 		if (level == 0)
 			return this;
@@ -269,6 +269,14 @@ public class TBNode implements Serializable {
 			child.getIndexSet(onTerminal, indexSet);
 	}
 
+	public int getLevelToRoot() {
+		int level = 0;
+		TBNode ancestor = this;
+		while ((ancestor=ancestor.parent)!=null)
+			++level;
+		return level;
+	}
+	
 	public TBNode getLowestCommonAncestor(TBNode node) {
 		List<TBNode> lhs = getPathToRoot();
 		List<TBNode> rhs = node.getPathToRoot();

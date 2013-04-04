@@ -129,7 +129,7 @@ public class DefaultSentencePairReader extends SentencePairReader{
     }
     
     @Override
-    void close()
+	public void close()
     {
         if (srcSentenceReader!=null)
             srcSentenceReader.close();

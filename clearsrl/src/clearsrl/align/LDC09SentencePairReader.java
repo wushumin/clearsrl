@@ -372,7 +372,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
 	}
 	
 	@Override
-	void close() {
+	public void close() {
 		
 		// put at end
 		super.close();

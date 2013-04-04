@@ -266,7 +266,7 @@ public class LDCSentencePairReader extends SentencePairReader {
     }
 	
 	@Override
-    void close()
+    public void close()
     {
 	    sentenceInfoScanner = closeScanner(sentenceInfoScanner);
 	    srcTokenScanner     = closeScanner(srcTokenScanner);
