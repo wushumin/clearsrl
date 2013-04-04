@@ -70,6 +70,26 @@ public class TBTree implements Serializable {
 		return index;
 	}
 
+	public TBNode getNodeByTerminalIndex(int terminalIndex) {
+		return rootNode.getNodeByTerminalIndex(terminalIndex);
+	}
+
+	public TBNode getNodeByTokenIndex(int tokenIndex) {
+		return rootNode.getNodeByTokenIndex(tokenIndex);
+	}
+	
+	public TBNode[] getTerminalNodes() {
+		TBNode[] tnodes = new TBNode[terminalCount];
+		rootNode.fillNodeArray(false, tnodes);
+		return tnodes;
+	}
+	
+	public TBNode[] getTokenNodes() {
+		TBNode[] tnodes = new TBNode[tokenCount];
+		rootNode.fillNodeArray(false, tnodes);
+		return tnodes;
+	}
+
 	public TBNode getRootNode() {
 		return rootNode;
 	}

@@ -304,7 +304,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
 		int treeIdx = (int) (startIndex>>32);
 		int tokenIdx = (int) (startIndex&0xffffffff);
 		
-		List<TBNode> treeTokens = null;
+		TBNode[] treeTokens = null;
 		
 		while (lenCnt < tokenLen)
 		{
@@ -312,15 +312,15 @@ public class LDC09SentencePairReader extends SentencePairReader {
 			{
 				++treeIdx;
 				tokenIdx=0;
-				treeTokens = trees[treeIdx].getRootNode().getTokenNodes();
+				treeTokens = trees[treeIdx].getTokenNodes();
 				continue;
 			}
 			
-			if (treeTokens==null) treeTokens = trees[treeIdx].getRootNode().getTokenNodes();
+			if (treeTokens==null) treeTokens = trees[treeIdx].getTokenNodes();
 
-			lenCnt+= treeTokens.get(tokenIdx).getWord().length();
-			treeTokenStr.append(treeTokens.get(tokenIdx).getWord());
-			treeTokenizedStr.append(treeTokens.get(tokenIdx).getWord());
+			lenCnt+= treeTokens[tokenIdx].getWord().length();
+			treeTokenStr.append(treeTokens[tokenIdx].getWord());
+			treeTokenizedStr.append(treeTokens[tokenIdx].getWord());
 			treeTokenizedStr.append(' ');
 			treeIndices.add((((long)(treeIdx))<<32)|tokenIdx);
 			++tokenIdx;	

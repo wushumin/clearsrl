@@ -119,10 +119,10 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
 	{
 		StringBuilder buffer = new StringBuilder();
 
-		List<TBNode> nodes = printEC?tree.getRootNode().getTerminalNodes() : tree.getRootNode().getTokenNodes();
+		TBNode[] nodes = printEC?tree.getTerminalNodes() : tree.getTokenNodes();
 		
-		String[] preMarkup = new String[nodes.size()];
-		String[] postMarkup = new String[nodes.size()];
+		String[] preMarkup = new String[nodes.length];
+		String[] postMarkup = new String[nodes.length];
 		
 		Arrays.fill(preMarkup, "");
 		Arrays.fill(postMarkup, "");
@@ -131,10 +131,10 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
 		for (PBArg arg : (printEC?getAllArgs():getArgs()))	
 			markArg(arg, preMarkup, postMarkup, "["+arg.getLabel()+" ", "]", printEC);
 		
-		for (int i=0; i<nodes.size(); ++i)
+		for (int i=0; i<nodes.length; ++i)
 		{
 			buffer.append(preMarkup[i]);
-			buffer.append(nodes.get(i).getWord());
+			buffer.append(nodes[i].getWord());
 			buffer.append(postMarkup[i]);
 			buffer.append(" ");
 		}

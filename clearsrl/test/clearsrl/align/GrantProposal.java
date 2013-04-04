@@ -55,7 +55,7 @@ public class GrantProposal {
 			int treeId = Integer.parseInt(tokens[1]);
 			int terminalId = Integer.parseInt(tokens[2]);
 			
-			int tokenId = trees[treeId].getRootNode().getNodeByTerminalIndex(terminalId).getTokenIndex();
+			int tokenId = trees[treeId].getNodeByTerminalIndex(terminalId).getTokenIndex();
 			
 			String verbNetId = tokens[6];
 			

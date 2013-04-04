@@ -294,7 +294,7 @@ public class SRLModel implements Serializable {
             isPredicate.set(instance.predicateNode.getTokenIndex());
         }
         
-        List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        TBNode[] nodes = tree.getTokenNodes();
         
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
@@ -679,7 +679,7 @@ public class SRLModel implements Serializable {
         return features;
     }
     */
-    public Map<EnumSet<PredFeature>,List<String>> extractPredicateFeature(TBNode predicateNode, List<TBNode> nodes)
+    public Map<EnumSet<PredFeature>,List<String>> extractPredicateFeature(TBNode predicateNode, TBNode[] nodes)
     {
         EnumMap<PredFeature,List<String>> sampleFlat = new EnumMap<PredFeature,List<String>>(PredFeature.class);
         
@@ -690,7 +690,7 @@ public class SRLModel implements Serializable {
         }
 
         TBNode parent = predicateNode.getParent();
-        TBNode leftNode = predicateNode.getTokenIndex()>0? nodes.get(predicateNode.getTokenIndex()-1):null;
+        TBNode leftNode = predicateNode.getTokenIndex()>0? nodes[predicateNode.getTokenIndex()-1]:null;
         TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().length-1)?
                 predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
@@ -983,15 +983,15 @@ public class SRLModel implements Serializable {
     {   
         List<SRInstance> predictions = new ArrayList<SRInstance>();
         
-        List<TBNode> nodes = parseTree.getRootNode().getTokenNodes();
+        TBNode[] nodes = parseTree.getTokenNodes();
         
         //debug block
-        for (int i=0; i<nodes.size();++i)
-        	if (nodes.get(i).getTokenIndex()!=i)
+        for (int i=0; i<nodes.length;++i)
+        	if (nodes[i].getTokenIndex()!=i)
         	{
         		System.err.println(parseTree.getFilename()+" "+parseTree.getIndex()+": "+parseTree.toString());
-        		for (int j=0; j<nodes.size();++j)
-        			System.err.print(nodes.get(j).getWord()+"/"+nodes.get(j).getTokenIndex()+" ");
+        		for (int j=0; j<nodes.length;++j)
+        			System.err.print(nodes[j].getWord()+"/"+nodes[j].getTokenIndex()+" ");
         		System.err.print("\n");
         		System.err.flush();
         		System.exit(1);

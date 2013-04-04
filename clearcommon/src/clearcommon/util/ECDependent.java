@@ -41,7 +41,7 @@ public class ECDependent {
 	
 	public static List<TBNode> getECCandidates(TBTree tree) {
 		List<TBNode> nodes = new ArrayList<TBNode>();
-		for (TBNode node:tree.getRootNode().getTokenNodes()) {
+		for (TBNode node:tree.getTokenNodes()) {
 			if (!node.getPOS().matches("V.*")) continue;
 			TBNode vpAncestor = null;
 			for (TBNode ancestor:node.getPathToAncestor(node.getConstituentByHead())) {

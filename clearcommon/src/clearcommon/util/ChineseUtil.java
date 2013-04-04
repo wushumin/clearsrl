@@ -66,10 +66,7 @@ public class ChineseUtil extends LanguageUtil {
         
         int retCode = 0;
         
-        TBNode root = predicateNode.getRoot();
-        List<TBNode> nodes = root.getTokenNodes();
-
-        for (TBNode node:nodes)
+        for (TBNode node:predicateNode.getRoot().getTokenNodes())
         {
             if (node.getPOS().matches("(SB|LB).*"))
             {

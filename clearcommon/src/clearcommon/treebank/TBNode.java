@@ -294,6 +294,18 @@ public class TBNode implements Serializable {
 		return null;
 	}
 
+	void fillNodeArray(boolean onTerminal, TBNode[] nodes) {
+		if (onTerminal) {
+			if (terminalIndex >= 0)
+				nodes[terminalIndex] = this;
+		} else {
+			if (tokenIndex >= 0)
+				nodes[tokenIndex] = this;
+		}
+		for (TBNode child : children)
+			child.fillNodeArray(onTerminal, nodes);
+	}
+	
 	void getNestedNodes(boolean onTerminal, List<TBNode> nodes) {
 		if (onTerminal) {
 			if (terminalIndex >= 0)
@@ -416,7 +428,7 @@ public class TBNode implements Serializable {
 		return terminalIndex;
 	}
 
-	public List<TBNode> getTerminalNodes() {
+    public List<TBNode> getTerminalNodes() {
 		List<TBNode> tnodes = new ArrayList<TBNode>();
 		getNestedNodes(true, tnodes);
 		return tnodes;
@@ -432,7 +444,7 @@ public class TBNode implements Serializable {
 		return tokenIndex;
 	}
 
-	public List<TBNode> getTokenNodes() {
+    public List<TBNode> getTokenNodes() {
 		List<TBNode> tnodes = new ArrayList<TBNode>();
 		getNestedNodes(false, tnodes);
 		return tnodes;

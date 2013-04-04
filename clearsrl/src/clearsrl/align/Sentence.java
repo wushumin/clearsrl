@@ -43,13 +43,13 @@ public class Sentence implements Serializable{
 		sentence.treeMap = new TreeMap<Integer, TBTree>();
 		sentence.treeMap.put(tree.getIndex(), tree);
 		
-	    List<TBNode> nodes = tree.getRootNode().getTokenNodes();
-	    sentence.indices = new long[nodes.size()];
-	    sentence.tokens = new TBNode[nodes.size()];
-	    for (int i=0; i<nodes.size();++i)
+	    TBNode[] nodes = tree.getTokenNodes();
+	    sentence.indices = new long[nodes.length];
+	    sentence.tokens = new TBNode[nodes.length];
+	    for (int i=0; i<nodes.length;++i)
 	    {
-	    	sentence.indices[i] = makeIndex(tree.getIndex(),nodes.get(i).getTerminalIndex());
-	    	sentence.tokens[i] = nodes.get(i);
+	    	sentence.indices[i] = makeIndex(tree.getIndex(),nodes[i].getTerminalIndex());
+	    	sentence.tokens[i] = nodes[i];
 	    }
 	    sentence.findTerminals();
  
@@ -98,7 +98,7 @@ public class Sentence implements Serializable{
 				
 				terminalIdx = Integer.parseInt(matcher.group(2));
 				
-				TBNode node = tokenIndexed?trees[treeIdx].getRootNode().getNodeByTokenIndex(terminalIdx):trees[treeIdx].getRootNode().getNodeByTerminalIndex(terminalIdx);
+				TBNode node = tokenIndexed?trees[treeIdx].getNodeByTokenIndex(terminalIdx):trees[treeIdx].getNodeByTerminalIndex(terminalIdx);
 				
 				a_idx.add(makeIndex(treeIdx,node.getTerminalIndex()));
 				a_token.add(node);
@@ -134,7 +134,7 @@ public class Sentence implements Serializable{
 			tokenIdx = (int) (idx&0xffffffff);
 			
 			sentence.treeMap.put(treeIdx, trees[treeIdx]);
-			a_token.add(trees[treeIdx].getRootNode().getNodeByTokenIndex(tokenIdx));
+			a_token.add(trees[treeIdx].getNodeByTokenIndex(tokenIdx));
 			a_idx.add(makeIndex(treeIdx,a_token.get(a_token.size()-1).getTerminalIndex()));
 		}
 
@@ -170,21 +170,21 @@ public class Sentence implements Serializable{
 			int endTerminalIdx = endToken.getTerminalIndex();
 			
 			
-			List<TBNode> startTerminals = startTree.getRootNode().getTerminalNodes();
-			List<TBNode> endTerminals = endTree.getRootNode().getTerminalNodes();
+			TBNode[] startTerminals = startTree.getTerminalNodes();
+			TBNode[] endTerminals = endTree.getTerminalNodes();
 			
 			while (startTerminalIdx>0)
 			{
-				if (startTerminals.get(startTerminalIdx-1).isToken()) break;
-				TBNode ancestor = startTerminals.get(startTerminalIdx-1).getLowestCommonAncestor(startToken);
+				if (startTerminals[startTerminalIdx-1].isToken()) break;
+				TBNode ancestor = startTerminals[startTerminalIdx-1].getLowestCommonAncestor(startToken);
 				if (ancestor.getTokenNodes().get(0)!=startToken) break;
 				--startTerminalIdx;
 			}
 	
-			while (endTerminalIdx<endTerminals.size()-1)
+			while (endTerminalIdx<endTerminals.length-1)
 			{
-				if (endTerminals.get(endTerminalIdx+1).isToken()) break;
-				TBNode ancestor = endTerminals.get(endTerminalIdx+1).getLowestCommonAncestor(endToken);
+				if (endTerminals[endTerminalIdx+1].isToken()) break;
+				TBNode ancestor = endTerminals[endTerminalIdx+1].getLowestCommonAncestor(endToken);
 				List<TBNode> nodes = ancestor.getTokenNodes();
 				if (nodes.get(nodes.size()-1)!=endToken) break;
 				++endTerminalIdx;
@@ -194,7 +194,7 @@ public class Sentence implements Serializable{
 			{
 				TBTree tree = treeMap.get(i);
 				if (tree==null) continue;
-				for (TBNode terminal : tree.getRootNode().getTerminalNodes())
+				for (TBNode terminal : tree.getTerminalNodes())
 				{
 					if (tree==startTree && terminal.getTerminalIndex()<startTerminalIdx) continue;
 					if (tree==endTree && terminal.getTerminalIndex()>endTerminalIdx) continue;

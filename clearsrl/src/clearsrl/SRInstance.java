@@ -31,7 +31,7 @@ public class SRInstance {
 	
 	public SRInstance(TBNode predicateNode, TBTree tree)
 	{
-		this.predicateNode = tree.getRootNode().getNodeByTokenIndex(predicateNode.getTokenIndex());
+		this.predicateNode = tree.getNodeByTokenIndex(predicateNode.getTokenIndex());
 		this.tree = tree;
 		args = new ArrayList<SRArg>();
 	}
@@ -403,12 +403,12 @@ public class SRInstance {
 		buffer.append(tree.getFilename()); buffer.append(" ");
 		buffer.append(tree.getIndex()); buffer.append(" ");
 		
-		List<TBNode> nodes = tree.getRootNode().getTokenNodes();
-		String[] tokens = new String[nodes.size()];
+		TBNode[] nodes = tree.getTokenNodes();
+		String[] tokens = new String[nodes.length];
 		for (int i=0; i<tokens.length; ++i)
-			tokens[i] = nodes.get(i).getWord();
+			tokens[i] = nodes[i].getWord();
 		
-		String[] labels = new String[nodes.size()];
+		String[] labels = new String[nodes.length];
 		
 		for (SRArg arg:args)
 		{

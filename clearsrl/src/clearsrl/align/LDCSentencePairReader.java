@@ -219,8 +219,7 @@ public class LDCSentencePairReader extends SentencePairReader {
 		for (int i=0; i<treeIds.length; ++i)
 		{
 			TBTree tree =  trees[Integer.parseInt(treeIds[i])];
-			List<TBNode> treeNodes = tree.getRootNode().getTokenNodes();
-			for (TBNode node:treeNodes)
+			for (TBNode node:tree.getTokenNodes())
 				builder.append(" "+tree.getIndex()+'~'+node.getTerminalIndex());
 		}
 		

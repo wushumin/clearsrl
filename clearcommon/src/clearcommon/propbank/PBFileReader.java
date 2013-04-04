@@ -119,7 +119,7 @@ public class PBFileReader
 		if (instance.tree==null)
 		    throw new PBFormatException("parse tree invalid: "+treeFile+" "+tokens[1]+"\n"+Arrays.toString(tokens));
 
-		instance.predicateNode = instance.tree.getRootNode().getNodeByTerminalIndex(Integer.parseInt(tokens[2]));
+		instance.predicateNode = instance.tree.getNodeByTerminalIndex(Integer.parseInt(tokens[2]));
 		
 		if (instance.predicateNode == null)
             throw new PBFormatException("predicate node not found "+"\n"+Arrays.toString(tokens));

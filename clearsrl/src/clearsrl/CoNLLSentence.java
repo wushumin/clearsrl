@@ -188,7 +188,7 @@ public class CoNLLSentence {
 			if (!tokens[5].equals("-"))
 			{
 				//if (!training) System.out.println(sentence.parse);
-				TBNode predicateNode = sentence.parse.getRootNode().getTokenNodes().get(i);
+				TBNode predicateNode = sentence.parse.getNodeByTokenIndex(i);
 				sentence.srls[srlIdx] = new SRInstance(predicateNode, sentence.parse);
 				if (!tokens[5].equals(tokens[4]))
 					sentence.srls[srlIdx].setRolesetId(tokens[5]+'.'+tokens[4]);
