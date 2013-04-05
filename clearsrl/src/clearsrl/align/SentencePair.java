@@ -270,7 +270,7 @@ public 	class SentencePair implements Serializable {
 		return isSrc?src:dst;
 	}
 	
-	static long makeLong(int a, int b)
+	public static long makeLong(int a, int b)
 	{
 		return (((long)a)<<32)|b;
 	}
