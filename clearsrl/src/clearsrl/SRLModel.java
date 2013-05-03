@@ -58,6 +58,7 @@ public class SRLModel implements Serializable {
 		VOICE,
 		SUBCATEGORIZATION,
 		SUPPORT,
+		SUPPORTPATH,
 		
 		// Constituent dependent features
 		PATH,
@@ -211,7 +212,7 @@ public class SRLModel implements Serializable {
         features.addFeatures(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
         features.addFeatures(EnumSet.of(Feature.ARGTYPE), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
         features.addFeatures(EnumSet.of(Feature.ARGTYPEPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
-        features.rebuildMap(cutoff, cutoff*10);
+        features.rebuildMap(cutoff, cutoff*3);
         
         
        /* 
@@ -230,7 +231,7 @@ public class SRLModel implements Serializable {
         
 		
 		if (predFeatures!=null) {
-			predFeatures.rebuildMap(cutoff, cutoff*10);
+			predFeatures.rebuildMap(cutoff, cutoff*3);
 			
             //for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
             //	FeatureSet.trimMap(predicateFeatureStringMap.get(predFeature),cutoff);
@@ -623,6 +624,25 @@ public class SRLModel implements Serializable {
 			case SUBCATEGORIZATION:
 				defaultMap.put(feature, Arrays.asList(subCat.toString()));
 				break;
+			case SUPPORT:
+				if (support!=null) {
+					String lemma = langUtil.findStems(support.getPredicateNode()).get(0);
+					String position = support.getPredicateNode().getTokenIndex()<predicateNode.getTokenIndex()?"left":"right";
+					String level = support.getPredicateNode().getLevelToRoot()<predicateNode.getLevelToRoot()?"above":"sibling";
+					defaultMap.put(feature, Arrays.asList(lemma, position, level, lemma+" "+level, support.getPredicateNode().getWord()));
+				}
+				break;
+			case SUPPORTPATH:
+				if (support!=null) {
+					List<TBNode> supportToTopNodes = support.getPredicateNode().getPathToRoot();
+				    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
+				    TBNode joinNode = trimPathNodes(supportToTopNodes, predToTopNodes);
+					List<String> path = getPath(supportToTopNodes, predToTopNodes, joinNode);
+					StringBuilder buffer = new StringBuilder();
+					for (String node:path) buffer.append(node);
+					defaultMap.put(feature, Arrays.asList(buffer.toString()));
+				}
+				break;
 			default:
 				break;
 			}
@@ -637,9 +657,6 @@ public class SRLModel implements Serializable {
 			List<TBNode> argToTopNodes = argNode.getPathToRoot();
 		    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
 		    TBNode joinNode = trimPathNodes(argToTopNodes, predToTopNodes);
-			if (argToTopNodes.isEmpty()) {
-				System.err.println("Not good!!!");
-			}
 			List<String> path = getPath(argToTopNodes, predToTopNodes, joinNode);
 		
 			
@@ -854,6 +871,20 @@ public class SRLModel implements Serializable {
 					}
 					break;
 				}
+				case SUPPORTARG:
+					if (support!=null) {
+						SRArg sArg = null;
+						for (SRArg arg:support.getArgs()) {
+							if (arg.getLabel().equals(NOT_ARG)) continue;
+							if (arg.node == argNode || argNode.isDecendentOf(arg.node)) {
+								sArg=arg;
+								break;
+							}							
+						}
+						if (sArg!=null)
+							sample.put(feature, Arrays.asList((sArg.node==argNode?"":"in ")+sArg.getLabel()));
+					}
+					break;
 				default:
 					break;
 				}
