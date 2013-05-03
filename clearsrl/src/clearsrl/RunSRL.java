@@ -3,6 +3,7 @@ package clearsrl;
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.SerialTBFileReader;
@@ -446,10 +447,10 @@ public class RunSRL {
 
                 treeBank = TBUtil.readTBDir(runSRLProps.getProperty("tbdir"), treeRegex);
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-                propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), 
-                                     propRegex, 
-                                     new TBReader(treeBank),
-                                     dataFormat.equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer());
+                PBTokenizer tokenzier = runSRLProps.getProperty("pb.tokenizer")==null?(runSRLProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(runSRLProps.getProperty("pb.tokenizer")).newInstance();
+
+                propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), propRegex, 
+                                     new TBReader(treeBank),tokenzier);
             }
             
             ParseCorpus phraseParser = null;
