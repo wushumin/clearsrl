@@ -76,6 +76,7 @@ public final class PBUtil {
 				    break;
 				} catch (Exception e) {
 					logger.severe(annotationFile+": "+e.getMessage());
+					e.printStackTrace();
 					continue;
 				}
 				
