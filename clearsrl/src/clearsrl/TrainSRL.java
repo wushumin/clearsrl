@@ -213,6 +213,8 @@ public class TrainSRL {
 			        ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
 			            
 		            if (pbInstances!=null)  {
+		            	if (!pbInstances.isEmpty())
+		            		TBUtil.linkHeads(pbInstances.get(0).getTree(), langUtil.getHeadRules());
 			            for (PBInstance instance:pbInstances) {
 			            	srls.add(new SRInstance(instance));
 			                if (instance.getArgs().length>1)
