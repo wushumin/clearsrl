@@ -13,6 +13,7 @@ import java.util.TreeSet;
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
 import clearcommon.util.PropertyUtil;
 
@@ -26,7 +27,7 @@ public class ScoreSRL {
         
         props = PropertyUtil.filterProperties(props, "srl.");
         props = PropertyUtil.filterProperties(props, "score.", true);
-        String dataFormat = props.getProperty("gold.data.format", "default");
+        PBTokenizer goldTokenizer = props.getProperty("gold.pb.tokenizer")==null?(props.getProperty("gold.data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("gold.pb.tokenizer")).newInstance();
      
         String[] systems = props.getProperty("systems").trim().split(",");
         for (int i=0; i< systems.length; ++i)
@@ -40,15 +41,19 @@ public class ScoreSRL {
         SRLScore iScore =new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
         SRLScore uScore =new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
         SRLScore[] scores = new SRLScore[systems.length];
+        SRLScore[] vScores = new SRLScore[systems.length];
+        SRLScore[] nScores = new SRLScore[systems.length];
         
-        for (int i=0; i<scores.length; ++i)
+        for (int i=0; i<scores.length; ++i) {
             scores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
-        
+            vScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
+            nScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
+        }
         Map<String, SortedMap<Integer, List<PBInstance>>>  goldPB = 
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
                              props.getProperty("gold.pb.regex").trim(), 
                              props.getProperty("gold.tbdir"),
-                             dataFormat.equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer());
+                             goldTokenizer);
         
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         
@@ -58,7 +63,7 @@ public class ScoreSRL {
             systemPBs.add(PBUtil.readPBDir(props.getProperty(system+".pbdir"), 
                              props.getProperty(system+".pb.regex").trim(), 
                              props.getProperty(system+".tbdir"),
-                             null));
+                             new DefaultPBTokenizer()));
         }
         
         String outTemplate = props.getProperty("output.propfile");
@@ -109,6 +114,8 @@ public class ScoreSRL {
                 for (PBInstance goldProp:goldProps)
                 {
                     SRInstance goldInstance = new SRInstance(goldProp);
+                    // don't evaluate the actual light verb
+                    if (goldInstance.getRolesetId().endsWith(".LV")) continue;
                     List<SRInstance> sysInstances = new ArrayList<SRInstance>();
                     
                     boolean found = false;
@@ -116,7 +123,7 @@ public class ScoreSRL {
                     {
                         found = false;
                         for (PBInstance sysProp:sysProps)
-                            if (goldProp.getPredicate().getTokenIndex()-sysProp.getPredicate().getTokenIndex()==0)
+                            if (goldProp.getPredicate().getTokenIndex()==sysProp.getPredicate().getTokenIndex())
                             {
                                 found = true;
                                 sysInstances.add(new SRInstance(sysProp));
@@ -129,9 +136,14 @@ public class ScoreSRL {
                     for (int i=0; i<scores.length;++i)
                     {
                         scores[i].addResult(sysInstances.get(i), goldInstance);
+                        if (goldInstance.getPredicateNode().getPOS().startsWith("V"))
+                        	vScores[i].addResult(sysInstances.get(i), goldInstance);
+                        else
+                        	nScores[i].addResult(sysInstances.get(i), goldInstance);
+                        
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
                     }
-		    goldPropOut.println(goldInstance.toPropbankString());
+                    goldPropOut.println(goldInstance.toPropbankString());
                     
                     if (scores.length==1) continue;
                     
@@ -140,7 +152,7 @@ public class ScoreSRL {
                         interInstance = SRLScore.getIntersection(interInstance, sysInstances.get(i));
                     
                     iScore.addResult(interInstance, goldInstance);
-		    interInstance.cleanUpArgs();
+                    interInstance.cleanUpArgs();
                     interPropOut.println(interInstance.toPropbankString());
                     
                     SRInstance unionInstance = sysInstances.get(0);
@@ -148,7 +160,7 @@ public class ScoreSRL {
                         unionInstance = SRLScore.getUnion(unionInstance, sysInstances.get(i));
                     
                     uScore.addResult(unionInstance, goldInstance);
-		    unionInstance.cleanUpArgs();
+                    unionInstance.cleanUpArgs();
                     unionPropOut.println(unionInstance.toPropbankString());
                 }
             }
@@ -198,7 +210,12 @@ public class ScoreSRL {
         for (int i=0; i<scores.length; ++i)
         {
             System.out.println(systems[i]+":");
+            System.out.println("All predicates:");
             System.out.println(scores[i]);
+            System.out.println("verb predicates:");
+            System.out.println(vScores[i]);
+            System.out.println("nominal predicates:");
+            System.out.println(nScores[i]);
         }
         
         if (scores.length>1)
