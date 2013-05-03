@@ -289,166 +289,10 @@ public class SRLModel implements Serializable {
     }
 	*/
 	
-	enum SupportType {
-		NOMINAL,
-		VERB,
-		ALL
-	}
-	
-	int[] findSupportPredicates(List<SRInstance> instances, SupportType type, boolean training) {
-		int[] supports = new int[instances.size()];
-		if (supports.length==0) return supports;
-		Arrays.fill(supports, -1);
-		
-		TIntIntHashMap instanceMap = new TIntIntHashMap();
-		for (int i=0; i<instances.size();++i)
-			instanceMap.put(instances.get(i).getPredicateNode().getTokenIndex(), i+1);
-
-		for (int i=0; i<instances.size();++i) {
-			SRInstance instance = instances.get(i);			
-			boolean isVerb = langUtil.isVerb(instance.getPredicateNode().getPOS());
-			if (isVerb && type.equals(SupportType.NOMINAL) || !isVerb && type.equals(SupportType.VERB))
-				continue;
-			
-			TBNode head = instance.getPredicateNode();
-			TBNode constituent = head.getConstituentByHead();
-
-			boolean foundSupport=false;
-			if (!isVerb && constituent.getPOS().equals("NP")) {
-				for (TBNode node:head.getDependentNodes()) {
-					if (langUtil.isVerb(node.getPOS()) && node.getTokenIndex()>head.getTokenIndex() && langUtil.getPassive(node)>0) {
-						supports[i] = instanceMap.get(node.getTokenIndex())-1;
-						if (supports[i]>0)
-							for (SRArg sarg:instances.get(supports[i]).getArgs())
-								if (sarg.getLabel().matches("ARG1|ARGM-PRX")&&sarg.tokenSet.get(head.getTokenIndex())) {
-									foundSupport = true;
-									break;
-								}	
-						
-						//System.out.println(instance);
-						//if (supports[i]>=0)
-						//	System.out.println(Boolean.toString(foundSupport)+" "+instances.get(supports[i])+"\n");
-						break;
-					}
-				}
-			}
-			if (!foundSupport) {
-				//while (constituent.getParent()!=null && constituent.getPOS().equals("VP") && constituent.getParent().getPOS().equals("VP")) {
-				//	constituent = constituent.getParent();
-				//	head = constituent.getHead();
-				//}
-	
-				while (constituent.getParent()!=null && !langUtil.isClause(constituent.getParent().getPOS())) {
-					if (constituent.getParent().getHead()!=head && 
-							langUtil.isVerb(constituent.getParent().getHead().getPOS()) && 
-							head.getLevelToRoot()>=constituent.getParent().getHead().getLevelToRoot()) {
-						supports[i] = instanceMap.get(constituent.getParent().getHead().getTokenIndex())-1;
-						break;
-					}
-					constituent = constituent.getParent();
-				}
-			}
-			if (training) {
-
-				TBNode lvNode = null;
-				for (SRArg arg:instance.getArgs())
-					if (arg.getLabel().endsWith("LVB")) {
-						lvNode = arg.node;
-						break;
-					}
-				if (lvNode!=null) {
-					if (supports[i]<0 || instances.get(supports[i]).getPredicateNode()!=lvNode) {
-						if (supports[i]<0)
-							System.err.println("Light verb not found for "+instance);
-						else
-							System.err.println("Wrong support for "+instance);
-						boolean found = false;
-						for (SRInstance support:instances)
-							if (support.getPredicateNode()==lvNode) {
-								found = true;
-								System.err.println(Boolean.toString(langUtil.getPassive(support.predicateNode)>0)+" "+support);
-								break;
-							}
-						if (!found)
-							System.err.println("Light verb not in list");
-					} 
-				}
-	
-				boolean nonlocalArg = false;
-				if (supports[i]>=0) {
-					TBNode node = instances.get(supports[i]).getPredicateNode().getParent();
-					while (node.getParent()!=null && !node.getPOS().equals("VP") && !langUtil.isClause(node.getPOS()))
-						node = node.getParent();
-					for (SRArg sarg:instances.get(supports[i]).getArgs()) {
-						if (sarg.getLabel().equals(SRLModel.NOT_ARG)) continue;
-						BitSet tokenSet = sarg.getTokenSet();
-						tokenSet.or(node.getTokenSet());
-						if (tokenSet.get(instance.getPredicateNode().getTokenIndex())) {
-							for (SRArg arg:instance.getArgs()) {
-								if (arg.getLabel().equals(SRLModel.NOT_ARG)) continue;
-								if (!tokenSet.intersects(arg.getTokenSet())) {
-									nonlocalArg=true;
-									break;
-								}
-							}
-							break;
-						}
-					}
-				}
-				
-				if (lvNode!=null && supports[i]>=0) {
-					//re-populate the arguments of the light verb
-					BitSet tokenSet=null;
-					
-					for (SRArg sarg:instances.get(supports[i]).getArgs())
-						if ((tokenSet = sarg.getTokenSet()).get(instance.getPredicateNode().getTokenIndex()))
-							break;
-						else
-							tokenSet = null;
-					if (tokenSet!=null) {
-						TBNode node = instances.get(supports[i]).getPredicateNode().getParent();
-						while (node.getParent()!=null && !node.getPOS().equals("VP") && !langUtil.isClause(node.getPOS()))
-							node = node.getParent();
-						
-						BitSet vpSet = node.getTokenSet();
-						
-						for (int a=0; a<instance.getArgs().size(); ++a)
-							if (!tokenSet.intersects(instance.getArgs().get(a).getTokenSet())) {
-								boolean found = false;
-								for (SRArg sarg:instances.get(supports[i]).getArgs())
-									if (instance.getArgs().get(a).node==sarg.node) {
-										found = true;
-										if (!instance.getArgs().get(a).getLabel().equals(sarg.getLabel()) && !sarg.getLabel().equals("rel")) {
-											System.err.println("LVC issue: "+instance.getArgs().get(a).getLabel()+" "+sarg.getLabel());
-											System.err.println(instance);
-											System.err.println(instances.get(supports[i])+"\n");
-										}
-										break;
-									}
-								if (!found) {
-									instances.get(supports[i]).addArg(instance.getArgs().get(a));
-									if (!vpSet.intersects(instance.getArgs().get(a).getTokenSet()))
-										instance.getArgs().remove(a);
-									continue;
-								}
-							}
-						//System.out.println(instance);
-						//System.out.println(instances.get(supports[i])+"\n");
-					}			
-				}
-				
-				//if (lvNode==null && nonlocalArg && !isVerb) {
-				//	System.out.println(instance);
-				//	System.out.println(instances.get(supports[i])+"\n");
-				//}
-			}
-		}
-		return supports;
-	}
 	
     public void addTrainingSentence(TBTree tree, List<SRInstance> instances, String[] namedEntities, float threshold, boolean buildDictionary) {
     	
-    	int[] supportIds = findSupportPredicates(instances, SupportType.ALL, true);
+    	int[] supportIds = SRLUtil.findSupportPredicates(instances, langUtil, SRLUtil.SupportType.ALL, true);
     	
     	List<SRInstance> trainInstances = new ArrayList<SRInstance>(instances.size());
     	for (SRInstance instance:instances)
@@ -1249,7 +1093,7 @@ public class SRLModel implements Serializable {
         		predictions.add(new SRInstance(parseTree.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex()), parseTree, goldSRL.getRolesetId(), 1.0));
         }
 
-        int[] supportIds = findSupportPredicates(predictions, SupportType.VERB, false);
+        int[] supportIds = SRLUtil.findSupportPredicates(predictions, langUtil, SRLUtil.SupportType.VERB, false);
         BitSet predicted = new BitSet(supportIds.length);
         
         // classify verb predicates first
@@ -1266,7 +1110,7 @@ public class SRLModel implements Serializable {
         } while (predicted.cardinality()>cardinality);
         
         // then classify nominal predicates, by now we'll have the verb arguments to help find support verbs
-        supportIds = findSupportPredicates(predictions, SupportType.NOMINAL, false);
+        supportIds = SRLUtil.findSupportPredicates(predictions, langUtil, SRLUtil.SupportType.NOMINAL, false);
         do {
         	cardinality = predicted.cardinality();
         	for (int i=predicted.nextClearBit(0); i<supportIds.length; i=predicted.nextClearBit(i+1))
