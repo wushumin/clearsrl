@@ -23,7 +23,7 @@ public class TestPBInstance {
         TBReader tbReader = new TBReader(treeDir, false);
         PBFileReader reader = new PBFileReader(tbReader,
                 "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
-                new OntoNoteTreeFileResolver());
+                new OntoNotesTokenizer());
         List<PBInstance> instances = new ArrayList<PBInstance> ();
         PBInstance instance=null;
         try {
@@ -50,7 +50,7 @@ public class TestPBInstance {
         
         reader = new PBFileReader(new TBReader(treeDir, false),
                 "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
-                new OntoNoteTreeFileResolver());
+                new OntoNotesTokenizer());
  
         while ((instances = reader.nextPropSet())!=null)
         {
@@ -71,7 +71,7 @@ public class TestPBInstance {
         PBReader pbReader = new PBReader(new TBReader(treeDir, false),
                 "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/nw/wsj/23/wsj_2356.prop",
                 ".+",
-                new OntoNoteTreeFileResolver());
+                new OntoNotesTokenizer());
  
         while ((instances = pbReader.nextPropSet())!=null)
         {

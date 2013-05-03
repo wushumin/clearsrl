@@ -1,9 +1,11 @@
 package clearsrl;
 
 import clearcommon.alg.FeatureSet;
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBFileReader;
@@ -25,6 +27,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -40,46 +43,15 @@ import clearsrl.SRLModel.PredFeature;
 
 public class TrainSRL {
 	static final float THRESHOLD=0.90f;
-	
-	static SRInstance addTrainingSample(SRLModel model, SRInstance instance, TBTree parsedTree, String[] namedEntities, float threshold, boolean buildDictionary)
-	{	
-		ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-		ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-
-		if (instance.tree.getTokenCount() == parsedTree.getTokenCount())
-		{
-		    SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
-		    SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
-		    for (int i=0; i<labels.size(); ++i)
-                trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
-		    
-			model.addTrainingSamples(trainInstance, namedEntities, buildDictionary);
-		}
-			
-		if (!buildDictionary)
-		{	
-			SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
-			for (int i=0; i<labels.size(); ++i)
-			{
-				if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG)) continue;
-				trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
-			}
-			return trainInstance;
-		}
-		return null;
-	}
-	
-	static List<SRInstance> addTrainingSentence(SRLModel model, SRInstance[] instances, TBTree parsedTree, String[] namedEntities, float threshold, boolean buildDictionary)
-	{
+	/*
+	static List<SRInstance> addTrainingSentence(SRLModel model, SRInstance[] instances, TBTree parsedTree, String[] namedEntities, float threshold, boolean buildDictionary) {
 	    List<SRInstance> trainInstances = new ArrayList<SRInstance>();
 
-        for (SRInstance instance:instances)
-        {
-            if (instance.tree.getTokenCount() == parsedTree.getTokenCount())
-            {
+        for (SRInstance instance:instances) {
+            if (instance.tree.getTokenCount() == parsedTree.getTokenCount()) {
                 ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                 ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-                SRLUtil.getSamplesFromParse(instance, parsedTree, threshold, argNodes, labels);
+                SRLUtil.getSamplesFromParse(instance, parsedTree, model.langUtil, threshold, argNodes, labels);
                 SRInstance trainInstance = new SRInstance(instance.predicateNode, parsedTree, instance.getRolesetId(), 1.0);
                 for (int i=0; i<labels.size(); ++i)
                     trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
@@ -89,7 +61,7 @@ public class TrainSRL {
 	    }
         model.addTrainingSentence(parsedTree, trainInstances, namedEntities, buildDictionary);
         return trainInstances;
-	}
+	}*/
 	
 	public static void main(String[] args) throws Exception
 	{	
@@ -167,8 +139,7 @@ public class TrainSRL {
 			Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
 			Map<String, TBTree[]> parsedTreeBank = props.getProperty("goldparse", "false").equals("true")?null:new TreeMap<String, TBTree[]>();
 			Map<String, Integer> trainWeights =new TreeMap<String, Integer>();
-			
-			
+
 			for (String source:sources) {
 				System.out.println("Processing source "+source);
 				Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
@@ -181,8 +152,9 @@ public class TrainSRL {
 				List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"), true)
                 		:FileUtil.getFileList(new File(srcProps.getProperty("pbdir")), new File(filename), true);
 				
-				Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank),
-	                     srcProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+				PBTokenizer tokenzier = srcProps.getProperty("pb.tokenizer")==null?(srcProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("pb.tokenizer")).newInstance();
+				
+				Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank), tokenzier);
 
 				int weight = Integer.parseInt(srcProps.getProperty("weight", "1"));
 				
@@ -237,38 +209,20 @@ public class TrainSRL {
 			    {
 			        TBUtil.linkHeads(trees[i], langUtil.getHeadRules());
 			        List<PBInstance> pbInstances = pbFileMap.get(i);
-			        if (modelPredicate)
-			        {
-			            ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
+
+			        ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
 			            
-			            if (pbInstances!=null)
-			            {
-    			            for (PBInstance instance:pbInstances)
-    			            {
-    			                if (instance.getArgs().length>1)
-    			                {
-    			                    srls.add(new SRInstance(instance));
-    			                    rolesetArg.put(instance.getRoleset(), rolesetArg.get(instance.getRoleset())+1);
-    			                }
-    			                else
-    			                {
-    			                    rolesetEmpty.put(instance.getRoleset(), rolesetEmpty.get(instance.getRoleset())+1);
-    			                }
-    			            }
+		            if (pbInstances!=null)  {
+			            for (PBInstance instance:pbInstances) {
+			            	srls.add(new SRInstance(instance));
+			                if (instance.getArgs().length>1)
+			                    rolesetArg.put(instance.getRoleset(), rolesetArg.get(instance.getRoleset())+1);
+			                else
+			                    rolesetEmpty.put(instance.getRoleset(), rolesetEmpty.get(instance.getRoleset())+1);
 			            }
-			            for (int w=0; w<weight; ++w)
-	                        addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, true);
-                    }
-			        else if (pbInstances!=null)
-			        {
-			            for (PBInstance pbInstance:pbInstances)
-                        {
-                            //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
-                            SRInstance instance = new SRInstance(pbInstance);
-                            for (int w=0; w<weight; ++w)
-                            	addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, true);
-                        }
-			        }
+		            }
+		            for (int w=0; w<weight; ++w)
+                        model.addTrainingSentence(trees[i], srls, null, THRESHOLD, true);
 			    }
 			}
             model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
@@ -293,33 +247,18 @@ public class TrainSRL {
             	
             	System.out.println("Processing (p2) "+entry.getKey());
                 TBTree[] trees = entry.getValue(); 
-                for (int i=0; i<trees.length; ++i)
-                {
+                for (int i=0; i<trees.length; ++i) {
                     List<PBInstance> pbInstances = pbFileMap.get(i);
-                    if (modelPredicate)
-                    {
-                        ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
-                        if (pbInstances!=null)
-                        {
-                            for (PBInstance instance:pbInstances)
-                            {
-                                //if (!rolesetEmpty.containsKey(instance.getRoleset()))
-                                    srls.add(new SRInstance(instance));
-                            }
-                        }
-			            for (int w=0; w<weight; ++w)
-			            	addTrainingSentence(model, srls.toArray(new SRInstance[srls.size()]), trees[i], null, THRESHOLD, false);
-                    }
-                    else if (pbInstances!=null)
-                    {
-                        for (PBInstance pbInstance:pbInstances)
-                        {
-                            //System.out.println(pbInstance.rolesetId+" "+pbInstance.predicateNode.tokenIndex+" "+pbInstance.tree.getTreeIndex());
-                            SRInstance instance = new SRInstance(pbInstance);
-    			            for (int w=0; w<weight; ++w)
-    			            	addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.getTree().getIndex()], null, THRESHOLD, false);
+
+                    ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
+                    if (pbInstances!=null)  {
+                        for (PBInstance instance:pbInstances) {
+                            //if (!rolesetEmpty.containsKey(instance.getRoleset()))
+                                srls.add(new SRInstance(instance));
                         }
                     }
+		            for (int w=0; w<weight; ++w)
+		            	model.addTrainingSentence(trees[i], srls,  null, THRESHOLD, false);
                 }
             }
             /*
@@ -392,19 +331,17 @@ public class TrainSRL {
 			}
 			model.score.printResults(System.out);
 		}*/
-        else if (dataFormat.equals("conll"))
-        {
+        else if (dataFormat.equals("conll")) {
             ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("input")), true);
             model.initDictionary();
-            for (CoNLLSentence sentence:training)
-            {
+            for (CoNLLSentence sentence:training) {
                 TBUtil.linkHeads(sentence.parse, langUtil.getHeadRules());
-                addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, true);
+                model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD, true);
             }
             model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
 
             for (CoNLLSentence sentence:training)
-                addTrainingSentence(model, sentence.srls, sentence.parse, sentence.namedEntities, THRESHOLD, false);
+            	model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD, false);
         }		
 		System.out.println("Reference arg instance count: "+gCount);
 		System.out.println("Training arg instance count: "+tCount);

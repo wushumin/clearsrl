@@ -18,6 +18,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     TBNode      predicateNode;
+    TBNode      prrNode;
 	String      rolesetId;
 	String      verbnetId;
 	PBArg[]     args;

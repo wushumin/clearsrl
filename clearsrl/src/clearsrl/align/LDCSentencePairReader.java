@@ -19,9 +19,10 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -91,8 +92,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         {
         	bidirectionalAlignemnt = true;
         	
-        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), new OntoNoteTreeFileResolver());
-            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), new OntoNoteTreeFileResolver());
+        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), new OntoNotesTokenizer());
+            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), new OntoNotesTokenizer());
              
         	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("alignment"))));
         	srcTokenOutput = new PrintStream(props.getProperty("src.tokens"));
@@ -102,8 +103,8 @@ public class LDCSentencePairReader extends SentencePairReader {
         }
         else
         {
-        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
-            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
+        	srcPropBank = PBUtil.readPBDir(props.getProperty("src.pbdir"), props.getProperty("pb.regex"), new TBReader(srcTreeBank), props.getProperty("goldpb")==null?new DefaultPBTokenizer():new OntoNotesTokenizer());
+            dstPropBank = PBUtil.readPBDir(props.getProperty("dst.pbdir"), props.getProperty("pb.regex"), new TBReader(dstTreeBank), props.getProperty("goldpb")==null?new DefaultPBTokenizer():new OntoNotesTokenizer());
         	
         	srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
         	dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");

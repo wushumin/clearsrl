@@ -10,9 +10,10 @@ import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeSet;
 
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.util.PropertyUtil;
 
 public class ScoreSRL {
@@ -47,7 +48,7 @@ public class ScoreSRL {
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
                              props.getProperty("gold.pb.regex").trim(), 
                              props.getProperty("gold.tbdir"),
-                             dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+                             dataFormat.equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer());
         
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         

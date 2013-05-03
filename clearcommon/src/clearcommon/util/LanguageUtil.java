@@ -56,4 +56,11 @@ public abstract class LanguageUtil {
 	public abstract boolean isAdjective(String POS);
 	
 	public abstract boolean isAdverb(String POS);
+
+	public abstract boolean isClause(String POS);
+
+	public abstract boolean isRelativeClause(String POS);
+	
+	public abstract boolean isPredicateCandidate(String POS); 
+	
 }

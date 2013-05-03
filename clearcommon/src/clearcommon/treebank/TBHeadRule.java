@@ -54,13 +54,12 @@ public class TBHeadRule
 	    dirs[0] = toks[1].equals("l")?Direction.LEFT:Direction.RIGHT;
 	    rules[0] = toks[2];
 	    
-	    for (int i=1; i<rules.length; ++i)
-	    {
+	    for (int i=1; i<rules.length; ++i) {
 	        toks = rules[i].split("\\s+");
-	        if (toks.length<1)
+	        if (toks.length<2) {
 	            dirs[i] = dirs[i-1];
-	        else
-	        {
+	            rules[i] = toks[0];
+	        } else {
 	            dirs[i] = toks[0].equals("l")?Direction.LEFT:Direction.RIGHT;
 	            rules[i] = toks[1];
 	        }   

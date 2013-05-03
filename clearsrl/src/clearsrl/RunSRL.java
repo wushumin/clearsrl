@@ -1,8 +1,9 @@
 package clearsrl;
 
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBFileReader;
@@ -32,6 +33,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
@@ -93,14 +95,17 @@ public class RunSRL {
 	    BlockingQueue<TBTree> treeQueue;
 	    PrintWriter writer;
         SortedMap<Integer, List<PBInstance>> pbFileMap;
+        LanguageUtil langUtil;
 
 	    public Runner(BlockingQueue<TBTree> treeQueue, 
 	            PrintWriter writer, 
-                SortedMap<Integer, List<PBInstance>> pbFileMap)
+                SortedMap<Integer, List<PBInstance>> pbFileMap,
+                LanguageUtil langUtil)
 	    {
 	        this.treeQueue = treeQueue;
 	        this.writer    = writer;
 	        this.pbFileMap = pbFileMap;
+	        this.langUtil  = langUtil;
 	    }
 	    
         public void run() {
@@ -121,16 +126,12 @@ public class RunSRL {
                 //for (TBNode node:nodes)
                 //    System.out.println(node.toParse());
                 TBUtil.linkHeads(tree, langUtil.getHeadRules());
-                List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(tree.getIndex());
-                SRInstance[] goldInstances = pbInstances==null?new SRInstance[0]:new SRInstance[pbInstances.size()];
-                for (int j=0; j<goldInstances.length; ++j)
-                    goldInstances[j] = new SRInstance(pbInstances.get(j));
-                
+
+               
                 List<SRInstance> predictions = null;
                 
-                if (pbFileMap==null)
-                {
-                    predictions = model.predict(tree, goldInstances, null);
+                if (pbFileMap==null) {
+                    predictions = model.predict(tree, null, null);
                     
                     /*
                     BitSet goldPredicates = new BitSet();
@@ -158,48 +159,54 @@ public class RunSRL {
                         }
                         System.out.print("\n");
                     }*/
-                }
-                else
-                {
-                    predictions = new LinkedList<SRInstance>();
-                    for (SRInstance goldInstance:goldInstances)
-                    {
-                        List<String> stem = langUtil.findStems(goldInstance.predicateNode.getWord(), POS.VERB);
-                        predictions.add(new SRInstance(goldInstance.predicateNode, tree, stem.get(0)+".XX", 1.0));
-                        model.predict(predictions.get(predictions.size()-1), null);
+                } else  {
+                    List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(tree.getIndex());
+                	if (pbInstances!=null) {
+                		
+                		predictions = new ArrayList<SRInstance>();
+                		SRInstance[] goldInstances = new SRInstance[pbInstances.size()];
+	                    for (int j=0; j<goldInstances.length; ++j) {
+	                    	goldInstances[j] = new SRInstance(pbInstances.get(j));
+	                    	List<String> stem = langUtil.findStems(goldInstances[j].predicateNode);
+	                        predictions.add(new SRInstance(goldInstances[j].predicateNode, tree, stem.get(0)+".XX", 1.0));
+	                    }
+	                    predictions = model.predict(tree, goldInstances, null);
+                	}
+                        
+                        /*
 
                         ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                         ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-                        SRLUtil.getSamplesFromParse(goldInstance, tree, THRESHOLD, argNodes, labels);
+                        SRLUtil.getSamplesFromParse(goldInstance, tree, langUtil, THRESHOLD, argNodes, labels);
                         
                         SRInstance trainInstance = new SRInstance(goldInstance.predicateNode, tree, goldInstance.getRolesetId(), 1.0);
                         for (int l=0; l<labels.size(); ++l)
                         {
                             if (SRLUtil.getMaxLabel(labels.get(l)).equals(SRLModel.NOT_ARG)) continue;
                             trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-                        }
-                    }
-
+                        } */
                 }
                 
-                if (outputFormat.equals(OutputFormat.CONLL))
-                	writer.println(CoNLLSentence.toString(tree, predictions.toArray(new SRInstance[predictions.size()])));
-                else
-	                for (SRInstance instance:predictions)
-	                    writer.println(instance.toString(outputFormat));
+                if (predictions!=null) {
+	                if (outputFormat.equals(OutputFormat.CONLL))
+	                	writer.println(CoNLLSentence.toString(tree, predictions.toArray(new SRInstance[predictions.size()])));
+	                else
+		                for (SRInstance instance:predictions)
+		                    writer.println(instance.toString(outputFormat));
+                }
                 
             }
             logger.info("done");
         }
 	}
 	
-	void processInput(Reader reader, String inName, PrintWriter writer, String outName, ParseCorpus parser, SortedMap<Integer, List<PBInstance>>  propBank) throws IOException, ParseException, InterruptedException
+	void processInput(Reader reader, String inName, PrintWriter writer, String outName, ParseCorpus parser, SortedMap<Integer, List<PBInstance>>  propBank, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
 	{
 	    logger.info("Processing "+(inName==null?"stdin":inName)+", outputing to "+(outName==null?"stdout":outName));
 	    
         BlockingQueue<TBTree> queue = new ArrayBlockingQueue<TBTree>(100);
         
-        Thread srlThread = new Thread(new Runner(queue, writer, propBank));
+        Thread srlThread = new Thread(new Runner(queue, writer, propBank, langUtil));
         srlThread.start();
         
         Reader parseIn = null;
@@ -308,7 +315,6 @@ public class RunSRL {
 		
 		options.model.setLanguageUtil(options.langUtil);
 		
-		int cCount = 0;
 		int pCount = 0;
 		String dataFormat = runSRLProps.getProperty("data.format", "default");
 		if (!options.parsed) 
@@ -443,7 +449,7 @@ public class RunSRL {
                 propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), 
                                      propRegex, 
                                      new TBReader(treeBank),
-                                     dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+                                     dataFormat.equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer());
             }
             
             ParseCorpus phraseParser = null;
@@ -454,9 +460,7 @@ public class RunSRL {
                 phraseParser.initialize(PropertyUtil.filterProperties(props, "parser."));
             }   
             if (options.inFile==null)
-            {
-                options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null);
-            }
+                options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null, options.langUtil);
             else {
                 List<String> fileList = options.inFileList==null?FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"))
                 		:FileUtil.getFileList(options.inFile, options.inFileList);
@@ -487,7 +491,7 @@ public class RunSRL {
                         foutName = outFile.getPath();
                     }
                     
-                    options.processInput(reader, fName, writer, foutName, phraseParser, propBank==null?null:propBank.get(fName));
+                    options.processInput(reader, fName, writer, foutName, phraseParser, propBank==null?null:propBank.get(fName), options.langUtil);
                     reader.close();
                     writer.close();
                 }
@@ -550,6 +554,7 @@ public class RunSRL {
         }		
 		else if (dataFormat.equals("conll"))
 		{
+			/*
 			ArrayList<CoNLLSentence> testing = CoNLLSentence.read(new FileReader(runSRLProps.getProperty("test.input")), false);
 			
 			for (CoNLLSentence sentence:testing)
@@ -559,7 +564,7 @@ public class RunSRL {
 				{
 					ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
 					ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-					SRLUtil.getSamplesFromParse(instance, sentence.parse, THRESHOLD, argNodes, labels);
+					SRLUtil.getSamplesFromParse(instance, sentence.parse, options.langUtil, THRESHOLD, argNodes, labels);
 					
 					SRInstance trainInstance = new SRInstance(instance.predicateNode, sentence.parse, instance.getRolesetId(), 1.0);
 					for (int i=0; i<labels.size(); ++i)
@@ -580,12 +585,8 @@ public class RunSRL {
 					for (int j=1; j<outStr[i].length; ++j)
 						outStr[i][j] = "*";
 				}
-				for (int j=1; j<=sentence.srls.length; ++j)
-				//for (SRInstance instance:sentence.srls)
-				{
-					SRInstance instance = sentence.srls[j-1];
-					outStr[instance.predicateNode.getTokenIndex()][0] = instance.rolesetId;
-					
+				
+				for (SRInstance instance:sentence.srls) {
 					Map<String, BitSet> argBitSet = new HashMap<String, BitSet>();
 					for (SRArg arg:instance.args)
 					{
@@ -596,18 +597,26 @@ public class RunSRL {
 						else
 							argBitSet.put(arg.label, arg.getTokenSet());
 					}
-					SRInstance pInstance = new SRInstance(instance.predicateNode, instance.tree, instance.getRolesetId(), 1.0);
-					cCount += options.model.predict(pInstance, sentence.namedEntities);
-					pCount += pInstance.getArgs().size()-1;
+				}
+				
+				List<SRInstance> predictions = options.model.predict(sentence.parse, sentence.srls, sentence.namedEntities);
+				
+				for (int j=1; j<=predictions.size(); ++j)
+				//for (SRInstance instance:sentence.srls)
+				{
+					SRInstance instance = predictions.get(j-1);
+					outStr[instance.predicateNode.getTokenIndex()][0] = instance.rolesetId;
+					
+					pCount += instance.getArgs().size()-1;
 					//pCount += instance.getArgs().size()-1;
 					//System.out.println(instance);
 					//System.out.println(pInstance+"\n");
 					//String a = instance.toString().trim();
 					//String b = pInstance.toString().trim();
 
-					Collections.sort(pInstance.args);
+					Collections.sort(instance.args);
 					//Map<String, SRArg> labelMap= new HashMap<String, SRArg>();
-					for (SRArg arg:pInstance.args)
+					for (SRArg arg:instance.args)
 					{
 						String label = arg.label;
 						if (label.equals("rel"))
@@ -640,7 +649,7 @@ public class RunSRL {
 				}
 				output.print("\n");
 			}
-
+*/
 		}
         if (output!=null && output != System.out)
             output.close();
@@ -674,7 +683,6 @@ public class RunSRL {
         }		
 		*/
 		logger.info("Constituents predicted: "+pCount);
-		logger.info("Constituents considered: "+cCount);
 		
 		//System.out.printf("%d/%d %.2f%%\n", count, y.length, count*100.0/y.length);
 		

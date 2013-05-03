@@ -25,7 +25,6 @@ package clearcommon.propbank;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TreeFileResolver;
 import clearcommon.treebank.ParseException;
 
 import java.io.BufferedReader;
@@ -72,7 +71,7 @@ public class PBFileReader
 	
     String                annotationFile;
 	Scanner               scanner;
-	TreeFileResolver      filenameResolver;
+	PBTokenizer           tokenizer;
 	TBReader              tbReader;
 	PBInstance            lastInstance;
 	boolean               closed;
@@ -85,15 +84,15 @@ public class PBFileReader
 	 */
 	public PBFileReader(TBReader tbReader, String annotationFile) throws FileNotFoundException
 	{
-	    this(tbReader, annotationFile, null);
+	    this(tbReader, annotationFile, new DefaultPBTokenizer());
 	}
 
-	public PBFileReader(TBReader tbReader, String annotationFile, TreeFileResolver resolver) throws FileNotFoundException
+	public PBFileReader(TBReader tbReader, String annotationFile, PBTokenizer tokenizer) throws FileNotFoundException
     {
 	    this.tbReader       = tbReader;
 	    this.annotationFile = annotationFile;
         scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
-        filenameResolver    = resolver;
+        this.tokenizer      = tokenizer;
         lastInstance        = null;
         closed              = false;
     }
@@ -107,13 +106,16 @@ public class PBFileReader
 			return null;
 		}
 		String line = scanner.nextLine().trim();
-		String[] tokens = line.split("[ \t]+");
+		String[] tokens = tokenizer.tokenize(line);
+		if (tokens==null) 
+			return nextProp();
+		
 		//System.out.println(Arrays.toString(tokens));
 		int t=0;
 		
 		PBInstance instance = new PBInstance();
 		
-		String treeFile     = (filenameResolver==null?tokens[0]:filenameResolver.resolve(annotationFile, tokens[0]));
+		String treeFile     = tokens[0];
 		
 		instance.tree = tbReader.getTree(treeFile, Integer.parseInt(tokens[1]));
 		if (instance.tree==null)
@@ -131,10 +133,8 @@ public class PBFileReader
 		        throw new PBFormatException("Can't find roleset: "+"\n"+Arrays.toString(tokens));
 		}
 		
-		if (tokens[t].endsWith("-v"))
-		    instance.rolesetId = tokens[++t];// skip roleset-v for ontonotes
-		else if (tokens[t].endsWith("-n"))
-		    return nextProp(); // skip nominalization for now
+		if (tokens[t].matches(".+-[nv]"))
+		    instance.rolesetId = tokens[++t];// skip roleset-[nv] for ontonotes
 		else
 		    instance.rolesetId = tokens[t];
 		
@@ -176,19 +176,23 @@ public class PBFileReader
                     nodeList.add(node);
             }
             
+            if (label.endsWith("PRR")) {
+            	instance.prrNode = nodeList.get(0);
+            	continue;
+            }
+            
             PBArg arg = new PBArg(label);
             arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
             
-            if (!nestedNodeList.isEmpty())
-            {
+            if (!nestedNodeList.isEmpty()) {
                 arg.nestedArgs = new PBArg[nestedNodeList.size()];
-                for (int i=0; i<nestedNodeList.size(); ++i)
-                {
+                for (int i=0; i<nestedNodeList.size(); ++i)  {
                     arg.nestedArgs[i] = new PBArg("C-"+label);
                     arg.nestedArgs[i].allNodes = new TBNode[1];
                     arg.nestedArgs[i].allNodes[0] = nestedNodeList.get(i);
                 }
             }
+            
             argList.add(arg);
 		}
 		
@@ -251,7 +255,8 @@ public class PBFileReader
 		    throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
 		}
 		
-		instance.allArgs = argList.toArray(new PBArg[argList.size()]); 
+		instance.allArgs = argList.toArray(new PBArg[argList.size()]);
+		
 		Arrays.sort(instance.allArgs);
 		
 		List<PBArg> emptyArgList = new LinkedList<PBArg>();
@@ -269,8 +274,7 @@ public class PBFileReader
 		//System.out.println(instance);
 
 		BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());
-		for (PBArg arg:instance.allArgs)
-		{
+		for (PBArg arg:instance.allArgs) {
 		    if (terminalSet.intersects(arg.terminalSet))
 		        throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens)+"\n"+instance);
 		    terminalSet.or(arg.terminalSet);

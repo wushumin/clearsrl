@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Queue;
 
 import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TreeFileResolver;
 import clearcommon.util.FileUtil;
 
 public class PBReader {
@@ -15,13 +14,13 @@ public class PBReader {
     Queue<String>    fileList;
     TBReader         tbReader;
     PBFileReader     pbReader;
-    TreeFileResolver resolver;
+    PBTokenizer      tokenizer;
     
-    public PBReader(TBReader tbReader, String dir, String regex, TreeFileResolver resolver)
+    public PBReader(TBReader tbReader, String dir, String regex, PBTokenizer tokenizer)
     {
         this.tbReader = tbReader;
         fileList = new ArrayDeque<String>(FileUtil.getFiles(new File(dir), regex, true));
-        this.resolver = resolver;
+        this.tokenizer = tokenizer;
         pbReader = null;
     }
 
@@ -41,7 +40,7 @@ public class PBReader {
             if (fileList.isEmpty())
                 return null;
             try {
-                pbReader = new PBFileReader(tbReader, fileList.remove(), resolver);
+                pbReader = new PBFileReader(tbReader, fileList.remove(), tokenizer);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }

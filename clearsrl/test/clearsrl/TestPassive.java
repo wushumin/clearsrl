@@ -1,8 +1,9 @@
 package clearsrl;
 
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBFileReader;
@@ -65,7 +66,7 @@ public class TestPassive {
                 PBUtil.readPBDir(props.getProperty("pbdir"), 
                                  trainRegex, 
                                  props.getProperty("tbdir"), 
-                                 dataFormat.equals("ontonotes")?new OntoNoteTreeFileResolver():null);
+                                 dataFormat.equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer());
             
             System.out.println(propBank.size());
             

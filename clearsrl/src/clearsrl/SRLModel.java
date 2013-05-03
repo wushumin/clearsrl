@@ -2,6 +2,7 @@ package clearsrl;
 
 import gnu.trove.TIntArrayList;
 import gnu.trove.TIntHashSet;
+import gnu.trove.TIntIntHashMap;
 import gnu.trove.TIntObjectHashMap;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
@@ -13,6 +14,7 @@ import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearcommon.util.EnglishUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.LanguageUtil.POS;
 
@@ -23,6 +25,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -54,6 +57,7 @@ public class SRLModel implements Serializable {
 		PREDICATEPOS,
 		VOICE,
 		SUBCATEGORIZATION,
+		SUPPORT,
 		
 		// Constituent dependent features
 		PATH,
@@ -76,6 +80,7 @@ public class SRLModel implements Serializable {
 		LASTWORDPOS,
 		SYNTACTICFRAME,
 		NAMEDENTITIES,
+		SUPPORTARG,
 		
         // Round 2+ label feature
 		ARGLIST,
@@ -88,8 +93,11 @@ public class SRLModel implements Serializable {
 	{
 	    PREDICATE,
 	    PREDICATEPOS,
+	    PREDICATEHEAD,
+	    PREDICATEHEADPOS,
 	    PARENTPOS,
 	    HEADOFVP,
+	    VPSIBLING,
 	    LEFTWORD,
 	    LEFTWORDPOS,
 	    RIGHTHEADWORD,
@@ -147,8 +155,8 @@ public class SRLModel implements Serializable {
 	transient ArrayList<int[]>                           predicateTrainingFeatures;
 	transient TIntArrayList                              predicateTrainingLabels;
 
-	transient int                                        hit = 0;
-	transient int                                        total = 0;
+	transient int                                        argsTrained = 0;
+	transient int                                        argsTotal = 0;
 
 	
 	
@@ -174,8 +182,7 @@ public class SRLModel implements Serializable {
 		trainGoldParse =false;
 	}
 	
-	public void setLanguageUtil(LanguageUtil langUtil)
-	{
+	public void setLanguageUtil(LanguageUtil langUtil) {
 	    this.langUtil = langUtil;
 	}
 	
@@ -183,27 +190,22 @@ public class SRLModel implements Serializable {
         this.trainGoldParse = trainGoldParse;
     }
 	
-	public void initDictionary()
-	{
+	public void initDictionary() {
 		labelStringMap     = new TObjectIntHashMap<String>();
 	}
 	
-	public TObjectIntHashMap<String> getLabelValueMap()
-	{
+	public TObjectIntHashMap<String> getLabelValueMap() {
 		return labelStringMap;
 	}
 
-	public void finalizeDictionary(int cutoff)
-	{
+	public void finalizeDictionary(int cutoff) {
 	    FeatureSet.trimMap(labelStringMap,20);
 	    
 	    logger.info("Labels: ");
         String[] labels = labelStringMap.keys(new String[labelStringMap.size()]);
         Arrays.sort(labels);
         for (String label:labels)
-        {
             logger.info("  "+label+" "+labelStringMap.get(label));
-        }   
         
         features.addFeatures(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
         features.addFeatures(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()), false);
@@ -227,8 +229,7 @@ public class SRLModel implements Serializable {
         
         
 		
-		if (predFeatures!=null)
-		{
+		if (predFeatures!=null) {
 			predFeatures.rebuildMap(cutoff, cutoff*10);
 			
             //for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
@@ -245,14 +246,15 @@ public class SRLModel implements Serializable {
         buildMapIndex(labelStringMap, 0);
         
         labelIndexMap = new TIntObjectHashMap<String>();
-        for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();)
-        {
+        for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();) {
             iter.advance();
             labelIndexMap.put(iter.value(),iter.key());
         }
         labelValues = new double[labelIndexMap.size()];
 		
 		
+        System.err.printf("ARGS trained %d/%d\n", argsTrained, argsTotal);
+        
 		//rebuildMaps();
 	}
     /*
@@ -285,41 +287,232 @@ public class SRLModel implements Serializable {
         }
     }
 	*/
-    public void addTrainingSentence(TBTree tree, List<SRInstance> instances, String[] namedEntities, boolean buildDictionary)
-    {
-        BitSet isPredicate = new BitSet();
-        for (SRInstance instance:instances)
-        {
-            addTrainingSamples(instance, namedEntities, buildDictionary);
-            isPredicate.set(instance.predicateNode.getTokenIndex());
-        }
+	
+	enum SupportType {
+		NOMINAL,
+		VERB,
+		ALL
+	}
+	
+	int[] findSupportPredicates(List<SRInstance> instances, SupportType type, boolean training) {
+		int[] supports = new int[instances.size()];
+		if (supports.length==0) return supports;
+		Arrays.fill(supports, -1);
+		
+		TIntIntHashMap instanceMap = new TIntIntHashMap();
+		for (int i=0; i<instances.size();++i)
+			instanceMap.put(instances.get(i).getPredicateNode().getTokenIndex(), i+1);
+
+		for (int i=0; i<instances.size();++i) {
+			SRInstance instance = instances.get(i);			
+			boolean isVerb = langUtil.isVerb(instance.getPredicateNode().getPOS());
+			if (isVerb && type.equals(SupportType.NOMINAL) || !isVerb && type.equals(SupportType.VERB))
+				continue;
+			
+			TBNode head = instance.getPredicateNode();
+			TBNode constituent = head.getConstituentByHead();
+
+			boolean foundSupport=false;
+			if (!isVerb && constituent.getPOS().equals("NP")) {
+				for (TBNode node:head.getDependentNodes()) {
+					if (langUtil.isVerb(node.getPOS()) && node.getTokenIndex()>head.getTokenIndex() && langUtil.getPassive(node)>0) {
+						supports[i] = instanceMap.get(node.getTokenIndex())-1;
+						if (supports[i]>0)
+							for (SRArg sarg:instances.get(supports[i]).getArgs())
+								if (sarg.getLabel().matches("ARG1|ARGM-PRX")&&sarg.tokenSet.get(head.getTokenIndex())) {
+									foundSupport = true;
+									break;
+								}	
+						
+						//System.out.println(instance);
+						//if (supports[i]>=0)
+						//	System.out.println(Boolean.toString(foundSupport)+" "+instances.get(supports[i])+"\n");
+						break;
+					}
+				}
+			}
+			if (!foundSupport) {
+				//while (constituent.getParent()!=null && constituent.getPOS().equals("VP") && constituent.getParent().getPOS().equals("VP")) {
+				//	constituent = constituent.getParent();
+				//	head = constituent.getHead();
+				//}
+	
+				while (constituent.getParent()!=null && !langUtil.isClause(constituent.getParent().getPOS())) {
+					if (constituent.getParent().getHead()!=head && 
+							langUtil.isVerb(constituent.getParent().getHead().getPOS()) && 
+							head.getLevelToRoot()>=constituent.getParent().getHead().getLevelToRoot()) {
+						supports[i] = instanceMap.get(constituent.getParent().getHead().getTokenIndex())-1;
+						break;
+					}
+					constituent = constituent.getParent();
+				}
+			}
+			if (training) {
+
+				TBNode lvNode = null;
+				for (SRArg arg:instance.getArgs())
+					if (arg.getLabel().endsWith("LVB")) {
+						lvNode = arg.node;
+						break;
+					}
+				if (lvNode!=null) {
+					if (supports[i]<0 || instances.get(supports[i]).getPredicateNode()!=lvNode) {
+						if (supports[i]<0)
+							System.err.println("Light verb not found for "+instance);
+						else
+							System.err.println("Wrong support for "+instance);
+						boolean found = false;
+						for (SRInstance support:instances)
+							if (support.getPredicateNode()==lvNode) {
+								found = true;
+								System.err.println(Boolean.toString(langUtil.getPassive(support.predicateNode)>0)+" "+support);
+								break;
+							}
+						if (!found)
+							System.err.println("Light verb not in list");
+					} 
+				}
+	
+				boolean nonlocalArg = false;
+				if (supports[i]>=0) {
+					TBNode node = instances.get(supports[i]).getPredicateNode().getParent();
+					while (node.getParent()!=null && !node.getPOS().equals("VP") && !langUtil.isClause(node.getPOS()))
+						node = node.getParent();
+					for (SRArg sarg:instances.get(supports[i]).getArgs()) {
+						if (sarg.getLabel().equals(SRLModel.NOT_ARG)) continue;
+						BitSet tokenSet = sarg.getTokenSet();
+						tokenSet.or(node.getTokenSet());
+						if (tokenSet.get(instance.getPredicateNode().getTokenIndex())) {
+							for (SRArg arg:instance.getArgs()) {
+								if (arg.getLabel().equals(SRLModel.NOT_ARG)) continue;
+								if (!tokenSet.intersects(arg.getTokenSet())) {
+									nonlocalArg=true;
+									break;
+								}
+							}
+							break;
+						}
+					}
+				}
+				
+				if (lvNode!=null && supports[i]>=0) {
+					//re-populate the arguments of the light verb
+					BitSet tokenSet=null;
+					
+					for (SRArg sarg:instances.get(supports[i]).getArgs())
+						if ((tokenSet = sarg.getTokenSet()).get(instance.getPredicateNode().getTokenIndex()))
+							break;
+						else
+							tokenSet = null;
+					if (tokenSet!=null) {
+						TBNode node = instances.get(supports[i]).getPredicateNode().getParent();
+						while (node.getParent()!=null && !node.getPOS().equals("VP") && !langUtil.isClause(node.getPOS()))
+							node = node.getParent();
+						
+						BitSet vpSet = node.getTokenSet();
+						
+						for (int a=0; a<instance.getArgs().size(); ++a)
+							if (!tokenSet.intersects(instance.getArgs().get(a).getTokenSet())) {
+								boolean found = false;
+								for (SRArg sarg:instances.get(supports[i]).getArgs())
+									if (instance.getArgs().get(a).node==sarg.node) {
+										found = true;
+										if (!instance.getArgs().get(a).getLabel().equals(sarg.getLabel()) && !sarg.getLabel().equals("rel")) {
+											System.err.println("LVC issue: "+instance.getArgs().get(a).getLabel()+" "+sarg.getLabel());
+											System.err.println(instance);
+											System.err.println(instances.get(supports[i])+"\n");
+										}
+										break;
+									}
+								if (!found) {
+									instances.get(supports[i]).addArg(instance.getArgs().get(a));
+									if (!vpSet.intersects(instance.getArgs().get(a).getTokenSet()))
+										instance.getArgs().remove(a);
+									continue;
+								}
+							}
+						//System.out.println(instance);
+						//System.out.println(instances.get(supports[i])+"\n");
+					}			
+				}
+				
+				//if (lvNode==null && nonlocalArg && !isVerb) {
+				//	System.out.println(instance);
+				//	System.out.println(instances.get(supports[i])+"\n");
+				//}
+			}
+		}
+		return supports;
+	}
+	
+    public void addTrainingSentence(TBTree tree, List<SRInstance> instances, String[] namedEntities, float threshold, boolean buildDictionary) {
+    	
+    	int[] supportIds = findSupportPredicates(instances, SupportType.ALL, true);
+    	
+    	List<SRInstance> trainInstances = new ArrayList<SRInstance>(instances.size());
+    	for (SRInstance instance:instances)
+    		trainInstances.add(new SRInstance(instance.predicateNode, tree, instance.getRolesetId(), 1.0));
+
+    	BitSet processedSet = new BitSet(supportIds.length);
+        // classify verb predicates first
+        int cardinality = 0;        
+        do {
+        	cardinality = processedSet.cardinality();
+        	for (int i=processedSet.nextClearBit(0); i<supportIds.length; i=processedSet.nextClearBit(i+1))
+        		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {
+        			ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
+                    ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
+                    SRLUtil.getSamplesFromParse(instances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), tree, langUtil, 1, threshold, argNodes, labels);
+                    for (int l=0; l<labels.size(); ++l)
+                        trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
+                    addTrainingSamples(trainInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), namedEntities, buildDictionary);
+
+                    if (buildDictionary) {
+                    	
+                    	int args = 0;
+	                    for (SRArg arg:trainInstances.get(i).getArgs())
+	                    	if (!arg.getLabel().equals(NOT_ARG))
+	                            args++;
+	                    if (args!=instances.get(i).getArgs().size()) {
+	                    	System.err.println("\n"+trainInstances.get(i));
+	                    	System.err.println(instances.get(i));
+	                    	if (supportIds[i]>=0)
+	                    		System.err.println(trainInstances.get(supportIds[i]));
+	                    	System.err.println(tree+"\n");
+	                    }
+	                    argsTrained+=args-1;
+	                    argsTotal+=instances.get(i).getArgs().size()-1;
+                    }
+                    
+        			processedSet.set(i);
+        		}
+        } while (processedSet.cardinality()>cardinality);
         
         TBNode[] nodes = tree.getTokenNodes();
         
         ArrayList<TBNode> predicateCandidates = new ArrayList<TBNode>();
         for (TBNode node: nodes)
-            if (node.getPOS().startsWith("V"))
+            if (langUtil.isPredicateCandidate(node.getPOS()))
                 predicateCandidates.add(node);
         
         // add predicate training samples
-        if (buildDictionary)
-        {
+        if (buildDictionary) {
             for (TBNode predicateCandidate:predicateCandidates)            	
                 for(Map.Entry<EnumSet<PredFeature>,List<String>> entry:extractPredicateFeature(predicateCandidate, nodes).entrySet())
                 	predFeatures.addToDictionary(entry.getKey(), entry.getValue(), false);
-
-        }
-        else
-        {
-            for (TBNode predicateCandidate:predicateCandidates)
-            {
+        } else {
+        	BitSet instanceMask = new BitSet(tree.getTokenCount());
+    		for (SRInstance instance:trainInstances)
+    			instanceMask.set(instance.getPredicateNode().getTokenIndex());
+        	
+            for (TBNode predicateCandidate:predicateCandidates) {
                 predicateTrainingFeatures.add(predFeatures.getFeatureVector(extractPredicateFeature(predicateCandidate, nodes)));
-                predicateTrainingLabels.add(isPredicate.get(predicateCandidate.getTokenIndex())?1:2);
+                predicateTrainingLabels.add(instanceMask.get(predicateCandidate.getTokenIndex())?1:2);
             }
         }
     }
     
-    public void addTrainingSamples(SRInstance sampleInstance, String[] namedEntities, boolean buildDictionary)    
+    public void addTrainingSamples(SRInstance sampleInstance, SRInstance supportInstance, String[] namedEntities, boolean buildDictionary)    
 	{
         if (sampleInstance.args.size()<=1) return;
         
@@ -334,7 +527,7 @@ public class SRLModel implements Serializable {
         }
         if (argNodes.isEmpty()) return;
         
-		List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
+		List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(sampleInstance.predicateNode, argNodes, supportInstance, namedEntities);
 		if (buildDictionary)
 		{
 			int c=0;
@@ -374,9 +567,9 @@ public class SRLModel implements Serializable {
             }
 		}
 	}
-	
 
-	public List<Map<EnumSet<Feature>,List<String>>> extractSampleFeature(TBNode predicateNode, List<TBNode> argNodes, String[] namedEntities)
+
+	public List<Map<EnumSet<Feature>,List<String>>> extractSampleFeature(TBNode predicateNode, List<TBNode> argNodes, SRInstance support, String[] namedEntities)
 	{
 		List<Map<EnumSet<Feature>,List<String>>> samples = new ArrayList<Map<EnumSet<Feature>,List<String>>>();
 		
@@ -389,7 +582,10 @@ public class SRLModel implements Serializable {
 			if (!stems.isEmpty()) predicateLemma = stems.get(0);
 		}
 
-		
+		String relatedVerb = null;
+		if ((langUtil instanceof EnglishUtil) && !langUtil.isVerb(predicateNode.getPOS()))
+			relatedVerb = ((EnglishUtil)langUtil).findDerivedVerb(predicateNode);
+
         List<String> predicateAlternatives = langUtil.getPredicateAlternatives(predicateLemma, features.getFeatureStrMap()==null?null:features.getFeatureStrMap().get(EnumSet.of(Feature.PREDICATE)));
 		
 		// build subcategorization feature
@@ -411,16 +607,18 @@ public class SRLModel implements Serializable {
 		{
 			switch (feature) {
 			case PREDICATE:
-				//defaultMap.put(feature, Arrays.asList(predicateLemma));
-				defaultMap.put(feature, predicateAlternatives);
+				if (relatedVerb!=null)
+					defaultMap.put(feature, Arrays.asList(relatedVerb, predicateLemma+"-n"));
+				else
+					defaultMap.put(feature, predicateAlternatives);
 				break;
 			case PREDICATEPOS:
 				if (predicateNode.getPOS().matches("V.*"))
 					defaultMap.put(feature, trainGoldParse?predicateNode.getFunctionTaggedPOS():Arrays.asList(predicateNode.getPOS()));
 				break;
 			case VOICE:
-				//if (isPassive) defaultMap.put(feature, Arrays.asList("Passive"));
-			    defaultMap.put(feature, Arrays.asList(isPassive?"passive":"active"));
+				if (langUtil.isVerb(predicateNode.getPOS()))
+					 defaultMap.put(feature, Arrays.asList(isPassive?"passive":"active"));
 				break;
 			case SUBCATEGORIZATION:
 				defaultMap.put(feature, Arrays.asList(subCat.toString()));
@@ -432,14 +630,19 @@ public class SRLModel implements Serializable {
 				
 		for (TBNode argNode:argNodes)
 		{
+			
 			EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(defaultMap);
 			List<TBNode> tnodes = argNode.getTokenNodes();
 			
 			List<TBNode> argToTopNodes = argNode.getPathToRoot();
 		    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
 		    TBNode joinNode = trimPathNodes(argToTopNodes, predToTopNodes);
-			
+			if (argToTopNodes.isEmpty()) {
+				System.err.println("Not good!!!");
+			}
 			List<String> path = getPath(argToTopNodes, predToTopNodes, joinNode);
+		
+			
 			
             List<TBNode> argDepToTopNodes = new ArrayList<TBNode>();
             
@@ -486,6 +689,7 @@ public class SRLModel implements Serializable {
 			
 			boolean isBefore = tnodes.get(0).getTokenIndex() < predicateNode.getTokenIndex();
 			//System.out.println(predicateNode+" "+predicateNode.tokenIndex+": "+argNode.getParent()+" "+argToTopNodes.size());
+
 			int cstDst = countConstituents(argToTopNodes.get(0).getPOS(), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
 			//System.out.println(cstDst+" "+path);
 			
@@ -688,21 +892,15 @@ public class SRLModel implements Serializable {
             List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
             if (!stems.isEmpty()) predicateLemma = stems.get(0);
         }
-
+        TBNode head = predicateNode.getHeadOfHead();
         TBNode parent = predicateNode.getParent();
         TBNode leftNode = predicateNode.getTokenIndex()>0? nodes[predicateNode.getTokenIndex()-1]:null;
         TBNode rightSibling = (predicateNode.getParent()!=null&&predicateNode.getChildIndex()<predicateNode.getParent().getChildren().length-1)?
                 predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
+
         
-        TBNode vpAncestor = predicateNode;
-        while (vpAncestor != null && !vpAncestor.getPOS().equals("VP"))
-        	vpAncestor = vpAncestor.getParent();
-        if (vpAncestor!=null && !vpAncestor.getPOS().equals("VP"))
-        	vpAncestor = null;
-        
-        for (PredFeature feature:predFeatures.getFeaturesFlat())
-        {
+        for (PredFeature feature:predFeatures.getFeaturesFlat()) {
             switch (feature)
             {
             case PREDICATE:
@@ -715,9 +913,33 @@ public class SRLModel implements Serializable {
                 if (parent!=null)
                     sampleFlat.put(feature, trainGoldParse?parent.getFunctionTaggedPOS():Arrays.asList(parent.getPOS()));
                 break;
+            case PREDICATEHEAD:
+            	if (head!=null) 
+            		sampleFlat.put(feature, Arrays.asList(langUtil.findStems(head).get(0)));
+            	break;
+            case PREDICATEHEADPOS:
+            	if (head!=null) 
+            		sampleFlat.put(feature, Arrays.asList(head.getPOS()));
+            	break;
             case HEADOFVP:
-            	if (vpAncestor != null)
-            		sampleFlat.put(feature, Arrays.asList(Boolean.toString(vpAncestor.getHead()==predicateNode)));
+            	if (langUtil.isVerb(predicateNode.getPOS())) {
+            		TBNode vpAncestor = predicateNode;
+                    while (vpAncestor != null && !vpAncestor.getPOS().equals("VP"))
+                    	vpAncestor = vpAncestor.getParent();
+                    if (vpAncestor!=null && vpAncestor.getPOS().equals("VP"))
+                    	sampleFlat.put(feature, Arrays.asList(Boolean.toString(vpAncestor.getHead()==predicateNode)));	
+            	}
+            	break;
+            case VPSIBLING:
+            	if (langUtil.isVerb(predicateNode.getPOS())) {
+            		for (int i=predicateNode.getChildIndex()+1; i<predicateNode.getParent().getChildren().length;++i)
+            			if (predicateNode.getParent().getChildren()[i].getPOS().equals("VP")) {
+            				sampleFlat.put(feature, Arrays.asList(Boolean.toString(true)));
+            				break;
+            			}
+            		if (sampleFlat.get(feature)==null)
+            			sampleFlat.put(feature, Arrays.asList(Boolean.toString(false)));
+            	}
             	break;
             case LEFTWORD:
                 if (leftNode!=null) sampleFlat.put(feature, Arrays.asList(leftNode.getWord()));   
@@ -927,43 +1149,34 @@ public class SRLModel implements Serializable {
         
         int mapIdx;
         
-        for (int i=0; i<samples.length; ++i)
-        {
+        for (int i=0; i<samples.length; ++i) {
             TIntHashSet featureSet = new TIntHashSet(samples[i].features);
             
             mapIdx = argTypeMap.get(samples[i].label);
             if (mapIdx!=0) featureSet.add(mapIdx);
             
-            for (int a=0; a<samples.length; ++a)
-            {
+            for (int a=0; a<samples.length; ++a) {
                 if (a==i) continue;
                 mapIdx = argListMap.get(samples[a].label);
                 if (mapIdx!=0) featureSet.add(mapIdx);
                 
                 if (samples[i].terminalIndex!=samples[a].terminalIndex &&
-                    samples[i].isBeforePredicate^samples[i].terminalIndex>samples[a].terminalIndex)
-                {
+                    samples[i].isBeforePredicate^samples[i].terminalIndex>samples[a].terminalIndex) {
                     mapIdx = argListPreviousMap.get(samples[a].label);
                     if (mapIdx!=0) featureSet.add(mapIdx);
                 }
             }
             
-            if (samples[i].isBeforePredicate)
-            {
+            if (samples[i].isBeforePredicate) {
                 for (int a=samples.length-1;a>i; --a)
-                    if (samples[i].terminalIndex<samples[a].terminalIndex && samples[a].label.matches("ARG\\d"))
-                    {
+                    if (samples[i].terminalIndex<samples[a].terminalIndex && samples[a].label.matches("ARG\\d")) {
                         mapIdx = argTypePreviousMap.get(samples[a].label);
                         if (mapIdx!=0) featureSet.add(mapIdx);
                         break;
                     }
-            }
-            else
-            {
-                for (int a=i+1;a<samples.length; ++a)
-                {
-                    if (samples[i].terminalIndex>samples[a].terminalIndex && samples[a].label.matches("ARG\\d"))
-                    {
+            } else {
+                for (int a=i+1;a<samples.length; ++a) {
+                    if (samples[i].terminalIndex>samples[a].terminalIndex && samples[a].label.matches("ARG\\d")) {
                         mapIdx = argTypePreviousMap.get(samples[a].label);
                         if (mapIdx!=0) featureSet.add(mapIdx);
                         break;
@@ -974,21 +1187,18 @@ public class SRLModel implements Serializable {
             X[i] = featureSet.toArray();
             Arrays.sort(X[i]);
         }
-        
         return X;
     }
-    
-    
+
     public List<SRInstance> predict(TBTree parseTree, SRInstance[] goldSRLs, String[] namedEntities)
     {   
-        List<SRInstance> predictions = new ArrayList<SRInstance>();
+    	ArrayList<SRInstance> predictions = new ArrayList<SRInstance>();
         
         TBNode[] nodes = parseTree.getTokenNodes();
         
         //debug block
         for (int i=0; i<nodes.length;++i)
-        	if (nodes[i].getTokenIndex()!=i)
-        	{
+        	if (nodes[i].getTokenIndex()!=i) {
         		System.err.println(parseTree.getFilename()+" "+parseTree.getIndex()+": "+parseTree.toString());
         		for (int j=0; j<nodes.length;++j)
         			System.err.print(nodes[j].getWord()+"/"+nodes[j].getTokenIndex()+" ");
@@ -996,32 +1206,53 @@ public class SRLModel implements Serializable {
         		System.err.flush();
         		System.exit(1);
         	}
+
+        if (goldSRLs==null) {
+        	double[] vals = new double[2];
+            for (TBNode node: nodes)
+                if (langUtil.isPredicateCandidate(node.getPOS()) &&
+                    predicateClassifier.predictValues(predFeatures.getFeatureVector(extractPredicateFeature(node, nodes)), vals)==1)
+                	predictions.add(new SRInstance(node, parseTree, langUtil.findStems(node).get(0)+".XX", vals[1]-vals[0]));
+        } else {
+        	for (SRInstance goldSRL:goldSRLs)
+        		predictions.add(new SRInstance(parseTree.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex()), parseTree, goldSRL.getRolesetId(), 1.0));
+        }
+
+        int[] supportIds = findSupportPredicates(predictions, SupportType.VERB, false);
+        BitSet predicted = new BitSet(supportIds.length);
         
-        double[] vals = new double[2];
-        for (TBNode node: nodes)
-            if (node.getPOS().startsWith("V") &&
-                predicateClassifier.predictValues(predFeatures.getFeatureVector(extractPredicateFeature(node, nodes)), vals)==1)
-            {
-            	List<String> stem = langUtil.findStems(node.getWord(), POS.VERB);
-                predictions.add(new SRInstance(node, parseTree, stem.get(0)+".XX", vals[1]-vals[0]));
-                /*
-                SRInstance goldSRL = null;
-                for (SRInstance srl:goldSRLs)
-                    if (node.getTokenIndex()==srl.predicateNode.getTokenIndex())
-                    {
-                        goldSRL = srl;
-                        break;
-                    }
-				*/
-                predict(predictions.get(predictions.size()-1), namedEntities);
-            }
+        // classify verb predicates first
+        int cardinality = 0;        
+        do {
+        	cardinality = predicted.cardinality();
+        	for (int i=predicted.nextClearBit(0); i<supportIds.length; i=predicted.nextClearBit(i+1))
+        		if (!langUtil.isVerb(predictions.get(i).getPredicateNode().getPOS()))
+        			continue;
+        		else if (supportIds[i]<0 || predicted.get(supportIds[i])) {
+        			predict(predictions.get(i), supportIds[i]<0?null:predictions.get(supportIds[i]), namedEntities);
+        			predicted.set(i);
+        		}
+        } while (predicted.cardinality()>cardinality);
+        
+        // then classify nominal predicates, by now we'll have the verb arguments to help find support verbs
+        supportIds = findSupportPredicates(predictions, SupportType.NOMINAL, false);
+        do {
+        	cardinality = predicted.cardinality();
+        	for (int i=predicted.nextClearBit(0); i<supportIds.length; i=predicted.nextClearBit(i+1))
+        		if (langUtil.isVerb(predictions.get(i).getPredicateNode().getPOS()))
+        			continue;
+        		else if (supportIds[i]<0 || predicted.get(supportIds[i])) {
+        			predict(predictions.get(i), supportIds[i]<0?null:predictions.get(supportIds[i]), namedEntities);
+        			predicted.set(i);
+        		}
+        } while (predicted.cardinality()>cardinality);
+        
         return predictions;
     }
 
-    public int predict(SRInstance prediction, /*SRInstance goldSRL,*/ String[] namedEntities)
-    {
-        List<TBNode> argNodes = SRLUtil.filterPredicateNode(SRLUtil.getArgumentCandidates(prediction.tree.getRootNode()),prediction.tree,prediction.predicateNode);
-        List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, namedEntities);
+    public int predict(SRInstance prediction, SRInstance support, String[] namedEntities) {
+        List<TBNode> argNodes = SRLUtil.getArgumentCandidates(prediction.predicateNode, support, langUtil, 1);
+        List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(prediction.predicateNode, argNodes, support, namedEntities);
 
         //boolean doStage2 = false;
         boolean doStage2 = classifier2!=null;
@@ -1120,6 +1351,7 @@ public class SRLModel implements Serializable {
         fout.close();
     }
     
+    /*
     public void writeSample(PrintStream out, TBNode predicateNode, ArrayList<TBNode> argNodes, ArrayList<String> labels, String[] namedEntities, InstanceFormat format)
     {
         List<Map<EnumSet<Feature>,List<String>>> samples = extractSampleFeature(predicateNode, argNodes, namedEntities);
@@ -1135,7 +1367,7 @@ public class SRLModel implements Serializable {
             writeData(out, features.getFeatureVector(samples.get(i)), lIdx, format);
         }
     }   
-
+*/
 	
 	int countConstituents(String label, List<TBNode> lnodes, List<TBNode> rnodes, TBNode joinNode)
 	{   

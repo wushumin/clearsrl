@@ -2,10 +2,12 @@ package clearsrl;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearcommon.util.LanguageUtil;
 
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -134,8 +136,10 @@ public class SRLUtil {
 		}
 	}
 	*/
+	
+	/*
 	public static void getSamplesFromParse(SRInstance instance, 
-			TBTree parsedTree, float threshold, 
+			TBTree parsedTree, LanguageUtil langUtil, float threshold, 
 			ArrayList<TBNode> candidateNodes, 
 			ArrayList<Map<String, Float>> labels)
 	{
@@ -150,7 +154,7 @@ public class SRLUtil {
 
 		for (int i=0; i<tmpNodes.size();++i)
 		{
-			BitSet tmp = convertToBitSet(tmpNodes.get(i),parsedTree.getTokenCount());
+			BitSet tmp = tmpNodes.get(i).getTokenSet();
 			if (!tmp.get(instance.predicateNode.getTokenIndex()))
 			{
 				// initialize all candidates to not argument
@@ -196,11 +200,11 @@ public class SRLUtil {
 			}
 			// if an argument is not matched to any candidate above the threshold, 
 			// at least remove the best matched candidate (if fscore>0.5) from training 
-			/*
-			else if (fScores[index]>threshold)
-			{
-				removalBitSet.set(index);
-			}*/
+			
+			//else if (fScores[index]>threshold)
+			//{
+			//	removalBitSet.set(index);
+			//}
 		}
 		
 		for (int i=removalBitSet.nextSetBit(0); i>=0; i=removalBitSet.nextSetBit(i+1))
@@ -216,16 +220,87 @@ public class SRLUtil {
 			}
 		}
 	}
+*/
 
-	
-	public static BitSet convertToBitSet(TBNode node, int nbits)
-	{
-		BitSet tokenSet = new BitSet(nbits);
-		for (TBNode aNode:node.getTokenNodes())
-			tokenSet.set(aNode.getTokenIndex());
-		return tokenSet;
+	/**
+	 * @param instance instance to get samples from, nodes can be based off of gold tree
+	 * @param support support instance and its arguments, should be based off of parsed tree
+	 * @param parsedTree the parsed tree to perform SRL off of 
+	 * @param langUtil language utility class
+	 * @param levelDown numbers of levels down each sibling node to collect candidates
+	 * @param threshold word overlap threshold for an argument and constituent to be considered a match
+	 * @param candidateNodes candidate constituents for argument consideration
+	 * @param labels argument labels (matched against instance arguments)
+	 */
+	@SuppressWarnings("serial")
+	public static void getSamplesFromParse(SRInstance instance, SRInstance support,
+			TBTree parsedTree, LanguageUtil langUtil, int levelDown, float threshold, 
+			ArrayList<TBNode> candidateNodes, 
+			ArrayList<Map<String, Float>> labels) {
+		//if (instance.getArgs().size()==1) // skip if there are no arguments
+		//	return;
+		
+		candidateNodes.clear();
+		labels.clear();
+
+		candidateNodes.addAll(getArgumentCandidates(parsedTree.getNodeByTokenIndex(instance.getPredicateNode().getTokenIndex()), support, langUtil, levelDown));
+		if (candidateNodes.isEmpty()) return;
+		
+		ArrayList<BitSet> candidateTokens = new ArrayList<BitSet>(candidateNodes.size());
+		for (TBNode node:candidateNodes) {
+			// initialize all candidates to not argument
+			candidateTokens.add(node.getTokenSet());
+			labels.add(new HashMap<String, Float>(){{put(SRLModel.NOT_ARG, 1.0f);}});
+		}
+		
+		BitSet candidateBitSet = new BitSet(candidateNodes.size());
+		BitSet removalBitSet = new BitSet(candidateNodes.size());
+		
+		// find a good match between parse candidates and argument boundary of gold SRL
+		for (SRArg arg:instance.getArgs()) {
+			if (arg.isPredicate()) continue;
+			BitSet argBitSet = arg.getTokenSet();
+		
+			if (argBitSet.isEmpty()) continue;
+			float []fScores = new float[candidateTokens.size()];
+			
+			for (int i=0; i<candidateTokens.size(); ++i) {
+				BitSet clone = (BitSet)candidateTokens.get(i).clone();
+				clone.and(argBitSet);
+				fScores[i] = getFScore(clone.cardinality()*1.0f/candidateTokens.get(i).cardinality(), clone.cardinality()*1.0f/argBitSet.cardinality());
+				if (fScores[i]>0.5f)
+					labels.get(i).put(removeArgModifier(arg.label), fScores[i]);
+			}
+			int index = SRLUtil.getMaxIndex(fScores);
+			
+			// if the best matched candidate phrase fscore is above threshold, labeled it the argument
+			if (fScores[index]>=0.9999f) {
+				if (candidateBitSet.get(index))
+					System.err.println("Candidate reused: "+candidateNodes.get(index));
+				candidateBitSet.set(index);
+				labels.get(index).remove(SRLModel.NOT_ARG);
+			}
+			// if an argument is not matched to any candidate above the threshold, 
+			// at least remove the best matched candidate (if fscore>0.5) from training 
+			/*
+			else if (fScores[index]>threshold)
+			{
+				removalBitSet.set(index);
+			}*/
+		}
+		
+		for (int i=removalBitSet.nextSetBit(0); i>=0; i=removalBitSet.nextSetBit(i+1))
+			if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG))
+				labels.set(i, null);
+		
+		for (int i=0; i<labels.size();++i)
+			if (labels.get(i)==null) {
+				labels.remove(i);
+				candidateNodes.remove(i);
+				continue;
+			}
 	}
-	
+	/*
 	public static ArrayList<TBNode> getArgumentCandidates(TBNode node)
 	{
 		ArrayList<TBNode> nodes = new ArrayList<TBNode>();
@@ -251,18 +326,169 @@ public class SRLUtil {
 			}
 		}
 		return nodes;
+	}*/
+	
+	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown) {
+		boolean toRoot = true;
+		
+		boolean isVerb = langUtil.isVerb(predicate.getPOS());
+		if (support != null) {
+			int levelUp = 0;			
+			SRArg foundArg = null;
+			for (SRArg arg:support.getArgs()) {
+				if (arg.getLabel().equals(SRLModel.NOT_ARG)) continue;
+				if (arg.tokenSet.get(predicate.getTokenIndex())) {
+					foundArg = arg;
+					TBNode node = predicate;
+					while (node != arg.node) {
+						++levelUp;
+						node=node.getParent();
+					}
+					break;	
+				}
+			}
+			if (foundArg!=null) {
+				List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);
+				if (!isVerb) {
+					for (SRArg arg:support.getArgs())
+						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG))
+							candidates.add(arg.node);
+				} else {
+					TBNode argNode = foundArg.node;
+					
+					if (toRoot)
+						levelUp = argNode.getLevelToRoot();
+					else {
+						levelUp = 0;
+						boolean foundVP=false;
+						while (argNode!=null) {
+							++levelUp;
+							if (foundVP && (langUtil.isClause(argNode.getPOS()) || argNode.getPOS().equals("FRAG")))
+								break;
+							if (argNode.getPOS().equals("VP"))
+								foundVP = true;
+							argNode = argNode.getParent();
+						}
+					}
+					
+					if (levelUp>0)
+						candidates.addAll(getNodes(foundArg.node, levelUp, 0));
+					for (SRArg arg:support.getArgs())
+						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG)) {
+							boolean foundCandidate = false;
+							for (TBNode node:candidates)
+								if (arg.node==node) {
+									foundCandidate = true;
+									break;
+								}
+							if (!foundCandidate)
+								candidates.add(arg.node);
+						}
+				}
+				return candidates;
+			}
+			if (langUtil.isVerb(predicate.getPOS())) {
+				TBNode ancestor = predicate.getLowestCommonAncestor(support.predicateNode);
+				if (ancestor.getPOS().equals("VP") && (levelUp=predicate.getLevelToNode(ancestor))==support.predicateNode.getLevelToNode(ancestor)) {
+					// support probably is the head of VP conjunction
+					List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);
+					if (toRoot) {
+						levelUp = ancestor.getLevelToRoot();
+						if (levelUp>0)
+							candidates.addAll(getNodes(ancestor, levelUp, 0));
+					}
+					for (SRArg arg:support.getArgs())
+						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.getLabel().equals("rel")) {
+							boolean foundCandidate = false;
+							for (TBNode node:candidates)
+								if (arg.node==node) {
+									foundCandidate = true;
+									break;
+								}
+							if (!foundCandidate)
+								candidates.add(arg.node);
+						}
+					return candidates;
+				}
+			}
+		}
+		int levelUp = 0;
+		TBNode node = predicate.getParent();
+		boolean foundClause=false;
+		boolean foundRelativeClause=false;
+		while (node!=null) {
+			++levelUp;
+			if (!isVerb && (node.getPOS().equals("VP")||langUtil.isClause(node.getPOS())) || node.getPOS().equals("FRAG"))
+				break;
+			
+			// work around for relative clauses when the support verb is missing
+			if (foundClause && langUtil.isVerb(node.getHead().getPOS()) && node.getHead()!=predicate && 
+					(foundRelativeClause || !langUtil.isRelativeClause(node.getPOS())) ) {
+				TBNode headConstituent = node.getHead().getConstituentByHead();
+				levelUp+=node.getLevelToNode(headConstituent);
+				node = headConstituent;
+				break;
+			}
+			
+			if (langUtil.isClause(node.getPOS()))
+				foundClause = true;
+			
+			if (langUtil.isRelativeClause(node.getPOS()))
+				foundRelativeClause = true;
+			
+			node = node.getParent();
+		}
+		List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);	
+		if (toRoot && node!=null) {
+			levelUp = node.getLevelToRoot();
+			if (levelUp>0)
+				candidates.addAll(getNodes(node, levelUp, 0));
+		}
+		return candidates;	
 	}
 	
-	public static ArrayList<TBNode> filterPredicateNode(ArrayList<TBNode> argNodes, TBTree tree, TBNode predicateNode)
-	{
+	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown) {
+		ArrayList<TBNode> nodes = new ArrayList<TBNode>();
+		if ((levelUp<=0 || node.getParent()==null) && levelDown<=0)
+			return nodes;
+		
+		if (levelUp>0) {
+			TBNode parent = node.getParent();
+			
+			for (int i=0; i<parent.getChildren().length; ++i) {
+				if (node.getChildIndex()==i) continue;
+				if (parent.getChildren()[i].getTokenSet().cardinality()>0) {
+					nodes.add(parent.getChildren()[i]);
+					if (levelDown>0)
+						nodes.addAll(getNodes(parent.getChildren()[i], 0, levelDown));
+				}
+			}
+			if (levelUp>1)
+				nodes.addAll(getNodes(parent, levelUp-1, levelDown));
+		} else {
+			for (TBNode child:node.getChildren())
+				// make this is not an empty element node
+				if (child.getTokenSet().cardinality()>0) {
+					nodes.add(child);
+					if (levelDown>0)
+						nodes.addAll(getNodes(child, 0, levelDown-1));
+				}
+			// if we are going down a level, we need to find more than 1 node, otherwise
+			// the single node would have the same token set as the current node
+			if (nodes.size()==1)
+				nodes.clear();
+		}
+
+		return nodes;
+	}
+	
+	
+	public static ArrayList<TBNode> filterPredicateNode(ArrayList<TBNode> argNodes, TBTree tree, TBNode predicateNode) {
 		for (int i=0; i<argNodes.size();)
-		{
-			BitSet tmp = convertToBitSet(argNodes.get(i),tree.getTokenCount());
-			if (tmp.get(predicateNode.getTokenIndex()))
+			if (argNodes.get(i).getTokenSet().get(predicateNode.getTokenIndex()))
 				argNodes.remove(i);
 			else
 				++i;
-		}
 		return argNodes;
 	}
 	

@@ -3,6 +3,7 @@ package clearcommon.util;
 import java.io.FileNotFoundException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +11,10 @@ import java.util.Map;
 import java.util.Properties;
 
 import edu.mit.jwi.Dictionary;
+import edu.mit.jwi.item.IIndexWord;
+import edu.mit.jwi.item.IWord;
+import edu.mit.jwi.item.IWordID;
+import edu.mit.jwi.item.Pointer;
 import edu.mit.jwi.morph.WordnetStemmer;
 
 import clearcommon.treebank.TBHeadRules;
@@ -66,28 +71,49 @@ public class EnglishUtil extends LanguageUtil {
     }
 
     @Override
-    public List<String> findStems(String word, POS pos)
-    {
-        List<String> stems = stemmer.findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
-        return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+    public List<String> findStems(String word, POS pos) {
+        return findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
     }
     
     @Override
-    public List<String> findStems(TBNode node)
-    {
-        String pos = node.getPOS();
-        List<String> stems = null;
-        if (isNoun(pos))
-            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.NOUN);
-        else if (isVerb(pos))
-            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.VERB);
-        else if (isAdjective(pos))
-            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.ADJECTIVE);
-        else if (isAdverb(pos))
-            stems = stemmer.findStems(node.getWord(), edu.mit.jwi.item.POS.ADVERB);
-        
+    public List<String> findStems(TBNode node) {
+        edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
+        List<String> stems  = pos==null?null:stemmer.findStems(node.getWord(), pos);        
         return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(node.getWord()):stems;
     }
+    
+    List<String> findStems(String word, edu.mit.jwi.item.POS pos) {
+    	List<String> stems = stemmer.findStems(word, pos);
+    	return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+    }
+    
+    edu.mit.jwi.item.POS convertPOS(String input) {
+    	if (isNoun(input)) return edu.mit.jwi.item.POS.NOUN;
+    	if (isVerb(input)) return edu.mit.jwi.item.POS.VERB;
+    	if (isAdjective(input)) return edu.mit.jwi.item.POS.ADJECTIVE;
+    	if (isAdverb(input)) return edu.mit.jwi.item.POS.ADVERB;
+    	return null;
+    }
+    
+    public String findDerivedVerb(TBNode node) {
+    	
+    	edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
+    	if (pos==null) return null;
+    	
+    	String stem = findStems(node).get(0);
+    	
+        IIndexWord idxWord = dict.getIndexWord(stem, pos);
+        if (idxWord==null) return null;
+        IWordID wordID = idxWord.getWordIDs().get(0);
+        IWord word = dict.getWord(wordID);
+        
+        List<IWordID> wordIDs = word.getRelatedWords(Pointer.DERIVATIONALLY_RELATED);
+        List<String> candidates = new ArrayList<String>();
+        for (IWordID wID:wordIDs)
+            if (wID.getPOS() == edu.mit.jwi.item.POS.VERB) candidates.add(dict.getWord(wID).getLemma());
+        return candidates.isEmpty()?null:candidates.get(0);
+    }
+    
     
     @Override
     public String resolveAbbreviation(String word, String POS)
@@ -264,6 +290,21 @@ public class EnglishUtil extends LanguageUtil {
 	@Override
 	public boolean isAdverb(String POS) {
 		return POS.startsWith("RB");
+	}
+
+	@Override
+	public boolean isClause(String POS) {
+		return POS.matches("S|SBARQ|SINV|SQ");
+	}
+
+	@Override
+	public boolean isPredicateCandidate(String POS) {
+		return isVerb(POS) || isAdjective(POS) || POS.matches("NN|NNS");
+	}
+
+	@Override
+	public boolean isRelativeClause(String POS) {
+		return POS.equals("SBAR");
 	}
 
 

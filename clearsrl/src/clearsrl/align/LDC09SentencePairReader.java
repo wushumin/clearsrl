@@ -19,9 +19,10 @@ import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import clearcommon.propbank.DefaultPBTokenizer;
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -108,7 +109,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
         		srcPropFiles.add(srcOntonotesDir+File.separatorChar+filePrefix+".prop");
         	}
         	srcTreeBank = TBUtil.readTBDir(srcOntonotesDir, srcTreeFiles);
-        	srcPropBank = PBUtil.readPBDir(srcPropFiles, new TBReader(srcTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
+        	srcPropBank = PBUtil.readPBDir(srcPropFiles, new TBReader(srcTreeBank), props.getProperty("goldpb")==null?new DefaultPBTokenizer():new OntoNotesTokenizer());
 
         	for (String filePrefix:dstTreeFilePrefixs)
         	{
@@ -116,7 +117,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
         		dstPropFiles.add(dstOntonotesDir+File.separatorChar+filePrefix+".prop");
         	}
             dstTreeBank = TBUtil.readTBDir(dstOntonotesDir, dstTreeFiles);
-            dstPropBank = PBUtil.readPBDir(dstPropFiles, new TBReader(dstTreeBank), props.getProperty("goldpb")==null?null:new OntoNoteTreeFileResolver());
+            dstPropBank = PBUtil.readPBDir(dstPropFiles, new TBReader(dstTreeBank), props.getProperty("goldpb")==null?new DefaultPBTokenizer():new OntoNotesTokenizer());
         	
         }
     }

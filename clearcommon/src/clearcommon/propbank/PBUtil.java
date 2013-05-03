@@ -2,7 +2,6 @@ package clearcommon.propbank;
 
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TreeFileResolver;
 import clearcommon.util.FileUtil;
 
 import java.io.File;
@@ -22,25 +21,25 @@ public final class PBUtil {
 	
     public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir)
     {
-        return readPBDir(dirName, regex, tbDir, null);
+        return readPBDir(dirName, regex, tbDir, new DefaultPBTokenizer());
     }
     
-    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, TreeFileResolver resolver)
+    public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, String tbDir, PBTokenizer tokenizer)
     {   
-        return readPBDir(dirName, regex, new TBReader(tbDir, true), resolver);
+        return readPBDir(dirName, regex, new TBReader(tbDir, true), tokenizer);
     }
     
     public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader)
     {
-    	return readPBDir(dirName, regex, tbReader, null);
+    	return readPBDir(dirName, regex, tbReader, new DefaultPBTokenizer());
     }
     
-	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader, TreeFileResolver resolver)
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(String dirName, String regex, TBReader tbReader, PBTokenizer tokenizer)
 	{ 
-		return readPBDir(FileUtil.getFiles(new File(dirName), regex, true), tbReader, resolver);		
+		return readPBDir(FileUtil.getFiles(new File(dirName), regex, true), tbReader, tokenizer);		
 	}
 	
-	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(List<String> files, TBReader tbReader, TreeFileResolver resolver)
+	public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(List<String> files, TBReader tbReader, PBTokenizer tokenizer)
 	{   
 		int correctCnt=0;
 		int exceptionCnt=0;
@@ -55,7 +54,7 @@ public final class PBUtil {
 		{
 			PBFileReader pbreader=null;
             try {
-                pbreader = new PBFileReader(tbReader, annotationFile, resolver);
+                pbreader = new PBFileReader(tbReader, annotationFile, tokenizer);
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
                 continue;

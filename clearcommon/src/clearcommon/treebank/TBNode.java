@@ -277,6 +277,16 @@ public class TBNode implements Serializable {
 		return level;
 	}
 	
+	public int getLevelToNode(TBNode node) {
+		int level = 0;
+		TBNode ancestor = this;
+		while (ancestor!=node && (ancestor=ancestor.parent)!=null)
+			++level;
+		if (ancestor!=node)
+			return -1;
+		return level;
+	}
+	
 	public TBNode getLowestCommonAncestor(TBNode node) {
 		List<TBNode> lhs = getPathToRoot();
 		List<TBNode> rhs = node.getPathToRoot();

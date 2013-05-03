@@ -139,4 +139,20 @@ public class ChineseUtil extends LanguageUtil {
 		return POS.equals("AD");
 	}
 
+	@Override
+	public boolean isClause(String POS) {
+		return POS.matches("IP|CP");
+	}
+
+	@Override
+	public boolean isPredicateCandidate(String POS) {
+		return isVerb(POS) || POS.equals("NN");
+	}
+
+	@Override
+	public boolean isRelativeClause(String POS) {
+		// TODO: this is very termporary 
+		return POS.equals("CP");
+	}
+
 }

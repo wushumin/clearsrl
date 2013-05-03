@@ -57,15 +57,16 @@ public class SRInstance {
 	*/
 	public SRInstance(PBInstance instance) {
 		this(instance.getPredicate(), instance.getTree(), instance.getRoleset(), 1.0);
-		for (PBArg pbArg: instance.getArgs())
-		{
+		for (PBArg pbArg: instance.getArgs()) {
+			if (pbArg.getLabel().equals("rel")) continue;
 		    if (!pbArg.getTokenSet().isEmpty())
-		        addArg(new SRArg(SRLUtil.removeArgModifier(pbArg.getLabel()), pbArg.getNode()));
+		        addArg(new SRArg(SRLUtil.removeArgModifier(pbArg.getLabel()), pbArg.getNode(), 1.0));
 
 			for (PBArg nestedArg:pbArg.getNestedArgs())
 			    if (!nestedArg.getTokenSet().isEmpty())
-	                addArg(new SRArg(SRLUtil.removeArgModifier(nestedArg.getLabel()), nestedArg.getNode()));
+	                addArg(new SRArg(SRLUtil.removeArgModifier(nestedArg.getLabel()), nestedArg.getNode(), 1.0));
 		}
+		args.trimToSize();
 	}
 
 	public void addArg(SRArg arg)

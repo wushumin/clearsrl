@@ -24,9 +24,9 @@ import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.OntoNoteTreeFileResolver;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -358,7 +358,7 @@ public class ConvertLDC09 {
         		srcPropFiles.add(srcOntonotesDir+File.separatorChar+filePrefix+".prop");
         	}
         	srcTreeBank = TBUtil.readTBDir(srcOntonotesDir, srcTreeFiles);
-        	srcPropBank = PBUtil.readPBDir(srcPropFiles, new TBReader(srcTreeBank), new OntoNoteTreeFileResolver());
+        	srcPropBank = PBUtil.readPBDir(srcPropFiles, new TBReader(srcTreeBank), new OntoNotesTokenizer());
 
         	for (String filePrefix:dstTreeFilePrefixs)
         	{
@@ -366,7 +366,7 @@ public class ConvertLDC09 {
         		dstPropFiles.add(dstOntonotesDir+File.separatorChar+filePrefix+".prop");
         	}
             dstTreeBank = TBUtil.readTBDir(dstOntonotesDir, dstTreeFiles);
-            dstPropBank = PBUtil.readPBDir(dstPropFiles, new TBReader(dstTreeBank), new OntoNoteTreeFileResolver());
+            dstPropBank = PBUtil.readPBDir(dstPropFiles, new TBReader(dstTreeBank), new OntoNotesTokenizer());
         	
         }
 
