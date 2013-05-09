@@ -134,7 +134,12 @@ public class SRLModel implements Serializable {
 	    EnumMap<Feature,List<String>> features;
 	}
 	
-	class TokenDistanceComparator implements Comparator<ArgSample> {
+	class TokenDistanceComparator implements Comparator<ArgSample>, Serializable {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public int compare(ArgSample lhs, ArgSample rhs) {
@@ -155,7 +160,12 @@ public class SRLModel implements Serializable {
 		
 	}
 	
-	class HeadDistanceComparator implements Comparator<ArgSample> {
+	class HeadDistanceComparator implements Comparator<ArgSample>, Serializable  {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public int compare(ArgSample o1, ArgSample o2) {
