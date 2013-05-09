@@ -362,7 +362,7 @@ public class SRLModel implements Serializable {
                     SRLUtil.getSamplesFromParse(instances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), tree, langUtil, 1, threshold, argNodes, labels);
                     for (int l=0; l<labels.size(); ++l)
                         trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), supportIds[i]<0?null:srlSamples[supportIds[i]], namedEntities, buildDictionary);
+                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), supportIds[i]<0?null:srlSamples[supportIds[i]], namedEntities, buildDictionary);
 
                     if (buildDictionary) {
                     	
@@ -409,7 +409,7 @@ public class SRLModel implements Serializable {
         }
     }
     
-    public SRLSample addTrainingSamples(SRInstance sampleInstance, SRLSample supportInstance, String[] namedEntities, boolean buildDictionary)    
+    public SRLSample addTrainingSamples(SRInstance sampleInstance, SRInstance supportInstance, SRLSample supportSample, String[] namedEntities, boolean buildDictionary)    
 	{
         ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
         ArrayList<String> labels = new ArrayList<String>();
@@ -420,12 +420,24 @@ public class SRLModel implements Serializable {
             labels.add(arg.label);
         }
         
-		List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
+		List<EnumMap<Feature,List<String>>> featureMapList = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
+		List<ArgSample> sampleList = new ArrayList<ArgSample>();
+        for (int i=0; i<featureMapList.size();++i)
+            if (labelStringMap.containsKey(labels.get(i)))
+                sampleList.add(new ArgSample(argNodes.get(i), sampleInstance.getPredicateNode(), labels.get(i), featureMapList.get(i)));
+        
+        ArgSample[] argSamsples = sampleList.toArray(new ArgSample[sampleList.size()]);
+        Arrays.sort(argSamsples, sampleComparator);
+				
 		if (buildDictionary) {
 			int c=0;
-			for (EnumMap<Feature,List<String>> sample:samples) {
+			List<ArgSample> predictedList = new ArrayList<ArgSample>();
+			for (int i=0; i<featureMapList.size();++i) {
 				boolean isNoArg = NOT_ARG.equals(labels.get(c));
-				for(Map.Entry<EnumSet<Feature>,List<String>> entry:features.convertFlatSample(sample).entrySet())
+				featureMapList.get(i).putAll(extractSequenceFeatures(sampleInstance.predicateNode, sampleList.get(i), sampleInstance, predictedList));
+				if (!isNoArg)
+					predictedList.add(argSamsples[i]);
+				for(Map.Entry<EnumSet<Feature>,List<String>> entry:features.convertFlatSample(featureMapList.get(i)).entrySet())
 					features.addToDictionary(entry.getKey(), entry.getValue(), isNoArg);
 				
 				//if (!NOT_ARG.equals(SRLUtil.getMaxLabel(labels.get(c))))
@@ -434,16 +446,8 @@ public class SRLModel implements Serializable {
 				++c;
 			}
 			return null;
-		} else {  
-			List<ArgSample> sampleList = new ArrayList<ArgSample>();	
-            for (int i=0; i<samples.size();++i)
-                if (labelStringMap.containsKey(labels.get(i)))
-                    sampleList.add(new ArgSample(argNodes.get(i), sampleInstance.getPredicateNode(), labels.get(i), samples.get(i)));
-            
-            ArgSample[] argSamsples = sampleList.toArray(new ArgSample[sampleList.size()]);
-            Arrays.sort(argSamsples, sampleComparator);
-            
-            SRLSample srlSample = new SRLSample(sampleInstance.getPredicateNode(), sampleInstance.getTree(), supportInstance, argSamsples);
+		} else {              
+            SRLSample srlSample = new SRLSample(sampleInstance.getPredicateNode(), sampleInstance.getTree(), supportSample, argSamsples);
             
             List<SRLSample> tSampleList = trainingSamples.get(sampleInstance.tree.getFilename());
             if (tSampleList == null) {
