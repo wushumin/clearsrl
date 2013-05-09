@@ -1012,8 +1012,18 @@ public class SRLModel implements Serializable {
         
         	System.out.println(score.toString());
         	
-        	if (1-agreement<=threshold) break;
-        }
+        	if (1-agreement<=threshold) {
+        		if (r>0) {
+        			// change the training sample labels back
+        	        int labelCnt=0;
+        	        for (Map.Entry<String, List<SRLSample>> entry:trainingSamples.entrySet())
+        	            for (SRLSample sample:entry.getValue())
+        	                for (ArgSample argSample:sample.args)
+        	                	argSample.label=goldLabels[labelCnt++];        
+        		}
+        		break;
+        	}
+        }     
     }
 
     String[] train(int folds, int threads, String[] labels) {   			
@@ -1025,10 +1035,13 @@ public class SRLModel implements Serializable {
         TIntArrayList yList = new TIntArrayList();
         TIntArrayList seedList = new TIntArrayList();
         int treeCnt = 0;
+        
+        int labelCnt=0;
         for (Map.Entry<String, List<SRLSample>> entry:trainingSamples.entrySet()) {
             for (SRLSample srlSample:entry.getValue()) {
             	List<ArgSample> predictedArgs = new ArrayList<ArgSample>();
                 for (ArgSample argSample:srlSample.args) {
+                	argSample.label = labels[labelCnt++];
                 	if (!argSample.label.equals(NOT_ARG))
                 		predictedArgs.add(argSample);
                 	SRInstance support = null;
