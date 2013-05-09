@@ -423,7 +423,7 @@ public class SRLModel implements Serializable {
 		List<EnumMap<Feature,List<String>>> featureMapList = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
 		List<ArgSample> sampleList = new ArrayList<ArgSample>();
         for (int i=0; i<featureMapList.size();++i)
-            if (labelStringMap.containsKey(labels.get(i)))
+            if (buildDictionary || labelStringMap.containsKey(labels.get(i)))
                 sampleList.add(new ArgSample(argNodes.get(i), sampleInstance.getPredicateNode(), labels.get(i), featureMapList.get(i)));
         
         ArgSample[] argSamsples = sampleList.toArray(new ArgSample[sampleList.size()]);
