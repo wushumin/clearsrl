@@ -171,9 +171,14 @@ public class SRLScore {
 	public String toString()
 	{
 		StringBuilder builder = new StringBuilder();
-		
-		builder.append("\n********** Token Results **********");
-		builder.append(toString(microCount));
+		int sum = 0;
+		for (int[] row:microCount)
+			for (int cell:row)
+				sum+=cell;
+		if (sum>0) {
+			builder.append("\n********** Token Results **********");
+			builder.append(toString(microCount));
+		}
 		builder.append("---------- Arg Results ------------");
 		builder.append(toString(macroCount));
 		builder.append("************************\n\n");

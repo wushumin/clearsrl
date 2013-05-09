@@ -996,7 +996,7 @@ public class SRLModel implements Serializable {
 
         String[] labels = goldLabels;
         for (int r=0; r<rounds; ++r) {
-        	String[] newLabels = train(hasSequenceFeature?folds:1, threads, labels);
+        	String[] newLabels = train(r!=0, hasSequenceFeature?folds:1, threads, labels);
         	int cnt=0;
         	for (int i=0; i<labels.length; ++i) {
         		//if (i<50) System.out.println(i+" "+labels[i]+" "+newLabels[i]);
@@ -1026,7 +1026,15 @@ public class SRLModel implements Serializable {
         }     
     }
 
-    String[] train(int folds, int threads, String[] labels) {   			
+    /**
+     * 
+     * @param useSequence whether to use sequence features (may not be a good idea at the start)
+     * @param folds folds of x-validataion
+     * @param threads number of threads used for x-validataion
+     * @param labels set of predicted labels from last round of training
+     * @return new set of labels
+     */
+    String[] train(boolean useSequence, int folds, int threads, String[] labels) {   			
         int[][] X = null;
         int[] y = null;
         int[] seed = null;
@@ -1051,7 +1059,10 @@ public class SRLModel implements Serializable {
                 			if (!supportArg.label.equals(NOT_ARG))
                 				support.addArg(new SRArg(supportArg.label, supportArg.node));
                 	}
-                	xList.add(getFeatureVector(srlSample.predicate, argSample, support, predictedArgs));
+                	if (useSequence)
+                		xList.add(getFeatureVector(srlSample.predicate, argSample, support, predictedArgs));
+                	else
+                		xList.add(features.getFeatureVector(features.convertFlatSample(argSample.features)));
                     yList.add(labelStringMap.get(argSample.label));
                     seedList.add(treeCnt);
                 }
