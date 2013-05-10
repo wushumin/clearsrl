@@ -1014,7 +1014,7 @@ public class SRLModel implements Serializable {
 
         String[] labels = goldLabels;
         for (int r=0; r<rounds; ++r) {
-        	String[] newLabels = train(r!=0, hasSequenceFeature?folds:1, threads, labels, goldLabels);
+        	String[] newLabels = train(hasSequenceFeature, hasSequenceFeature?folds:1, threads, labels, goldLabels);
         	int cnt=0;
         	for (int i=0; i<labels.length; ++i) {
         		//if (i<50) System.out.println(i+" "+labels[i]+" "+newLabels[i]);
