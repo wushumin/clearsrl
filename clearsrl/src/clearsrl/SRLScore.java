@@ -2,7 +2,6 @@ package clearsrl;
 
 import gnu.trove.TObjectIntHashMap;
 
-import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.SortedSet;
@@ -13,6 +12,30 @@ public class SRLScore {
 	TObjectIntHashMap<String> labelMap;
 	int[][] microCount;
 	int[][] macroCount;
+	
+	class Score {
+		public Score(String label, double p, double r, double f, long pCount, long rCount, long fCount) {
+			this.label = label;
+			this.p = p;
+			this.r = r;
+			this.f = f;
+			this.pCount = pCount;
+			this.rCount = rCount;
+			this.fCount = fCount;
+		}
+		
+		public String toString() {
+			return String.format("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f", label, fCount, pCount, rCount, p*100, r*100, f*100);
+		}
+		
+		String label;
+		double p;
+		double r;
+		double f;
+		long pCount;
+		long rCount;
+		long fCount;
+	}
 	
 	public SRLScore(SortedSet<String> labelSet)
 	{
@@ -176,23 +199,23 @@ public class SRLScore {
 			for (int cell:row)
 				sum+=cell;
 		if (sum>0) {
-			builder.append("\n********** Token Results **********");
+			builder.append("\n********** Token Results **********\n");
 			builder.append(toString(microCount));
 		}
-		builder.append("---------- Arg Results ------------");
+		builder.append("---------- Arg Results ------------\n");
 		builder.append(toString(macroCount));
 		builder.append("************************\n\n");
 		
 		return builder.toString();
 	}
 		
-	String toString(int[][] count)	
-	{
-		StringBuilder builder = new StringBuilder();
+	
+	Score[] getScores(int[][] count) {
+		Score[] scores = new Score[labelSet.size()+1];
 		int pTotal=0, rTotal=0, fTotal=0;
 		double p, r, f;
-		for (String label: labelSet)
-		{
+		int sCount = 0;
+		for (String label: labelSet) {
 			if (label.equals(SRLModel.NOT_ARG)) continue;
 			
 			int idx = labelMap.get(label);
@@ -208,7 +231,7 @@ public class SRLScore {
 			r = rArgT==0?0:((double)fArgT)/rArgT;
 			f = p==0?0:(r==0?0:2*p*r/(p+r));
 
-			builder.append(String.format("\n%s(%d,%d,%d): precision: %f recall: %f f-measure: %f", label, fArgT, pArgT, rArgT, p*100, r*100, f*100));
+			scores[sCount++] = new Score(label, p, r, f, pArgT, rArgT, fArgT);
 			
 			pTotal += pArgT;
 			rTotal += rArgT;
@@ -219,8 +242,23 @@ public class SRLScore {
 		r = rTotal==0?0:((double)fTotal)/rTotal;
 		f = p==0?0:(r==0?0:2*p*r/(p+r));
 		
-		builder.append(String.format("\n%s(%d,%d,%d): precision: %f recall: %f f-measure: %f\n", "all", fTotal, pTotal, rTotal, p*100, r*100, f*100));
+		scores[sCount] = new Score("all", p, r, f, pTotal, rTotal, fTotal);
+		return scores;
 		
+	}
+	
+	public double getFScore() {
+		Score[] scores = getScores(macroCount);
+		return scores[scores.length-1].f;
+	}
+	
+	String toString(int[][] count) 	{
+		StringBuilder builder = new StringBuilder();
+		
+		for (Score score:getScores(count)) {
+			builder.append(score.toString());
+			builder.append("\n");
+		}
 		return builder.toString();
 	}
 }
