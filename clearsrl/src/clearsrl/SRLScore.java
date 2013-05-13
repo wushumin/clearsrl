@@ -2,6 +2,7 @@ package clearsrl;
 
 import gnu.trove.TObjectIntHashMap;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.SortedSet;
@@ -37,14 +38,12 @@ public class SRLScore {
 		long fCount;
 	}
 	
-	public SRLScore(SortedSet<String> labelSet)
-	{
+	public SRLScore(SortedSet<String> labelSet) {
 		this.labelSet = labelSet;
 		labelMap = new TObjectIntHashMap<String>();
 		
 		int count=0;
-		for (String argType:labelSet)
-		{
+		for (String argType:labelSet) {
 		    if (SRLModel.NOT_ARG.equals(argType))
 		        continue;
 			labelMap.put(argType, ++count);
@@ -53,8 +52,7 @@ public class SRLScore {
 		macroCount = new int[count+1][count+1];
 	}
 	
-	String[] getLabels(List<SRArg> args, int tokenCount)
-	{
+	String[] getLabels(List<SRArg> args, int tokenCount) {
 		String[] strs = new String[tokenCount];
 		Arrays.fill(strs, SRLModel.NOT_ARG);
 		for (SRArg arg:args)
@@ -63,8 +61,7 @@ public class SRLScore {
 		return strs;
 	}
 	
-	public static SRInstance getIntersection(SRInstance lhs, SRInstance rhs)
-	{
+	public static SRInstance getIntersection(SRInstance lhs, SRInstance rhs) {
 	    if (!lhs.tree.getFilename().equals(rhs.tree.getFilename()) ||
 	            lhs.tree.getIndex()!=rhs.tree.getIndex() ||
 	            lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
@@ -75,13 +72,13 @@ public class SRLScore {
 	    List<SRArg> lhsargs = lhs.args;
 	    List<SRArg> rhsargs = rhs.args;
 	    
-	    for (int i=0, j=0; i<lhsargs.size() && j<rhsargs.size();)
-        {
+	    for (int i=0, j=0; i<lhsargs.size() && j<rhsargs.size();) {
 	        int compare = lhsargs.get(i).compareTo(rhsargs.get(j));
-	        if (compare<0) ++i;
-	        else if (compare>0) ++j;
-	        else
-	        {
+	        if (compare<0) 
+	        	++i;
+	        else if (compare>0) 
+	        	++j;
+	        else {
 	            if (lhsargs.get(i).tokenSet.equals(rhsargs.get(j).tokenSet))
 	                instance.args.add(lhsargs.get(i));
 	            ++i; ++j;
@@ -92,8 +89,7 @@ public class SRLScore {
 	}
 	
 	
-	public static SRInstance getUnion(SRInstance lhs, SRInstance rhs)
-	{
+	public static SRInstance getUnion(SRInstance lhs, SRInstance rhs) {
 	    if (!lhs.tree.getFilename().equals(rhs.tree.getFilename()) ||
 	            lhs.tree.getIndex()!=rhs.tree.getIndex() ||
 	            lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
@@ -108,17 +104,14 @@ public class SRLScore {
 	    instance.args.addAll(lhs.args);
 	    int i=0;
 	    int j=0;
-	    for (; i<lhsargs.size() && j<rhsargs.size();)
-	    {
+	    for (; i<lhsargs.size() && j<rhsargs.size();) {
 	        int compare = lhsargs.get(i).compareTo(rhsargs.get(j));
-	        if (compare<0) ++i;
-	        else if (compare>0)
-	        {
+	        if (compare<0) 
+	        	++i;
+	        else if (compare>0) {
 	            instance.args.add(rhsargs.get(j));
 	            ++j;
-	        }
-	        else
-	        {
+	        } else {
 	            if (!lhsargs.get(i).tokenSet.equals(rhsargs.get(j).tokenSet))
 	                instance.args.add(rhsargs.get(j));
 	            ++i; ++j;
@@ -126,63 +119,50 @@ public class SRLScore {
         }
 	    for (;j<rhsargs.size();++j)
 	        instance.args.add(rhsargs.get(j));
-	    
 	        
         return instance;
     }
 	
-	public void addResult(String systemLabel, String goldLabel)
-	{
+	public void addResult(String systemLabel, String goldLabel) {
 	    macroCount[labelMap.get(systemLabel)][labelMap.get(goldLabel)]++;
 	}
 	
-	public void addResult(SRInstance systemSRL, SRInstance goldSRL)
-	{
+	public void addResult(SRInstance systemSRL, SRInstance goldSRL) {
 		List<SRArg> sysArgs = systemSRL.getScoringArgs();
 		List<SRArg> goldArgs = goldSRL.getScoringArgs();
 		
 		String[] sysStr = getLabels(sysArgs, systemSRL.tree.getTokenCount());		
 		String[] goldStr = getLabels(goldArgs, goldSRL.tree.getTokenCount());
 		
-		for (int i=0; i<sysStr.length; ++i)
-		{
+		for (int i=0; i<sysStr.length; ++i) {
 			if (sysStr[i]==SRLModel.NOT_ARG && goldStr[i]==SRLModel.NOT_ARG)
 				continue;
 			microCount[labelMap.get(sysStr[i])][labelMap.get(goldStr[i])]++;
 		}
 
-		for (int i=0, j=0; i<sysArgs.size() || j<goldArgs.size();)
-		{
-			if (i>=sysArgs.size())
-			{
+		for (int i=0, j=0; i<sysArgs.size() || j<goldArgs.size();) {
+			if (i>=sysArgs.size()) {
 				macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
 				++j;
 				continue;
 			}
-			if (j>=goldArgs.size())
-			{
+			if (j>=goldArgs.size()) {
 				macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
 				++i;
 				continue;
 			}
 			
 			int compare = sysArgs.get(i).compareTo(goldArgs.get(j));
-			if (compare<0)
-			{
+			if (compare<0) {
 				macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
 				++i;
-			}
-			else if (compare>0)
-			{
+			} else if (compare>0) {
 				macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
 				++j;
-			}
-			else
-			{
+			} else {
 				if (sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet))
 					macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
-				else
-				{
+				else {
 					macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
 					macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
 				}
@@ -191,8 +171,7 @@ public class SRLScore {
 		}
 	}
 	
-	public String toString()
-	{
+	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		int sum = 0;
 		for (int[] row:microCount)
@@ -210,11 +189,10 @@ public class SRLScore {
 	}
 		
 	
-	Score[] getScores(int[][] count) {
-		Score[] scores = new Score[labelSet.size()+1];
+	List<Score> getScores(int[][] count) {
+		List<Score> scores = new ArrayList<Score>(labelSet.size());
 		int pTotal=0, rTotal=0, fTotal=0;
 		double p, r, f;
-		int sCount = 0;
 		for (String label: labelSet) {
 			if (label.equals(SRLModel.NOT_ARG)) continue;
 			
@@ -231,7 +209,7 @@ public class SRLScore {
 			r = rArgT==0?0:((double)fArgT)/rArgT;
 			f = p==0?0:(r==0?0:2*p*r/(p+r));
 
-			scores[sCount++] = new Score(label, p, r, f, pArgT, rArgT, fArgT);
+			scores.add(new Score(label, p, r, f, pArgT, rArgT, fArgT));
 			
 			pTotal += pArgT;
 			rTotal += rArgT;
@@ -242,14 +220,14 @@ public class SRLScore {
 		r = rTotal==0?0:((double)fTotal)/rTotal;
 		f = p==0?0:(r==0?0:2*p*r/(p+r));
 		
-		scores[sCount] = new Score("all", p, r, f, pTotal, rTotal, fTotal);
+		scores.add(new Score("all", p, r, f, pTotal, rTotal, fTotal));
 		return scores;
 		
 	}
 	
 	public double getFScore() {
-		Score[] scores = getScores(macroCount);
-		return scores[scores.length-1].f;
+		List<Score> scores = getScores(macroCount);
+		return scores.get(scores.size()-1).f;
 	}
 	
 	String toString(int[][] count) 	{
