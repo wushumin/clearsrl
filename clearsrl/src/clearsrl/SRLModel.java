@@ -191,7 +191,7 @@ public class SRLModel implements Serializable {
 	public static String DOWN_CHAR = "v";
 	public static String RIGHT_ARROW = "->";
 
-	boolean                                           labeled;
+	boolean                                             labeled;
 	public boolean isLabeled() {
 		return labeled;
 	}
@@ -213,6 +213,9 @@ public class SRLModel implements Serializable {
 	
 	boolean                                              trainGoldParse;
 	
+	int                                                  argCandidateLevelDown = 2;
+	boolean                                              argCandidateAllHeadPhrases = true;
+	
     transient LanguageUtil                               langUtil;
 	
 	transient double[]                                   labelValues;
@@ -233,7 +236,7 @@ public class SRLModel implements Serializable {
 	{
 		logger = Logger.getLogger("clearsrl");
 		
-		labeled       = true;
+		labeled = true;
 
 		features = new FeatureSet<Feature>(featureSet);
 		if (predicateFeatureSet!=null)
@@ -274,7 +277,7 @@ public class SRLModel implements Serializable {
         for (String label:labels)
             logger.info("  "+label+" "+labelStringMap.get(label));
         
-        features.rebuildMap(cutoff, cutoff*3);
+        features.rebuildMap(cutoff, cutoff*4);
         
         
        /* 
@@ -370,7 +373,8 @@ public class SRLModel implements Serializable {
         		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {
         			ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                     ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-                    SRLUtil.getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), tree, langUtil, 1, threshold, argNodes, labels);
+                    SRLUtil.getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
+                    		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold, argNodes, labels);
                     for (int l=0; l<labels.size(); ++l)
                         trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
                     srlSamples[i] = addTrainingSamples(trainInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), supportIds[i]<0?null:srlSamples[supportIds[i]], goldInstances.get(i), namedEntities, buildDictionary);
@@ -536,9 +540,7 @@ public class SRLModel implements Serializable {
 			}
 		}
 				
-		for (TBNode argNode:argNodes)
-		{
-			
+		for (TBNode argNode:argNodes) {
 			EnumMap<Feature,List<String>> featureMap = new EnumMap<Feature,List<String>>(defaultMap);
 			List<TBNode> tnodes = argNode.getTokenNodes();
 			
@@ -546,9 +548,7 @@ public class SRLModel implements Serializable {
 		    List<TBNode> predToTopNodes = predicateNode.getPathToRoot();
 		    TBNode joinNode = trimPathNodes(argToTopNodes, predToTopNodes);
 			List<String> path = getPath(argToTopNodes, predToTopNodes, joinNode);
-		
-			
-			
+
             List<TBNode> argDepToTopNodes = new ArrayList<TBNode>();
             
             if (!argToTopNodes.isEmpty()) argDepToTopNodes.add(argToTopNodes.get(0));
@@ -575,8 +575,7 @@ public class SRLModel implements Serializable {
 			
 			// compute head
 			TBNode head = argNode.getHead();
-			if (argNode.getPOS().matches("PP.*"))
-			{
+			if (argNode.getPOS().matches("PP.*")) {
 			    int i = argNode.getChildren().length-1;
 				for (; i>=0; --i)
 				{
@@ -1233,7 +1232,7 @@ public class SRLModel implements Serializable {
     }
 
     public int predict(SRInstance prediction, SRInstance support, String[] namedEntities) {
-    	return predict(prediction, SRLUtil.getArgumentCandidates(prediction.predicateNode, support, langUtil, 1), support, namedEntities);
+    	return predict(prediction, SRLUtil.getArgumentCandidates(prediction.predicateNode, support, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases), support, namedEntities);
     } 
 
     int predict(SRInstance prediction, List<TBNode> argNodes, SRInstance support, String[] namedEntities) {
@@ -1265,8 +1264,7 @@ public class SRLModel implements Serializable {
         return featureMapList.size();
     }
 	
-	int countConstituents(String label, List<TBNode> lnodes, List<TBNode> rnodes, TBNode joinNode)
-	{   
+	int countConstituents(String label, List<TBNode> lnodes, List<TBNode> rnodes, TBNode joinNode) {   
 	    int count = 0;
 	    
 	    count += countConstituents(label, new LinkedList<TBNode>(lnodes), true, 100);
@@ -1280,8 +1278,7 @@ public class SRLModel implements Serializable {
 	    return count;
 	}
 	
-    int countConstituents(String label, Deque<TBNode> nodes, boolean left, int depth)
-    {   
+    int countConstituents(String label, Deque<TBNode> nodes, boolean left, int depth) {   
         TBNode node = nodes.pop();
         int count = node.getPOS().startsWith(label)?1:0;
 
@@ -1300,8 +1297,7 @@ public class SRLModel implements Serializable {
         return count + countConstituents(label, nodes, left, depth);
     }
 	 
-    int countConstituents(String label, TBNode node, int depth)
-    {   
+    int countConstituents(String label, TBNode node, int depth) {   
         int count = node.getPOS().startsWith(label)?1:0;
         
         if (node.isTerminal() || depth == 0)
@@ -1338,14 +1334,12 @@ public class SRLModel implements Serializable {
     List<String> getPath(List<TBNode> argNodes, List<TBNode> predNodes, TBNode joinNode) {
         ArrayList<String> path = new ArrayList<String>();
         
-        for (TBNode node:argNodes)
-        {
+        for (TBNode node:argNodes) {
             path.add(node.getPOS());
             path.add(UP_CHAR);
         }
         path.add(joinNode.getPOS());
-        for (int i=predNodes.size()-1; i>=0; --i)
-        {
+        for (int i=predNodes.size()-1; i>=0; --i) {
             path.add(DOWN_CHAR);
             path.add(predNodes.get(i).getPOS());
         }

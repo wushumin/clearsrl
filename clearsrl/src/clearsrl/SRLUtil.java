@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -395,7 +397,7 @@ public class SRLUtil {
 	 */
 	@SuppressWarnings("serial")
 	public static void getSamplesFromParse(SRInstance instance, SRInstance support,
-			TBTree parsedTree, LanguageUtil langUtil, int levelDown, float threshold, 
+			TBTree parsedTree, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases, float threshold, 
 			ArrayList<TBNode> candidateNodes, 
 			ArrayList<Map<String, Float>> labels) {
 		//if (instance.getArgs().size()==1) // skip if there are no arguments
@@ -404,7 +406,7 @@ public class SRLUtil {
 		candidateNodes.clear();
 		labels.clear();
 
-		candidateNodes.addAll(getArgumentCandidates(parsedTree.getNodeByTokenIndex(instance.getPredicateNode().getTokenIndex()), support, langUtil, levelDown));
+		candidateNodes.addAll(getArgumentCandidates(parsedTree.getNodeByTokenIndex(instance.getPredicateNode().getTokenIndex()), support, langUtil, levelDown, allHeadPhrases));
 		if (candidateNodes.isEmpty()) return;
 		
 		ArrayList<BitSet> candidateTokens = new ArrayList<BitSet>(candidateNodes.size());
@@ -489,7 +491,7 @@ public class SRLUtil {
 		return nodes;
 	}*/
 	
-	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown) {
+	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		boolean toRoot = true;
 		
 		boolean isVerb = langUtil.isVerb(predicate.getPOS());
@@ -509,7 +511,7 @@ public class SRLUtil {
 				}
 			}
 			if (foundArg!=null) {
-				List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);
+				Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));
 				if (!isVerb) {
 					for (SRArg arg:support.getArgs())
 						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG))
@@ -533,7 +535,7 @@ public class SRLUtil {
 					}
 					
 					if (levelUp>0)
-						candidates.addAll(getNodes(foundArg.node, levelUp, 0));
+						candidates.addAll(getNodes(foundArg.node, levelUp, 0, allHeadPhrases));
 					for (SRArg arg:support.getArgs())
 						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG)) {
 							boolean foundCandidate = false;
@@ -546,17 +548,17 @@ public class SRLUtil {
 								candidates.add(arg.node);
 						}
 				}
-				return candidates;
+				return new ArrayList<TBNode>(candidates);
 			}
 			if (langUtil.isVerb(predicate.getPOS())) {
 				TBNode ancestor = predicate.getLowestCommonAncestor(support.predicateNode);
 				if (ancestor.getPOS().equals("VP") && (levelUp=predicate.getLevelToNode(ancestor))==support.predicateNode.getLevelToNode(ancestor)) {
 					// support probably is the head of VP conjunction
-					List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);
+					Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));
 					if (toRoot) {
 						levelUp = ancestor.getLevelToRoot();
 						if (levelUp>0)
-							candidates.addAll(getNodes(ancestor, levelUp, 0));
+							candidates.addAll(getNodes(ancestor, levelUp, 0, allHeadPhrases));
 					}
 					for (SRArg arg:support.getArgs())
 						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.getLabel().equals("rel")) {
@@ -569,7 +571,7 @@ public class SRLUtil {
 							if (!foundCandidate)
 								candidates.add(arg.node);
 						}
-					return candidates;
+					return new ArrayList<TBNode>(candidates);
 				}
 			}
 		}
@@ -599,19 +601,26 @@ public class SRLUtil {
 			
 			node = node.getParent();
 		}
-		List<TBNode> candidates = levelUp==0?new ArrayList<TBNode>():getNodes(predicate, levelUp, levelDown);	
+		Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));	
 		if (toRoot && node!=null) {
 			levelUp = node.getLevelToRoot();
 			if (levelUp>0)
-				candidates.addAll(getNodes(node, levelUp, 0));
+				candidates.addAll(getNodes(node, levelUp, 0, allHeadPhrases));
 		}
-		return candidates;	
+		return new ArrayList<TBNode>(candidates);	
 	}
 	
-	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown) {
-		ArrayList<TBNode> nodes = new ArrayList<TBNode>();
-		if ((levelUp<=0 || node.getParent()==null) && levelDown<=0)
+	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown, boolean getHeadPhrases) {
+		List<TBNode> nodes = new ArrayList<TBNode>();
+		if (levelUp<=0) 
 			return nodes;
+		getNodes(node, levelUp, levelDown, nodes, getHeadPhrases);
+		return nodes;
+	}
+	
+	static void getNodes(TBNode node, int levelUp, int levelDown, List<TBNode> nodes, boolean getHeadPhrases) {
+		if ((levelUp<=0 || node.getParent()==null) && levelDown<=0)
+			return;
 		
 		if (levelUp>0) {
 			TBNode parent = node.getParent();
@@ -621,28 +630,43 @@ public class SRLUtil {
 				if (parent.getChildren()[i].getTokenSet().cardinality()>0) {
 					nodes.add(parent.getChildren()[i]);
 					if (levelDown>0)
-						nodes.addAll(getNodes(parent.getChildren()[i], 0, levelDown));
+						nodes.addAll(getNodes(parent.getChildren()[i], 0, levelDown, false));
+					if (getHeadPhrases)
+						nodes.addAll(getHeadPhrases(parent.getChildren()[i]));			
 				}
 			}
 			if (levelUp>1)
-				nodes.addAll(getNodes(parent, levelUp-1, levelDown));
+				nodes.addAll(getNodes(parent, levelUp-1, levelDown, getHeadPhrases));
 		} else {
+			Set<TBNode> nodeSet = new HashSet<TBNode>();
 			for (TBNode child:node.getChildren())
-				// make this is not an empty element node
+				// make sure this is not an empty element node
 				if (child.getTokenSet().cardinality()>0) {
-					nodes.add(child);
+					nodeSet.add(child);
 					if (levelDown>0)
-						nodes.addAll(getNodes(child, 0, levelDown-1));
+						nodeSet.addAll(getNodes(child, 0, levelDown-1, getHeadPhrases));
 				}
 			// if we are going down a level, we need to find more than 1 node, otherwise
 			// the single node would have the same token set as the current node
-			if (nodes.size()==1)
-				nodes.clear();
+			if (nodeSet.size()>1)
+				nodes.addAll(nodeSet);
 		}
-
-		return nodes;
+		return;
 	}
 	
+	static List<TBNode> getHeadPhrases(TBNode node) {
+		List<TBNode> nodes = new ArrayList<TBNode>();
+		for (TBNode dependent:node.getHead().getDependentNodes(false)) {
+			if (!dependent.isDecendentOf(node))
+				continue;
+			TBNode constituent = dependent.getConstituentByHead();
+			if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
+				continue;
+			nodes.add(constituent);
+			nodes.addAll(getHeadPhrases(constituent));
+		}
+		return nodes;
+	}
 	
 	public static ArrayList<TBNode> filterPredicateNode(ArrayList<TBNode> argNodes, TBTree tree, TBNode predicateNode) {
 		for (int i=0; i<argNodes.size();)
