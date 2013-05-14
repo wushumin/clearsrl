@@ -213,8 +213,10 @@ public class SRLModel implements Serializable {
 	
 	boolean                                              trainGoldParse;
 	
-	int                                                  argCandidateLevelDown = 2;
+	int                                                  argCandidateLevelDown = 3;
 	boolean                                              argCandidateAllHeadPhrases = true;
+	float                                                noArgWeight = 0.2f;
+	float                                                nominalWeight = 2;
 	
     transient LanguageUtil                               langUtil;
 	
@@ -277,7 +279,7 @@ public class SRLModel implements Serializable {
         for (String label:labels)
             logger.info("  "+label+" "+labelStringMap.get(label));
         
-        features.rebuildMap(cutoff, cutoff*4);
+        features.rebuildMap(cutoff);
         
         
        /* 
@@ -296,7 +298,7 @@ public class SRLModel implements Serializable {
         
 		
 		if (predFeatures!=null) {
-			predFeatures.rebuildMap(cutoff, cutoff*3);
+			predFeatures.rebuildMap(2);
 			
             //for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
             //	FeatureSet.trimMap(predicateFeatureStringMap.get(predFeature),cutoff);
@@ -385,13 +387,13 @@ public class SRLModel implements Serializable {
 	                    for (SRArg arg:trainInstances.get(i).getArgs())
 	                    	if (!arg.getLabel().equals(NOT_ARG))
 	                            args++;
-	                    if (args!=goldInstances.get(i).getArgs().size()) {
+	                    /*if (args!=goldInstances.get(i).getArgs().size()) {
 	                    	System.err.println("\n"+trainInstances.get(i));
 	                    	System.err.println(goldInstances.get(i));
 	                    	if (supportIds[i]>=0)
 	                    		System.err.println(trainInstances.get(supportIds[i]));
 	                    	System.err.println(tree+"\n");
-	                    }
+	                    }*/
 	                    argsTrained+=args-1;
 	                    argsTotal+=goldInstances.get(i).getArgs().size()-1;
                     }
@@ -411,7 +413,7 @@ public class SRLModel implements Serializable {
         if (buildDictionary) {
             for (TBNode predicateCandidate:predicateCandidates)            	
                 for(Map.Entry<EnumSet<PredFeature>,List<String>> entry:extractPredicateFeature(predicateCandidate, nodes).entrySet())
-                	predFeatures.addToDictionary(entry.getKey(), entry.getValue(), false);
+                	predFeatures.addToDictionary(entry.getKey(), entry.getValue(), 1);
         } else {
         	BitSet instanceMask = new BitSet(tree.getTokenCount());
     		for (SRInstance instance:trainInstances)
@@ -428,6 +430,8 @@ public class SRLModel implements Serializable {
 	{
         ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
         ArrayList<String> labels = new ArrayList<String>();
+        
+        boolean isNominal = !langUtil.isVerb(sampleInstance.getPredicateNode().getPOS());
         
         for (SRArg arg:sampleInstance.args) {
             if (arg.isPredicate()) continue;
@@ -453,7 +457,7 @@ public class SRLModel implements Serializable {
 				if (!isNoArg)
 					predictedList.add(new SRArg(argSamples[i].label, argSamples[i].node));
 				for(Map.Entry<EnumSet<Feature>,List<String>> entry:features.convertFlatSample(featureMapList.get(i)).entrySet())
-					features.addToDictionary(entry.getKey(), entry.getValue(), isNoArg);
+					features.addToDictionary(entry.getKey(), entry.getValue(), (isNominal?nominalWeight:1)*(isNoArg?noArgWeight:1));
 				
 				//if (!NOT_ARG.equals(SRLUtil.getMaxLabel(labels.get(c))))
 				//	System.out.println(sample.get(Feature.PATH));
@@ -1051,9 +1055,9 @@ public class SRLModel implements Serializable {
 	                    predict(instance, nodes, sample.support==null?null:makeSRInstance(sample.support), null);
 	                    score2.addResult(instance, sample.gold);
 	                }
-    	            if (goldInstances.length>0)
-    	            	System.out.println("Predicting: "+entry2.getValue().get(0).tree.getFilename()+" "+entry2.getValue().get(0).tree.getIndex());
-    	                instances = predict(entry2.getValue().get(0).tree, goldInstances, null);
+    	            //if (goldInstances.length>0)
+    	            	//System.out.println("Predicting: "+entry2.getValue().get(0).tree.getFilename()+" "+entry2.getValue().get(0).tree.getIndex());
+    	            instances = predict(entry2.getValue().get(0).tree, goldInstances, null);
     	            for (int i=0; i<instances.size(); ++i)
     	            	score3.addResult(instances.get(i), goldInstances[i]);
             	}

@@ -1,6 +1,8 @@
 package clearcommon.alg;
 
 import gnu.trove.TIntHashSet;
+import gnu.trove.TObjectFloatHashMap;
+import gnu.trove.TObjectFloatIterator;
 import gnu.trove.TObjectIntHashMap;
 import gnu.trove.TObjectIntIterator;
 
@@ -25,14 +27,14 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	Set<EnumSet<T>>                                      features;
-    EnumSet<T>                                           featuresFlat;
-    Map<EnumSet<T>, TObjectIntHashMap<String>>           featureStrMap;
+	Set<EnumSet<T>>                                       features;
+    EnumSet<T>                                            featuresFlat;
+    Map<EnumSet<T>, TObjectIntHashMap<String>>            featureStrMap;
     
-    boolean                                              dictionaryFinalized;
-    int                                                  dimension;
+    boolean                                               dictionaryFinalized;
+    int                                                   dimension;
 
-    transient Map<EnumSet<T>, TObjectIntHashMap<String>> noArgFeatureStrMap;
+    transient Map<EnumSet<T>, TObjectFloatHashMap<String>> featureCountMap;
     
     public FeatureSet(Set<EnumSet<T>> features) {
         this.features = features;
@@ -42,8 +44,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     public FeatureSet(Class<T> cType, String[] featuresStr) {
         features = new TreeSet<EnumSet<T>>();
         
-        for (String featureStr:featuresStr)
-        {
+        for (String featureStr:featuresStr) {
             String[] fArray = featureStr.trim().split("-");
             List<T> fList = new ArrayList<T>(fArray.length);
             for (String fStr:fArray)
@@ -54,17 +55,15 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         initialize();
     }
     
-    void initialize()
-    {
+    void initialize() {
         dictionaryFinalized = false;
         featureStrMap = new HashMap<EnumSet<T>, TObjectIntHashMap<String>>();
-        noArgFeatureStrMap = new HashMap<EnumSet<T>, TObjectIntHashMap<String>>();
+        featureCountMap = new HashMap<EnumSet<T>, TObjectFloatHashMap<String>>();
         
         List<T> featureList = new ArrayList<T>();
-        for (EnumSet<T> feature:features)
-        {
+        for (EnumSet<T> feature:features) {
             featureStrMap.put(feature, new TObjectIntHashMap<String>());
-            noArgFeatureStrMap.put(feature, new TObjectIntHashMap<String>());
+            featureCountMap.put(feature, new TObjectFloatHashMap<String>());
             featureList.addAll(feature);
         }
         featuresFlat = EnumSet.copyOf(featureList);
@@ -166,35 +165,36 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return addToFeatureVector(featureValueMap, null);
     }
     
-    public void addToDictionary(EnumSet<T> type, List<String> values, boolean isNoArg)
-    {
+    public void addToDictionary(EnumSet<T> type, List<String> values) {
+    	addToDictionary(type, values, 1);
+    }
+    
+    public void addToDictionary(EnumSet<T> type, List<String> values, float weight) {
         if (dictionaryFinalized) return;
 
-        TObjectIntHashMap<String> fMap = isNoArg?noArgFeatureStrMap.get(type):featureStrMap.get(type);
+        TObjectFloatHashMap<String> fMap = featureCountMap.get(type);
         for (String fVal:values)
-            fMap.put(fVal, fMap.get(fVal)+1);
+            fMap.put(fVal, fMap.get(fVal)+weight);
         
     }
     
-    public void rebuildMap(long cutoff, long noArgCutoff) {
+    public void rebuildMap(float cutoff) {
+    	int dimension=0;
+        for (EnumSet<T> feature:features) {
+        	TObjectIntHashMap<String> indexMap = new TObjectIntHashMap<String>();
+        	featureStrMap.put(feature, indexMap);
 
-        for (EnumSet<T> feature:features)
-        {
-            //StringBuilder builder = new StringBuilder(toString(feature)+": "+featureStrMap.get(feature).size()+"/"+noArgFeatureStrMap.get(feature).size());
-            trimMap(featureStrMap.get(feature),cutoff);
-            trimMap(noArgFeatureStrMap.get(feature),noArgCutoff);
-            //builder.append(" "+featureStrMap.get(feature).size()+"/"+noArgFeatureStrMap.get(feature).size());
-            featureStrMap.get(feature).putAll(noArgFeatureStrMap.get(feature));
-            //builder.append(" "+featureStrMap.get(feature).size());
-            //builder.append(featureStrMap.get(feature).size()<=250?" "+Arrays.asList(featureStrMap.get(feature).keys()):"");
-            //logger.info(builder.toString());
+        	for (TObjectFloatIterator<String> iter = featureCountMap.get(feature).iterator(); iter.hasNext();) {
+                iter.advance();
+                if (iter.value()>=cutoff)
+                	indexMap.put(iter.key(), ++dimension);
+            }
         }
-        
-        buildMapIndices();
-        
         dictionaryFinalized = true;
+        featureCountMap.clear();
     }
     
+    /*
     void buildMapIndices()
     {   
         //featureStringMap.put(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()));
@@ -210,9 +210,9 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
             for (String key:keys)
                 entry.getValue().put(key, ++dimension);   
         }
-    }
+    }*/
     
-    public static void trimMap(TObjectIntHashMap<String> featureMap, long threshold)
+    public static void trimMap(TObjectIntHashMap<String> featureMap, int threshold)
     {
         for (TObjectIntIterator<String> iter = featureMap.iterator(); iter.hasNext();)
         {
@@ -251,13 +251,14 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return featuresFlat;
     }
     
+    /*
     public void addFeatures(EnumSet<T> key, TObjectIntHashMap<String> value, boolean isNoArg)
     {
     	if (isNoArg)
     		noArgFeatureStrMap.put(key, value);
     	else
     		featureStrMap.put(key, value);
-    }
+    }*/
     
     public Map<EnumSet<T>, TObjectIntHashMap<String>> getFeatureStrMap() {
         return Collections.unmodifiableMap(featureStrMap);

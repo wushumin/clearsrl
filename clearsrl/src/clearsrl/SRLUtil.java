@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -463,10 +464,16 @@ public class SRLUtil {
 				continue;
 			}
 	}
-	/*
-	public static ArrayList<TBNode> getArgumentCandidates(TBNode node)
+	
+	public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
+		List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
+		filterPredicateNode(nodes, predicate);
+		return nodes;
+	}
+	
+	public static List<TBNode> getArgumentCandidates(TBNode node)
 	{
-		ArrayList<TBNode> nodes = new ArrayList<TBNode>();
+		List<TBNode> nodes = new ArrayList<TBNode>();
 		if (node.isTerminal())
 			return nodes;
 		
@@ -476,7 +483,7 @@ public class SRLUtil {
 				nodes.add(childNode);
 			else
 			{
-				ArrayList<TBNode> childNodes = getArgumentCandidates(childNode);
+				List<TBNode> childNodes = getArgumentCandidates(childNode);
 				if (childNodes.size()>0)// && node.getChildren().length>1)
 					nodes.add(childNode);
 				if (childNodes.size()>1)
@@ -489,8 +496,8 @@ public class SRLUtil {
 			}
 		}
 		return nodes;
-	}*/
-	
+	}
+	/*
 	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		boolean toRoot = true;
 		
@@ -535,7 +542,7 @@ public class SRLUtil {
 					}
 					
 					if (levelUp>0)
-						candidates.addAll(getNodes(foundArg.node, levelUp, 0, allHeadPhrases));
+						candidates.addAll(getNodes(foundArg.node, levelUp, levelDown-1, allHeadPhrases));
 					for (SRArg arg:support.getArgs())
 						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG)) {
 							boolean foundCandidate = false;
@@ -557,8 +564,7 @@ public class SRLUtil {
 					Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));
 					if (toRoot) {
 						levelUp = ancestor.getLevelToRoot();
-						if (levelUp>0)
-							candidates.addAll(getNodes(ancestor, levelUp, 0, allHeadPhrases));
+						candidates.addAll(getNodes(ancestor, levelUp, levelDown-1, allHeadPhrases));
 					}
 					for (SRArg arg:support.getArgs())
 						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.getLabel().equals("rel")) {
@@ -604,12 +610,11 @@ public class SRLUtil {
 		Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));	
 		if (toRoot && node!=null) {
 			levelUp = node.getLevelToRoot();
-			if (levelUp>0)
-				candidates.addAll(getNodes(node, levelUp, 0, allHeadPhrases));
+			candidates.addAll(getNodes(node, levelUp, levelDown-1, allHeadPhrases));
 		}
 		return new ArrayList<TBNode>(candidates);	
 	}
-	
+	*/
 	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown, boolean getHeadPhrases) {
 		List<TBNode> nodes = new ArrayList<TBNode>();
 		if (levelUp<=0) 
@@ -660,24 +665,21 @@ public class SRLUtil {
 			if (!dependent.isDecendentOf(node))
 				continue;
 			TBNode constituent = dependent.getConstituentByHead();
-			if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
-				continue;
+			//if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
+			//	continue;
 			nodes.add(constituent);
 			nodes.addAll(getHeadPhrases(constituent));
 		}
 		return nodes;
 	}
 	
-	public static ArrayList<TBNode> filterPredicateNode(ArrayList<TBNode> argNodes, TBTree tree, TBNode predicateNode) {
-		for (int i=0; i<argNodes.size();)
-			if (argNodes.get(i).getTokenSet().get(predicateNode.getTokenIndex()))
-				argNodes.remove(i);
-			else
-				++i;
-		return argNodes;
+	public static void filterPredicateNode(List<TBNode> argNodes, TBNode predicateNode) {
+		for (Iterator<TBNode> iter=argNodes.iterator(); iter.hasNext();)
+			if (iter.next().getTokenSet().get(predicateNode.getTokenIndex()))
+				iter.remove();
+		return;
 	}
-	
-	
+
 	public static Map<String, BitSet> convertSRInstanceToTokenMap(SRInstance instance)
 	{
 		Map<String, BitSet> tokenMap = new TreeMap<String, BitSet>();
