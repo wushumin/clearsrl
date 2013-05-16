@@ -45,10 +45,10 @@ public class SRLModel implements Serializable {
 	public enum Feature
 	{
 		// Constituent independent features
-		PREDICATE(false),
-		PREDICATEPOS(false),
-		VOICE(false),
-		SUBCATEGORIZATION(false),
+		PREDICATE,
+		PREDICATEPOS,
+		VOICE,
+		SUBCATEGORIZATION,
 
 		// Constituent dependent features
 		PATH,
@@ -1032,7 +1032,7 @@ public class SRLModel implements Serializable {
         		score.addResult(labels[i], goldLabels[i]);
         
         	System.out.println(score.toString());
-        	
+        	/*
         	int lcnt=0;
         	SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
         	SRLScore score3 = new SRLScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
@@ -1063,7 +1063,7 @@ public class SRLModel implements Serializable {
             	}
         	System.out.println(score2.toString());
         	System.out.println(score3.toString());
-        	
+        	*/
         	if (1-agreement<=threshold) {
         		if (r>0) {
         			// change the training sample labels back
