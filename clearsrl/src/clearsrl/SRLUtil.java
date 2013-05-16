@@ -464,12 +464,12 @@ public class SRLUtil {
 				continue;
 			}
 	}
-	
+	/*
 	public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
 		filterPredicateNode(nodes, predicate);
 		return nodes;
-	}
+	}*/
 	
 	public static List<TBNode> getArgumentCandidates(TBNode node)
 	{
@@ -497,7 +497,7 @@ public class SRLUtil {
 		}
 		return nodes;
 	}
-	/*
+	
 	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		boolean toRoot = true;
 		
@@ -614,7 +614,7 @@ public class SRLUtil {
 		}
 		return new ArrayList<TBNode>(candidates);	
 	}
-	*/
+	
 	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown, boolean getHeadPhrases) {
 		List<TBNode> nodes = new ArrayList<TBNode>();
 		if (levelUp<=0) 
@@ -665,8 +665,8 @@ public class SRLUtil {
 			if (!dependent.isDecendentOf(node))
 				continue;
 			TBNode constituent = dependent.getConstituentByHead();
-			//if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
-			//	continue;
+			if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
+				continue;
 			nodes.add(constituent);
 			nodes.addAll(getHeadPhrases(constituent));
 		}
