@@ -67,8 +67,10 @@ public final class PBUtil {
 				try {
 					instance = pbreader.nextProp();
 				} catch (PBFormatException e) {
-					++exceptionCnt;
-				    e.printStackTrace();
+					if (!e.getMessage().startsWith("parse tree invalid")) {
+						++exceptionCnt;
+					    e.printStackTrace();
+					}
 				    continue;
 				} catch (ParseException e) {
 				    e.printStackTrace();
