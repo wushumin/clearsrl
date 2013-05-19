@@ -144,7 +144,7 @@ public final class TBUtil {
 	
     protected static TBNode findHeadsAux(TBNode curr, TBNode child, String rule)
     {  
-        if (!child.isEC() && !child.pos.equals(":") && !child.pos.equals(",") && child.pos.matches(rule))
+        if (!child.head.isEC() && !child.pos.equals(":") && !child.pos.equals(",") && child.pos.matches(rule))
             return child.head;
         return null;
     }

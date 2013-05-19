@@ -386,84 +386,7 @@ public class SRLUtil {
 	}
 
 	
-	/**
-	 * @param instance instance to get samples from, nodes can be based off of gold tree
-	 * @param support support instance and its arguments, should be based off of parsed tree
-	 * @param parsedTree the parsed tree to perform SRL off of 
-	 * @param langUtil language utility class
-	 * @param levelDown numbers of levels down each sibling node to collect candidates
-	 * @param threshold word overlap threshold for an argument and constituent to be considered a match
-	 * @param candidateNodes candidate constituents for argument consideration
-	 * @param labels argument labels (matched against instance arguments)
-	 */
-	@SuppressWarnings("serial")
-	public static void getSamplesFromParse(SRInstance instance, SRInstance support,
-			TBTree parsedTree, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases, float threshold, 
-			ArrayList<TBNode> candidateNodes, 
-			ArrayList<Map<String, Float>> labels) {
-		//if (instance.getArgs().size()==1) // skip if there are no arguments
-		//	return;
-		
-		candidateNodes.clear();
-		labels.clear();
 
-		candidateNodes.addAll(getArgumentCandidates(parsedTree.getNodeByTokenIndex(instance.getPredicateNode().getTokenIndex()), support, langUtil, levelDown, allHeadPhrases));
-		if (candidateNodes.isEmpty()) return;
-		
-		ArrayList<BitSet> candidateTokens = new ArrayList<BitSet>(candidateNodes.size());
-		for (TBNode node:candidateNodes) {
-			// initialize all candidates to not argument
-			candidateTokens.add(node.getTokenSet());
-			labels.add(new HashMap<String, Float>(){{put(SRLModel.NOT_ARG, 1.0f);}});
-		}
-		
-		BitSet candidateBitSet = new BitSet(candidateNodes.size());
-		BitSet removalBitSet = new BitSet(candidateNodes.size());
-		
-		// find a good match between parse candidates and argument boundary of gold SRL
-		for (SRArg arg:instance.getArgs()) {
-			if (arg.isPredicate()) continue;
-			BitSet argBitSet = arg.getTokenSet();
-		
-			if (argBitSet.isEmpty()) continue;
-			float []fScores = new float[candidateTokens.size()];
-			
-			for (int i=0; i<candidateTokens.size(); ++i) {
-				BitSet clone = (BitSet)candidateTokens.get(i).clone();
-				clone.and(argBitSet);
-				fScores[i] = getFScore(clone.cardinality()*1.0f/candidateTokens.get(i).cardinality(), clone.cardinality()*1.0f/argBitSet.cardinality());
-				if (fScores[i]>0.5f)
-					labels.get(i).put(removeArgModifier(arg.label), fScores[i]);
-			}
-			int index = SRLUtil.getMaxIndex(fScores);
-			
-			// if the best matched candidate phrase fscore is above threshold, labeled it the argument
-			if (fScores[index]>=0.9999f) {
-				if (candidateBitSet.get(index))
-					System.err.println("Candidate reused: "+candidateNodes.get(index));
-				candidateBitSet.set(index);
-				labels.get(index).remove(SRLModel.NOT_ARG);
-			}
-			// if an argument is not matched to any candidate above the threshold, 
-			// at least remove the best matched candidate (if fscore>0.5) from training 
-			/*
-			else if (fScores[index]>threshold)
-			{
-				removalBitSet.set(index);
-			}*/
-		}
-		
-		for (int i=removalBitSet.nextSetBit(0); i>=0; i=removalBitSet.nextSetBit(i+1))
-			if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG))
-				labels.set(i, null);
-		
-		for (int i=0; i<labels.size();++i)
-			if (labels.get(i)==null) {
-				labels.remove(i);
-				candidateNodes.remove(i);
-				continue;
-			}
-	}
 	/*
 	public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
@@ -521,7 +444,7 @@ public class SRLUtil {
 				Set<TBNode> candidates = new HashSet<TBNode>(getNodes(predicate, levelUp, levelDown, allHeadPhrases));
 				if (!isVerb) {
 					for (SRArg arg:support.getArgs())
-						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG))
+						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.tokenSet.get(predicate.getTokenIndex()))
 							candidates.add(arg.node);
 				} else {
 					TBNode argNode = foundArg.node;
@@ -544,7 +467,7 @@ public class SRLUtil {
 					if (levelUp>0)
 						candidates.addAll(getNodes(foundArg.node, levelUp, levelDown-1, allHeadPhrases));
 					for (SRArg arg:support.getArgs())
-						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG)) {
+						if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.tokenSet.get(predicate.getTokenIndex())) {
 							boolean foundCandidate = false;
 							for (TBNode node:candidates)
 								if (arg.node==node) {
@@ -577,6 +500,7 @@ public class SRLUtil {
 							if (!foundCandidate)
 								candidates.add(arg.node);
 						}
+					
 					return new ArrayList<TBNode>(candidates);
 				}
 			}
@@ -612,7 +536,7 @@ public class SRLUtil {
 			levelUp = node.getLevelToRoot();
 			candidates.addAll(getNodes(node, levelUp, levelDown-1, allHeadPhrases));
 		}
-		return new ArrayList<TBNode>(candidates);	
+		return new ArrayList<TBNode>(candidates);
 	}
 	
 	static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown, boolean getHeadPhrases) {
