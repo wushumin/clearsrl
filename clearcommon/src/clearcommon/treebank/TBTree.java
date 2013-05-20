@@ -80,7 +80,7 @@ public class TBTree implements Serializable {
 	
 	public TBNode[] getTerminalNodes() {
 		TBNode[] tnodes = new TBNode[terminalCount];
-		rootNode.fillNodeArray(false, tnodes);
+		rootNode.fillNodeArray(true, tnodes);
 		return tnodes;
 	}
 	
