@@ -1331,6 +1331,26 @@ public class SRLModel implements Serializable {
         		}
         } while (predicted.cardinality()>cardinality);
         
+        // debug
+        for (int i=0; i<predictions.size(); ++i) {
+        	SRInstance instance = predictions.get(i);
+        	TBNode vp = instance.predicateNode;
+        	while (vp.getParent() != null && vp.getParent().getHead()==instance.predicateNode && vp.getParent().getPOS().equals("VP"))
+        		vp = vp.getParent();
+        	if (vp.getPOS().equals("VP")) {
+        		for (SRArg arg:instance.getArgs())
+        			if (arg.node.isDecendentOf(vp) && arg.node.getParent() != vp) {
+        				System.err.println(parseTree.getFilename()+" "+parseTree.getIndex()+" "+parseTree);
+        				System.err.println(instance);
+        				if (goldSRLs!=null) {
+        					System.err.println(goldSRLs[i].getTree().getFilename()+" "+goldSRLs[i].getTree().getIndex()+" "+goldSRLs[i].getTree());
+        					System.err.println(goldSRLs[i]);
+        				}
+        				System.err.print("\n");
+        			}
+        	}
+        }
+        
         return predictions;
     }
 
