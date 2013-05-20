@@ -1339,7 +1339,7 @@ public class SRLModel implements Serializable {
         	
         	while (topVp.getParent() != null && topVp.getParent().getHead()==instance.predicateNode && topVp.getParent().getPOS().equals("VP")) {
         		topVp = topVp.getParent();
-        		vpList.add(topVp.getParent());
+        		vpList.add(topVp);
         	}
         	
         	if (topVp.getPOS().equals("VP")) {
