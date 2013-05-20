@@ -1334,7 +1334,7 @@ public class SRLModel implements Serializable {
         // debug
         for (int i=0; i<predictions.size(); ++i) {
         	SRInstance instance = predictions.get(i);
-        	TBNode topVp = instance.predicateNode.getParent();
+        	TBNode topVp = instance.predicateNode;
         	List<TBNode> vpList = new ArrayList<TBNode>();
         	
         	while (topVp.getParent() != null && topVp.getParent().getHead()==instance.predicateNode && topVp.getParent().getPOS().equals("VP")) {
