@@ -36,7 +36,7 @@ public class AnnotationOutput {
         return builder.toString();
     }
     
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws Exception
     {
         Properties props = new Properties();
         {

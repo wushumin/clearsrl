@@ -63,7 +63,7 @@ public class LDC09SentencePairReader extends SentencePairReader {
     }
 	
     @Override
-    public void initialize() throws IOException
+    public void initialize() throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
     {
         close();
         super.initialize();

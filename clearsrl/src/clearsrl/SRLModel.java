@@ -417,7 +417,7 @@ public class SRLModel implements Serializable {
 					BitSet clone = (BitSet)cSet.clone();
 					clone.and(arg.tokenSet);
 					labelMap.put(SRLUtil.removeArgModifier(arg.label), SRLUtil.getFScore(clone.cardinality()*1.0f/cSet.cardinality(), clone.cardinality()*1.0f/arg.tokenSet.cardinality()));
-					candidateMap.put(constituent, labelMap);
+					//candidateMap.put(constituent, labelMap);
 				}
 			}
 			
@@ -459,11 +459,7 @@ public class SRLModel implements Serializable {
         do {
         	cardinality = processedSet.cardinality();
         	for (int i=processedSet.nextClearBit(0); i<supportIds.length; i=processedSet.nextClearBit(i+1))
-        		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {
-
-        			if (trainInstances.get(i).predicateNode.getWord().equals("helped"))
-        				System.out.println(trainInstances.get(i).getTree());
-        			
+        		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {        			
         			for (Map.Entry<TBNode, Map<String, Float>> entry: getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
                     		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold).entrySet()) {
         				trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(entry.getValue()), entry.getKey()));
@@ -483,13 +479,13 @@ public class SRLModel implements Serializable {
 	                    for (SRArg arg:trainInstances.get(i).getArgs())
 	                    	if (!arg.getLabel().equals(NOT_ARG))
 	                            args++;
-	                    /*if (args!=goldInstances.get(i).getArgs().size()) {
+	                    if (args!=goldInstances.get(i).getArgs().size()) {
 	                    	System.err.println("\n"+trainInstances.get(i));
 	                    	System.err.println(goldInstances.get(i));
 	                    	if (supportIds[i]>=0)
 	                    		System.err.println(trainInstances.get(supportIds[i]));
 	                    	System.err.println(tree+"\n");
-	                    }*/
+	                    }
 	                    argsTrained+=args-1;
 	                    argsTotal+=goldInstances.get(i).getArgs().size()-1;
                     }

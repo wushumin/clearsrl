@@ -20,7 +20,7 @@ import clearcommon.util.PropertyUtil;
 
 public class RunTrainer {
 	
-	static Aligner gatherSentences(Properties props, String prefix) throws IOException
+	static Aligner gatherSentences(Properties props, String prefix) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
 	{	
 	    Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
         Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
@@ -177,7 +177,7 @@ public class RunTrainer {
 	}
 	
 	
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{
 	    Properties props = new Properties();
         {

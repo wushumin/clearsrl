@@ -62,17 +62,19 @@ public class RunAligner {
     @Option(name="-filter",usage="filters the set of properties in the properties file")
     private String filter = ""; 
     
+    @Option(name="-rewrite",usage="rewrite saved object stream")
+    private boolean reWrite = false; 
+
     @Option(name="-h",usage="help message")
     private boolean help = false;
     
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{	
 		RunAligner options = new RunAligner();
 	    CmdLineParser parser = new CmdLineParser(options);
 	    try {
 	    	parser.parseArgument(args);
-	    } catch (CmdLineException e)
-	    {
+	    } catch (CmdLineException e) {
 	    	System.err.println("invalid options:"+e);
 	    	parser.printUsage(System.err);
 	        System.exit(0);
@@ -112,12 +114,12 @@ public class RunAligner {
 		if (options.filter.startsWith("ldc"))
 		{
 			if (options.filter.startsWith("ldc09"))
-				sentencePairReader = new LDC09SentencePairReader(props, false);
+				sentencePairReader = new LDC09SentencePairReader(props, options.reWrite);
 			else
-				sentencePairReader = new LDCSentencePairReader(props, false);
+				sentencePairReader = new LDCSentencePairReader(props, options.reWrite);
 		}
 		else
-		    sentencePairReader = new DefaultSentencePairReader(props, false);
+		    sentencePairReader = new DefaultSentencePairReader(props, options.reWrite);
 		
 		boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
 		

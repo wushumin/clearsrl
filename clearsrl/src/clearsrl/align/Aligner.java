@@ -845,7 +845,7 @@ public class Aligner {
 	{
 		try {
 			reader.initialize();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		int srcCoverageCnt = 0;

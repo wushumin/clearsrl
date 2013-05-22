@@ -44,7 +44,7 @@ public abstract class SentencePairReader {
         }
     }
 
-    public void initialize() throws IOException
+    public void initialize() throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
     {
         close();
 

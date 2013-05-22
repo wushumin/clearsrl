@@ -543,11 +543,11 @@ public class SRLUtil {
 		List<TBNode> nodes = new ArrayList<TBNode>();
 		if (levelUp<=0) 
 			return nodes;
-		getNodes(node, levelUp, levelDown, nodes, getHeadPhrases);
+		getNodesAux(node, levelUp, levelDown, nodes, getHeadPhrases);
 		return nodes;
 	}
 	
-	static void getNodes(TBNode node, int levelUp, int levelDown, List<TBNode> nodes, boolean getHeadPhrases) {
+	static void getNodesAux(TBNode node, int levelUp, int levelDown, List<TBNode> nodes, boolean getHeadPhrases) {
 		if ((levelUp<=0 || node.getParent()==null) && levelDown<=0)
 			return;
 		
@@ -559,13 +559,13 @@ public class SRLUtil {
 				if (parent.getChildren()[i].getTokenSet().cardinality()>0) {
 					nodes.add(parent.getChildren()[i]);
 					if (levelDown>0)
-						nodes.addAll(getNodes(parent.getChildren()[i], 0, levelDown, false));
+						getNodesAux(parent.getChildren()[i], 0, levelDown, nodes, false);
 					if (getHeadPhrases)
 						nodes.addAll(getHeadPhrases(parent.getChildren()[i]));			
 				}
 			}
 			if (levelUp>1)
-				nodes.addAll(getNodes(parent, levelUp-1, levelDown, getHeadPhrases));
+				getNodesAux(parent, levelUp-1, levelDown, nodes, getHeadPhrases);
 		} else {
 			Set<TBNode> nodeSet = new HashSet<TBNode>();
 			for (TBNode child:node.getChildren())
@@ -573,7 +573,7 @@ public class SRLUtil {
 				if (child.getTokenSet().cardinality()>0) {
 					nodeSet.add(child);
 					if (levelDown>0)
-						nodeSet.addAll(getNodes(child, 0, levelDown-1, getHeadPhrases));
+						getNodesAux(child, 0, levelDown-1, nodes, getHeadPhrases);
 				}
 			// if we are going down a level, we need to find more than 1 node, otherwise
 			// the single node would have the same token set as the current node

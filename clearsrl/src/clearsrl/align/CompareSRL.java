@@ -7,7 +7,7 @@ import java.nio.charset.Charset;
 import java.util.Properties;
 
 public class CompareSRL {
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws Exception
     {
         Properties props = new Properties();
         {

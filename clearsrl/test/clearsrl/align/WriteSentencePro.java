@@ -102,7 +102,7 @@ public class WriteSentencePro {
 		terminalOut.print("\n");
 	}
 	
-	public static void main(String[] args) throws IOException{
+	public static void main(String[] args) throws Exception{
 		WriteSentencePro options = new WriteSentencePro();
 		CmdLineParser parser = new CmdLineParser(options);
 	    try {

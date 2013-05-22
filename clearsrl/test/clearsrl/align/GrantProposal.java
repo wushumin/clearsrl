@@ -89,7 +89,7 @@ public class GrantProposal {
 	}
 	
 	
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{	
 		boolean useWA = false;
 		

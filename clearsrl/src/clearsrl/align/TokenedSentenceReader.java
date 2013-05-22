@@ -12,6 +12,7 @@ import java.util.SortedMap;
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
 import clearcommon.propbank.PBInstance;
+import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -37,15 +38,17 @@ public class TokenedSentenceReader extends SentenceReader {
         }
     }
 
-    @Override
-    public void initialize() throws FileNotFoundException {
+    @SuppressWarnings("resource")
+	@Override
+    public void initialize() throws FileNotFoundException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         close();
 
         if (treeBank==null)
             treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("tb.regex"));
-        if (propBank==null)
-            propBank = PBUtil.readPBDir(props.getProperty("pbdir"), props.getProperty("pb.regex"), new TBReader(treeBank), props.getProperty("goldpb", "false").equals("false")?new DefaultPBTokenizer():new OntoNotesTokenizer());
-        
+        if (propBank==null) {
+			PBTokenizer tokenzier = props.getProperty("pb.tokenizer")==null?(props.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("pb.tokenizer")).newInstance();
+            propBank = PBUtil.readPBDir(props.getProperty("pbdir"), props.getProperty("pb.regex"), new TBReader(treeBank), tokenzier);
+        }
         tokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("token_idx")))).useDelimiter("[\n\r]");
         
         tokenIndexed = !props.getProperty("tokenIndexed","false").equals("false");

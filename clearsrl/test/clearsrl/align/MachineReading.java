@@ -155,7 +155,7 @@ public class MachineReading {
 		}
 	}
 	
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws Exception
 	{	
 	    MachineReading options = new MachineReading();
 	    CmdLineParser parser = new CmdLineParser(options);

@@ -11,7 +11,7 @@ public abstract class SentenceReader {
         this.props = props;
     }
     
-	public abstract void initialize() throws FileNotFoundException, IOException;
+	public abstract void initialize() throws FileNotFoundException, IOException, InstantiationException, IllegalAccessException, ClassNotFoundException;
 	public abstract Sentence nextSentence();
 	public abstract void close();
 }
