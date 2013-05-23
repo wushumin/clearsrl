@@ -385,17 +385,16 @@ public class SRLUtil {
 		return supports;
 	}
 
-	
-
 	/*
 	public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
 		filterPredicateNode(nodes, predicate);
 		return nodes;
-	}*/
+	}
+	*/
 	
-	public static List<TBNode> getArgumentCandidates(TBNode node)
-	{
+		
+	static List<TBNode> getArgumentCandidates(TBNode node) {
 		List<TBNode> nodes = new ArrayList<TBNode>();
 		if (node.isTerminal())
 			return nodes;
@@ -421,7 +420,7 @@ public class SRLUtil {
 		return nodes;
 	}
 	
-	static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
+	public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
 		boolean toRoot = true;
 		
 		boolean isVerb = langUtil.isVerb(predicate.getPOS());
@@ -561,7 +560,7 @@ public class SRLUtil {
 					if (levelDown>0)
 						getNodesAux(parent.getChildren()[i], 0, levelDown, nodes, false);
 					if (getHeadPhrases)
-						nodes.addAll(getHeadPhrases(parent.getChildren()[i]));			
+						nodes.addAll(getHeadPhrases(parent.getChildren()[i], 1));
 				}
 			}
 			if (levelUp>1)
@@ -583,7 +582,7 @@ public class SRLUtil {
 		return;
 	}
 	
-	static List<TBNode> getHeadPhrases(TBNode node) {
+	static List<TBNode> getHeadPhrases(TBNode node, int levelDown) {
 		List<TBNode> nodes = new ArrayList<TBNode>();
 		for (TBNode dependent:node.getHead().getDependentNodes(false)) {
 			if (!dependent.isDecendentOf(node))
@@ -592,8 +591,27 @@ public class SRLUtil {
 			if (constituent.isToken()&&constituent.getParent().getPOS().equals("NP"))
 				continue;
 			nodes.add(constituent);
-			nodes.addAll(getHeadPhrases(constituent));
+			nodes.addAll(getHeadLevelDown(constituent, levelDown));
+			nodes.addAll(getHeadPhrases(constituent, levelDown));
 		}
+		return nodes;
+	}
+	
+	static List<TBNode> getHeadLevelDown(TBNode node, int levelDown) {
+		List<TBNode> nodes = new ArrayList<TBNode>();
+		if (levelDown<=0) return nodes;
+		for (TBNode child:node.getChildren()) 
+			if (child.getHead()==node.getHead()) {
+				if (child.getTokenSet().cardinality()<node.getTokenSet().cardinality()) {
+					if (!child.isToken()||child.getParent().getPOS().equals("NP")) {
+						nodes.add(child);
+						nodes.addAll(getHeadLevelDown(child, levelDown-1));
+					}
+				} else {
+					nodes.addAll(getHeadLevelDown(child, levelDown));
+				}
+				break;
+			}
 		return nodes;
 	}
 	
@@ -632,20 +650,6 @@ public class SRLUtil {
 		return index;
 	}
 
-	public static String getMaxLabel(Map<String, Float> labels)
-	{
-		float val = Float.NEGATIVE_INFINITY;
-		String maxLabel = null;
-		for (Map.Entry<String, Float> entry:labels.entrySet())
-		{
-			if (entry.getValue()>val)
-			{
-				val = entry.getValue();
-				maxLabel = entry.getKey();
-			}
-		}
-		return maxLabel;
-	}
 /*
 	public static void removeOverlap(SRInstance instance)
 	{		

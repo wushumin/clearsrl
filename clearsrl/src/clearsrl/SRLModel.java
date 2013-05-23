@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -214,7 +215,7 @@ public class SRLModel implements Serializable {
 	
 	boolean                                              trainGoldParse;
 	
-	int                                                  argCandidateLevelDown = 3;
+	int                                                  argCandidateLevelDown = 2;
 	boolean                                              argCandidateAllHeadPhrases = true;
 	float                                                noArgWeight = 0.2f;
 	float                                                nominalWeight = 2;
@@ -366,80 +367,44 @@ public class SRLModel implements Serializable {
 	 * @param threshold word overlap threshold for an argument and constituent to be considered a match
 	 */
 	@SuppressWarnings("serial")
-	Map<TBNode, Map<String, Float>> getSamplesFromParse(SRInstance instance, SRInstance support,
+	Map<TBNode, SRArg> getSamplesFromParse(SRInstance instance, SRInstance support,
 			TBTree parsedTree, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases, float threshold) {
 		//if (instance.getArgs().size()==1) // skip if there are no arguments
 		//	return;
 		
-		Map<TBNode, Map<String, Float>> candidateMap = new HashMap<TBNode, Map<String, Float>>();
+		Map<TBNode, SRArg> candidateMap = new HashMap<TBNode, SRArg>();
 		
 		List<TBNode> candidateNodes = SRLUtil.getArgumentCandidates(parsedTree.getNodeByTokenIndex(instance.getPredicateNode().getTokenIndex()), support, langUtil, levelDown, allHeadPhrases);
-		List<Map<String, Float>> labels = new ArrayList<Map<String, Float>>(candidateNodes.size());
-		
-		List<BitSet> candidateTokens = new ArrayList<BitSet>(candidateNodes.size());
+		Map<BitSet, TBNode> tokenSetMap = new HashMap<BitSet, TBNode>();
 		for (TBNode node:candidateNodes) {
-			// initialize all candidates to not argument
-			candidateTokens.add(node.getTokenSet());
-			labels.add(new HashMap<String, Float>(){{put(SRLModel.NOT_ARG, 1.0f);}});
+			BitSet tokenSet = node.getTokenSet();
+			if (!tokenSetMap.containsKey(tokenSet) || tokenSetMap.get(tokenSet).isDecendentOf(node))
+				tokenSetMap.put(tokenSet, node);
 		}
 		
-		BitSet candidateBitSet = new BitSet(candidateNodes.size());
-		BitSet removalBitSet = new BitSet(candidateNodes.size());
+		Set<TBNode> candidateNodeSet = new HashSet<TBNode>(tokenSetMap.values());
 		
 		// find a good match between parse candidates and argument boundary of gold SRL
 		for (SRArg arg:instance.getArgs()) {
 			if (arg.isPredicate()) continue;
 			BitSet argBitSet = arg.getTokenSet();
-		
 			if (argBitSet.isEmpty()) continue;
-			float []fScores = new float[candidateTokens.size()];
 			
-			for (int i=0; i<candidateTokens.size(); ++i) {
-				BitSet clone = (BitSet)candidateTokens.get(i).clone();
-				clone.and(argBitSet);
-				fScores[i] = SRLUtil.getFScore(clone.cardinality()*1.0f/candidateTokens.get(i).cardinality(), clone.cardinality()*1.0f/argBitSet.cardinality());
-				if (fScores[i]>0.5f)
-					labels.get(i).put(SRLUtil.removeArgModifier(arg.label), fScores[i]);
-			}
-			int index = SRLUtil.getMaxIndex(fScores);
-			
-			// if the best matched candidate phrase fscore is above threshold, labeled it the argument
-			if (fScores[index]>=0.9999f) {
-				if (candidateBitSet.get(index))
-					System.err.println("Candidate reused: "+candidateNodes.get(index));
-				candidateBitSet.set(index);
-				labels.get(index).remove(SRLModel.NOT_ARG);
-			} else if (arg.getLabel().matches("ARG.*")) { // force numbered arguments into training
+			if (tokenSetMap.containsKey(argBitSet))
+				candidateMap.put(tokenSetMap.get(argBitSet), arg);
+			else {
 				TBNode constituent = parsedTree.getNodeByTokenIndex(arg.node.getHead().getTokenIndex()).getConstituentByHead();
 				BitSet cSet = constituent.getTokenSet();
-				if (cSet.nextSetBit(0)==arg.tokenSet.nextSetBit(0) && !cSet.get(instance.predicateNode.getTokenIndex())) {
-					Map<String, Float> labelMap = new HashMap<String, Float>();
-					BitSet clone = (BitSet)cSet.clone();
-					clone.and(arg.tokenSet);
-					labelMap.put(SRLUtil.removeArgModifier(arg.label), SRLUtil.getFScore(clone.cardinality()*1.0f/cSet.cardinality(), clone.cardinality()*1.0f/arg.tokenSet.cardinality()));
-					//candidateMap.put(constituent, labelMap);
-				}
+				
+				if (!cSet.get(instance.predicateNode.getTokenIndex()) && candidateNodeSet.contains(constituent))
+					candidateMap.put(constituent, arg);
 			}
-			
-			// if an argument is not matched to any candidate above the threshold, 
-			// at least remove the best matched candidate (if fscore>0.5) from training 
-			/*
-			else if (fScores[index]>threshold)
-			{
-				removalBitSet.set(index);
-			}*/
 		}
 		
-		for (int i=removalBitSet.nextSetBit(0); i>=0; i=removalBitSet.nextSetBit(i+1))
-			if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG))
-				labels.set(i, null);
+		for (TBNode node:candidateNodeSet)
+			if (!candidateMap.containsKey(node))
+				candidateMap.put(node, null);
 		
-		for (int i=0; i<labels.size();++i)
-			if (labels.get(i)!=null) {
-				if (!SRLUtil.getMaxLabel(labels.get(i)).equals(NOT_ARG) || !candidateMap.containsKey(candidateNodes.get(i)))
-					candidateMap.put(candidateNodes.get(i), labels.get(i));
-			}
-
 		return candidateMap;
 	}
 	
@@ -460,18 +425,16 @@ public class SRLModel implements Serializable {
         	cardinality = processedSet.cardinality();
         	for (int i=processedSet.nextClearBit(0); i<supportIds.length; i=processedSet.nextClearBit(i+1))
         		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {        			
-        			for (Map.Entry<TBNode, Map<String, Float>> entry: getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
-                    		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold).entrySet()) {
-        				trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(entry.getValue()), entry.getKey()));
-        			}
         			
+        			Map<TBNode, SRArg> candidateMap = getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
+                    		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold);
         			//ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
                     //ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
                     //SRLUtil.getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
                     //		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold, argNodes, labels);
                     //for (int l=0; l<labels.size(); ++l)
                     //    trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), supportIds[i]<0?null:srlSamples[supportIds[i]], goldInstances.get(i), namedEntities, buildDictionary);
+                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), candidateMap, supportIds[i]<0?null:trainInstances.get(supportIds[i]), supportIds[i]<0?null:srlSamples[supportIds[i]], goldInstances.get(i), namedEntities, buildDictionary);
 
                     if (buildDictionary) {
                     	
@@ -518,24 +481,49 @@ public class SRLModel implements Serializable {
         }
     }
     
-    public SRLSample addTrainingSamples(SRInstance sampleInstance, SRInstance supportInstance, SRLSample supportSample, SRInstance goldInstance, String[] namedEntities, boolean buildDictionary)    
-	{
-        ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-        ArrayList<String> labels = new ArrayList<String>();
+    SRLSample addTrainingSamples(SRInstance sampleInstance, Map<TBNode, SRArg> candidateMap, 
+    		SRInstance supportInstance, SRLSample supportSample, SRInstance goldInstance, 
+    		String[] namedEntities, boolean buildDictionary) {
+    	
+    	List<TBNode> argNodes = new ArrayList<TBNode>(candidateMap.keySet());
+    	List<String> labels = new ArrayList<String>();
+    	
+    	boolean isNominal = !langUtil.isVerb(sampleInstance.getPredicateNode().getPOS());
+    	
+    	List<EnumMap<Feature,List<String>>> featureMapList = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
+    	
+    	for (TBNode node:argNodes) {
+    		if (candidateMap.get(node)==null)
+    			labels.add(NOT_ARG);
+    		else
+    			labels.add(SRLUtil.removeArgModifier(candidateMap.get(node).label));
+    		sampleInstance.addArg(new SRArg(labels.get(labels.size()-1), node));
+    	}
         
-        boolean isNominal = !langUtil.isVerb(sampleInstance.getPredicateNode().getPOS());
-        
-        for (SRArg arg:sampleInstance.args) {
-            if (arg.isPredicate()) continue;
-            argNodes.add(arg.node);
-            labels.add(arg.label);
-        }
-        
-		List<EnumMap<Feature,List<String>>> featureMapList = extractSampleFeature(sampleInstance.predicateNode, argNodes, namedEntities);
 		List<ArgSample> sampleList = new ArrayList<ArgSample>();
-        for (int i=0; i<featureMapList.size();++i)
+        for (int i=0; i<featureMapList.size();++i) {
+        	SRArg goldArg = candidateMap.get(argNodes.get(i));
+        	if (goldArg!=null) {
+        		BitSet goldTokenSet = goldArg.getTokenSet();
+        		BitSet argTokenSet = argNodes.get(i).getTokenSet();
+        		if (!argTokenSet.equals(goldTokenSet)) {
+        			if (argTokenSet.nextSetBit(0)!=goldTokenSet.nextSetBit(0)) {
+        				featureMapList.get(i).remove(Feature.FIRSTWORD);
+        				featureMapList.get(i).remove(Feature.FIRSTWORDPOS);
+        				if (argTokenSet.nextSetBit(0)>sampleInstance.getPredicateNode().getTokenIndex())
+        					featureMapList.get(i).remove(Feature.CONSTITUENTDIST);
+        			} else {
+        				featureMapList.get(i).remove(Feature.LASTWORD);
+        				featureMapList.get(i).remove(Feature.LASTWORDPOS);
+        				if (argTokenSet.nextSetBit(0)<sampleInstance.getPredicateNode().getTokenIndex())
+        					featureMapList.get(i).remove(Feature.CONSTITUENTDIST);
+        			}	
+        		}	
+        	}
+        	
             if (buildDictionary || labelStringMap.containsKey(labels.get(i)))
                 sampleList.add(new ArgSample(argNodes.get(i), sampleInstance.getPredicateNode(), labels.get(i), featureMapList.get(i)));
+        }
         
         ArgSample[] argSamples = sampleList.toArray(new ArgSample[sampleList.size()]);
         Arrays.sort(argSamples, sampleComparator);
@@ -1098,7 +1086,7 @@ public class SRLModel implements Serializable {
         		break;
         	}
         
-        int rounds = hasSequenceFeature?5:1;
+        int rounds = hasSequenceFeature?2:1;
         double threshold = 0.001;
         
         String[] goldLabels = null;
