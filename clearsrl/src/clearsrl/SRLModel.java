@@ -166,10 +166,18 @@ public class SRLModel implements Serializable {
 			if ((lhs.predicate.getTokenIndex()<lhsStart)!=(lhs.predicate.getTokenIndex()<rhsStart))
 				return lhs.predicate.getTokenIndex()-lhsStart;
 				
+			int lhsEnd = lhsSet.nextClearBit(lhsStart)-1;
+			int rhsEnd = rhsSet.nextClearBit(rhsStart)-1;
+			
 			if (lhsStart!=rhsStart)
-				return lhs.predicate.getTokenIndex()<lhsStart?lhsStart-rhsStart:rhsStart-lhsStart;
+				return lhs.predicate.getTokenIndex()<lhsStart?lhsStart-rhsStart:rhsEnd-lhsEnd;
 
 			return rhsSet.cardinality()-lhsSet.cardinality();
+			
+			//if (lhs.node.getHead().getTokenIndex()!=rhs.node.getHead().getTokenIndex())
+			//	return lhs.predicate.getTokenIndex()<lhsStart?lhs.node.getHead().getTokenIndex()-rhs.node.getHead().getTokenIndex():rhs.node.getHead().getTokenIndex()-lhs.node.getHead().getTokenIndex();
+			
+			//return lhs.node.isDecendentOf(rhs.node)?1:-1;
 		}
 		
 	}
@@ -894,7 +902,7 @@ public class SRLModel implements Serializable {
 						}							
 					}
 					if (sArg!=null)
-						featureMap.put(feature, Arrays.asList((sArg.node==sample.node?"":"in ")+sArg.getLabel()));
+						featureMap.put(feature, Arrays.asList("nested", sArg.getLabel()));
 				}
 				break;
 			case ARGLISTDIRECTIONAL:
