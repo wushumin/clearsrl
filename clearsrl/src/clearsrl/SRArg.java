@@ -1,10 +1,16 @@
 package clearsrl;
 
+import java.io.Serializable;
 import java.util.BitSet;
 
 import clearcommon.treebank.TBNode;
 
-public class SRArg implements Comparable<SRArg>{
+public class SRArg implements Comparable<SRArg>, Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6336607317441187664L;
+	
 	boolean flat;
 	TBNode node;
 	BitSet tokenSet;

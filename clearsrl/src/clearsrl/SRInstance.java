@@ -1,7 +1,7 @@
 package clearsrl;
 
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -15,9 +15,14 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 
-public class SRInstance {
+public class SRInstance implements Serializable {
 
-    enum OutputFormat {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -1033211240285878934L;
+
+	enum OutputFormat {
         TEXT,
         PROPBANK,
         CONLL

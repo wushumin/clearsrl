@@ -194,7 +194,7 @@ public class TrainSRL {
 			    model.setTrainGoldParse(true);
 			}
 
-			model.initDictionary();
+			model.initialize(props);
 			for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
 			{
 				SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
@@ -335,7 +335,7 @@ public class TrainSRL {
 		}*/
         else if (dataFormat.equals("conll")) {
             ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("input")), true);
-            model.initDictionary();
+            model.initialize(props);
             for (CoNLLSentence sentence:training) {
                 TBUtil.linkHeads(sentence.parse, langUtil.getHeadRules());
                 model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD, true);
