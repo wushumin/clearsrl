@@ -1203,7 +1203,7 @@ public class SRLModel implements Serializable {
         */
 
         String[] labels = goldLabels;
-        for (int r=0; r<rounds; ++r) {
+        for (int r=0; r<rounds-1; ++r) {
         	String[] newLabels = train(r!=0, hasSequenceFeature?folds:1, threads, labels, goldLabels);
         	int cnt=0;
         	for (int i=0; i<labels.length; ++i) {
@@ -1265,6 +1265,8 @@ public class SRLModel implements Serializable {
         		break;
         	}
         }
+        if (hasSequenceFeature && folds>1)
+        	train(true, 1, threads, labels, goldLabels);
     }
 
     /**
@@ -1348,7 +1350,7 @@ public class SRLModel implements Serializable {
         int[] yV;
         if (folds>1) {
             CrossValidator validator = new CrossValidator(classifier, threads);
-            yV =  validator.validate(folds, X, y, seed, true);
+            yV =  validator.validate(folds, X, y, seed, false);
         } else {
             classifier.train(X, y);
             yV = new int[y.length];

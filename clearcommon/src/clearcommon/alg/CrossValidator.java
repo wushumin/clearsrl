@@ -36,6 +36,8 @@ public class CrossValidator {
         
         @Override
         public void run() {
+        	System.out.printf("*********** Training fold %d ***************\n",f+1);
+        	
             cf.train(Xtrain, ytrain);
             
             if (f<0) return;
@@ -110,9 +112,7 @@ public class CrossValidator {
         randomPermute(perm, new Random(y.length));
 
         for (int f=0; f<foldNum; ++f)
-        {
-            System.out.printf("*********** Performing fold %d/%d ***************\n",f+1, foldNum);
-            
+        {   
             TIntHashSet permSet = new TIntHashSet();
             for (int i=f; i<perm.length; i+=foldNum)
                 permSet.add(perm[i]);
