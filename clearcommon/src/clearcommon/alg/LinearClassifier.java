@@ -1,12 +1,9 @@
 package clearcommon.alg;
 
 import java.io.Serializable;
-import java.util.Properties;
 
 import liblinearbinary.Linear;
 import liblinearbinary.SolverType;
-
-import gnu.trove.TObjectIntHashMap;
 
 public class LinearClassifier extends Classifier implements Serializable {
 	/**
@@ -21,11 +18,10 @@ public class LinearClassifier extends Classifier implements Serializable {
 	double[] values;
 	int[] mLabelIdx;
 	
-	public LinearClassifier(TObjectIntHashMap<String> labelMap, Properties prop)
+	public LinearClassifier()
 	{
-		super(labelMap, prop);
 	}
-
+	
 	@Override
     public int predict(int[] x) {
 		return Linear.predictValues(model, convertToLibLinear(x), values);
@@ -144,12 +140,14 @@ public class LinearClassifier extends Classifier implements Serializable {
 	public void train(int[][] X, int[] Y, double[] weightY) {
 		train(convertToProblem(X,Y, weightY, Double.parseDouble(prop.getProperty("liblinear.bias", "-1"))));
 	}
-
+/*
     @Override
     public Classifier getNewInstance() {
         // TODO Auto-generated method stub
-        return new LinearClassifier(labelMap, prop);
+    	Classifier classifier = new LinearClassifier();
+    	classifier.initialize(labelMap, prop);
+    	return classifier;
     }
-
+*/
 
 }

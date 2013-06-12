@@ -1133,7 +1133,8 @@ public class SRLModel implements Serializable {
                 dist += (predicateTrainingLabels.get(i)==1)?1:0;
             logger.info(String.format("Training predicates: %d/%d/%d\n", dist, predicateTrainingLabels.size()-dist, predicateTrainingLabels.size()));
                 
-            predicateClassifier = new LinearClassifier(predicateLabelMap, prop);
+            predicateClassifier = new LinearClassifier();
+            predicateClassifier.initialize(predicateLabelMap, prop);
             predicateClassifier.train(predicateTrainingFeatures.toArray(new int[predicateTrainingFeatures.size()][]),
                     predicateTrainingLabels.toNativeArray());
             
@@ -1143,7 +1144,22 @@ public class SRLModel implements Serializable {
             logger.info(String.format("Predicate training accuracy: %f\n", score/predicateTrainingLabels.size()));
         }
         
-        classifier = new PairWiseClassifier(labelStringMap, prop);
+        try {
+			classifier = (Classifier)Class.forName(prop.getProperty("classifier", "clearcommon.util.LinearClassifier")).newInstance();
+	        classifier.initialize(labelStringMap, prop);
+        } catch (InstantiationException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+			return;
+		} catch (IllegalAccessException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+			return;
+		} catch (ClassNotFoundException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+			return;
+		}
         
         int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));
         int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","1"));
@@ -1354,8 +1370,8 @@ public class SRLModel implements Serializable {
         } else {
             classifier.train(X, y);
             yV = new int[y.length];
-            for (int i=0; i<y.length; ++i)
-                yV[i] = classifier.predict(X[i]);
+            //for (int i=0; i<y.length; ++i)
+            //    yV[i] = classifier.predict(X[i]);
         }
         
         String[] newLabels = new String[yV.length];

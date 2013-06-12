@@ -18,9 +18,12 @@ public class TwoStageClassifier extends Classifier implements Serializable {
     Classifier stageTwoClassifier;
     double cutoff;
     
-    TwoStageClassifier(TObjectIntHashMap<String> labelMap, double cutoff, Properties prop) {
-        super(labelMap, prop);
-        this.cutoff = cutoff;
+    TwoStageClassifier() {
+    }
+    
+    public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
+        super.initialize(labelMap, prop);
+        this.cutoff = Double.parseDouble(prop.getProperty("TwoStageClassifier.cutoff"));
     }
 
     @Override
@@ -40,7 +43,8 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         Properties propMod = (Properties)prop.clone();
         propMod.setProperty("liblinear.solverType", "L2R_LR");
         
-        stageOneClassifier = new LinearClassifier(lMap, propMod);
+        stageOneClassifier = new LinearClassifier();
+        stageOneClassifier.initialize(lMap, propMod);
         
         stageOneClassifier.train(X, Y1);
         
@@ -82,7 +86,8 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         for (int i=0; i<labels.length;++i)
             labelMap.put(labels[i], labelIdx[i]);
         
-        stageTwoClassifier = new PairWiseClassifier(labelMap, prop);
+        stageTwoClassifier = new PairWiseClassifier();
+        stageTwoClassifier.initialize(labelMap, prop);
         
         stageTwoClassifier.train(X2.toArray(new int[X2.size()][]), Y2.toNativeArray(), weightY);
     }
@@ -96,10 +101,13 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         return stageTwoClassifier.predict(x);
     }
-    
+    /*
     @Override
     public Classifier getNewInstance() {
         // TODO Auto-generated method stub
-        return new TwoStageClassifier(labelMap, cutoff, prop);
+    	Classifier classifier = new TwoStageClassifier();
+    	classifier.initialize(labelMap, prop);
+    	return classifier;
     }
+    */
 }

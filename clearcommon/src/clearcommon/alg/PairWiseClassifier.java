@@ -1,7 +1,6 @@
 package clearcommon.alg;
 
 import gnu.trove.TIntArrayList;
-import gnu.trove.TIntHashSet;
 import gnu.trove.TObjectIntHashMap;
 
 import java.io.Serializable;
@@ -49,9 +48,26 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         }
     }
 	
-	public PairWiseClassifier(TObjectIntHashMap<String> labelMap, Properties prop)
+	class PredictJob implements Runnable {
+		Classifier cf;
+		int[] x;
+		public PredictJob(Classifier cf, int[] x) {
+			this.cf = cf;
+            this.x = x;
+		}
+		
+		@Override
+        public void run() {
+            cf.predict(x);
+        }
+	}
+	
+	public PairWiseClassifier()
 	{
-		super(labelMap, prop);
+	}
+	
+	public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
+		super.initialize(labelMap, prop);
 		classifiers = new Classifier[labelIdx.length][labelIdx.length];
 		labelMap.getValues();
 		values = new double[labelIdx.length];
@@ -199,7 +215,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 					map.put(labels[i], labelIdx[i]);
 					map.put(labels[j], labelIdx[j]);
 					
-					classifiers[i][j] = new LinearClassifier(map, prop);
+					classifiers[i][j] = new LinearClassifier();
+					classifiers[i][j].initialize(map, prop);
 					
 					int[][] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
 					int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
@@ -259,11 +276,12 @@ public class PairWiseClassifier extends Classifier implements Serializable {
             }
         }
 	}
-
+/*
     @Override
     public Classifier getNewInstance() {
-        // TODO Auto-generated method stub
-        return new PairWiseClassifier(labelMap, prop);
+    	Classifier classifier = new PairWiseClassifier();
+    	classifier.initialize(labelMap, prop);
+    	return classifier;
     }
-
+*/
 }

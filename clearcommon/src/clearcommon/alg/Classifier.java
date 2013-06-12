@@ -26,8 +26,11 @@ public abstract class Classifier implements Serializable {
 
     int[] labelIdx;
     
-    Classifier(TObjectIntHashMap<String> labelMap, Properties prop)
+    Classifier()
     {
+    }
+    
+    public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
         this.labelMap = labelMap;
         this.prop = prop;
         labels = labelMap.keys(new String[labelMap.size()]);
@@ -56,7 +59,21 @@ public abstract class Classifier implements Serializable {
     
     public abstract int predict(int[] x);
     
-    public abstract Classifier getNewInstance();
+    public Classifier getNewInstance() {
+    	Classifier classifier = null;
+		try {
+			classifier = this.getClass().newInstance();
+			classifier.initialize(labelMap, prop);
+			return classifier;
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+    }
     
     public int predictProb(int[] x, double[] prob)
     {
