@@ -75,6 +75,10 @@ public abstract class Classifier implements Serializable {
 		return null;
     }
     
+    public boolean canPredictProb() {
+    	return false;
+    }
+    
     public int predictProb(int[] x, double[] prob)
     {
         int label = predict(x);

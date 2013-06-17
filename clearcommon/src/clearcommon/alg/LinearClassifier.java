@@ -1,6 +1,7 @@
 package clearcommon.alg;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import liblinearbinary.Linear;
 import liblinearbinary.SolverType;
@@ -33,8 +34,21 @@ public class LinearClassifier extends Classifier implements Serializable {
 	}
 */
 	@Override
+	public boolean canPredictProb() {
+		return solverType==SolverType.L2R_LR;
+	}
+	
+	@Override
 	public int predictProb(int[] x, double[] prob) {
-		int label = Linear.predictProbability(model, convertToLibLinear(x), values);
+		int[] xConv = convertToLibLinear(x);
+		int label = Linear.predictProbability(model, xConv, values);
+		
+		if (label==0) {
+			label = Linear.predictValues(model, xConv, values);
+			Arrays.fill(prob, 0);
+			prob[labelIdxMap.get(label)]=1;
+			return label;
+		}
 		
 		for (int i=0; i<values.length; ++i)
 			prob[labelIdxMap.get(mLabelIdx[i])] = values[i];
