@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Properties;
 
 
+import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.PBFileReader;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.ParseException;
@@ -44,7 +45,7 @@ public class AlignedSentenceReader extends SentenceReader {
         
         tbReader = new ThreadedTBFileReader(props.getProperty("tbfile"), 1000);
         pbReader = new PBFileReader(new TBReader(props.getProperty("tbfile"), false), 
-        		props.getProperty("pbfile"), null);
+        		props.getProperty("pbfile"), new DefaultPBTokenizer());
         
         lastInstanceSet = null;
         count = 0;
