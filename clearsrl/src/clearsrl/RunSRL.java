@@ -171,6 +171,8 @@ public class RunSRL {
 	                    	List<String> stem = langUtil.findStems(goldInstances[j].predicateNode);
 	                        predictions.add(new SRInstance(goldInstances[j].predicateNode, tree, stem.get(0)+".XX", 1.0));
 	                    }
+	                    if (goldInstances!=null && goldInstances.length!=0)
+	                    	TBUtil.linkHeads(goldInstances[0].tree, langUtil.getHeadRules());
 	                    predictions = model.predict(tree, goldInstances, null);
                 	}
                         
