@@ -63,8 +63,7 @@ public class TrainSRL {
         return trainInstances;
 	}*/
 	
-	public static void main(String[] args) throws Exception
-	{	
+	public static void main(String[] args) throws Exception {	
 		Properties props = new Properties();
 		FileInputStream in = new FileInputStream(args[0]);
 		props.load(in);
@@ -108,8 +107,7 @@ public class TrainSRL {
         for (EnumSet<SRLModel.Feature> feature:model.features.getFeatures())
             System.out.println(feature.toString());
         
-        if (model.predFeatures!=null)
-        {
+        if (model.predFeatures!=null) {
             System.out.println("\nPredicate features:");
             for (EnumSet<SRLModel.PredFeature> feature:model.predFeatures.getFeatures())
                 System.out.println(feature.toString());
@@ -187,9 +185,7 @@ public class TrainSRL {
 
 			System.out.println(propBank.size());
 
-			
-			if (parsedTreeBank==null)
-			{
+			if (parsedTreeBank==null) {
 			    parsedTreeBank = treeBank;
 			    model.setTrainGoldParse(true);
 			}
@@ -201,8 +197,7 @@ public class TrainSRL {
 				if (pbFileMap==null) continue;
 				int weight = trainWeights.get(entry.getKey());
 				
-				
-				System.out.println("Processing (p1) "+entry.getKey());
+				System.out.println("Processing "+entry.getKey());
 			    TBTree[] trees = entry.getValue();
 			    
 			    for (int i=0; i<trees.length; ++i)
@@ -224,11 +219,9 @@ public class TrainSRL {
 			            }
 		            }
 		            for (int w=0; w<weight; ++w)
-                        model.addTrainingSentence(trees[i], srls, null, THRESHOLD, true);
+                        model.addTrainingSentence(trees[i], srls, null, THRESHOLD);
 			    }
 			}
-            model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
-			
             System.out.println("***************************************************");
             for (TObjectIntIterator<String> iter = rolesetEmpty.iterator(); iter.hasNext();)
             {
@@ -239,111 +232,15 @@ public class TrainSRL {
                 else
                     System.out.println(iter.key()+": "+iter.value()+"/"+rolesetArg.get(iter.key()));
             }
-            System.out.println("***************************************************");
-            
-            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-            {
-            	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
-            	if (pbFileMap==null) continue;
-            	int weight = trainWeights.get(entry.getKey());
-            	
-            	System.out.println("Processing (p2) "+entry.getKey());
-                TBTree[] trees = entry.getValue(); 
-                for (int i=0; i<trees.length; ++i) {
-                    List<PBInstance> pbInstances = pbFileMap.get(i);
-
-                    ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
-                    if (pbInstances!=null)  {
-                        for (PBInstance instance:pbInstances) {
-                            //if (!rolesetEmpty.containsKey(instance.getRoleset()))
-                                srls.add(new SRInstance(instance));
-                        }
-                    }
-		            for (int w=0; w<weight; ++w)
-		            	model.addTrainingSentence(trees[i], srls,  null, THRESHOLD, false);
-                }
-            }
-            /*
-			model.initScore();
-			for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
-                for(TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
-				{
-					iter.advance();
-					for (PBInstance pbInstance:iter.value())
-                    {
-    					SRInstance instance = new SRInstance(pbInstance);
-    					
-    					SRInstance trainInstance = addTrainingSample(model, instance, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], null, THRESHOLD, false);
-    					tCount += trainInstance.args.size()-1;
-    					gCount += instance.args.size()-1;
-    				
-    					for (SRArg arg:instance.args)
-    					{
-    					    if (arg.isPredicate()) continue;
-    					    if (arg.node.getParent()==null) continue;
-    					    
-    					    if (arg.node.head != arg.node.getParent().head)
-    					        hCnt++;
-    					    tCnt++;
-    					}
-                    
-    					model.score.addResult(SRLUtil.convertSRInstanceToTokenMap(trainInstance), SRLUtil.convertSRInstanceToTokenMap(instance));
-                    }
-				}
-			model.score.printResults(System.out);
-			*/
+            System.out.println("***************************************************");            
 		}
-		/*
-		else if (dataFormat.equals("conll"))
-		{
-			ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
-			model.initDictionary();
-			for (CoNLLSentence sentence:training)
-			{
-				TBUtil.findHeads(sentence.parse.getRootNode(), headrules);
-				for (SRInstance instance:sentence.srls)
-					addTrainingSample(model, instance, instance.tree, sentence.namedEntities, THRESHOLD, true);
-			}
-			model.finalizeDictionary(Integer.parseInt(props.getProperty("train.dictionary.cutoff", "2")));
-			
-			model.initScore();
-
-			for (CoNLLSentence sentence:training)
-			{
-				for (SRInstance instance:sentence.srls)
-				{
-					SRInstance trainInstance = addTrainingSample(model, instance, instance.tree, sentence.namedEntities, THRESHOLD, false);
-					
-					tCount += trainInstance.args.size()-1;
-					gCount += instance.args.size()-1;
-				
-                    for (SRArg arg:trainInstance.args)
-                    {
-                        if (arg.isPredicate()) continue;
-                        if (arg.node==null) continue;
-                        if (arg.node.getParent()==null) continue;
-                        
-                        if (arg.node.head != arg.node.getParent().head)
-                            hCnt++;
-                        tCnt++;
-                    }
-					
-					model.score.addResult(SRLUtil.convertSRInstanceToTokenMap(trainInstance), SRLUtil.convertSRInstanceToTokenMap(instance));
-				}
-			}
-			model.score.printResults(System.out);
-		}*/
         else if (dataFormat.equals("conll")) {
             ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("input")), true);
             model.initialize(props);
             for (CoNLLSentence sentence:training) {
                 TBUtil.linkHeads(sentence.parse, langUtil.getHeadRules());
-                model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD, true);
+                model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD);
             }
-            model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "2")));
-
-            for (CoNLLSentence sentence:training)
-            	model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD, false);
         }		
 		System.out.println("Reference arg instance count: "+gCount);
 		System.out.println("Training arg instance count: "+tCount);

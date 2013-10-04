@@ -20,6 +20,7 @@ import java.io.BufferedOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -203,21 +204,6 @@ public class SRLModel implements Serializable {
 		
 	}
 	
-	class HeadDistanceComparator implements Comparator<ArgSample>, Serializable  {
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public int compare(ArgSample o1, ArgSample o2) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-		
-	}
-	
 	public static String UP_CHAR = "^";
 	public static String DOWN_CHAR = "v";
 	public static String RIGHT_ARROW = "->";
@@ -255,8 +241,6 @@ public class SRLModel implements Serializable {
 	
 	transient double[]                                   labelValues;
 	
-	//transient SortedMap<String, SortedMap<Integer, List<SRLSample>>>         trainingSamples;
-	
 	transient ArrayList<int[]>                           predicateTrainingFeatures;
 	transient TIntArrayList                              predicateTrainingLabels;
 
@@ -266,14 +250,14 @@ public class SRLModel implements Serializable {
 	transient Logger                                     logger;
 	
 	transient File                                       trainingSampleFile;
-	transient ObjectOutputStream                         trainingSampleOut; 
-	transient ObjectInputStream                          trainingSampleIn;
+	transient File                                       extractedSampleFile;
+	
+	transient ObjectOutputStream                         cachedOutStream;
+	transient ObjectInputStream                          cachedInStream;
+	
 	transient int                                        trainingTreeCnt;
 	
-//	transient private SRLScore                        score;
-	
-	public SRLModel (Set<EnumSet<Feature>> featureSet, Set<EnumSet<PredFeature>> predicateFeatureSet)
-	{
+	public SRLModel (Set<EnumSet<Feature>> featureSet, Set<EnumSet<PredFeature>> predicateFeatureSet) {
 		logger = Logger.getLogger("clearsrl");
 		
 		labeled = true;
@@ -282,20 +266,32 @@ public class SRLModel implements Serializable {
 		if (predicateFeatureSet!=null)
 			predFeatures = new FeatureSet<PredFeature>(predicateFeatureSet);
 		
-		//trainingSamples = new TreeMap<String, SortedMap<Integer, List<SRLSample>>>();
-		
-		predicateTrainingFeatures = new ArrayList<int[]>();
-		predicateTrainingLabels = new TIntArrayList();
-		
+
 		sampleComparator = new TokenDistanceComparator();
 		
 		trainGoldParse =false;
 	}
 	
-	public void initialize(Properties props) {
-		trainingSampleFile = new File(props.getProperty("tmpdir", "/tmp"), "trainingSamples."+ManagementFactory.getRuntimeMXBean().getName());
+	public void initialize(Properties props) throws IOException {
+
+		predicateTrainingFeatures = new ArrayList<int[]>();
+		predicateTrainingLabels = new TIntArrayList();		
+		
+		// process name/id + object name/id means this should be unique, right?
+		String uniqueExtension = ManagementFactory.getRuntimeMXBean().getName()+'.'+Integer.toHexString(System.identityHashCode(this));
+
+		trainingTreeCnt = 0;
+		trainingSampleFile = new File(props.getProperty("tmpdir", "/tmp"), "trainingSamples."+uniqueExtension);
 		trainingSampleFile.deleteOnExit();
-		labelStringMap     = new TObjectIntHashMap<String>();
+		
+		extractedSampleFile = new File(props.getProperty("tmpdir", "/tmp"), "extractedSamples."+uniqueExtension);
+		extractedSampleFile.deleteOnExit();
+		
+		// might as well make sure both can be open for write
+		cachedOutStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(trainingSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+		//extractedSampleOut = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(extractedSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+		
+		labelStringMap = new TObjectIntHashMap<String>();
 	}
 	
 	public void setLanguageUtil(LanguageUtil langUtil) {
@@ -316,7 +312,8 @@ public class SRLModel implements Serializable {
 		tmpDir = null;
 	}
 	
-	public void finalizeDictionary(int cutoff) {
+	@SuppressWarnings("unchecked")
+	void finalizeDictionary(int cutoff) throws IOException {
 	    FeatureSet.trimMap(labelStringMap,20);
 	    
 	    logger.info("Labels: ");
@@ -326,37 +323,11 @@ public class SRLModel implements Serializable {
             logger.info("  "+label+" "+labelStringMap.get(label));
         
         features.rebuildMap(cutoff);
-        
-        
-       /* 
-		for (EnumSet<Feature> feature:featureSet)
-		{
-			StringBuilder builder = new StringBuilder(feature.toString()+": "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
-			FeatureSet.trimMap(featureStringMap.get(feature),cutoff);
-			FeatureSet.trimMap(noargFeatureStringMap.get(feature),cutoff*10);
-			builder.append(" "+featureStringMap.get(feature).size()+"/"+noargFeatureStringMap.get(feature).size());
-			featureStringMap.get(feature).putAll(noargFeatureStringMap.get(feature));
-			builder.append(" "+featureStringMap.get(feature).size());
-			builder.append(featureStringMap.get(feature).size()<=250?" "+Arrays.asList(featureStringMap.get(feature).keys()):"");
-			logger.info(builder.toString());
-		}*/
-        
-        
 		
 		if (predFeatures!=null) {
 			predFeatures.rebuildMap(2);
-			
-            //for (EnumSet<PredFeature> predFeature:predicateFeatureSet)
-            //	FeatureSet.trimMap(predicateFeatureStringMap.get(predFeature),cutoff);
 		}
-		/*
-		
-		labelStringSet = new TreeSet<String>();
-		for (String str:labelStringMap.keys(new String[labelStringMap.size()]))
-			labelStringSet.add(str);
-		*/
-		
-		
+
         buildMapIndex(labelStringMap, 0);
         
         labelIndexMap = new TIntObjectHashMap<String>();
@@ -367,57 +338,41 @@ public class SRLModel implements Serializable {
         labelValues = new double[labelIndexMap.size()];
 		
         System.err.printf("ARGS trained %d/%d\n", argsTrained, argsTotal);
+
+        cachedOutStream.close();
+        cachedOutStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(extractedSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+        cachedInStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(trainingSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+        
+        logger.info("Second pass processing of training samples.");
         
         try {
-			trainingSampleOut = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(trainingSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
-		} catch (IOException e) {
+        	for (;;) {
+	        	TBTree tree = (TBTree)cachedInStream.readObject();
+	        	List<SRInstance> goldInstances = (List<SRInstance>)cachedInStream.readObject();
+	        	String[] namedEntities = (String[])cachedInStream.readObject();
+	        	float threshold = cachedInStream.readFloat();
+	        	addTrainingSentence(tree, goldInstances, namedEntities, threshold, false);
+	        }
+        } catch (EOFException e) {
+        } catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+        	cachedInStream.close();
+        	cachedInStream = null;
 		}
-        
-        
-		//rebuildMaps();
+        trainingSampleFile.delete();
+        logger.info("Second pass processing completed.");
 	}
-    /*
-    void rebuildMaps()
-    {   
-        featureStringMap.put(EnumSet.of(Feature.ARGLIST), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        featureStringMap.put(EnumSet.of(Feature.ARGLISTPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        featureStringMap.put(EnumSet.of(Feature.ARGTYPE), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        featureStringMap.put(EnumSet.of(Feature.ARGTYPEPREVIOUS), (TObjectIntHashMap<String>)(labelStringMap.clone()));
-        
-        int startIdx=0;
-        for (Map.Entry<EnumSet<Feature>, TObjectIntHashMap<String>> entry: featureStringMap.entrySet())
-            startIdx = buildMapIndex(entry.getValue(), startIdx);
- 
-        buildMapIndex(labelStringMap, 0);
-        
-        labelIndexMap = new TIntObjectHashMap<String>();
-        for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();)
-        {
-            iter.advance();
-            labelIndexMap.put(iter.value(),iter.key());
-        }
-        labelValues = new double[labelIndexMap.size()];
-        
-        if (predicateFeatureSet!=null)
-        {
-            startIdx=0;
-            for (Map.Entry<EnumSet<PredFeature>, TObjectIntHashMap<String>> entry: predicateFeatureStringMap.entrySet())
-                startIdx = buildMapIndex(entry.getValue(), startIdx);      
-        }
-    }
-	*/
 	
 	/**
-	 * @param instance instance to get samples from, nodes can be based off of gold tree
+	 * Mapping arguments annotated on one parse (typically gold) to ones using another parse tree (typically automatic)
+	 * @param instance src SRL instance
 	 * @param parsedTree the parsed tree to perform SRL off of 
-	 * @param candidateNodes argument candidate nodes
+	 * @param candidateNodes argument candidate nodes	 
+	 * @return map of nodes of parse tree to arguments from the src instance
 	 */
 	Map<TBNode, SRArg> mapArguments(SRInstance instance, TBTree parsedTree, List<TBNode> candidateNodes) {
-		//if (instance.getArgs().size()==1) // skip if there are no arguments
-		//	return;
-		
 		Map<TBNode, SRArg> candidateMap = new HashMap<TBNode, SRArg>();
 		
 		Map<BitSet, TBNode> tokenSetMap = new HashMap<BitSet, TBNode>();
@@ -429,7 +384,7 @@ public class SRLModel implements Serializable {
 		
 		Set<TBNode> candidateNodeSet = new HashSet<TBNode>(tokenSetMap.values());
 		
-		// find a good match between parse candidates and argument boundary of gold SRL
+		// find a good match between parse candidates and argument boundary of src SRL
 		for (SRArg arg:instance.getArgs()) {
 			if (arg.isPredicate()) continue;
 			BitSet argBitSet = arg.getTokenSet();
@@ -453,7 +408,25 @@ public class SRLModel implements Serializable {
 		return candidateMap;
 	}
 	
-    public void addTrainingSentence(TBTree tree, List<SRInstance> goldInstances, String[] namedEntities, float threshold, boolean buildDictionary) {
+    /**
+     * add training sentences to the model
+     * @param tree input parse tree
+     * @param goldInstances annotated SRL instances for the sentence captured by the parse tree (the instances themselves can be based off a different parse tree, but must have same tokenization)
+     * @param namedEntities named entity features, if available
+     * @param threshold argument matching threshold (for converting one parse to another)
+     * @throws IOException 
+     */
+    public void addTrainingSentence(TBTree tree, List<SRInstance> goldInstances, String[] namedEntities, float threshold) throws IOException {
+    	addTrainingSentence(tree, goldInstances, namedEntities, threshold, true);
+    	cachedOutStream.writeObject(tree);
+    	cachedOutStream.writeObject(goldInstances);
+    	cachedOutStream.writeObject(namedEntities);
+    	cachedOutStream.writeFloat(threshold);
+		if (++trainingTreeCnt%5000==0)
+			cachedOutStream.reset();
+    }
+    
+    void addTrainingSentence(TBTree tree, List<SRInstance> goldInstances, String[] namedEntities, float threshold, boolean buildDictionary) {
     	
     	int[] supportIds = SRLUtil.findSupportPredicates(goldInstances, langUtil, SRLUtil.SupportType.ALL, true);
     	
@@ -471,15 +444,15 @@ public class SRLModel implements Serializable {
         	for (int i=processedSet.nextClearBit(0); i<supportIds.length; i=processedSet.nextClearBit(i+1))
         		if (supportIds[i]<0 || processedSet.get(supportIds[i])) {        			
         			
-        			List<TBNode> candidateNodes = SRLUtil.getArgumentCandidates(tree.getNodeByTokenIndex(goldInstances.get(i).getPredicateNode().getTokenIndex()), supportIds[i]<0?null:trainInstances.get(supportIds[i]), langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
+        			List<TBNode> candidateNodes = 
+        					SRLUtil.getArgumentCandidates(tree.getNodeByTokenIndex(goldInstances.get(i).getPredicateNode().getTokenIndex()), 
+        					                              supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
+        					                              langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
         			Map<TBNode, SRArg> candidateMap = mapArguments(goldInstances.get(i), tree, candidateNodes);
-        			//ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-                    //ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-                    //SRLUtil.getSamplesFromParse(goldInstances.get(i), supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
-                    //		tree, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases, threshold, argNodes, labels);
-                    //for (int l=0; l<labels.size(); ++l)
-                    //    trainInstances.get(i).addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), candidateMap, supportIds[i]<0?null:trainInstances.get(supportIds[i]), supportIds[i]<0?null:srlSamples[supportIds[i]], goldInstances.get(i), namedEntities, buildDictionary);
+                    srlSamples[i] = addTrainingSamples(trainInstances.get(i), candidateMap, 
+                    		                           supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
+                    		                           supportIds[i]<0?null:srlSamples[supportIds[i]], 
+                    		                           goldInstances.get(i), namedEntities, buildDictionary);
 
                     if (buildDictionary) {
                     	
@@ -525,12 +498,11 @@ public class SRLModel implements Serializable {
             }
             
             try {
-				trainingSampleOut.writeObject(tree);
-				trainingSampleOut.writeObject(srlSamples);
+            	cachedOutStream.writeObject(tree);
+            	cachedOutStream.writeObject(srlSamples);
 				if (++trainingTreeCnt%5000==0)
-					trainingSampleOut.reset();
+					cachedOutStream.reset();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
         }
@@ -600,34 +572,13 @@ public class SRLModel implements Serializable {
 				++c;
 			}
 			return null;
-		} else {        
-			/*
-            SRLSample srlSample = new SRLSample(sampleInstance.getPredicateNode(), sampleInstance.getTree(), supportSample, argSamples, goldInstance);
-            
-            SortedMap<Integer, List<SRLSample>> tSampleMap = trainingSamples.get(sampleInstance.tree.getFilename());
-            if (tSampleMap == null) {
-            	tSampleMap = new TreeMap<Integer, List<SRLSample>>();
-            	trainingSamples.put(sampleInstance.tree.getFilename(), tSampleMap);
-            }
-            
-            List<SRLSample> tSampleList = tSampleMap.get(sampleInstance.tree.getIndex());
-            if (tSampleList == null) {
-            	tSampleList = new ArrayList<SRLSample>();
-            	tSampleMap.put(sampleInstance.tree.getIndex(), tSampleList);
-            }                
-            tSampleList.add(srlSample);
-            
-            return srlSample;
-            */
+		} else {
 			return new SRLSample(sampleInstance.getPredicateNode(), sampleInstance.getTree(), supportSample, argSamples, goldInstance);
 		}
 	}
 
-
 	public List<EnumMap<Feature,List<String>>> extractSampleFeature(TBNode predicateNode, List<TBNode> argNodes, String[] namedEntities) {	
 		List<EnumMap<Feature,List<String>>> featureMapList = new ArrayList<EnumMap<Feature,List<String>>>();
-		
-		//EnumMap<Feature,List<String>> defaultMap = new EnumMap<Feature,List<String>>(Feature.class);
 		
 		// find predicate lemma
 		String predicateLemma = predicateNode.getWord();
@@ -910,10 +861,7 @@ public class SRLModel implements Serializable {
 			
 			featureMapList.add(featureMap);
 		}
-		
-		
-		
-		
+
 		return featureMapList;
 	}
 	
@@ -989,30 +937,7 @@ public class SRLModel implements Serializable {
 		return featureMap;
 	}
 
-   
-	
-	
-/*
-	<T extends Enum<T>> int[] getFeatureVector(Map<EnumSet<T>,List<String>> sample, Map<EnumSet<T>, TObjectIntHashMap<String>> fStringMap)
-    {
-        TIntHashSet featureSet = new TIntHashSet();
-        
-        for(Map.Entry<EnumSet<T>,List<String>> entry:sample.entrySet())
-        {
-            TObjectIntHashMap<String> fMap = fStringMap.get(entry.getKey());
-            for (String fVal:entry.getValue())
-            {
-                int mapIdx = fMap.get(fVal);
-                if (mapIdx>0) featureSet.add(mapIdx-1);
-            }
-        }
-        int [] features = featureSet.toArray();
-        Arrays.sort(features);
-        return features;
-    }
-    */
-    public Map<EnumSet<PredFeature>,List<String>> extractPredicateFeature(TBNode predicateNode, TBNode[] nodes)
-    {
+    public Map<EnumSet<PredFeature>,List<String>> extractPredicateFeature(TBNode predicateNode, TBNode[] nodes) {
         EnumMap<PredFeature,List<String>> sampleFlat = new EnumMap<PredFeature,List<String>>(PredFeature.class);
         
 		// find predicate lemma
@@ -1028,13 +953,6 @@ public class SRLModel implements Serializable {
 
         List<String> predicateAlternatives = langUtil.getPredicateAlternatives(predicateLemma, features.getFeatureStrMap()==null?null:features.getFeatureStrMap().get(EnumSet.of(Feature.PREDICATE)));
 
-        
-        
-        /*// find predicate lemma
-        String predicateLemma = predicateNode.getWord(); {
-            List<String> stems = langUtil.findStems(predicateLemma, LanguageUtil.POS.VERB);
-            if (!stems.isEmpty()) predicateLemma = stems.get(0);
-        }*/
         TBNode head = predicateNode.getHeadOfHead();
         TBNode parent = predicateNode.getParent();
         TBNode leftNode = predicateNode.getTokenIndex()>0? nodes[predicateNode.getTokenIndex()-1]:null;
@@ -1042,7 +960,6 @@ public class SRLModel implements Serializable {
                 predicateNode.getParent().getChildren()[predicateNode.getChildIndex()+1]:null;
         TBNode rightHeadnode = (rightSibling==null||rightSibling.getHead()==null)?null:rightSibling.getHead();
 
-        
         for (PredFeature feature:predFeatures.getFeaturesFlat()) {
             switch (feature) {
             case PREDICATE:
@@ -1127,7 +1044,9 @@ public class SRLModel implements Serializable {
         return startIdx;
     }
     
-    public void train(Properties prop) {
+    public void train(Properties prop) throws IOException {
+    	finalizeDictionary(Integer.parseInt(prop.getProperty("dictionary.cutoff", "2")));
+    	
     	// train predicate classifier
         if (predFeatures!=null && !predicateTrainingFeatures.isEmpty()) {
             TObjectIntHashMap<String> predicateLabelMap = new TObjectIntHashMap<String>();
@@ -1184,21 +1103,21 @@ public class SRLModel implements Serializable {
         String[] goldLabels = null;
         List<String> labelList = new ArrayList<String>();
         
-        if (trainingSampleOut!=null) {
+        if (cachedOutStream!=null) {
         	try {
-				trainingSampleOut.close();
+        		cachedOutStream.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-        	trainingSampleOut = null;
+        	cachedOutStream = null;
         }
 
         try {
-        	trainingSampleIn = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(trainingSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+        	cachedInStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(extractedSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
         	for (;;) {
-	        	trainingSampleIn.readObject();
-	        	SRLSample[] samples = (SRLSample[]) trainingSampleIn.readObject();
+        		cachedInStream.readObject();
+	        	SRLSample[] samples = (SRLSample[]) cachedInStream.readObject();
 	        	for (SRLSample sample:samples)
 	                for (ArgSample argSample:sample.args)
 	                	labelList.add(argSample.label);
@@ -1208,22 +1127,13 @@ public class SRLModel implements Serializable {
         	if (!(e instanceof EOFException))
         		e.printStackTrace();
         	try {
-        		trainingSampleIn.close();
+        		cachedInStream.close();
             } catch (IOException e1) {
                 e1.printStackTrace();
             } finally {
-            	trainingSampleIn = null;
+            	cachedInStream = null;
             }
         }
-        
-        /*
-        for (Map.Entry<String, SortedMap<Integer, List<SRLSample>>> entry:trainingSamples.entrySet())
-        	for (Map.Entry<Integer, List<SRLSample>> entry2:entry.getValue().entrySet())
-	            for (SRLSample sample:entry2.getValue())
-	                for (ArgSample argSample:sample.args)
-	                	labelList.add(argSample.label);
-        goldLabels = labelList.toArray(new String[labelList.size()]);
-        */
 
         String[] labels = goldLabels;
         for (int r=0; r<rounds-1; ++r) {
@@ -1311,11 +1221,11 @@ public class SRLModel implements Serializable {
         try {
         	int labelCnt=0;
         	Set<String> treeNameSet = new HashSet<String>();
-        	trainingSampleIn = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(trainingSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
+        	cachedInStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(extractedSampleFile),GZIP_BUFFER),GZIP_BUFFER*4));
         	for (;;) {
-	        	TBTree tree = (TBTree)trainingSampleIn.readObject();
+	        	TBTree tree = (TBTree)cachedInStream.readObject();
 	        	treeNameSet.add(tree.getFilename());
-	        	SRLSample[] samples = (SRLSample[]) trainingSampleIn.readObject();
+	        	SRLSample[] samples = (SRLSample[]) cachedInStream.readObject();
 	            for (SRLSample srlSample:samples) {
 	            	List<SRArg> predictedArgs = new ArrayList<SRArg>();
 	                for (ArgSample argSample:srlSample.args) {
@@ -1342,11 +1252,11 @@ public class SRLModel implements Serializable {
         	if (!(e instanceof EOFException))
         		e.printStackTrace();
         	try {
-        		trainingSampleIn.close();
+        		cachedInStream.close();
             } catch (IOException e1) {
                 e1.printStackTrace();
             } finally {
-            	trainingSampleIn = null;
+            	cachedInStream = null;
             }
         }
         
@@ -1373,7 +1283,7 @@ public class SRLModel implements Serializable {
         int[] yV;
         if (folds>1) {
             CrossValidator validator = new CrossValidator(classifier, threads);
-            yV =  validator.validate(folds, X, y, seed, false);
+            yV =  validator.validate(folds, X, y, null, seed, false);
         } else {
             classifier.train(X, y);
             yV = new int[y.length];
