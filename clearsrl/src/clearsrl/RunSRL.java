@@ -300,13 +300,13 @@ public class RunSRL {
 		
 		logger.info("model loaded");
 		
-		logger.info("Features: "+options.model.features.getFeatures());
+		logger.info("Argument features: "+options.model.argLabelFeatures.getFeatures());
 		//for (EnumSet<SRLModel.Feature> feature:model.featureSet)
 		//	logger.info(SRLModel.toString(feature));
 		
-		if (options.model.predFeatures!=null)
+		if (options.model.predicateFeatures!=null)
 		{
-			logger.info("Predicate features: "+options.model.predFeatures.getFeatures());
+			logger.info("Predicate features: "+options.model.predicateFeatures.getFeatures());
 		    //for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
 		    //	logger.info(SRLModel.toString(feature));
 		}

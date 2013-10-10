@@ -20,6 +20,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+/**
+ * Encapsulate binary feature representation. Basic feature types are 
+ * enumerations. Each specific feature can be a set of enumerated values (to 
+ * support n-gram of different basic features). The class keeps track of 
+ * number of feature instances in the training examples and prunes away rare 
+ * features. It also supports converting feature values to linear indices 
+ * for training/decoding by ML classifiers.
+ * 
+ * ex: we have basic feature types like LEMMA, POS, etc, and specific feature
+ *     types like LEMMA, LEMMA-POS, etc
+ * 
+ * @author Shumin Wu
+ *
+ * @param <T>
+ */
 public class FeatureSet<T extends Enum<T>> implements Serializable {
     
     /**
@@ -38,7 +53,6 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     
     public FeatureSet(Set<EnumSet<T>> features) {
         this.features = features;
-        initialize();
     }
 
     public FeatureSet(Class<T> cType, String[] featuresStr) {
@@ -51,11 +65,9 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
                 fList.add(T.valueOf(cType,fStr));
             features.add(EnumSet.copyOf(fList));
         }
-        
-        initialize();
     }
     
-    void initialize() {
+    public void initialize() {
         dictionaryFinalized = false;
         featureStrMap = new HashMap<EnumSet<T>, TObjectIntHashMap<String>>();
         featureCountMap = new HashMap<EnumSet<T>, TObjectFloatHashMap<String>>();
@@ -69,8 +81,16 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         featuresFlat = EnumSet.copyOf(featureList);
     }
     
-    public static <T extends Enum<T>> EnumSet<T> toEnumSet(Class<T> cType, String fString) throws IllegalArgumentException
-    {
+    /**
+     * Converts String representation of features to EnumSet. N-gram 
+     * features are delimited with '-', unigram feature are the String 
+     * values of the enum type.
+     * @param cType
+     * @param fString
+     * @return
+     * @throws IllegalArgumentException
+     */
+    public static <T extends Enum<T>> EnumSet<T> toEnumSet(Class<T> cType, String fString) throws IllegalArgumentException {
         String[] fArray = fString.trim().split("-");
         List<T> fList = new ArrayList<T>(fArray.length);
         for (String fStr:fArray)
@@ -78,19 +98,22 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return EnumSet.copyOf(fList);
     }
     
-    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input)
-    {
+    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input) {
     	return getBigramSet(input, false);
     }
     
-    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input, boolean allPairing)
-    {
+    /**
+     * Generate bigrams of features
+     * @param input
+     * @param allPairing whether to generate bigrams of any n-gram features in the input
+     * @return
+     */
+    public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input, boolean allPairing) {
     	Set<EnumSet<T>> output = new HashSet<EnumSet<T>>(input);
     	if (allPairing) {
     		List<EnumSet<T>> enumList = new ArrayList<EnumSet<T>>(input);
     		for (int i=0; i<enumList.size()-1; ++i)
-	        	for (int j=i+1; j<enumList.size(); ++j)
-	        	{
+	        	for (int j=i+1; j<enumList.size(); ++j) {
 	        		List<T> featureList = new ArrayList<T>(enumList.get(i));
 	        		featureList.addAll(enumList.get(j));
 	        		output.add(EnumSet.copyOf(featureList));
@@ -108,20 +131,22 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     	return output;
     }
     
-    public Map<EnumSet<T>,List<String>> convertFlatSample(EnumMap<T,List<String>> sampleFlat)
-    { 
+    /**
+     * convert extracted unigram feature values to n-gram feature values 
+     * @param sampleFlat
+     * @return
+     */
+    public Map<EnumSet<T>,List<String>> convertFlatSample(EnumMap<T,List<String>> sampleFlat)  { 
         //System.out.println(sampleFlat);
         Map<EnumSet<T>,List<String>> sample = new HashMap<EnumSet<T>,List<String>>();
         
-        for (EnumSet<T> feature:features)
-        {   
+        for (EnumSet<T> feature:features)  {   
             Iterator<T> iter = feature.iterator();
             List<String> sList = sampleFlat.get(iter.next());
             for (;iter.hasNext() && sList!=null && !sList.isEmpty();)
                 sList = permute(sList, sampleFlat.get(iter.next()));
             
-            if (sList!=null && !sList.isEmpty())
-            {
+            if (sList!=null && !sList.isEmpty()) {
                 //if (feature.size()>1) System.out.println(toString(feature)+": "+sList);
                 sample.put(feature, sList);
             }
@@ -130,8 +155,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return sample;   
     }
 
-    static List<String> permute(List<String> lhs, List<String> rhs)
-    {   
+    static List<String> permute(List<String> lhs, List<String> rhs) {   
         if (lhs==null || rhs==null) return new ArrayList<String>(0);
 
         ArrayList<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
@@ -141,15 +165,21 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return ret;
     }
     
-    public int[] addToFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap, int[] vec)
-    {
+    /**
+     * add some feature values to an existing feature vector
+     * @param featureValueMap
+     * @param vec
+     * @return
+     */
+    public int[] addToFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap, int[] vec) {
     	TIntHashSet featureSet = vec==null?new TIntHashSet():new TIntHashSet(vec);
     	
-    	for(Map.Entry<EnumSet<T>,List<String>> entry:featureValueMap.entrySet())
-        {
+    	for(Map.Entry<EnumSet<T>,List<String>> entry:featureValueMap.entrySet()) {
             TObjectIntHashMap<String> fMap = featureStrMap.get(entry.getKey());
-            for (String fVal:entry.getValue())
-            {
+            // unused feature that was extracted
+            if (fMap==null) continue;
+            
+            for (String fVal:entry.getValue()) {
                 int mapIdx = fMap.get(fVal);
                 if (mapIdx>0) featureSet.add(mapIdx-1);
             }
@@ -160,8 +190,12 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         return features;
     }
     
-    public int[] getFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap)
-    {
+    /**
+     * convert extracted feature values to indexed array
+     * @param featureValueMap
+     * @return
+     */
+    public int[] getFeatureVector(Map<EnumSet<T>,List<String>> featureValueMap) {
         return addToFeatureVector(featureValueMap, null);
     }
     
@@ -169,6 +203,12 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     	addToDictionary(type, values, 1);
     }
     
+    /**
+     * Add feature values to dictionary
+     * @param type
+     * @param values
+     * @param weight changes the occurence count for this feature value
+     */
     public void addToDictionary(EnumSet<T> type, List<String> values, float weight) {
         if (dictionaryFinalized) return;
 
@@ -178,6 +218,10 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         
     }
     
+    /**
+     * Prunes away rare features (occurs less than cutoff) and indexes all remain feature values
+     * @param cutoff
+     */
     public void rebuildMap(float cutoff) {
     	int dimension=0;
         for (EnumSet<T> feature:features) {
@@ -212,10 +256,8 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         }
     }*/
     
-    public static void trimMap(TObjectIntHashMap<String> featureMap, int threshold)
-    {
-        for (TObjectIntIterator<String> iter = featureMap.iterator(); iter.hasNext();)
-        {
+    public static void trimMap(TObjectIntHashMap<String> featureMap, int threshold) {
+        for (TObjectIntIterator<String> iter = featureMap.iterator(); iter.hasNext();) {
             iter.advance();
             if (iter.value()<threshold)
                 iter.remove();
@@ -228,8 +270,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     
     public static <T extends Enum<T>> String toString(Set<EnumSet<T>> features) {
         StringBuilder builder = new StringBuilder();
-        for (EnumSet<T> feature:features)
-        {
+        for (EnumSet<T> feature:features) {
             builder.append(toString(feature));
             builder.append(' ');
         }

@@ -1,6 +1,9 @@
 package clearcommon.util;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -9,6 +12,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.XMLReaderFactory;
 
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.item.IIndexWord;
@@ -24,6 +35,7 @@ public class EnglishUtil extends LanguageUtil {
 
     public Dictionary dict;
     public WordnetStemmer stemmer;
+    public Map<String, PBFrame> frameMap;
     TBHeadRules headRules;
     
     static Map<String, String> abbreviations = new HashMap<String, String>();
@@ -54,14 +66,19 @@ public class EnglishUtil extends LanguageUtil {
             dict.open();
             stemmer = new WordnetStemmer(dict);
             headRules = new TBHeadRules(props.getProperty("headrules"));
-        } catch (MalformedURLException e)
-        {
+        } catch (MalformedURLException e) {
             e.printStackTrace();
             return false;
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return false;
         }
+        
+        frameMap = new HashMap<String, PBFrame>();
+        String frameDir = props.getProperty("frame_dir");
+        if (frameDir != null)
+        	readFrameFiles(new File(frameDir));
+        
         return true;
     }
     
@@ -69,7 +86,7 @@ public class EnglishUtil extends LanguageUtil {
     protected void finalize() throws Throwable {
         dict.close();
     }
-
+    
     @Override
     public List<String> findStems(String word, POS pos) {
         return findStems(word, edu.mit.jwi.item.POS.valueOf(pos.toString()));
@@ -95,6 +112,73 @@ public class EnglishUtil extends LanguageUtil {
     	return null;
     }
     
+    class FrameParseHandler extends DefaultHandler {
+    	PBFrame frame;
+    	PBFrame.Roleset roleset;
+    	public FrameParseHandler(PBFrame frame) {
+    		this.frame = frame;
+    		
+    	}
+    	
+    	@Override
+    	public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
+    		if (localName.equals("roleset")) {
+    			roleset = frame.new Roleset(atts.getValue("id"));
+    			frame.rolesets.put(roleset.getId(), roleset);
+    		} else if (localName.equals("role"))
+    			roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
+    	}
+    }
+    
+    void readFrameFiles(final File dir) {
+    	XMLReader parser=null;
+		try {
+			parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
+			parser.setEntityResolver(new EntityResolver() {
+			    @Override
+			    public InputSource resolveEntity(String publicId, String systemId)
+			            throws SAXException, IOException {
+			        if (systemId.contains("frameset.dtd")) {
+			            return new InputSource(new FileReader(new File(dir, "frameset.dtd")));
+			        } else {
+			            return null;
+			        }
+			    }
+			});
+		} catch (SAXException e) {
+			e.printStackTrace();
+			return;
+		}
+    	
+    	for (String fileName:FileUtil.getFiles(dir, ".+-[nvj]\\.xml"))
+    		readFrameFile(parser, new File(dir, fileName));
+    }
+    
+    void readFrameFile(XMLReader parser, File file) {
+    	String key = file.getName();
+    	key = key.substring(0, key.length()-4);
+    	String predicate = key.substring(0, key.length()-2);
+    	char type = key.charAt(key.length()-1);
+    	
+    	PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
+    	try {
+    		parser.setContentHandler(new FrameParseHandler(frame));
+			parser.parse(new InputSource(new FileReader(file)));
+			frameMap.put(key, frame);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SAXException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+    
+    @Override
+	public PBFrame getFrame(String key) {
+		return frameMap==null?null:frameMap.get(key);
+	}
+    
     public String findDerivedVerb(TBNode node) {
     	
     	edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
@@ -116,8 +200,7 @@ public class EnglishUtil extends LanguageUtil {
     
     
     @Override
-    public String resolveAbbreviation(String word, String POS)
-    {
+    public String resolveAbbreviation(String word, String POS) {
         String full = abbreviations.get(word+" "+POS);
         return full==null?word:full;
     }
@@ -258,14 +341,11 @@ public class EnglishUtil extends LanguageUtil {
 
     }
 
-    public TBNode getPPHead(TBNode ppNode)
-    {
+    public TBNode getPPHead(TBNode ppNode) {
         TBNode head = null;
         int i = ppNode.getChildren().length-1;
-        for (; i>=0; --i)
-        {
-            if (ppNode.getChildren()[i].getPOS().matches("NP.*"))
-            {
+        for (; i>=0; --i) {
+            if (ppNode.getChildren()[i].getPOS().matches("NP.*")) {
                 if (ppNode.getChildren()[i].getHead()!=null && ppNode.getChildren()[i].getHeadword()!=null)
                     head = ppNode.getChildren()[i].getHead();
                 break;

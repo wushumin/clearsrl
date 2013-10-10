@@ -25,7 +25,7 @@ import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import clearsrl.SRLModel.Feature;
+import clearsrl.SRLModel.ArgFeature;
 
 public class TestPassive {
 	static final float THRESHOLD=0.8f;
@@ -42,12 +42,12 @@ public class TestPassive {
             System.exit(-1);
 		
 		
-		ArrayList<Feature> features = new ArrayList<Feature>();
+		ArrayList<ArgFeature> features = new ArrayList<ArgFeature>();
 		StringTokenizer tokenizer = new StringTokenizer(props.getProperty("feature"),",");
 		while (tokenizer.hasMoreTokens())
 		{
 			try {
-				features.add(Feature.valueOf(tokenizer.nextToken().trim()));
+				features.add(ArgFeature.valueOf(tokenizer.nextToken().trim()));
 			} catch (IllegalArgumentException e) {
 				System.err.println(e);
 			}

@@ -38,7 +38,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.zip.GZIPOutputStream;
 
-import clearsrl.SRLModel.Feature;
+import clearsrl.SRLModel.ArgFeature;
 import clearsrl.SRLModel.PredFeature;
 
 public class TrainSRL {
@@ -79,12 +79,12 @@ public class TrainSRL {
         if (!langUtil.init(props))
             System.exit(-1);
 		
-		Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
+		Set<EnumSet<ArgFeature>> features = new HashSet<EnumSet<ArgFeature>>();
 		{
 		    String[] tokens = props.getProperty("feature").trim().split(",");
 		    for (String token:tokens)
 		        try {
-		            features.add(FeatureSet.toEnumSet(Feature.class, token));
+		            features.add(FeatureSet.toEnumSet(ArgFeature.class, token));
 		        } catch (IllegalArgumentException e) {
                     System.err.println(e);
                 }  
@@ -103,13 +103,13 @@ public class TrainSRL {
 
 		SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
 		
-		System.out.println("Features:");
-        for (EnumSet<SRLModel.Feature> feature:model.features.getFeatures())
+		System.out.println("Argument Features:");
+        for (EnumSet<SRLModel.ArgFeature> feature:model.argLabelFeatures.getFeatures())
             System.out.println(feature.toString());
         
-        if (model.predFeatures!=null) {
+        if (model.predicateFeatures!=null) {
             System.out.println("\nPredicate features:");
-            for (EnumSet<SRLModel.PredFeature> feature:model.predFeatures.getFeatures())
+            for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatures.getFeatures())
                 System.out.println(feature.toString());
         }
 		

@@ -45,7 +45,7 @@ public abstract class LanguageUtil {
     
     
     public abstract TBHeadRules getHeadRules();
-    
+
 	public boolean isNoun(String POS) {
 		return POS.charAt(0)=='N';
 	}
@@ -53,6 +53,11 @@ public abstract class LanguageUtil {
 	public boolean isVerb(String POS) {
 		return POS.charAt(0)=='V';
 	}
+
+	public PBFrame getFrame(String key) {
+		return null;
+	}
+	
 	public abstract boolean isAdjective(String POS);
 	
 	public abstract boolean isAdverb(String POS);
