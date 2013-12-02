@@ -25,7 +25,39 @@ public class ECScore {
 	}
 	
 	public void addResult(String systemLabel, String goldLabel) {
-		countMatrix[labelMap.get(systemLabel)][labelMap.get(goldLabel)]++;
+		String[] systemLabels = systemLabel.split(" ");
+		String[] goldLabels = goldLabel.split(" ");
+
+		if (systemLabels.length==goldLabels.length)
+			for (int i=0; i<goldLabels.length && i<systemLabels.length; ++i)
+				countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;
+		else if (goldLabels.length<systemLabels.length) {
+			if (goldLabels[0]==systemLabels[0])
+				for (int i=0; i<systemLabels.length; ++i)
+					if (i<goldLabels.length)
+						countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;
+					else
+						countMatrix[labelMap.get(systemLabels[i])][labelMap.get(ECCommon.NOT_EC)]++;
+			else
+				for (int i=0; i<systemLabels.length; ++i)
+					if (i+goldLabels.length<systemLabels.length)
+						countMatrix[labelMap.get(systemLabels[i])][labelMap.get(ECCommon.NOT_EC)]++;
+					else
+						countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i-systemLabels.length+goldLabels.length])]++;
+		} else if (systemLabels.length<goldLabels.length) {
+			if (goldLabels[0]==systemLabels[0])
+				for (int i=0; i<goldLabels.length; ++i)
+					if (i<systemLabels.length)
+						countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;
+					else
+						countMatrix[labelMap.get(ECCommon.NOT_EC)][labelMap.get(goldLabels[i])]++;
+			else
+				for (int i=0; i<goldLabels.length; ++i)
+					if (i+systemLabels.length<goldLabels.length)
+						countMatrix[labelMap.get(ECCommon.NOT_EC)][labelMap.get(goldLabels[i])]++;
+					else
+						countMatrix[labelMap.get(systemLabels[i-goldLabels.length+systemLabels.length])][labelMap.get(goldLabels[i])]++;
+		}
 	}
 		
 	public String toString() {

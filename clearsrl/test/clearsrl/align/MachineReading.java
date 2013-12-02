@@ -19,7 +19,6 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,14 +35,10 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.sun.net.ssl.SSLContext;
-
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
 import clearcommon.util.PropertyUtil;
-import clearsrl.RunSRL;
 
 public class MachineReading {
 	
