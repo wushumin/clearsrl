@@ -599,7 +599,7 @@ public class ECDepModel extends ECModel implements Serializable {
     	for (TBNode dep:head.getDependentNodes())
     		fillLinearLabel(dep, predictions, labels);
     	for (int i=0; i<predictions[head.getTokenIndex()].length; ++i)
-    		if (predictions[head.getTokenIndex()][i]!=null) {
+    		if (predictions[head.getTokenIndex()][i]!=null && !ECCommon.NOT_EC.equals(predictions[head.getTokenIndex()][i])) {
     			if (labels[i]==null)
     				labels[i] = predictions[head.getTokenIndex()][i];
     			else if (i<head.getTokenIndex())
@@ -629,6 +629,10 @@ public class ECDepModel extends ECModel implements Serializable {
     	String[] labels = new String[tree.getTokenCount()+1];
     	
     	fillLinearLabel(tree.getRootNode().getHead(), headPrediction, labels);
+    	
+    	for (int l=0; l<labels.length; ++l)
+    		if (labels[l]==null)
+    			labels[l] = ECCommon.NOT_EC;
     	
         return labels;
     }

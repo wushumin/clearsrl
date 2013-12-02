@@ -233,7 +233,8 @@ public class ChineseECTagger {
 						for (int l=0; l<labels.length; ++l) {
 							if (!labels[l].equals(ECCommon.NOT_EC))
 								builder.append(labels[l]+' ');
-							builder.append(nodes[l].getWord()+' ');
+							if (l<nodes.length)
+								builder.append(nodes[l].getWord()+' ');
 						}
 						builder.append("\n");
 						
