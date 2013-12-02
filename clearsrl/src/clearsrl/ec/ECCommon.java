@@ -140,7 +140,11 @@ public final class ECCommon {
 				node = node.getParent();
 				candidateSet.set(node.getTokenSet().nextSetBit(0));
 				for (TBNode child:node.getChildren()) {
-					int idx = child.getTokenSet().previousSetBit(tree.getTokenCount());
+					BitSet tokenSet = child.getTokenSet();
+					int idx = -1;
+					while (tokenSet.nextSetBit(idx+1)>=0 && tokenSet.nextSetBit(idx+1)<=tree.getTokenCount())
+						idx = tokenSet.nextSetBit(idx+1);
+					//int idx = child.getTokenSet().previousSetBit(tree.getTokenCount());
 					if (idx>=0)
 						candidateSet.set(idx+1);
 				}
