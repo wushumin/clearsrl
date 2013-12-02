@@ -1,14 +1,15 @@
 package clearcommon.alg;
 
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import gnu.trove.TIntArrayList;
-import gnu.trove.TIntHashSet;
 
 public class CrossValidator {
     
@@ -20,10 +21,10 @@ public class CrossValidator {
         double[][] prob;
         int[][] X;
         int[] ytest;
-        TIntHashSet permSet;
+        TIntSet permSet;
         int[] seed;
         
-        public TrainJob(int f, Classifier cf, int[][]Xtrain, int[]ytrain, double[][] prob, int[][] X, int[]ytest, TIntHashSet permSet, int[] seed)
+        public TrainJob(int f, Classifier cf, int[][]Xtrain, int[]ytrain, double[][] prob, int[][] X, int[]ytest, TIntSet permSet, int[] seed)
         {
             this.f = f;
             this.cf = cf;
@@ -90,6 +91,10 @@ public class CrossValidator {
     public int[] validate(int foldNum, int[][] X, int[] y, double[][] prob, int[] seed) {
         return validate(foldNum, X, y, prob, seed, false);
     }
+    
+    public int[] validate(int foldNum, int[][] X, int[] y, int[] seed, boolean trainAll) {
+        return validate(foldNum, X, y, null, seed, trainAll);
+    }
  
     /**
      * @param foldNum number of validation folds
@@ -115,7 +120,7 @@ public class CrossValidator {
         int[] perm = null;
         
         if (seed!=null) {
-            TIntHashSet seedSet = new TIntHashSet(seed);
+            TIntSet seedSet = new TIntHashSet(seed);
             perm = seedSet.toArray();
         } else {
             seed = new int[y.length];
@@ -127,7 +132,7 @@ public class CrossValidator {
         randomPermute(perm, new Random(y.length));
 
         for (int f=0; f<foldNum; ++f)  {   
-            TIntHashSet permSet = new TIntHashSet();
+            TIntSet permSet = new TIntHashSet();
             for (int i=f; i<perm.length; i+=foldNum)
                 permSet.add(perm[i]);
             
@@ -142,12 +147,13 @@ public class CrossValidator {
                 if (!permSet.contains(seed[i])) {
                     Xtrain.add(X[i]);
                     ytrain.add(y[i]);
-                    probTrain.add(prob[i]);
+                    if (prob!=null)
+                    	probTrain.add(prob[i]);
                 }
             
             Classifier cf = classifier.getNewInstance();
             TrainJob job = new TrainJob(f, cf, Xtrain.toArray(new int[Xtrain.size()][]), 
-            		ytrain.toNativeArray(), prob==null?null:probTrain.toArray(new double[probTrain.size()][]), X, ytest, permSet, seed);
+            		ytrain.toArray() , prob==null?null:probTrain.toArray(new double[probTrain.size()][]), X, ytest, permSet, seed);
             
             if (executor!=null) executor.submit(job);
             else job.run();

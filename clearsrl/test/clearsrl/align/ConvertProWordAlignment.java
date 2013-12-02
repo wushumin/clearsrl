@@ -1,6 +1,7 @@
 package clearsrl.align;
 
-import gnu.trove.TIntArrayList;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -19,12 +20,12 @@ public class ConvertProWordAlignment {
 
 	static int[] convertIndices(Sentence s)
 	{
-		TIntArrayList nIdx = new TIntArrayList();
+		TIntList nIdx = new TIntArrayList();
 		for (int i=0; i<s.terminals.length; ++i)
 			if (s.terminals[i].isToken() || s.terminals[i].getWord().matches("\\*[pP].*"))
 				nIdx.add(i);
 
-		return nIdx.toNativeArray();
+		return nIdx.toArray();
 	}
 	
 	static int[] convertIndices(Sentence s, String line)
@@ -38,7 +39,7 @@ public class ConvertProWordAlignment {
 			nIdx.add(Arrays.binarySearch(s.terminalIndices, Sentence.makeIndex(treeIdx, terminalIdx)));
 		}
 
-		return nIdx.toNativeArray();
+		return nIdx.toArray();
 	}
 	
 	public static void main(String[] args) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException

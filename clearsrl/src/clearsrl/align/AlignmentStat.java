@@ -1,6 +1,7 @@
 package clearsrl.align;
 
-import gnu.trove.TFloatArrayList;
+import gnu.trove.list.TFloatList;
+import gnu.trove.list.array.TFloatArrayList;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -18,31 +19,31 @@ public class AlignmentStat {
 	int oneToOne;
 	int total;
 	
-    Map<String, Map<String, TFloatArrayList>> srcDstPredicateMap;
-    Map<String, Map<String, TFloatArrayList>> dstSrcPredicateMap;
+    Map<String, Map<String, TFloatList>> srcDstPredicateMap;
+    Map<String, Map<String, TFloatList>> dstSrcPredicateMap;
     
-    Map<String, Map<String, TFloatArrayList>> srcDstArgTypeMap;
-    Map<String, Map<String, TFloatArrayList>> dstSrcArgTypeMap;
+    Map<String, Map<String, TFloatList>> srcDstArgTypeMap;
+    Map<String, Map<String, TFloatList>> dstSrcArgTypeMap;
     
-    Map<String, Map<String, TFloatArrayList>> srcDstCoreArgTypeMap;
-    Map<String, Map<String, TFloatArrayList>> dstSrcCoreArgTypeMap;
+    Map<String, Map<String, TFloatList>> srcDstCoreArgTypeMap;
+    Map<String, Map<String, TFloatList>> dstSrcCoreArgTypeMap;
     
-    Map<String, Map<String, TFloatArrayList>> srcDstPredicateArgMap;
-    Map<String, Map<String, TFloatArrayList>> dstSrcPredicateArgMap;
+    Map<String, Map<String, TFloatList>> srcDstPredicateArgMap;
+    Map<String, Map<String, TFloatList>> dstSrcPredicateArgMap;
     
     public AlignmentStat() {
-        srcDstPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
-        dstSrcPredicateMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        srcDstPredicateMap = new TreeMap<String, Map<String, TFloatList>>();
+        dstSrcPredicateMap = new TreeMap<String, Map<String, TFloatList>>();
         
-        srcDstArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
-        dstSrcArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        srcDstArgTypeMap = new TreeMap<String, Map<String, TFloatList>>();
+        dstSrcArgTypeMap = new TreeMap<String, Map<String, TFloatList>>();
         
-        srcDstCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
-        dstSrcCoreArgTypeMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        srcDstCoreArgTypeMap = new TreeMap<String, Map<String, TFloatList>>();
+        dstSrcCoreArgTypeMap = new TreeMap<String, Map<String, TFloatList>>();
         
         
-        srcDstPredicateArgMap = new TreeMap<String, Map<String, TFloatArrayList>>();
-        dstSrcPredicateArgMap = new TreeMap<String, Map<String, TFloatArrayList>>();
+        srcDstPredicateArgMap = new TreeMap<String, Map<String, TFloatList>>();
+        dstSrcPredicateArgMap = new TreeMap<String, Map<String, TFloatList>>();
         
         oneToOne = 0;
         total = 0;
@@ -69,15 +70,15 @@ public class AlignmentStat {
         }
     }
     
-    static void insert(Map<String, Map<String, TFloatArrayList>> map, String key1, String key2, float score)
+    static void insert(Map<String, Map<String, TFloatList>> map, String key1, String key2, float score)
     {
-        Map<String, TFloatArrayList> val1 = null;
+        Map<String, TFloatList> val1 = null;
         if ((val1=map.get(key1))==null)
         {
-            val1 = new HashMap<String, TFloatArrayList>();
+            val1 = new HashMap<String, TFloatList>();
             map.put(key1, val1);
         }
-        TFloatArrayList val2 = null;
+        TFloatList val2 = null;
         if ((val2=val1.get(key2))==null)
         {
             val2 = new TFloatArrayList();
@@ -136,19 +137,19 @@ public class AlignmentStat {
     	return input;
     }
     
-    long getTotal(Map<String, TFloatArrayList> map)
+    long getTotal(Map<String, TFloatList> map)
     {
         long total = 0;
-        for (Map.Entry<String, TFloatArrayList> entry:map.entrySet())
+        for (Map.Entry<String, TFloatList> entry:map.entrySet())
             total += entry.getValue().size();
         return total;
     }
     
-    List<ObjectScore<String>> makeStats(Map<String, TFloatArrayList> map, double total)
+    List<ObjectScore<String>> makeStats(Map<String, TFloatList> map, double total)
     {
         List<ObjectScore<String>> scores = new ArrayList<ObjectScore<String>>();
         
-        for (Map.Entry<String, TFloatArrayList> entry:map.entrySet())
+        for (Map.Entry<String, TFloatList> entry:map.entrySet())
             scores.add(new ObjectScore<String>(entry.getKey(),(float)(entry.getValue().size()/total), entry.getValue().size()));
         
         return scores;
@@ -160,9 +161,9 @@ public class AlignmentStat {
         return scores.subList(0, topN>scores.size()?scores.size():topN);
     }
     
-    void printProb(PrintStream out, Map<String, Map<String, TFloatArrayList>>  map, int freq, float threshold)
+    void printProb(PrintStream out, Map<String, Map<String, TFloatList>>  map, int freq, float threshold)
     {
-        for (Map.Entry<String, Map<String, TFloatArrayList>> entry:map.entrySet())
+        for (Map.Entry<String, Map<String, TFloatList>> entry:map.entrySet())
         {
             long total = getTotal(entry.getValue());
             if (total<freq) continue;
@@ -178,9 +179,9 @@ public class AlignmentStat {
         }
     }
     
-    void printStats(PrintStream out, Map<String, Map<String, TFloatArrayList>>  map, int topN)
+    void printStats(PrintStream out, Map<String, Map<String, TFloatList>>  map, int topN)
     {
-        for (Map.Entry<String, Map<String, TFloatArrayList>> entry:map.entrySet())
+        for (Map.Entry<String, Map<String, TFloatList>> entry:map.entrySet())
         {
             long total = getTotal(entry.getValue());
             if (total<=1) continue;

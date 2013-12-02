@@ -1,6 +1,6 @@
 package clearsrl.align;
 
-import gnu.trove.TIntHashSet;
+import gnu.trove.set.hash.TIntHashSet;
 
 import java.io.PrintStream;
 import java.util.BitSet;

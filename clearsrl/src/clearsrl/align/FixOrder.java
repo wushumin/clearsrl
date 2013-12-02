@@ -1,6 +1,7 @@
 package clearsrl.align;
 
-import gnu.trove.TIntIntHashMap;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -16,9 +17,9 @@ import java.util.regex.Pattern;
 
 public class FixOrder {
 
-	public static TIntIntHashMap getOrder(String[] oldStr, String[] newStr)
+	public static TIntIntMap getOrder(String[] oldStr, String[] newStr)
 	{
-		TIntIntHashMap map = new TIntIntHashMap();
+		TIntIntMap map = new TIntIntHashMap();
 		
 		Pattern pattern = Pattern.compile(".*fid.*");
 		
@@ -95,7 +96,7 @@ public class FixOrder {
 		oldMap.put(sentenceId, list.toArray(new String[list.size()]));
 
 		
-		Map<String, TIntIntHashMap> orderMap = new HashMap<String, TIntIntHashMap>();
+		Map<String, TIntIntMap> orderMap = new HashMap<String, TIntIntMap>();
 		
 		list.clear();
 		
@@ -130,7 +131,7 @@ public class FixOrder {
 				dstSRLId = Short.parseShort(tokenizer.nextToken().trim());
 				score = Double.parseDouble(tokenizer.nextToken().trim());
 				
-				TIntIntHashMap map = orderMap.get(sentenceId);
+				TIntIntMap map = orderMap.get(sentenceId);
 				
 				System.out.println(sentenceId+","+map.get(srcSRLId)+","+(-map.get(-dstSRLId))+","+score);
 			}

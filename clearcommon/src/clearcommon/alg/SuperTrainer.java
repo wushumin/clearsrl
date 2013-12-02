@@ -23,11 +23,13 @@
 */
 package clearcommon.alg;
 
-import gnu.trove.TShortArrayList;
-import gnu.trove.TShortHashSet;
 import clearcommon.alg.Classifier.InstanceFormat;
 import clearcommon.util.JArrays;
 import clearcommon.util.tuple.JShortDoubleArrayTuple;
+
+import gnu.trove.list.array.TShortArrayList;
+import gnu.trove.set.TShortSet;
+import gnu.trove.set.hash.TShortHashSet;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -56,7 +58,7 @@ public class SuperTrainer
 	/** Features dimension */
 	protected int   D;
 	/** Set of labels */
-	protected TShortHashSet    s_labels;
+	protected TShortSet    s_labels;
 	/** Training labels */
 	protected TShortArrayList  a_labels;
 	/** Training feature-vectors */

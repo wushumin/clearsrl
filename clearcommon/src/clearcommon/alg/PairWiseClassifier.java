@@ -1,7 +1,8 @@
 package clearcommon.alg;
 
-import gnu.trove.TIntArrayList;
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -62,14 +63,12 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         }
 	}
 	
-	public PairWiseClassifier()
-	{
+	public PairWiseClassifier(){
 	}
 	
-	public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
+	public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
 		super.initialize(labelMap, prop);
 		classifiers = new Classifier[labelIdx.length][labelIdx.length];
-		labelMap.getValues();
 		values = new double[labelIdx.length];
 		valueMatrix = new BitSet[labelIdx.length];
 		for (int i=0; i<valueMatrix.length;++i)
@@ -211,7 +210,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 				System.out.printf("Training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length);
 				System.out.println("Pairwise:");
 				{
-					TObjectIntHashMap<String> map = new TObjectIntHashMap<String>();
+					TObjectIntMap<String> map = new TObjectIntHashMap<String>();
 					map.put(labels[i], labelIdx[i]);
 					map.put(labels[j], labelIdx[j]);
 					

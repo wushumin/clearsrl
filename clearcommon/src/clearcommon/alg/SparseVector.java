@@ -23,11 +23,11 @@
 */
 package clearcommon.alg;
 
-import gnu.trove.TIntDoubleHashMap;
+import gnu.trove.map.TIntDoubleMap;
+import gnu.trove.map.hash.TIntDoubleHashMap;
 
 import java.util.Arrays;
 import java.util.ArrayList;
-
 
 /**
  * Sparse vector.
@@ -37,7 +37,7 @@ import java.util.ArrayList;
 public class SparseVector
 {
 	/** HashMap using primitive keys and values */
-	private TIntDoubleHashMap m_vector;
+	private TIntDoubleMap m_vector;
 	/** Bias (b_0) of the vector */
 	private double            d_bias;
 	/** Initial value (default is 0) */
@@ -131,7 +131,7 @@ public class SparseVector
 	 */
 	public int[] getIndices()
 	{
-		int[] keys = m_vector.keys();
+		int[] keys = m_vector.keys(new int[m_vector.size()]);
 		Arrays.sort(keys);
 		
 		return keys;

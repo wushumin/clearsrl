@@ -1,5 +1,8 @@
 package clearsrl.align;
 
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TLongHashSet;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileReader;
@@ -17,8 +20,6 @@ import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.util.PropertyUtil;
-
-import gnu.trove.TLongHashSet;
 
 public class ProAlignmentScorer {
 	
@@ -40,7 +41,7 @@ public class ProAlignmentScorer {
 		rTotal += gold.length;
 		pTotal += sys.length;
 		
-		TLongHashSet intersection = new TLongHashSet(gold);
+		TLongSet intersection = new TLongHashSet(gold);
 		intersection.retainAll(sys);
 		
 		pCount += intersection.size();

@@ -10,7 +10,7 @@
         	<classpath>
         		<pathelement location="../clearcommon/lib/blas.jar"/>
         	    <pathelement location="../clearcommon/lib/liblinearbinary.jar"/>   
-        	    <pathelement location="../clearcommon/lib/trove-2.1.0.jar"/>
+        	    <pathelement location="../clearcommon/lib/trove-3.0.3.jar"/>
         		<pathelement location="../clearcommon/lib/args4j-2.0.18.jar"/>
         		<pathelement location="../clearcommon/lib/edu.mit.jwi_2.1.5_jdk.jar"/>
         		<pathelement location="../clearcommon/bin/clearcommon.jar"/>
@@ -20,7 +20,7 @@
         	<classpath>
         		<pathelement location="../clearcommon/lib/blas.jar"/>
         	    <pathelement location="../clearcommon/lib/liblinearbinary.jar"/>   
-        	    <pathelement location="../clearcommon/lib/trove-2.1.0.jar"/>
+        	    <pathelement location="../clearcommon/lib/trove-3.0.3.jar"/>
         		<pathelement location="../clearcommon/lib/args4j-2.0.18.jar"/>
         		<pathelement location="../clearcommon/lib/edu.mit.jwi_2.1.5_jdk.jar"/>
         		<pathelement location="../clearcommon/bin/clearcommon.jar"/>

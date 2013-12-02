@@ -304,9 +304,9 @@ public class RunSRL {
 		//for (EnumSet<SRLModel.Feature> feature:model.featureSet)
 		//	logger.info(SRLModel.toString(feature));
 		
-		if (options.model.predicateFeatures!=null)
+		if (options.model.predicateModel!=null)
 		{
-			logger.info("Predicate features: "+options.model.predicateFeatures.getFeatures());
+			logger.info("Predicate features: "+options.model.predicateModel.getFeatures());
 		    //for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
 		    //	logger.info(SRLModel.toString(feature));
 		}
@@ -397,7 +397,7 @@ public class RunSRL {
                 !runSRLProps.getProperty("predict_predicate").equals("false") &&
                 runSRLProps.getProperty("pbdir")!=null);
         
-        if (predictPredicate==true && options.model.predicateClassifier==null)
+        if (predictPredicate==true && options.model.predicateModel==null)
         {
         	logger.severe("Predicate Classifier not trained!");
         	System.exit(-1);

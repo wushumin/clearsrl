@@ -1,12 +1,14 @@
 package clearsrl.align;
 
-import gnu.trove.TIntDoubleHashMap;
-import gnu.trove.TIntObjectHashMap;
-
 import clearcommon.alg.HungarianAlgorithm;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
+
+import gnu.trove.map.TIntDoubleMap;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntDoubleHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -386,10 +388,10 @@ public class Aligner {
 	}
 */
 	
-	public float getScore(ArrayList<SentencePair> sentences, TIntObjectHashMap<TIntDoubleHashMap> goldLabel, Method method)
+	public float getScore(ArrayList<SentencePair> sentences, TIntObjectMap<TIntDoubleMap> goldLabel, Method method)
 	{
-		TIntObjectHashMap<TIntDoubleHashMap> systemLabel = new TIntObjectHashMap<TIntDoubleHashMap>();
-		TIntDoubleHashMap sMap;
+		TIntObjectMap<TIntDoubleMap> systemLabel = new TIntObjectHashMap<TIntDoubleMap>();
+		TIntDoubleMap sMap;
 		
 		for (SentencePair sentence:sentences)
 		{

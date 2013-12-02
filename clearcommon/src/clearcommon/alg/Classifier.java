@@ -1,7 +1,8 @@
 package clearcommon.alg;
 
-import gnu.trove.TIntIntHashMap;
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -20,9 +21,9 @@ public abstract class Classifier implements Serializable {
     
     transient Properties prop;
     
-    TObjectIntHashMap<String> labelMap;
+    TObjectIntMap<String> labelMap;
     String[] labels;
-    TIntIntHashMap labelIdxMap;
+    TIntIntMap labelIdxMap;
 
     int[] labelIdx;
     
@@ -30,7 +31,7 @@ public abstract class Classifier implements Serializable {
     {
     }
     
-    public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
+    public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         this.labelMap = labelMap;
         this.prop = prop;
         labels = labelMap.keys(new String[labelMap.size()]);
@@ -97,7 +98,7 @@ public abstract class Classifier implements Serializable {
         return labelIdx;
     }
     
-    public TIntIntHashMap getLabelIdxMap() {
+    public TIntIntMap getLabelIdxMap() {
         return labelIdxMap;
     }
 }

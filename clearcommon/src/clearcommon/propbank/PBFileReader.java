@@ -127,13 +127,13 @@ public class PBFileReader
             throw new PBFormatException("predicate node not found "+"\n"+Arrays.toString(tokens));
 		
 		t = 3; // skip "gold" or annotator initial before roleset id
-		while (!tokens[t].matches(".+(\\.\\w{2}|-[nv])")) {
+		while (!tokens[t].matches(".+(\\.\\w{2}|-[nvj])")) {
 		    ++t;
 		    if (t>=tokens.length)
 		        throw new PBFormatException("Can't find roleset: "+"\n"+Arrays.toString(tokens));
 		}
 		
-		if (tokens[t].matches(".+-[nv]"))
+		if (tokens[t].matches(".+-[nvj]"))
 		    instance.rolesetId = tokens[++t];// skip roleset-[nv] for ontonotes
 		else
 		    instance.rolesetId = tokens[t];

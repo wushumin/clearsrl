@@ -1,9 +1,11 @@
 package clearsrl.align;
 
-import gnu.trove.TObjectDoubleHashMap;
-import gnu.trove.TObjectDoubleIterator;
-import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
+import gnu.trove.iterator.TObjectDoubleIterator;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.map.TObjectDoubleMap;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -106,8 +108,8 @@ public class GrantProposal {
 			in.close();
 		}
 		
-		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
-		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
+		Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+		Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 		Map<String, Map<String, List<String>>> vnetMapping = new TreeMap<String, Map<String, List<String>>>();
 		
 		String baseFilter = args.length>1?args[1]:"";
@@ -162,7 +164,7 @@ public class GrantProposal {
 		Aligner.initAlignmentOutput(htmlStream);
 		AlignmentStat stat = new AlignmentStat();
 		
-        TObjectIntHashMap<String> tgtMap;
+		TObjectIntMap<String> tgtMap;
 		int aTotal = 0;
 		while (true)
 		{
@@ -438,7 +440,7 @@ public class GrantProposal {
 					cntMap.put(e2.getKey(), e2.getValue().size());
 				}
 
-		Map<String, TObjectIntHashMap<String>> vvnetMapping = new TreeMap<String, TObjectIntHashMap<String>>();
+		Map<String, TObjectIntMap<String>> vvnetMapping = new TreeMap<String, TObjectIntMap<String>>();
 
 		
 		sentencePairReader.initialize();
@@ -567,7 +569,7 @@ public class GrantProposal {
 		int total = 0;
 		int correct = 0;
 		
-		for (Map.Entry<String, TObjectIntHashMap<String>>entry:vvnetMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>>entry:vvnetMapping.entrySet())
 		{
 			System.out.println(entry.getKey());
 			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
@@ -584,9 +586,9 @@ public class GrantProposal {
 		System.exit(0);
 
 		
-		for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = srcDstMapping.entrySet().iterator(); iter.hasNext();)
+		for (Iterator<Map.Entry<String, TObjectIntMap<String>>> iter = srcDstMapping.entrySet().iterator(); iter.hasNext();)
 		{
-			Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
+			Map.Entry<String, TObjectIntMap<String>> entry = iter.next();
 			
 			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
 			{
@@ -597,9 +599,9 @@ public class GrantProposal {
 			if (entry.getValue().isEmpty() || srcLightVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
 				iter.remove();
 		}
-		for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = dstSrcMapping.entrySet().iterator(); iter.hasNext();)
+		for (Iterator<Map.Entry<String, TObjectIntMap<String>>> iter = dstSrcMapping.entrySet().iterator(); iter.hasNext();)
 		{
-			Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
+			Map.Entry<String, TObjectIntMap<String>> entry = iter.next();
 			
 			for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
 			{
@@ -678,7 +680,7 @@ public class GrantProposal {
 
 
 		Set<String> srcRoles = new TreeSet<String>();
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>> entry:dstSrcMapping.entrySet())
 		{
 			if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
 				continue;
@@ -692,7 +694,7 @@ public class GrantProposal {
 			}
 		}		
 		Set<String> dstVerbsMapped = new TreeSet<String>();
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>> entry:srcDstMapping.entrySet())
 		{
 			if (!srcRoles.contains(entry.getKey()))
 				continue;
@@ -712,7 +714,7 @@ public class GrantProposal {
 			System.out.print(word.substring(0,word.length()-1)+" ");
 		System.out.println("]");
 		
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>> entry:srcDstMapping.entrySet())
 		{
 			if (srcRoles.contains(entry.getKey()))
 				continue;
@@ -725,15 +727,15 @@ public class GrantProposal {
 			}
 		}
 		
-		Map<String, TObjectDoubleHashMap<String>> srcDstMap2 = new TreeMap<String, TObjectDoubleHashMap<String>>();
-		Map<String, TObjectDoubleHashMap<String>> dstDstMap2 = new TreeMap<String, TObjectDoubleHashMap<String>>();
+		Map<String, TObjectDoubleMap<String>> srcDstMap2 = new TreeMap<String, TObjectDoubleMap<String>>();
+		Map<String, TObjectDoubleMap<String>> dstDstMap2 = new TreeMap<String, TObjectDoubleMap<String>>();
 		
 		for (String key:srcRoles)
 			srcDstMap2.put(key, new TObjectDoubleHashMap<String>());
 		
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>> entry:srcDstMapping.entrySet())
 		{
-			TObjectDoubleHashMap<String> map = srcDstMap2.get(entry.getKey());
+			TObjectDoubleMap<String> map = srcDstMap2.get(entry.getKey());
 			if (map==null) continue;
 			double cnt = 0;
 			for (TObjectIntIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
@@ -749,7 +751,7 @@ public class GrantProposal {
 			}			
 		}
 
-		for (Map.Entry<String, TObjectIntHashMap<String>> entry:dstSrcMapping.entrySet())
+		for (Map.Entry<String, TObjectIntMap<String>> entry:dstSrcMapping.entrySet())
 		{
 			if (!dstVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
 				continue;
@@ -769,7 +771,7 @@ public class GrantProposal {
 		{
 			double []cnt = new double[dstDstMap2.size()];
 			int idx=0; 
-			for (Map.Entry<String, TObjectDoubleHashMap<String>> entry:dstDstMap2.entrySet())
+			for (Map.Entry<String, TObjectDoubleMap<String>> entry:dstDstMap2.entrySet())
 			{
 				for (TObjectDoubleIterator<String> iter=entry.getValue().iterator();iter.hasNext();)
 				{
@@ -779,7 +781,7 @@ public class GrantProposal {
 				idx++;
 			}
 			idx=0;
-			for (Map.Entry<String, TObjectDoubleHashMap<String>> entry:dstDstMap2.entrySet())
+			for (Map.Entry<String, TObjectDoubleMap<String>> entry:dstDstMap2.entrySet())
 			{
 				System.out.println(entry.getKey()+":");
 				for (TObjectDoubleIterator<String> iter=entry.getValue().iterator();iter.hasNext();)

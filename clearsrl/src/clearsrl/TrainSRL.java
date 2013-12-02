@@ -7,7 +7,6 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
@@ -17,8 +16,9 @@ import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 
-import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,8 +38,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.zip.GZIPOutputStream;
 
-import clearsrl.SRLModel.ArgFeature;
-import clearsrl.SRLModel.PredFeature;
+import clearsrl.SRLModel.Feature;
 
 public class TrainSRL {
 	static final float THRESHOLD=0.90f;
@@ -79,23 +78,23 @@ public class TrainSRL {
         if (!langUtil.init(props))
             System.exit(-1);
 		
-		Set<EnumSet<ArgFeature>> features = new HashSet<EnumSet<ArgFeature>>();
+		Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
 		{
 		    String[] tokens = props.getProperty("feature").trim().split(",");
 		    for (String token:tokens)
 		        try {
-		            features.add(FeatureSet.toEnumSet(ArgFeature.class, token));
+		            features.add(FeatureSet.toEnumSet(Feature.class, token));
 		        } catch (IllegalArgumentException e) {
                     System.err.println(e);
                 }  
 		}
 		
-		Set<EnumSet<PredFeature>> predicateFeatures = new HashSet<EnumSet<PredFeature>>();
+		Set<EnumSet<Feature>> predicateFeatures = new HashSet<EnumSet<Feature>>();
         {
             String[] tokens = props.getProperty("predicateFeature").trim().split(",");
             for (String token:tokens)
                 try {
-                    predicateFeatures.add(FeatureSet.toEnumSet(PredFeature.class, token));
+                    predicateFeatures.add(FeatureSet.toEnumSet(Feature.class, token));
                 } catch (IllegalArgumentException e) {
                     System.err.println(e);
                 }  
@@ -104,12 +103,12 @@ public class TrainSRL {
 		SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
 		
 		System.out.println("Argument Features:");
-        for (EnumSet<SRLModel.ArgFeature> feature:model.argLabelFeatures.getFeatures())
+        for (EnumSet<SRLModel.Feature> feature:model.argLabelFeatures.getFeatures())
             System.out.println(feature.toString());
         
-        if (model.predicateFeatures!=null) {
+        if (model.predicateModel!=null) {
             System.out.println("\nPredicate features:");
-            for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatures.getFeatures())
+            for (EnumSet<SRLModel.Feature> feature:model.predicateModel.getFeatures())
                 System.out.println(feature.toString());
         }
 		
@@ -126,8 +125,8 @@ public class TrainSRL {
 		
         boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
 	
-        TObjectIntHashMap<String> rolesetEmpty = new TObjectIntHashMap<String>();
-        TObjectIntHashMap<String> rolesetArg = new TObjectIntHashMap<String>();
+        TObjectIntMap<String> rolesetEmpty = new TObjectIntHashMap<String>();
+        TObjectIntMap<String> rolesetArg = new TObjectIntHashMap<String>();
 		if (!dataFormat.equals("conll"))
 		{
 			String sourceList = props.getProperty("sources","");
@@ -223,12 +222,10 @@ public class TrainSRL {
 			    }
 			}
             System.out.println("***************************************************");
-            for (TObjectIntIterator<String> iter = rolesetEmpty.iterator(); iter.hasNext();)
-            {
+            for (TObjectIntIterator<String> iter=rolesetEmpty.iterator();iter.hasNext();) {
             	iter.advance();
-            	
                 if (iter.value()<rolesetArg.get(iter.key())||iter.value()<2)
-                    iter.remove();
+                	iter.remove();
                 else
                     System.out.println(iter.key()+": "+iter.value()+"/"+rolesetArg.get(iter.key()));
             }

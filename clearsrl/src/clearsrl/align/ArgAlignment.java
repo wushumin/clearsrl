@@ -1,23 +1,22 @@
 package clearsrl.align;
 
-import gnu.trove.TIntHashSet;
-
+import gnu.trove.set.TIntSet;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 
 public class ArgAlignment {
 
-	PBInstance  srcInstance;
-    int         srcArgIdx;
-    TIntHashSet dstArgList;
+	PBInstance srcInstance;
+    int        srcArgIdx;
+    TIntSet    dstArgList;
 
     float       weight;
     float       factor;
    
     float       score;
     
-    public ArgAlignment(PBInstance srcInstance, int srcArgIdx, TIntHashSet dstArgList, float[] srcTerminalWeights)
+    public ArgAlignment(PBInstance srcInstance, int srcArgIdx, TIntSet dstArgList, float[] srcTerminalWeights)
     {
     	this.srcInstance = srcInstance;
         this.srcArgIdx   = srcArgIdx;

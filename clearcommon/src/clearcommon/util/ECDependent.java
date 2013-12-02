@@ -92,7 +92,4 @@ public class ECDependent {
 	TBNode predicate;
 	TBNode subject;
 	TBNode object;
-	
-	
-	
 }

@@ -1,9 +1,10 @@
 package clearsrl.align;
 
-import gnu.trove.TLongArrayList;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+
+import gnu.trove.list.array.TLongArrayList;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -107,7 +108,7 @@ public class Sentence implements Serializable{
 			}
 		}
 
-		sentence.indices = a_idx.toNativeArray();
+		sentence.indices = a_idx.toArray();
 		sentence.tokens = a_token.toArray(new TBNode[a_token.size()]);
 		sentence.findTerminals();
 		
@@ -138,7 +139,7 @@ public class Sentence implements Serializable{
 			a_idx.add(makeIndex(treeIdx,a_token.get(a_token.size()-1).getTerminalIndex()));
 		}
 
-		sentence.indices = a_idx.toNativeArray();
+		sentence.indices = a_idx.toArray();
 		sentence.tokens = a_token.toArray(new TBNode[a_token.size()]);
 		
 		sentence.addPBInstances(pbMap);
@@ -204,7 +205,7 @@ public class Sentence implements Serializable{
 			}
 	
 			terminals = terminalList.toArray(new TBNode[terminalList.size()]);
-			terminalIndices = terminalIndexList.toNativeArray();
+			terminalIndices = terminalIndexList.toArray();
 		}
 		tokenToTerminalMap = new int[indices.length];
 		terminalToTokenMap = new int[terminals.length];

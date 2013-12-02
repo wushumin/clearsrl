@@ -1,7 +1,8 @@
 package clearsrl.align;
 
-import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,8 +23,8 @@ public class RunTrainer {
 	
 	static Aligner gatherSentences(Properties props, String prefix) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
 	{	
-	    Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
-        Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
+	    Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+        Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 
 	    
 		String htmlOutfile = props.getProperty(prefix+"align.output.html", null);
@@ -74,7 +75,7 @@ public class RunTrainer {
                             String srcRole = alignment.getSrcPBInstance().getRoleset();
                             String dstRole = alignment.getDstPBInstance().getRoleset();
                             
-                            TObjectIntHashMap<String> tgtMap;
+                            TObjectIntMap<String> tgtMap;
 
                             // strip roleset id
                             if (srcRole.lastIndexOf('.')>=0) 
@@ -133,9 +134,9 @@ public class RunTrainer {
                 System.out.println(dstLightVerbs);
         }
         
-        for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = srcDstMapping.entrySet().iterator(); iter.hasNext();)
+        for (Iterator<Map.Entry<String, TObjectIntMap<String>>> iter = srcDstMapping.entrySet().iterator(); iter.hasNext();)
         {
-                Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
+                Map.Entry<String, TObjectIntMap<String>> entry = iter.next();
                 
                 for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
                 {
@@ -146,9 +147,9 @@ public class RunTrainer {
                 if (entry.getValue().isEmpty() || srcLightVerbs.contains(entry.getKey().substring(0,entry.getKey().lastIndexOf('.')+1)))
                         iter.remove();
         }
-        for (Iterator<Map.Entry<String, TObjectIntHashMap<String>>> iter = dstSrcMapping.entrySet().iterator(); iter.hasNext();)
+        for (Iterator<Map.Entry<String, TObjectIntMap<String>>> iter = dstSrcMapping.entrySet().iterator(); iter.hasNext();)
         {
-                Map.Entry<String, TObjectIntHashMap<String>> entry = iter.next();
+                Map.Entry<String, TObjectIntMap<String>> entry = iter.next();
                 
                 for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)
                 {
@@ -160,7 +161,7 @@ public class RunTrainer {
                         iter.remove();
         }
 
-        for (Map.Entry<String, TObjectIntHashMap<String>> entry:srcDstMapping.entrySet())
+        for (Map.Entry<String, TObjectIntMap<String>> entry:srcDstMapping.entrySet())
         {
             System.out.print(entry.getKey().substring(0,entry.getKey().lastIndexOf('.'))+" ");
             for (TObjectIntIterator<String> tIter=entry.getValue().iterator();tIter.hasNext();)

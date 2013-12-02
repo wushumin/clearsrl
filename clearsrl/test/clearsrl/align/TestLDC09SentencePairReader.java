@@ -1,7 +1,9 @@
 package clearsrl.align;
 
-import gnu.trove.TIntArrayList;
-import gnu.trove.TLongArrayList;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.TLongList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.array.TLongArrayList;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -90,7 +92,7 @@ public class TestLDC09SentencePairReader {
 		
 		if (!pFile.exists()) return null;
 
-		TLongArrayList indices = new TLongArrayList();
+		TLongList indices = new TLongArrayList();
 		
 		BufferedReader reader = new BufferedReader(new FileReader(pFile));
 		
@@ -113,8 +115,8 @@ public class TestLDC09SentencePairReader {
 			reader.readLine(); reader.readLine();
 		}
 		
-		TIntArrayList enList = new TIntArrayList();
-		TIntArrayList chList = new TIntArrayList();
+		TIntList enList = new TIntArrayList();
+		TIntList chList = new TIntArrayList();
 	
 		
 		
@@ -142,7 +144,7 @@ public class TestLDC09SentencePairReader {
 			{
 				if (!chList.isEmpty())
 				{
-					sentences.add(new Sentence(chList.toNativeArray(), enList.toNativeArray()));
+					sentences.add(new Sentence(chList.toArray(), enList.toArray()));
 					chList.clear(); enList.clear();
 				}
 				chList.add(ch);
@@ -152,7 +154,7 @@ public class TestLDC09SentencePairReader {
 		reader.close();
 		
 		if (!chList.isEmpty())
-			sentences.add(new Sentence(chList.toNativeArray(), enList.toNativeArray()));
+			sentences.add(new Sentence(chList.toArray(), enList.toArray()));
 		
 		mapping.sentences = sentences.toArray(new Sentence[sentences.size()]);
 

@@ -383,7 +383,30 @@ public class TBNode implements Serializable {
 		return parent;
 	}
 
-	public List<TBNode> getPathToAncestor(TBNode ancestor) {
+	public ArrayList<TBNode> getPath(TBNode node) {
+		ArrayList<TBNode> lhs = getPathToRoot();
+		ArrayList<TBNode> rhs = node.getPathToRoot();
+		
+		TBNode anchor=null;
+		
+		while (!lhs.isEmpty()&&!rhs.isEmpty()) {
+			if (lhs.get(lhs.size()-1)!=rhs.get(rhs.size()-1))
+				break;
+			anchor = lhs.get(lhs.size()-1);
+			lhs.remove(lhs.size()-1);
+			rhs.remove(rhs.size()-1);
+		}
+		if (anchor==null)
+			return null;
+		
+		lhs.add(anchor);
+		for (int i=rhs.size()-1; i>=0; --i)
+			lhs.add(rhs.get(i));
+		
+		return lhs;
+	}
+	
+	public ArrayList<TBNode> getPathToAncestor(TBNode ancestor) {
 		TBNode node = this;
 		ArrayList<TBNode> nodeList = new ArrayList<TBNode>();
 		do {
@@ -396,7 +419,7 @@ public class TBNode implements Serializable {
 		return nodeList;
 	}
 
-	public List<TBNode> getPathToRoot() {
+	public ArrayList<TBNode> getPathToRoot() {
 		TBNode node = this;
 		ArrayList<TBNode> nodeList = new ArrayList<TBNode>();
 		do {

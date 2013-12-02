@@ -1,6 +1,6 @@
 package clearcommon.util;
 
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.map.TObjectIntMap;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class ChineseUtil extends LanguageUtil {
     }
     
     @Override
-    public List<String> getPredicateAlternatives(String predicate, TObjectIntHashMap<String> predicateSet)
+    public List<String> getPredicateAlternatives(String predicate, TObjectIntMap<String> predicateSet)
     {
     	if (predicateSet==null)
     		return super.getPredicateAlternatives(predicate, predicateSet);
@@ -63,18 +63,28 @@ public class ChineseUtil extends LanguageUtil {
     
     @Override
     public int getPassive(TBNode predicateNode) {
-        
-        int retCode = 0;
-        
+    	/*
         for (TBNode node:predicateNode.getRoot().getTokenNodes())
-        {
-            if (node.getPOS().matches("(SB|LB).*"))
-            {
+            if (node.getPOS().matches("(SB|LB).*")) {
+            	System.err.println(predicateNode);
+            	System.err.println(predicateNode.getRoot().toParse());
+            	System.err.println(predicateNode.getRoot().toDependence(true));
+            	break;
+            }*/
+        if (predicateNode.getHeadOfHead()!=null && predicateNode.getHeadOfHead().getPOS().equals("LB"))
+        	return 2;
+        for (TBNode dep:predicateNode.getDependentNodes())
+        	if (dep.getPOS().equals("SB"))
+        		return 1;
+
+        /*
+        
+        for (TBNode node:predicateNode.getRoot().getTokenNodes()) {
+            if (node.getPOS().matches("(SB|LB).*")) {
                 TBNode beiParent = node.getParent();
                 if (beiParent==null || !beiParent.getPOS().matches("VP.*")|| predicateNode.getTokenIndex()<node.getTokenIndex())
                     continue;
-                if (predicateNode.isDecendentOf(beiParent))
-                {
+                if (predicateNode.isDecendentOf(beiParent)) {
                     TBNode predicateParent = predicateNode.getParent();
                     //System.out.println(predicateParent.getPathToAncestor(beiParent));
                     if (predicateParent==beiParent) // short bei?
@@ -86,9 +96,9 @@ public class ChineseUtil extends LanguageUtil {
                         retCode = 1-count;
                 }
             }
-        }
+        }*/
         
-        return retCode;
+        return 0;
     }
     
     int countConstituents(String pos, Deque<TBNode> nodes, boolean left, int depth)

@@ -1,7 +1,5 @@
 package clearsrl.align;
 
-import gnu.trove.TLongHashSet;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;

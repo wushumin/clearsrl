@@ -1,8 +1,8 @@
 package clearsrl.align;
 
-import gnu.trove.TIntHashSet;
-import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.set.TIntSet;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -227,13 +227,13 @@ public class LDCSentencePairReader extends SentencePairReader {
 		return Sentence.parseSentence(builder.toString(), tbData, pbData, false);	
 	}
 	
-	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectHashMap<TIntHashSet> inAlignment)
+	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectMap<TIntSet> inAlignment)
 	{
 		SortedMap<Long, int[]> outAlignment = new TreeMap<Long, int[]>();
 		for (long index:indices)
 			outAlignment.put(index, SentencePair.EMPTY_INT_ARRAY);
 		
-		for (TIntObjectIterator<TIntHashSet> iter = inAlignment.iterator(); iter.hasNext();)
+		for (TIntObjectIterator<TIntSet> iter = inAlignment.iterator(); iter.hasNext();)
 		{
 			iter.advance();
 			if (!iter.value().isEmpty())

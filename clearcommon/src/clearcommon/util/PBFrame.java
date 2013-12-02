@@ -4,7 +4,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
+
+import clearcommon.treebank.TBNode;
 
 public class PBFrame {
 	public class Roleset {
@@ -31,7 +34,7 @@ public class PBFrame {
 	
 	String predicate;
 	LanguageUtil.POS pos;
-	Map<String, Roleset> rolesets;
+	SortedMap<String, Roleset> rolesets;
 
 	public PBFrame(String predicate, LanguageUtil.POS pos) {
 		this.predicate = predicate;
@@ -47,12 +50,18 @@ public class PBFrame {
 		return pos;
 	}
 	
-	public Map<String, Roleset> getRolesets() {
-		return Collections.unmodifiableMap(rolesets);
+	public SortedMap<String, Roleset> getRolesets() {
+		return Collections.unmodifiableSortedMap(rolesets);
 	}
 	
 	public void addRoleset(Roleset roleset) {
 		rolesets.put(roleset.id, roleset);
+	}
+	
+	public static String makeKey(TBNode node, LanguageUtil langUtil) {
+		String lemma = langUtil.findStems(node).get(0);
+		String pos = langUtil.isVerb(node.getPOS())?"-v":(langUtil.isNoun(node.getPOS())?"-n":(langUtil.isAdjective(node.getPOS())?"-j":""));
+		return lemma+pos;
 	}
 	
 	public String toString() {

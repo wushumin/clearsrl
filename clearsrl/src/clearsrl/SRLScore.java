@@ -1,16 +1,19 @@
 package clearsrl;
 
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class SRLScore {
 	
 	SortedSet<String> labelSet;
-	TObjectIntHashMap<String> labelMap;
+	TObjectIntMap<String> labelMap;
 	int[][] microCount;
 	int[][] macroCount;
 	
@@ -38,8 +41,8 @@ public class SRLScore {
 		long fCount;
 	}
 	
-	public SRLScore(SortedSet<String> labelSet) {
-		this.labelSet = labelSet;
+	public SRLScore(Collection<String> labelSet) {
+		this.labelSet = new TreeSet<String>(labelSet);
 		labelMap = new TObjectIntHashMap<String>();
 		
 		int count=0;

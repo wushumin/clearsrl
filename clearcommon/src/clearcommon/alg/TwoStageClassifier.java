@@ -1,7 +1,8 @@
 package clearcommon.alg;
 
-import gnu.trove.TIntArrayList;
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public class TwoStageClassifier extends Classifier implements Serializable {
     TwoStageClassifier() {
     }
     
-    public void initialize(TObjectIntHashMap<String> labelMap, Properties prop) {
+    public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         super.initialize(labelMap, prop);
         this.cutoff = Double.parseDouble(prop.getProperty("TwoStageClassifier.cutoff"));
     }
@@ -36,7 +37,7 @@ public class TwoStageClassifier extends Classifier implements Serializable {
             Y1[i] = Y[i]==labelIdx[0]?labelIdx[0]:labelIdx[1];
         }
         
-        TObjectIntHashMap<String> lMap = new TObjectIntHashMap<String>();
+        TObjectIntMap<String> lMap = new TObjectIntHashMap<String>();
         lMap.put(labels[0], labelIdx[0]);
         lMap.put(labels[1], labelIdx[1]);
         
@@ -82,14 +83,14 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         f = 2*p*r/(p+r);
         System.out.printf("Stage 1 (%f): precision=%f, recall=%f, f-score=%f\n", cutoff, p, r, f);
         
-        TObjectIntHashMap<String> labelMap = new TObjectIntHashMap<String>();
+        TObjectIntMap<String> labelMap = new TObjectIntHashMap<String>();
         for (int i=0; i<labels.length;++i)
             labelMap.put(labels[i], labelIdx[i]);
         
         stageTwoClassifier = new PairWiseClassifier();
         stageTwoClassifier.initialize(labelMap, prop);
         
-        stageTwoClassifier.train(X2.toArray(new int[X2.size()][]), Y2.toNativeArray(), weightY);
+        stageTwoClassifier.train(X2.toArray(new int[X2.size()][]), Y2.toArray(), weightY);
     }
     
     @Override

@@ -4,7 +4,8 @@ import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.util.LanguageUtil;
 
-import gnu.trove.TIntIntHashMap;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -239,7 +240,7 @@ public class SRLUtil {
 		if (supports.length==0) return supports;
 		Arrays.fill(supports, -1);
 		
-		TIntIntHashMap instanceMap = new TIntIntHashMap();
+		TIntIntMap instanceMap = new TIntIntHashMap();
 		for (int i=0; i<instances.size();++i)
 			instanceMap.put(instances.get(i).getPredicateNode().getTokenIndex(), i+1);
 

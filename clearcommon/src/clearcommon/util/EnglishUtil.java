@@ -99,11 +99,6 @@ public class EnglishUtil extends LanguageUtil {
         return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(node.getWord()):stems;
     }
     
-    List<String> findStems(String word, edu.mit.jwi.item.POS pos) {
-    	List<String> stems = stemmer.findStems(word, pos);
-    	return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
-    }
-    
     edu.mit.jwi.item.POS convertPOS(String input) {
     	if (isNoun(input)) return edu.mit.jwi.item.POS.NOUN;
     	if (isVerb(input)) return edu.mit.jwi.item.POS.VERB;
@@ -112,12 +107,17 @@ public class EnglishUtil extends LanguageUtil {
     	return null;
     }
     
+    
+    List<String> findStems(String word, edu.mit.jwi.item.POS pos) {
+    	List<String> stems = stemmer.findStems(word, pos);
+    	return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+    }
+    
     class FrameParseHandler extends DefaultHandler {
     	PBFrame frame;
     	PBFrame.Roleset roleset;
     	public FrameParseHandler(PBFrame frame) {
-    		this.frame = frame;
-    		
+    		this.frame = frame;	
     	}
     	
     	@Override
@@ -125,8 +125,12 @@ public class EnglishUtil extends LanguageUtil {
     		if (localName.equals("roleset")) {
     			roleset = frame.new Roleset(atts.getValue("id"));
     			frame.rolesets.put(roleset.getId(), roleset);
-    		} else if (localName.equals("role"))
-    			roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
+    		} else if (localName.equals("role")) {
+    			if (atts.getValue("f")==null)
+    				roleset.roles.add("arg"+atts.getValue("n").toLowerCase());
+    			else
+    				roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
+    		}
     	}
     }
     
@@ -176,7 +180,7 @@ public class EnglishUtil extends LanguageUtil {
     
     @Override
 	public PBFrame getFrame(String key) {
-		return frameMap==null?null:frameMap.get(key);
+    	return frameMap==null?null:frameMap.get(key);
 	}
     
     public String findDerivedVerb(TBNode node) {

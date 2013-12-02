@@ -1,11 +1,13 @@
 package clearsrl.align;
 
-import gnu.trove.TIntArrayList;
-import gnu.trove.TIntHashSet;
-import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
-import gnu.trove.TLongArrayList;
-import gnu.trove.TLongHashSet;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TIntHashSet;
+import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -221,17 +223,17 @@ public 	class SentencePair implements Serializable {
 	
 	public void setAlignment(int[] srcAlignmentIdx, int[] dstAlignmentIdx)
 	{
-		TIntObjectHashMap<TIntHashSet> srcAlignmentMap = new TIntObjectHashMap<TIntHashSet>();
-        TIntObjectHashMap<TIntHashSet> dstAlignmentMap = new TIntObjectHashMap<TIntHashSet>();
+		TIntObjectMap<TIntSet> srcAlignmentMap = new TIntObjectHashMap<TIntSet>();
+        TIntObjectMap<TIntSet> dstAlignmentMap = new TIntObjectHashMap<TIntSet>();
         for (int i=0; i<srcAlignmentIdx.length; ++i)
         {
         	if (srcAlignmentIdx[i]<0 || dstAlignmentIdx[i]<0)
         		continue;
-        	TIntHashSet srcSet = srcAlignmentMap.get(srcAlignmentIdx[i]);
+        	TIntSet srcSet = srcAlignmentMap.get(srcAlignmentIdx[i]);
         	if (srcSet==null) srcAlignmentMap.put(srcAlignmentIdx[i], srcSet=new TIntHashSet());
         	srcSet.add(dstAlignmentIdx[i]);
         	
-        	TIntHashSet dstSet = dstAlignmentMap.get(dstAlignmentIdx[i]);
+        	TIntSet dstSet = dstAlignmentMap.get(dstAlignmentIdx[i]);
         	if (dstSet==null) dstAlignmentMap.put(dstAlignmentIdx[i], dstSet=new TIntHashSet());
         	dstSet.add(srcAlignmentIdx[i]);
         }
@@ -240,13 +242,13 @@ public 	class SentencePair implements Serializable {
         
 	}
 
-	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectHashMap<TIntHashSet> inAlignment)
+	SortedMap<Long, int[]> convertAlignment(long[] indices, TIntObjectMap<TIntSet> inAlignment)
 	{
 		SortedMap<Long, int[]> outAlignment = new TreeMap<Long, int[]>();
 		for (long index:indices)
 			outAlignment.put(index, SentencePair.EMPTY_INT_ARRAY);
 		
-		for (TIntObjectIterator<TIntHashSet> iter = inAlignment.iterator(); iter.hasNext();)
+		for (TIntObjectIterator<TIntSet> iter = inAlignment.iterator(); iter.hasNext();)
 		{
 			iter.advance();
 			if (!iter.value().isEmpty())
@@ -298,21 +300,21 @@ public 	class SentencePair implements Serializable {
 		switch (type)
 		{
 		case SRC:
-			alignment = getWordAlignment(srcAlignment, src.indices, true).toNativeArray();
+			alignment = getWordAlignment(srcAlignment, src.indices, true).toArray();
 			break;
 		case DST:
-			alignment = getWordAlignment(dstAlignment, dst.indices, false).toNativeArray();
+			alignment = getWordAlignment(dstAlignment, dst.indices, false).toArray();
 			break;
 		case UNION:
-			TLongHashSet unionSet = new TLongHashSet();
-			unionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
-			unionSet.addAll(getWordAlignment(dstAlignment, dst.indices, false).toNativeArray());
+			TLongSet unionSet = new TLongHashSet();
+			unionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toArray());
+			unionSet.addAll(getWordAlignment(dstAlignment, dst.indices, false).toArray());
 			alignment = unionSet.toArray();
 			break;
 		case INTERSECTION:
-			TLongHashSet intersectionSet = new TLongHashSet();
-			intersectionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toNativeArray());
-			intersectionSet.retainAll(getWordAlignment(dstAlignment, dst.indices, false).toNativeArray());
+			TLongSet intersectionSet = new TLongHashSet();
+			intersectionSet.addAll(getWordAlignment(srcAlignment, src.indices, true).toArray());
+			intersectionSet.retainAll(getWordAlignment(dstAlignment, dst.indices, false).toArray());
 			alignment = intersectionSet.toArray();
 			break;
 		}

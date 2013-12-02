@@ -1,9 +1,7 @@
 package clearsrl.align;
 
-import gnu.trove.TObjectDoubleHashMap;
-import gnu.trove.TObjectDoubleIterator;
-import gnu.trove.TObjectIntHashMap;
-import gnu.trove.TObjectIntIterator;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -94,8 +92,8 @@ public class RunAligner {
 			props = PropertyUtil.resolveEnvironmentVariables(props);
 		}
 		
-		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
-		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
+		Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+		Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 		
 		props = PropertyUtil.filterProperties(props, options.filter+"align.");
 		
@@ -190,7 +188,7 @@ public class RunAligner {
 		    
 		    Aligner.printAlignment(htmlStream, sentencePair, alignments, true);
 
-            TObjectIntHashMap<String> tgtMap;
+            TObjectIntMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)
             {
                 //System.out.println("-----------------------------");

@@ -1,24 +1,14 @@
 package clearsrl.align;
 
-import gnu.trove.TLongHashSet;
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.Reader;
-import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TreeMap;
 
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.util.PropertyUtil;
 
 public class ScoreWA {
 	long pCount;
@@ -39,7 +29,7 @@ public class ScoreWA {
 		rTotal += gold.length;
 		pTotal += sys.length;
 		
-		TLongHashSet intersection = new TLongHashSet(gold);
+		TLongSet intersection = new TLongHashSet(gold);
 		intersection.retainAll(sys);
 		
 		pCount += intersection.size();

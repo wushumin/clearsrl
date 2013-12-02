@@ -6,10 +6,12 @@ import edu.mit.jwi.item.ISynsetID;
 import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.Pointer;
-import gnu.trove.TIntIntHashMap;
-import gnu.trove.TLongArrayList;
-import gnu.trove.TLongHashSet;
-import gnu.trove.TObjectIntHashMap;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -547,8 +549,8 @@ public class RunProMatcher {
 		if (!dstLangUtil.init(PropertyUtil.filterProperties(props, "dst.")))
 		    System.exit(-1);
 		
-		Map<String, TObjectIntHashMap<String>> srcDstMapping = new TreeMap<String, TObjectIntHashMap<String>>();
-		Map<String, TObjectIntHashMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntHashMap<String>>();
+		Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+		Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 		
 		String baseFilter = args.length>1?args[1]:"";
 		props = PropertyUtil.filterProperties(props, baseFilter+"align.");
@@ -599,7 +601,7 @@ public class RunProMatcher {
 		Aligner.initAlignmentOutput(htmlStream);
 		AlignmentStat stat = new AlignmentStat();
 
-		TIntIntHashMap proTypeCnt = new TIntIntHashMap();
+		TIntIntMap proTypeCnt = new TIntIntHashMap();
 		
 		int sentenceCnt = 0;
 		int proCnt = 0;
@@ -689,8 +691,8 @@ public class RunProMatcher {
 		    
 		    sentenceCnt++;
 		    
-		    TLongHashSet argProSet = new TLongHashSet();
-		    TLongHashSet mappedProSet = new TLongHashSet();
+		    TLongSet argProSet = new TLongHashSet();
+		    TLongSet mappedProSet = new TLongHashSet();
 		    
 		    for (PBInstance i:sentencePair.src.pbInstances)
 		    	for (PBArg arg:i.getAllArgs())
@@ -806,7 +808,7 @@ public class RunProMatcher {
 		    
 		    Aligner.printAlignment(htmlStream, sentencePair, alignments, alignPro, matches);
 
-            TObjectIntHashMap<String> tgtMap;
+            TObjectIntMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)
             {
                 //System.out.println("-----------------------------");

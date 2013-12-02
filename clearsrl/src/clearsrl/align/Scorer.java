@@ -1,13 +1,15 @@
 package clearsrl.align;
 
-import gnu.trove.TDoubleDoubleHashMap;
-import gnu.trove.TDoubleDoubleIterator;
-import gnu.trove.TIntDoubleHashMap;
-import gnu.trove.TIntDoubleIterator;
-import gnu.trove.TIntObjectHashMap;
-import gnu.trove.TIntObjectIterator;
-import gnu.trove.TLongObjectHashMap;
-import gnu.trove.TLongObjectIterator;
+import gnu.trove.iterator.TDoubleDoubleIterator;
+import gnu.trove.iterator.TIntDoubleIterator;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.iterator.TLongObjectIterator;
+import gnu.trove.map.TDoubleDoubleMap;
+import gnu.trove.map.TIntDoubleMap;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -19,9 +21,9 @@ import java.util.Set;
 
 public class Scorer {
 
-	public static TLongObjectHashMap<Set<String>> readScore(String filename) throws FileNotFoundException
+	public static TLongObjectMap<Set<String>> readScore(String filename) throws FileNotFoundException
 	{
-		TLongObjectHashMap<Set<String>> scores = new TLongObjectHashMap<Set<String>>();
+		TLongObjectMap<Set<String>> scores = new TLongObjectHashMap<Set<String>>();
 		Scanner scanner = new Scanner(new BufferedReader(new FileReader(filename)));
 		
 		long   sentenceId;
@@ -68,7 +70,7 @@ public class Scorer {
 		return scores;
 	}
 	
-	public static float[] score(TLongObjectHashMap<Set<String>> lhs, TLongObjectHashMap<Set<String>> rhs)
+	public static float[] score(TLongObjectMap<Set<String>> lhs, TLongObjectMap<Set<String>> rhs)
 	{
 		float[] ret = new float[3];
 		float score=0, scoreArg=0, scoreCoreArg=0;
@@ -105,17 +107,17 @@ public class Scorer {
 		return ret;
 	}
 
-	public static float score(TIntObjectHashMap<TIntDoubleHashMap> lhs, TIntObjectHashMap<TIntDoubleHashMap> rhs)
+	public static float score(TIntObjectMap<TIntDoubleMap> lhs, TIntObjectMap<TIntDoubleMap> rhs)
 	{
 		float score=0;
 		float cnt=0;
 		
-		TIntDoubleHashMap sMap;
+		TIntDoubleMap sMap;
 		
-		TDoubleDoubleHashMap dMap = new TDoubleDoubleHashMap();
-		TDoubleDoubleHashMap nMap = new TDoubleDoubleHashMap();
+		TDoubleDoubleMap dMap = new TDoubleDoubleHashMap();
+		TDoubleDoubleMap nMap = new TDoubleDoubleHashMap();
 		
-		for (TIntObjectIterator<TIntDoubleHashMap> iter=lhs.iterator(); iter.hasNext();)
+		for (TIntObjectIterator<TIntDoubleMap> iter=lhs.iterator(); iter.hasNext();)
 		{
 			iter.advance();
 			cnt += iter.value().size();
@@ -148,8 +150,8 @@ public class Scorer {
 	
 	public static void main(String[] args) throws IOException
 	{
-		TLongObjectHashMap<Set<String>> systemLabel = Scorer.readScore(args[0]);
-		TLongObjectHashMap<Set<String>> goldLabel = Scorer.readScore(args[1]);
+		TLongObjectMap<Set<String>> systemLabel = Scorer.readScore(args[0]);
+		TLongObjectMap<Set<String>> goldLabel = Scorer.readScore(args[1]);
 		float[] p = Scorer.score(systemLabel, goldLabel);
 		float[] r = Scorer.score(goldLabel, systemLabel);
 		System.out.printf("predicate precision: %.3f, recall: %.3f, f-score: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));

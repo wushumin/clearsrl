@@ -1,7 +1,9 @@
 package clearsrl.align;
 
-import gnu.trove.TIntArrayList;
-import gnu.trove.TLongArrayList;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.TLongList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.array.TLongArrayList;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -100,8 +102,8 @@ public class ConvertLDC09 {
 			String[] srcRawTokens = findRawTokens(srcTokens, srcTokenCnt);
 			String[] dstRawTokens = findRawTokens(dstTokens, dstTokenCnt);
 			
-			TLongArrayList srcTokenIndices = new TLongArrayList();
-			TLongArrayList dstTokenIndices = new TLongArrayList();
+			TLongList srcTokenIndices = new TLongArrayList();
+			TLongList dstTokenIndices = new TLongArrayList();
 			
 			int srcRet = matchTokens(srcRawTokens, srcTrees, srcStartIndex, srcTokenIndices);
 			int dstRet = matchTokens(dstRawTokens, dstTrees, dstStartIndex, dstTokenIndices);
@@ -119,11 +121,11 @@ public class ConvertLDC09 {
 			if (alignments.length==1 && alignments[0].equals("rejected")) continue;
 			
 			SentencePair pair = new SentencePair(cnt++);
-			pair.src = Sentence.parseSentence(srcTokenIndices.toNativeArray(), srcTreeFile, srcTrees, srcPropBank.get(srcTreeFile));
-			pair.dst = Sentence.parseSentence(dstTokenIndices.toNativeArray(), dstTreeFile, dstTrees, dstPropBank.get(dstTreeFile));
+			pair.src = Sentence.parseSentence(srcTokenIndices.toArray(), srcTreeFile, srcTrees, srcPropBank.get(srcTreeFile));
+			pair.dst = Sentence.parseSentence(dstTokenIndices.toArray(), dstTreeFile, dstTrees, dstPropBank.get(dstTreeFile));
 
-			TIntArrayList srcAlignmentTerminals = new TIntArrayList();
-			TIntArrayList dstAlignmentTerminals = new TIntArrayList();
+			TIntList srcAlignmentTerminals = new TIntArrayList();
+			TIntList dstAlignmentTerminals = new TIntArrayList();
 			
 			Pattern alignmentPattern = Pattern.compile("([^-\\(\\)]*)-([^-\\(\\)]*)(\\((\\w|,)+\\))?");
 			//System.out.println(line);
@@ -158,7 +160,7 @@ public class ConvertLDC09 {
 				System.out.printf("%d-%d ", srcAlignmentTerminals.get(i),dstAlignmentTerminals.get(i));
 			System.out.println("\n");
 			*/
-			pair.setAlignment(srcAlignmentTerminals.toNativeArray(), dstAlignmentTerminals.toNativeArray());
+			pair.setAlignment(srcAlignmentTerminals.toArray(), dstAlignmentTerminals.toArray());
 			sentenceQueue.add(pair);
 		}
 		
@@ -181,7 +183,7 @@ public class ConvertLDC09 {
 		return indices;
 	}
 	
-	static int matchTokens(String[] tokens, TBTree[] trees, long startIndex, TLongArrayList treeIndices)
+	static int matchTokens(String[] tokens, TBTree[] trees, long startIndex, TLongList treeIndices)
 	{
 		StringBuilder rawTokenStr = new StringBuilder();
 		StringBuilder rawTokenizedStr = new StringBuilder();
