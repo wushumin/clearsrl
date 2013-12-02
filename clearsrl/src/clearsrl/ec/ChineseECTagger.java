@@ -227,7 +227,13 @@ public class ChineseECTagger {
 						}
 					if (hasPro && !correctPro) {
 						StringBuilder builder = new StringBuilder(tbTrees[i].getFilename()+" "+tbTrees[i].getIndex()+"\n");
-						builder.append(tbTrees[i].toText(true)); builder.append("\n");
+						builder.append(Arrays.toString(goldLabels));
+						builder.append("\n");
+						builder.append(Arrays.toString(labels));
+						builder.append("\n");
+					    for (TBNode node: tbTrees[i].getTerminalNodes())
+					    	builder.append((node.isEC()?node.getECType():node.getWord())+' ');
+						builder.append("\n");
 						
 						TBNode[] nodes = parseTrees[i].getTokenNodes();
 						for (int l=0; l<labels.length; ++l) {

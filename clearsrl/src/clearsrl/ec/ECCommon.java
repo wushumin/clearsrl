@@ -192,7 +192,7 @@ public final class ECCommon {
 		String[] labels = new String[tree.getTokenCount()+1];
 		Arrays.fill(labels, ECCommon.NOT_EC);
 
-		int tokenIdx = 0;
+		int tokenIdx = -1;
 		for (TBNode terminal: tree.getTerminalNodes()) {
 			if (terminal.isToken()) {
 				tokenIdx = terminal.getTokenIndex();
@@ -216,7 +216,7 @@ public final class ECCommon {
 				break;
 			}
 			if (ecType!=ECCommon.NOT_EC)
-				labels[tokenIdx]=labels[tokenIdx]==ECCommon.NOT_EC?ecType:labels[tokenIdx]+' '+ecType;
+				labels[tokenIdx+1]=labels[tokenIdx+1]==ECCommon.NOT_EC?ecType:labels[tokenIdx+1]+' '+ecType;
 		}
 		
 		return labels;

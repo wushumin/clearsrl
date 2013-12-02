@@ -90,6 +90,15 @@ public class ECDepModel extends ECModel implements Serializable {
 		
 		List<EnumMap<Feature,List<String>>> positionSamples = new ArrayList<EnumMap<Feature,List<String>>>();
 		List<EnumMap<Feature,List<String>>> headSamples = new ArrayList<EnumMap<Feature,List<String>>>();
+		
+		BitSet extractHead = new BitSet(tokens.length);
+		BitSet extractPosition = new BitSet(tokens.length+1);
+		
+		for (int h=0; h<tokens.length; ++h)
+			extractHead.set(h, !headMasks[h].isEmpty());
+		
+		for (BitSet position:headMasks)
+			extractPosition.or(position);
 
 		PBInstance[] props = new PBInstance[tokens.length];
 		if (pList!=null)
@@ -98,6 +107,11 @@ public class ECDepModel extends ECModel implements Serializable {
 
 		//Add head only features
 		for (int t=0; t<tokens.length; ++t) {
+			if (!extractHead.get(t)) {
+				headSamples.add(null);
+				continue;
+			}
+			
 			TBNode token = tokens[t];
 			TBNode head = tokens[t];
 			/*
@@ -122,10 +136,10 @@ public class ECDepModel extends ECModel implements Serializable {
 			for (Feature feature:features.getFeaturesFlat())
 				switch (feature) {
 				case H_LEMMA:
-					sample.put(feature, ECCommon.getPartial(lemmas[head.getTokenIndex()]));
+					sample.put(feature, ECCommon.getPartial(lemmas[h]));
 					break;
 				case H_POS:
-					sample.put(feature, Arrays.asList(poses[head.getTokenIndex()]));
+					sample.put(feature, Arrays.asList(poses[h]));
 					break;
 				case H_CONSTITUENT:
 					if (head.getConstituentByHead()!=null)
@@ -133,11 +147,11 @@ public class ECDepModel extends ECModel implements Serializable {
 					break;
 				case H_ORG_LEMMA:
 					if (token!=head)
-						sample.put(feature, ECCommon.getPartial(lemmas[head.getTokenIndex()]));
+						sample.put(feature, ECCommon.getPartial(lemmas[h]));
 					break;
 				case H_ORG_POS:
 					if (token!=head)
-						sample.put(feature, Arrays.asList(poses[head.getTokenIndex()]));
+						sample.put(feature, Arrays.asList(poses[h]));
 					break;
 				case H_ORG_SPATH: 
 					if (token!=head)
@@ -327,6 +341,10 @@ public class ECDepModel extends ECModel implements Serializable {
 		
 		// Add position only features
 		for (int t=0; t<=tokens.length; ++t) {
+			if (!extractPosition.get(t)) {
+				positionSamples.add(null);
+				continue;
+			}
 			EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(Feature.class);
 			for (Feature feature:features.getFeaturesFlat())
 				switch (feature) {
@@ -622,10 +640,8 @@ public class ECDepModel extends ECModel implements Serializable {
     	
     	int cnt=0;
     	for (int h=0; h<headMasks.length; ++h)
-    		for (int t=headMasks[h].nextSetBit(0);t>0;t=headMasks[h].nextSetBit(t+1))
+    		for (int t=headMasks[h].nextSetBit(0);t>=0;t=headMasks[h].nextSetBit(t+1))
     			headPrediction[h][t] = prediction[cnt++];
-
-    	
     	String[] labels = new String[tree.getTokenCount()+1];
     	
     	fillLinearLabel(tree.getRootNode().getHead(), headPrediction, labels);
@@ -633,7 +649,26 @@ public class ECDepModel extends ECModel implements Serializable {
     	for (int l=0; l<labels.length; ++l)
     		if (labels[l]==null)
     			labels[l] = ECCommon.NOT_EC;
-    	
+    		else
+    			labels[l] = labels[l].trim();
+    	/*
+    	TBNode[] nodes = tree.getTokenNodes();
+    	for (int h=0; h<headMasks.length; ++h) {
+    		System.out.print(nodes[h].getWord());
+    		for (int t=0; t<headPrediction[h].length;++t)
+    			if (headPrediction[h][t]!=null && !headPrediction[h][t].equals(ECCommon.NOT_EC))
+    				System.out.print("/"+headPrediction[h][t]+'-'+t);
+    		System.out.print(' ');
+    	}
+    	System.out.print('\n');
+    	for (int l=0; l<labels.length; ++l) {
+    		if (!labels[l].equals(ECCommon.NOT_EC))
+    			System.out.print(labels[l]+'-'+l+' ');
+    		if (l<nodes.length)
+    			System.out.print(nodes[l].getWord()+' ');
+    	}
+    	System.out.print('\n');
+    	*/
         return labels;
     }
     
