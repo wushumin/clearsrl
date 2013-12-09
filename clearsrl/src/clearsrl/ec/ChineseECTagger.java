@@ -177,18 +177,19 @@ public class ChineseECTagger {
 	}
 	
 	
-	static void validate(ECModel model, Properties props, ChineseUtil langUtil) throws IOException, ClassNotFoundException
-	{
+	static void validate(ECModel model, Properties props, ChineseUtil langUtil) throws IOException, ClassNotFoundException {
 		Properties validateProps = PropertyUtil.filterProperties(props, "validate.", true);
 		
-		if (model == null)
-		{
+		if (model == null) {
 			ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(validateProps.getProperty("model_file"))));
 			model = (ECModel)mIn.readObject();
 			mIn.close();
 			model.setLangUtil(langUtil);
 		}
 
+		if (model instanceof ECDepModel)
+			((ECDepModel)model).setFastPredict(!validateProps.getProperty("fastPredict","true").equals("false"));
+		
     	ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
     	
     	String corpus = validateProps.getProperty("corpus");

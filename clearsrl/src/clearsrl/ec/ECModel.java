@@ -74,7 +74,7 @@ public class ECModel implements Serializable {
 	transient Logger                            logger;
 
 	transient ChineseUtil chLangUtil = null;
-	
+
 	public LabelType getLabelType() {
 		return labelType;
 	}
@@ -627,20 +627,4 @@ public class ECModel implements Serializable {
         	if (1-agreement<=threshold) break;
         }
     }
-
-	protected void writeData(PrintStream out, int [][] features, TShortList labels, InstanceFormat format) {
-		for (int i=0; i<labels.size();++i) {
-			if (format==InstanceFormat.DEFAULT) {
-				out.print(labels.get(i));
-				for (int f : features[i])
-					out.print(" "+f);
-			} else if (format==InstanceFormat.SVM) {
-				out.print(labels.get(i)+1);
-				Arrays.sort(features[i]);
-				for (int f : features[i])
-					out.print(" "+(f+1)+":1");
-			}
-			out.print("\n");
-		}
-	}
 }

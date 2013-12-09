@@ -51,6 +51,7 @@ public class ECDepModel extends ECModel implements Serializable {
 	transient int elipsisCnt;
 	transient int elipsisTotal;
 	
+	transient boolean fastPredict = true;
 	
 	public ECDepModel (Set<EnumSet<Feature>> featureSet) {
 		this(featureSet, LabelType.ALL);
@@ -60,6 +61,10 @@ public class ECDepModel extends ECModel implements Serializable {
 		super(featureSet, labelType);
 		propTotal = propCnt = 0;
 		elipsisCnt = elipsisTotal = 0;
+	}
+	
+	public void setFastPredict(boolean fastPredict) {
+		this.fastPredict = fastPredict;
 	}
 	
 	public EnumMap<Feature,List<String>> getHeadFeatures(TBNode head, PBInstance instance) {
@@ -628,7 +633,7 @@ public class ECDepModel extends ECModel implements Serializable {
     }
     
     public String[] predict(TBTree tree, List<PBInstance> props) {
-		BitSet[] headMasks = ECCommon.getECCandidates(tree);
+		BitSet[] headMasks = ECCommon.getECCandidates(tree, !fastPredict);
 
     	List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(tree, headMasks, null, props, false);
     	
