@@ -215,7 +215,7 @@ public class ChineseECTagger {
 				String[] labels = model.predict(parseTrees[i], propList);
 				for (int l=0; l<labels.length; ++l)
 		    		score.addResult(labels[l], goldLabels[l]);
-				
+				/*
 				{
 					boolean hasPro = false;
 					boolean correctPro = true;
@@ -253,7 +253,7 @@ public class ChineseECTagger {
 						
 						System.err.println(builder.toString());
 					}
-				}
+				}*/
 				
 			}
 		}
