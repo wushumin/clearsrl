@@ -30,10 +30,10 @@ package clearcommon.treebank;
  */
 public class TBLib
 {
-	/** Left Round Bracket "(" */
-	static final public String LRB = "(";
-	/** Right Round Bracket ")". */
-	static final public String RRB = ")";
-	/** POS-tag for trace nodes */
-	static final public String POS_EC = "-NONE-";
+    /** Left Round Bracket "(" */
+    static final public String LRB = "(";
+    /** Right Round Bracket ")". */
+    static final public String RRB = ")";
+    /** POS-tag for trace nodes */
+    static final public String POS_EC = "-NONE-";
 }

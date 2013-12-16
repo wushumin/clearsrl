@@ -67,86 +67,86 @@ import java.util.logging.Logger;
  */
 public class PBFileReader
 {
-	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
-	
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+    
     String                annotationFile;
-	Scanner               scanner;
-	PBTokenizer           tokenizer;
-	TBReader              tbReader;
-	PBInstance            lastInstance;
-	boolean               closed;
-	
-	/**
-	 * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
-	 * @param annotationFile the path of the annotation file.
-	 * @param treebankPath the path of the treebank.
-	 * @throws FileNotFoundException 
-	 */
-	public PBFileReader(TBReader tbReader, String annotationFile) throws FileNotFoundException
-	{
-	    this(tbReader, annotationFile, new DefaultPBTokenizer());
-	}
-
-	public PBFileReader(TBReader tbReader, String annotationFile, PBTokenizer tokenizer) throws FileNotFoundException
+    Scanner               scanner;
+    PBTokenizer           tokenizer;
+    TBReader              tbReader;
+    PBInstance            lastInstance;
+    boolean               closed;
+    
+    /**
+     * Opens 'annotationFile', finds trees from 'treebankPath', and collects information.
+     * @param annotationFile the path of the annotation file.
+     * @param treebankPath the path of the treebank.
+     * @throws FileNotFoundException 
+     */
+    public PBFileReader(TBReader tbReader, String annotationFile) throws FileNotFoundException
     {
-	    this.tbReader       = tbReader;
-	    this.annotationFile = annotationFile;
+        this(tbReader, annotationFile, new DefaultPBTokenizer());
+    }
+
+    public PBFileReader(TBReader tbReader, String annotationFile, PBTokenizer tokenizer) throws FileNotFoundException
+    {
+        this.tbReader       = tbReader;
+        this.annotationFile = annotationFile;
         scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
         this.tokenizer      = tokenizer;
         lastInstance        = null;
         closed              = false;
     }
-	
-	public PBInstance nextProp() throws PBFormatException, ParseException
-	{
-		if (closed) return null;
-		if (!scanner.hasNextLine())	
-		{
-			close();
-			return null;
-		}
-		String line = scanner.nextLine().trim();
-		String[] tokens = tokenizer.tokenize(line);
-		if (tokens==null) 
-			return nextProp();
-		
-		//System.out.println(Arrays.toString(tokens));
-		int t=0;
-		
-		PBInstance instance = new PBInstance();
-		
-		String treeFile     = tokens[0];
-		
-		instance.tree = tbReader.getTree(treeFile, Integer.parseInt(tokens[1]));
-		if (instance.tree==null)
-		    throw new PBFormatException("parse tree invalid: "+treeFile+" "+tokens[1]+"\n"+Arrays.toString(tokens));
+    
+    public PBInstance nextProp() throws PBFormatException, ParseException
+    {
+        if (closed) return null;
+        if (!scanner.hasNextLine()) 
+        {
+            close();
+            return null;
+        }
+        String line = scanner.nextLine().trim();
+        String[] tokens = tokenizer.tokenize(line);
+        if (tokens==null) 
+            return nextProp();
+        
+        //System.out.println(Arrays.toString(tokens));
+        int t=0;
+        
+        PBInstance instance = new PBInstance();
+        
+        String treeFile     = tokens[0];
+        
+        instance.tree = tbReader.getTree(treeFile, Integer.parseInt(tokens[1]));
+        if (instance.tree==null)
+            throw new PBFormatException("parse tree invalid: "+treeFile+" "+tokens[1]+"\n"+Arrays.toString(tokens));
 
-		instance.predicateNode = instance.tree.getNodeByTerminalIndex(Integer.parseInt(tokens[2]));
-		
-		if (instance.predicateNode == null)
+        instance.predicateNode = instance.tree.getNodeByTerminalIndex(Integer.parseInt(tokens[2]));
+        
+        if (instance.predicateNode == null)
             throw new PBFormatException("predicate node not found "+"\n"+Arrays.toString(tokens));
-		
-		t = 3; // skip "gold" or annotator initial before roleset id
-		while (!tokens[t].matches(".+(\\.\\w{2}|-[nvj])")) {
-		    ++t;
-		    if (t>=tokens.length)
-		        throw new PBFormatException("Can't find roleset: "+"\n"+Arrays.toString(tokens));
-		}
-		
-		if (tokens[t].matches(".+-[nvj]"))
-		    instance.rolesetId = tokens[++t];// skip roleset-[nv] for ontonotes
-		else
-		    instance.rolesetId = tokens[t];
-		
-		++t;              // skip "-----"
-		
-		List<PBArg> argList = new LinkedList<PBArg>();
+        
+        t = 3; // skip "gold" or annotator initial before roleset id
+        while (!tokens[t].matches(".+(\\.\\w{2}|-[nvj])")) {
+            ++t;
+            if (t>=tokens.length)
+                throw new PBFormatException("Can't find roleset: "+"\n"+Arrays.toString(tokens));
+        }
+        
+        if (tokens[t].matches(".+-[nvj]"))
+            instance.rolesetId = tokens[++t];// skip roleset-[nv] for ontonotes
+        else
+            instance.rolesetId = tokens[t];
+        
+        ++t;              // skip "-----"
+        
+        List<PBArg> argList = new LinkedList<PBArg>();
 
-		for (++t;t<tokens.length; ++t)
-		{
-		    if (!tokens[t].matches(PBArg.ARG_PATTERN))
-		        throw new PBFormatException("malformed argument: "+tokens[t]+"\n"+Arrays.toString(tokens));
-		    
+        for (++t;t<tokens.length; ++t)
+        {
+            if (!tokens[t].matches(PBArg.ARG_PATTERN))
+                throw new PBFormatException("malformed argument: "+tokens[t]+"\n"+Arrays.toString(tokens));
+            
             int idx    = tokens[t].indexOf(PBLib.ARG_DELIM);
             
             String label = tokens[t].substring(idx+1);
@@ -177,8 +177,8 @@ public class PBFileReader
             }
             
             if (label.endsWith("PRR")) {
-            	instance.prrNode = nodeList.get(0);
-            	continue;
+                instance.prrNode = nodeList.get(0);
+                continue;
             }
             
             PBArg arg = new PBArg(label);
@@ -194,94 +194,94 @@ public class PBFileReader
             }
             
             argList.add(arg);
-		}
-		
-		PBArg linkArg;
-		for (Iterator<PBArg> iter=argList.iterator(); iter.hasNext();)
-		{
-		    linkArg = iter.next();
-		    if (!linkArg.getLabel().startsWith("LINK")) continue;
+        }
+        
+        PBArg linkArg;
+        for (Iterator<PBArg> iter=argList.iterator(); iter.hasNext();)
+        {
+            linkArg = iter.next();
+            if (!linkArg.getLabel().startsWith("LINK")) continue;
 
-	        boolean found = false;
-	        boolean isSLC = linkArg.isLabel("LINK-SLC");
-	        if (isSLC && linkArg.allNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.allNodes);
+            boolean found = false;
+            boolean isSLC = linkArg.isLabel("LINK-SLC");
+            if (isSLC && linkArg.allNodes.length!=2) throw new PBFormatException("LINK-SLC size incorrect "+linkArg.allNodes);
 
-	        for (PBArg arg:argList)
+            for (PBArg arg:argList)
             {
-	            if (linkArg==arg) continue;
-	            for (TBNode node: arg.allNodes)
-	            {
-	                for (TBNode linkNode:linkArg.allNodes)
-	                {
-	                    if (node == linkNode)
-	                    {
-	                        found = true;
-	                        if (isSLC)
-	                        {
-	                            linkArg.label = arg.label;
-	                            
-	                            if (arg.allNodes.length==1)
-	                            	linkArg.allNodes = Arrays.asList(linkArg.allNodes[0]==node?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
-	                            else
-	                            	linkArg.allNodes = Arrays.asList(linkArg.allNodes[0].getPOS().startsWith("WH")?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
-	                            arg.label = "R-"+linkArg.label;
-	                            arg.linkingArg = linkArg;
-	                        } else {
-	                            List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.allNodes));
-	                            for (TBNode aNode:linkArg.allNodes)
-	                                if (aNode!=linkNode) nodeList.add(aNode);
-	                            arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
-	                        }
-	                        break;
-	                    }
-	                }
-	                if (found) break;
-	            }
-	            if (found) break;
+                if (linkArg==arg) continue;
+                for (TBNode node: arg.allNodes)
+                {
+                    for (TBNode linkNode:linkArg.allNodes)
+                    {
+                        if (node == linkNode)
+                        {
+                            found = true;
+                            if (isSLC)
+                            {
+                                linkArg.label = arg.label;
+                                
+                                if (arg.allNodes.length==1)
+                                    linkArg.allNodes = Arrays.asList(linkArg.allNodes[0]==node?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
+                                else
+                                    linkArg.allNodes = Arrays.asList(linkArg.allNodes[0].getPOS().startsWith("WH")?linkArg.allNodes[1]:linkArg.allNodes[0]).toArray(new TBNode[1]);
+                                arg.label = "R-"+linkArg.label;
+                                arg.linkingArg = linkArg;
+                            } else {
+                                List<TBNode> nodeList = new ArrayList<TBNode>(Arrays.asList(arg.allNodes));
+                                for (TBNode aNode:linkArg.allNodes)
+                                    if (aNode!=linkNode) nodeList.add(aNode);
+                                arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
+                            }
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+                if (found) break;
             }
-	        if (!found || !isSLC) {
-		    if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.allNodes+"\n"+Arrays.toString(tokens));
-		    iter.remove();
+            if (!found || !isSLC) {
+            if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.allNodes+"\n"+Arrays.toString(tokens));
+            iter.remove();
 
-		}
-		}
-		try {
-		    // process all the main args before the reference args
-    		for (PBArg arg:argList)
-    		    if (arg.linkingArg==null) arg.processNodes();
-    		for (PBArg arg:argList)
+        }
+        }
+        try {
+            // process all the main args before the reference args
+            for (PBArg arg:argList)
+                if (arg.linkingArg==null) arg.processNodes();
+            for (PBArg arg:argList)
                 if (arg.linkingArg!=null) arg.processNodes();
-		} catch (PBFormatException e) {
-		    throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
-		}
-		
-		instance.allArgs = argList.toArray(new PBArg[argList.size()]);
-		
-		Arrays.sort(instance.allArgs);
-		
-		List<PBArg> emptyArgList = new LinkedList<PBArg>();
-		argList.clear();
-		
-		for (PBArg arg:instance.allArgs)
-		    if (!arg.isEmpty()) argList.add(arg);
-		    else emptyArgList.add(arg);
+        } catch (PBFormatException e) {
+            throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
+        }
+        
+        instance.allArgs = argList.toArray(new PBArg[argList.size()]);
+        
+        Arrays.sort(instance.allArgs);
+        
+        List<PBArg> emptyArgList = new LinkedList<PBArg>();
+        argList.clear();
+        
+        for (PBArg arg:instance.allArgs)
+            if (!arg.isEmpty()) argList.add(arg);
+            else emptyArgList.add(arg);
 
-		instance.args = argList.toArray(new PBArg[argList.size()]);
-		Arrays.sort(instance.args);
-		
-		instance.emptyArgs = emptyArgList.toArray(new PBArg[emptyArgList.size()]);
-		Arrays.sort(instance.emptyArgs);
-		//System.out.println(instance);
+        instance.args = argList.toArray(new PBArg[argList.size()]);
+        Arrays.sort(instance.args);
+        
+        instance.emptyArgs = emptyArgList.toArray(new PBArg[emptyArgList.size()]);
+        Arrays.sort(instance.emptyArgs);
+        //System.out.println(instance);
 
-		BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());
-		for (PBArg arg:instance.allArgs) {
-		    if (terminalSet.intersects(arg.terminalSet))
-		        throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens)+"\n"+instance);
-		    terminalSet.or(arg.terminalSet);
-		}
-		return instance;
-	}
-	
+        BitSet terminalSet = new BitSet(instance.tree.getTerminalCount());
+        for (PBArg arg:instance.allArgs) {
+            if (terminalSet.intersects(arg.terminalSet))
+                throw new PBFormatException("instance has terminal overlap\n"+Arrays.toString(tokens)+"\n"+instance);
+            terminalSet.or(arg.terminalSet);
+        }
+        return instance;
+    }
+    
     public List<PBInstance> nextPropSet()
     {
         LinkedList<PBInstance> retList = new LinkedList<PBInstance>();
@@ -314,26 +314,26 @@ public class PBFileReader
                     }
                 }
             } catch (PBFormatException e) {
-            	logger.severe(e.getMessage());
+                logger.severe(e.getMessage());
                 continue;
             } catch (ParseException e) {
-            	logger.severe(e.getMessage());
+                logger.severe(e.getMessage());
                 close();
                 return retList.isEmpty()?null:retList;
             } catch (Exception e) {
-            	logger.severe(annotationFile+": "+e.getMessage());
+                logger.severe(annotationFile+": "+e.getMessage());
                 return retList.isEmpty()?null:retList;
             }
         }
     }
-	
+    
     public boolean isOpen() {
-    	return !closed;
+        return !closed;
     }
     
-	public void close()
-	{
-		closed = true;
-	    scanner.close();
-	}
+    public void close()
+    {
+        closed = true;
+        scanner.close();
+    }
 }

@@ -73,20 +73,20 @@ public class ScoreSRL {
         List<PrintStream> sysPropOuts = new ArrayList<PrintStream>();
         if (outTemplate == null)
         {
-        	interPropOut = unionPropOut = goldPropOut = new PrintStream("/dev/null");
-        	for (String system:systems)
-        		sysPropOuts.add(goldPropOut);
+            interPropOut = unionPropOut = goldPropOut = new PrintStream("/dev/null");
+            for (String system:systems)
+                sysPropOuts.add(goldPropOut);
         }
         else
         {
-        	goldPropOut = new PrintStream(outTemplate.replace("SYSTEM", "gold"));
-		if (systems.length>1)
-		{
-		    interPropOut = new PrintStream(outTemplate.replace("SYSTEM", "intersection"));
-		    unionPropOut = new PrintStream(outTemplate.replace("SYSTEM", "union"));
-		}
-        	for (String system:systems)
-        		sysPropOuts.add(new PrintStream(outTemplate.replace("SYSTEM", system)));
+            goldPropOut = new PrintStream(outTemplate.replace("SYSTEM", "gold"));
+        if (systems.length>1)
+        {
+            interPropOut = new PrintStream(outTemplate.replace("SYSTEM", "intersection"));
+            unionPropOut = new PrintStream(outTemplate.replace("SYSTEM", "union"));
+        }
+            for (String system:systems)
+                sysPropOuts.add(new PrintStream(outTemplate.replace("SYSTEM", system)));
         }
         
         for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:goldPB.entrySet())
@@ -137,9 +137,9 @@ public class ScoreSRL {
                     {
                         scores[i].addResult(sysInstances.get(i), goldInstance);
                         if (goldInstance.getPredicateNode().getPOS().startsWith("V"))
-                        	vScores[i].addResult(sysInstances.get(i), goldInstance);
+                            vScores[i].addResult(sysInstances.get(i), goldInstance);
                         else
-                        	nScores[i].addResult(sysInstances.get(i), goldInstance);
+                            nScores[i].addResult(sysInstances.get(i), goldInstance);
                         
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
                     }

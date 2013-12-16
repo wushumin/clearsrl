@@ -15,8 +15,8 @@ import java.util.zip.GZIPOutputStream;
 
 public abstract class SentencePairReader {
     
-	static final int GZIP_BUFFER = 0x40000;
-	
+    static final int GZIP_BUFFER = 0x40000;
+    
     Properties props;
     
     ObjectInputStream inStream;
@@ -61,12 +61,12 @@ public abstract class SentencePairReader {
             }
         }
         
-		try {
+        try {
             outStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("sentencePair_file", "")),GZIP_BUFFER),GZIP_BUFFER*4));
         } catch (IOException e) {
             //e.printStackTrace();
         }
-		
+        
     }
     
     public abstract SentencePair nextPair();
@@ -77,12 +77,12 @@ public abstract class SentencePairReader {
             try {
                 return (SentencePair) inStream.readObject();
             } catch (Exception e) {
-            	if (!(e instanceof EOFException))
-            	{
-            		e.printStackTrace();
-            		objStreamAvailable = false;
-            	}
-            	try {
+                if (!(e instanceof EOFException))
+                {
+                    e.printStackTrace();
+                    objStreamAvailable = false;
+                }
+                try {
                     inStream.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();

@@ -36,116 +36,116 @@ import java.util.ArrayList;
  */
 public class SparseVector
 {
-	/** HashMap using primitive keys and values */
-	private TIntDoubleMap m_vector;
-	/** Bias (b_0) of the vector */
-	private double            d_bias;
-	/** Initial value (default is 0) */
-	private double            d_mu;
-	
-	/**
-	 * Initialize values of all dimensions to <code>mu</code>. 
-	 * @param mu initial value
-	 */
-	public SparseVector(double mu)
-	{
-		m_vector = new TIntDoubleHashMap();
-		d_mu     = mu;
-	}
-	
-	/**
-	 * Initializes the sparse-vector with <code>aIndex</code> and <code>aValue</code>.
-	 * Values not in <code>aIndex</code> are initialized to 0.
-	 * @param aIndex array containing indices
-	 * @param aValue array containing values
-	 */
-	public SparseVector(int[] aIndex, double[] aValue)
-	{
-		m_vector = new TIntDoubleHashMap(aIndex.length-1);
-		d_bias   = aValue[0];
-		d_mu     = 0;
-		
-		for (int i=1; i<aIndex.length; i++)
-			m_vector.put(aIndex[i], aValue[i]);
-	}
-		
-	/**
-	 * Returns the score of a feature vector <code>x</code>.
-	 * <code>x</code> is a binary feature vector consists of only indices whose values are 1.
-	 * @param x binary feature vector
-	 * @return the score of a feature vector <code>x</code>
-	 */
-	public double getScore(ArrayList<Integer> x)
-	{
-		double score = d_bias;
-		
-		for (int idx : x)	score += m_vector.get(idx);
-		return score;
-	}
-	
-	/**
-	 * Returns the score of a feature vector <code>x</code>.
-	 * <code>x</code> is a binary feature vector consists of only indices whose values are 1.
-	 * @param x binary feature vector
-	 * @return the score of a feature vector <code>x</code>
-	 */
-	public double getScore(int[] x)
-	{
-		double score = d_bias;
-		
-		for (int idx : x)	score += m_vector.get(idx);
-		return score;
-	}
-	
-	/**
-	 * Returns the value corresponding to <code>index</code>.
-	 * @param index index to get value of
-	 * @return value corresponding to <code>index</code>
-	 */
-	public double get(int index)
-	{
-		return m_vector.containsKey(index) ? m_vector.get(index) : d_mu;
-	}
-	
-	/** <code>vector[index] *= value</code>. */
-	public void multiply(int index, double value)
-	{
-		if (m_vector.containsKey(index))
-			m_vector.put(index, m_vector.get(index) * value);
-		else
-			m_vector.put(index, d_mu * value);
-	}
-	
-	/** <code>vector[index] += value</code>. */
-	public void add(int index, double value)
-	{
-		if (m_vector.containsKey(index))
-			m_vector.put(index, m_vector.get(index) + value);
-		else
-			m_vector.put(index, d_mu + value);
-	}
-	
-	/**
-	 * Returns all indices with values in ascending order.
-	 * @return all indices with values in ascending order
-	 */
-	public int[] getIndices()
-	{
-		int[] keys = m_vector.keys(new int[m_vector.size()]);
-		Arrays.sort(keys);
-		
-		return keys;
-	}
-	
-	@Override
+    /** HashMap using primitive keys and values */
+    private TIntDoubleMap m_vector;
+    /** Bias (b_0) of the vector */
+    private double            d_bias;
+    /** Initial value (default is 0) */
+    private double            d_mu;
+    
+    /**
+     * Initialize values of all dimensions to <code>mu</code>. 
+     * @param mu initial value
+     */
+    public SparseVector(double mu)
+    {
+        m_vector = new TIntDoubleHashMap();
+        d_mu     = mu;
+    }
+    
+    /**
+     * Initializes the sparse-vector with <code>aIndex</code> and <code>aValue</code>.
+     * Values not in <code>aIndex</code> are initialized to 0.
+     * @param aIndex array containing indices
+     * @param aValue array containing values
+     */
+    public SparseVector(int[] aIndex, double[] aValue)
+    {
+        m_vector = new TIntDoubleHashMap(aIndex.length-1);
+        d_bias   = aValue[0];
+        d_mu     = 0;
+        
+        for (int i=1; i<aIndex.length; i++)
+            m_vector.put(aIndex[i], aValue[i]);
+    }
+        
+    /**
+     * Returns the score of a feature vector <code>x</code>.
+     * <code>x</code> is a binary feature vector consists of only indices whose values are 1.
+     * @param x binary feature vector
+     * @return the score of a feature vector <code>x</code>
+     */
+    public double getScore(ArrayList<Integer> x)
+    {
+        double score = d_bias;
+        
+        for (int idx : x)   score += m_vector.get(idx);
+        return score;
+    }
+    
+    /**
+     * Returns the score of a feature vector <code>x</code>.
+     * <code>x</code> is a binary feature vector consists of only indices whose values are 1.
+     * @param x binary feature vector
+     * @return the score of a feature vector <code>x</code>
+     */
+    public double getScore(int[] x)
+    {
+        double score = d_bias;
+        
+        for (int idx : x)   score += m_vector.get(idx);
+        return score;
+    }
+    
+    /**
+     * Returns the value corresponding to <code>index</code>.
+     * @param index index to get value of
+     * @return value corresponding to <code>index</code>
+     */
+    public double get(int index)
+    {
+        return m_vector.containsKey(index) ? m_vector.get(index) : d_mu;
+    }
+    
+    /** <code>vector[index] *= value</code>. */
+    public void multiply(int index, double value)
+    {
+        if (m_vector.containsKey(index))
+            m_vector.put(index, m_vector.get(index) * value);
+        else
+            m_vector.put(index, d_mu * value);
+    }
+    
+    /** <code>vector[index] += value</code>. */
+    public void add(int index, double value)
+    {
+        if (m_vector.containsKey(index))
+            m_vector.put(index, m_vector.get(index) + value);
+        else
+            m_vector.put(index, d_mu + value);
+    }
+    
+    /**
+     * Returns all indices with values in ascending order.
+     * @return all indices with values in ascending order
+     */
+    public int[] getIndices()
+    {
+        int[] keys = m_vector.keys(new int[m_vector.size()]);
+        Arrays.sort(keys);
+        
+        return keys;
+    }
+    
+    @Override
     public String toString()
-	{
-		int[] indices = getIndices();
-		String    str = "";
-		
-		for (int idx : indices)
-			str += SuperTrainer.COL_DELIM + idx + SuperTrainer.FTR_DELIM + m_vector.get(idx);
-		
-		return str.trim();
-	}
+    {
+        int[] indices = getIndices();
+        String    str = "";
+        
+        for (int idx : indices)
+            str += SuperTrainer.COL_DELIM + idx + SuperTrainer.FTR_DELIM + m_vector.get(idx);
+        
+        return str.trim();
+    }
 }

@@ -25,17 +25,17 @@ package clearcommon.util.tuple;
 
 public class JIntDoubleTuple
 {
-	public int    index;
-	public double value;
-	
-	public JIntDoubleTuple(int label, double score)
-	{
-		set(label, score);
-	}
-	
-	public void set(int label, double score)
-	{
-		this.index = label;
-		this.value = score;
-	}
+    public int    index;
+    public double value;
+    
+    public JIntDoubleTuple(int label, double score)
+    {
+        set(label, score);
+    }
+    
+    public void set(int label, double score)
+    {
+        this.index = label;
+        this.value = score;
+    }
 }

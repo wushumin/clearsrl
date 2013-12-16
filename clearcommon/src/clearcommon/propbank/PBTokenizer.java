@@ -1,5 +1,5 @@
 package clearcommon.propbank;
 
 public interface PBTokenizer {
-	public String[] tokenize(String line);
+    public String[] tokenize(String line);
 }

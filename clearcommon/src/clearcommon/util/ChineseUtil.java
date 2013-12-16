@@ -16,21 +16,21 @@ import clearcommon.treebank.TBNode;
 
 public class ChineseUtil extends LanguageUtil {
 
-	static final Set<String> NOUN_POS = new HashSet<String>();
-	static {
-		NOUN_POS.add("NR");
-		NOUN_POS.add("NT");
-		NOUN_POS.add("NN");
-	};
-	
-	static final Set<String> VERB_POS = new HashSet<String>();
-	static {
-		VERB_POS.add("VA");
-		VERB_POS.add("VC");
-		VERB_POS.add("VE");
-		VERB_POS.add("VV");
-	};
-	
+    static final Set<String> NOUN_POS = new HashSet<String>();
+    static {
+        NOUN_POS.add("NR");
+        NOUN_POS.add("NT");
+        NOUN_POS.add("NN");
+    };
+    
+    static final Set<String> VERB_POS = new HashSet<String>();
+    static {
+        VERB_POS.add("VA");
+        VERB_POS.add("VC");
+        VERB_POS.add("VE");
+        VERB_POS.add("VV");
+    };
+    
     TBHeadRules headRules;
     
     @Override
@@ -47,35 +47,35 @@ public class ChineseUtil extends LanguageUtil {
     @Override
     public List<String> getPredicateAlternatives(String predicate, TObjectIntMap<String> predicateSet)
     {
-    	if (predicateSet==null)
-    		return super.getPredicateAlternatives(predicate, predicateSet);
-    	ArrayList<String> alternatives = new ArrayList<String>();
-    	alternatives.add(predicate);
-    	if (predicate.length()>1)
-    	{
-    		if (predicateSet.containsKey(predicate.substring(0,1)))
-    			alternatives.add(predicate.substring(0,1));
-    		if (predicateSet.containsKey(predicate.substring(predicate.length()-1)))
-    			alternatives.add(predicate.substring(predicate.length()-1));
-    	}
-    	return alternatives;
+        if (predicateSet==null)
+            return super.getPredicateAlternatives(predicate, predicateSet);
+        ArrayList<String> alternatives = new ArrayList<String>();
+        alternatives.add(predicate);
+        if (predicate.length()>1)
+        {
+            if (predicateSet.containsKey(predicate.substring(0,1)))
+                alternatives.add(predicate.substring(0,1));
+            if (predicateSet.containsKey(predicate.substring(predicate.length()-1)))
+                alternatives.add(predicate.substring(predicate.length()-1));
+        }
+        return alternatives;
     }
     
     @Override
     public int getPassive(TBNode predicateNode) {
-    	/*
+        /*
         for (TBNode node:predicateNode.getRoot().getTokenNodes())
             if (node.getPOS().matches("(SB|LB).*")) {
-            	System.err.println(predicateNode);
-            	System.err.println(predicateNode.getRoot().toParse());
-            	System.err.println(predicateNode.getRoot().toDependence(true));
-            	break;
+                System.err.println(predicateNode);
+                System.err.println(predicateNode.getRoot().toParse());
+                System.err.println(predicateNode.getRoot().toDependence(true));
+                break;
             }*/
         if (predicateNode.getHeadOfHead()!=null && predicateNode.getHeadOfHead().getPOS().equals("LB"))
-        	return 2;
+            return 2;
         for (TBNode dep:predicateNode.getDependentNodes())
-        	if (dep.getPOS().equals("SB"))
-        		return 1;
+            if (dep.getPOS().equals("SB"))
+                return 1;
 
         /*
         
@@ -139,30 +139,30 @@ public class ChineseUtil extends LanguageUtil {
         return headRules;
     }
 
-	@Override
-	public boolean isAdjective(String POS) {
-		return POS.equals("JJ");
-	}
+    @Override
+    public boolean isAdjective(String POS) {
+        return POS.equals("JJ");
+    }
 
-	@Override
-	public boolean isAdverb(String POS) {
-		return POS.equals("AD");
-	}
+    @Override
+    public boolean isAdverb(String POS) {
+        return POS.equals("AD");
+    }
 
-	@Override
-	public boolean isClause(String POS) {
-		return POS.matches("IP|CP");
-	}
+    @Override
+    public boolean isClause(String POS) {
+        return POS.matches("IP|CP");
+    }
 
-	@Override
-	public boolean isPredicateCandidate(String POS) {
-		return isVerb(POS) || POS.equals("NN");
-	}
+    @Override
+    public boolean isPredicateCandidate(String POS) {
+        return isVerb(POS) || POS.equals("NN");
+    }
 
-	@Override
-	public boolean isRelativeClause(String POS) {
-		// TODO: this is very termporary 
-		return POS.equals("CP");
-	}
+    @Override
+    public boolean isRelativeClause(String POS) {
+        // TODO: this is very termporary 
+        return POS.equals("CP");
+    }
 
 }

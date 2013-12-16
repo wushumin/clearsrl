@@ -61,23 +61,23 @@ public abstract class Classifier implements Serializable {
     public abstract int predict(int[] x);
     
     public Classifier getNewInstance() {
-    	Classifier classifier = null;
-		try {
-			classifier = this.getClass().newInstance();
-			classifier.initialize(labelMap, prop);
-			return classifier;
-		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
+        Classifier classifier = null;
+        try {
+            classifier = this.getClass().newInstance();
+            classifier.initialize(labelMap, prop);
+            return classifier;
+        } catch (InstantiationException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
     }
     
     public boolean canPredictProb() {
-    	return false;
+        return false;
     }
     
     public int predictProb(int[] x, double[] prob)

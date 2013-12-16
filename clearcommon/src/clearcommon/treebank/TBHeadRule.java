@@ -41,29 +41,29 @@ public class TBHeadRule
     };
     
     public String      ruleName;
-	public Direction[] dirs;
-	public String[]    rules;
-	
-	public TBHeadRule(String textRule)
-	{
-	    rules = textRule.trim().split(HEAD_DELIM);
-	    dirs = new Direction[rules.length];
-	  
-	    String[] toks = rules[0].split("\\s+");
-	    ruleName = toks[0];
-	    dirs[0] = toks[1].equals("l")?Direction.LEFT:Direction.RIGHT;
-	    rules[0] = toks[2];
-	    
-	    for (int i=1; i<rules.length; ++i) {
-	        toks = rules[i].split("\\s+");
-	        if (toks.length<2) {
-	            dirs[i] = dirs[i-1];
-	            rules[i] = toks[0];
-	        } else {
-	            dirs[i] = toks[0].equals("l")?Direction.LEFT:Direction.RIGHT;
-	            rules[i] = toks[1];
-	        }   
-	    }
+    public Direction[] dirs;
+    public String[]    rules;
+    
+    public TBHeadRule(String textRule)
+    {
+        rules = textRule.trim().split(HEAD_DELIM);
+        dirs = new Direction[rules.length];
+      
+        String[] toks = rules[0].split("\\s+");
+        ruleName = toks[0];
+        dirs[0] = toks[1].equals("l")?Direction.LEFT:Direction.RIGHT;
+        rules[0] = toks[2];
+        
+        for (int i=1; i<rules.length; ++i) {
+            toks = rules[i].split("\\s+");
+            if (toks.length<2) {
+                dirs[i] = dirs[i-1];
+                rules[i] = toks[0];
+            } else {
+                dirs[i] = toks[0].equals("l")?Direction.LEFT:Direction.RIGHT;
+                rules[i] = toks[1];
+            }   
+        }
 
-	}
+    }
 }

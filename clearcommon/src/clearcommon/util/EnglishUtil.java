@@ -77,7 +77,7 @@ public class EnglishUtil extends LanguageUtil {
         frameMap = new HashMap<String, PBFrame>();
         String frameDir = props.getProperty("frame_dir");
         if (frameDir != null)
-        	readFrameFiles(new File(frameDir));
+            readFrameFiles(new File(frameDir));
         
         return true;
     }
@@ -100,96 +100,96 @@ public class EnglishUtil extends LanguageUtil {
     }
     
     edu.mit.jwi.item.POS convertPOS(String input) {
-    	if (isNoun(input)) return edu.mit.jwi.item.POS.NOUN;
-    	if (isVerb(input)) return edu.mit.jwi.item.POS.VERB;
-    	if (isAdjective(input)) return edu.mit.jwi.item.POS.ADJECTIVE;
-    	if (isAdverb(input)) return edu.mit.jwi.item.POS.ADVERB;
-    	return null;
+        if (isNoun(input)) return edu.mit.jwi.item.POS.NOUN;
+        if (isVerb(input)) return edu.mit.jwi.item.POS.VERB;
+        if (isAdjective(input)) return edu.mit.jwi.item.POS.ADJECTIVE;
+        if (isAdverb(input)) return edu.mit.jwi.item.POS.ADVERB;
+        return null;
     }
     
     
     List<String> findStems(String word, edu.mit.jwi.item.POS pos) {
-    	List<String> stems = stemmer.findStems(word, pos);
-    	return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+        List<String> stems = stemmer.findStems(word, pos);
+        return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
     }
     
     class FrameParseHandler extends DefaultHandler {
-    	PBFrame frame;
-    	PBFrame.Roleset roleset;
-    	public FrameParseHandler(PBFrame frame) {
-    		this.frame = frame;	
-    	}
-    	
-    	@Override
-    	public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
-    		if (localName.equals("roleset")) {
-    			roleset = frame.new Roleset(atts.getValue("id"));
-    			frame.rolesets.put(roleset.getId(), roleset);
-    		} else if (localName.equals("role")) {
-    			if (atts.getValue("f")==null)
-    				roleset.roles.add("arg"+atts.getValue("n").toLowerCase());
-    			else
-    				roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
-    		}
-    	}
+        PBFrame frame;
+        PBFrame.Roleset roleset;
+        public FrameParseHandler(PBFrame frame) {
+            this.frame = frame; 
+        }
+        
+        @Override
+        public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
+            if (localName.equals("roleset")) {
+                roleset = frame.new Roleset(atts.getValue("id"));
+                frame.rolesets.put(roleset.getId(), roleset);
+            } else if (localName.equals("role")) {
+                if (atts.getValue("f")==null)
+                    roleset.roles.add("arg"+atts.getValue("n").toLowerCase());
+                else
+                    roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
+            }
+        }
     }
     
     void readFrameFiles(final File dir) {
-    	XMLReader parser=null;
-		try {
-			parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
-			parser.setEntityResolver(new EntityResolver() {
-			    @Override
-			    public InputSource resolveEntity(String publicId, String systemId)
-			            throws SAXException, IOException {
-			        if (systemId.contains("frameset.dtd")) {
-			            return new InputSource(new FileReader(new File(dir, "frameset.dtd")));
-			        } else {
-			            return null;
-			        }
-			    }
-			});
-		} catch (SAXException e) {
-			e.printStackTrace();
-			return;
-		}
-    	
-    	for (String fileName:FileUtil.getFiles(dir, ".+-[nvj]\\.xml"))
-    		readFrameFile(parser, new File(dir, fileName));
+        XMLReader parser=null;
+        try {
+            parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
+            parser.setEntityResolver(new EntityResolver() {
+                @Override
+                public InputSource resolveEntity(String publicId, String systemId)
+                        throws SAXException, IOException {
+                    if (systemId.contains("frameset.dtd")) {
+                        return new InputSource(new FileReader(new File(dir, "frameset.dtd")));
+                    } else {
+                        return null;
+                    }
+                }
+            });
+        } catch (SAXException e) {
+            e.printStackTrace();
+            return;
+        }
+        
+        for (String fileName:FileUtil.getFiles(dir, ".+-[nvj]\\.xml"))
+            readFrameFile(parser, new File(dir, fileName));
     }
     
     void readFrameFile(XMLReader parser, File file) {
-    	String key = file.getName();
-    	key = key.substring(0, key.length()-4);
-    	String predicate = key.substring(0, key.length()-2);
-    	char type = key.charAt(key.length()-1);
-    	
-    	PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
-    	try {
-    		parser.setContentHandler(new FrameParseHandler(frame));
-			parser.parse(new InputSource(new FileReader(file)));
-			frameMap.put(key, frame);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SAXException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        String key = file.getName();
+        key = key.substring(0, key.length()-4);
+        String predicate = key.substring(0, key.length()-2);
+        char type = key.charAt(key.length()-1);
+        
+        PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
+        try {
+            parser.setContentHandler(new FrameParseHandler(frame));
+            parser.parse(new InputSource(new FileReader(file)));
+            frameMap.put(key, frame);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SAXException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
     
     @Override
-	public PBFrame getFrame(String key) {
-    	return frameMap==null?null:frameMap.get(key);
-	}
+    public PBFrame getFrame(String key) {
+        return frameMap==null?null:frameMap.get(key);
+    }
     
     public String findDerivedVerb(TBNode node) {
-    	
-    	edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
-    	if (pos==null) return null;
-    	
-    	String stem = findStems(node).get(0);
-    	
+        
+        edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
+        if (pos==null) return null;
+        
+        String stem = findStems(node).get(0);
+        
         IIndexWord idxWord = dict.getIndexWord(stem, pos);
         if (idxWord==null) return null;
         IWordID wordID = idxWord.getWordIDs().get(0);
@@ -366,30 +366,30 @@ public class EnglishUtil extends LanguageUtil {
         return headRules;
     }
 
-	@Override
-	public boolean isAdjective(String POS) {
-		return POS.charAt(0)=='J';
-	}
+    @Override
+    public boolean isAdjective(String POS) {
+        return POS.charAt(0)=='J';
+    }
 
-	@Override
-	public boolean isAdverb(String POS) {
-		return POS.startsWith("RB");
-	}
+    @Override
+    public boolean isAdverb(String POS) {
+        return POS.startsWith("RB");
+    }
 
-	@Override
-	public boolean isClause(String POS) {
-		return POS.matches("S|SBARQ|SINV|SQ");
-	}
+    @Override
+    public boolean isClause(String POS) {
+        return POS.matches("S|SBARQ|SINV|SQ");
+    }
 
-	@Override
-	public boolean isPredicateCandidate(String POS) {
-		return isVerb(POS) || isAdjective(POS) || POS.matches("NN|NNS");
-	}
+    @Override
+    public boolean isPredicateCandidate(String POS) {
+        return isVerb(POS) || isAdjective(POS) || POS.matches("NN|NNS");
+    }
 
-	@Override
-	public boolean isRelativeClause(String POS) {
-		return POS.equals("SBAR");
-	}
+    @Override
+    public boolean isRelativeClause(String POS) {
+        return POS.equals("SBAR");
+    }
 
 
 }

@@ -29,7 +29,7 @@ public abstract class LanguageUtil {
     }
     
     public List<String> getPredicateAlternatives(String predicate, TObjectIntMap<String> predicateSet) {
-    	return Arrays.asList(predicate);
+        return Arrays.asList(predicate);
     }
     
     public String resolveAbbreviation(String word, String POS) {
@@ -40,38 +40,38 @@ public abstract class LanguageUtil {
 
     public abstract TBHeadRules getHeadRules();
 
-	public boolean isNoun(String POS) {
-		return POS.charAt(0)=='N';
-	}
+    public boolean isNoun(String POS) {
+        return POS.charAt(0)=='N';
+    }
 
-	public boolean isVerb(String POS) {
-		return POS.charAt(0)=='V';
-	}
+    public boolean isVerb(String POS) {
+        return POS.charAt(0)=='V';
+    }
 
-	public PBFrame getFrame(String key) {
-		return null;
-	}
-	
-	public PBFrame getFrame(TBNode node) {
-		return getFrame(PBFrame.makeKey(node, this));
-	}
+    public PBFrame getFrame(String key) {
+        return null;
+    }
+    
+    public PBFrame getFrame(TBNode node) {
+        return getFrame(PBFrame.makeKey(node, this));
+    }
 
-	public POS getPOS(String pos) {
-		if (isAdjective(pos)) return POS.ADJECTIVE;
-		if (isAdverb(pos)) return POS.ADVERB;
-		if (isNoun(pos)) return POS.NOUN;
-		if (isVerb(pos)) return POS.VERB;
-		return null;
-	}
-	
-	public abstract boolean isAdjective(String POS);
-	
-	public abstract boolean isAdverb(String POS);
+    public POS getPOS(String pos) {
+        if (isAdjective(pos)) return POS.ADJECTIVE;
+        if (isAdverb(pos)) return POS.ADVERB;
+        if (isNoun(pos)) return POS.NOUN;
+        if (isVerb(pos)) return POS.VERB;
+        return null;
+    }
+    
+    public abstract boolean isAdjective(String POS);
+    
+    public abstract boolean isAdverb(String POS);
 
-	public abstract boolean isClause(String POS);
+    public abstract boolean isClause(String POS);
 
-	public abstract boolean isRelativeClause(String POS);
-	
-	public abstract boolean isPredicateCandidate(String POS); 
-	
+    public abstract boolean isRelativeClause(String POS);
+    
+    public abstract boolean isPredicateCandidate(String POS); 
+    
 }

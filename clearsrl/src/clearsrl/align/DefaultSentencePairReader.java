@@ -11,7 +11,7 @@ import clearcommon.util.PropertyUtil;
 import clearsrl.align.SentencePair.BadInstanceException;
 
 public class DefaultSentencePairReader extends SentencePairReader{
-	
+    
     Scanner srcAlignmentScanner;
     Scanner dstAlignmentScanner;
     
@@ -33,7 +33,7 @@ public class DefaultSentencePairReader extends SentencePairReader{
     
     public DefaultSentencePairReader(Properties props, boolean reWriteObjStream)
     {
-    	super(props, reWriteObjStream);        
+        super(props, reWriteObjStream);        
         sentenceAligned = !props.getProperty("sentence_aligned","false").equals("false");
         bidirectionalWA = !props.getProperty("bidirectionalWA", "false").equals("false");
         zeroWAIndexed = !props.getProperty("zeroWAIndexed","false").equals("false");
@@ -57,39 +57,39 @@ public class DefaultSentencePairReader extends SentencePairReader{
         
         count = 0;
         
-		if (sentenceAligned)
-		{
-			if (srcSentenceReader==null)
-			    srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src.", true));
-			if (dstSentenceReader==null)
-			    dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst.", true));
-		}
-		else
-		{
-		    if (srcSentenceReader==null)
+        if (sentenceAligned)
+        {
+            if (srcSentenceReader==null)
+                srcSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "src.", true));
+            if (dstSentenceReader==null)
+                dstSentenceReader = new AlignedSentenceReader(PropertyUtil.filterProperties(props, "dst.", true));
+        }
+        else
+        {
+            if (srcSentenceReader==null)
                 srcSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "src.", true));
             if (dstSentenceReader==null)
                 dstSentenceReader = new TokenedSentenceReader(PropertyUtil.filterProperties(props, "dst.", true));   
-		}
-		    
-		srcSentenceReader.initialize();
-		dstSentenceReader.initialize();
-		
-		if (bidirectionalWA)
-			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("token_alignment")))).useDelimiter("[\n\r]");
-		else
-		{
-			srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
-			dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
-		}
+        }
+            
+        srcSentenceReader.initialize();
+        dstSentenceReader.initialize();
+        
+        if (bidirectionalWA)
+            srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("token_alignment")))).useDelimiter("[\n\r]");
+        else
+        {
+            srcAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("src.token_alignment")))).useDelimiter("[\n\r]");
+            dstAlignmentScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("dst.token_alignment")))).useDelimiter("[\n\r]");
+        }
     }
     
     @Override
     public SentencePair nextPair()
-    {	
-    	if (objStreamAvailable) return readSentencePair();
+    {   
+        if (objStreamAvailable) return readSentencePair();
         
-    	SentencePair sentencePair = new SentencePair(count);
+        SentencePair sentencePair = new SentencePair(count);
         
         sentencePair.src = srcSentenceReader.nextSentence();
         sentencePair.dst = dstSentenceReader.nextSentence();
@@ -98,27 +98,27 @@ public class DefaultSentencePairReader extends SentencePairReader{
         String srcLine=null;
         String dstLine=null;
         try {
-        	if (bidirectionalWA)
-        	{
-        		srcLine = srcAlignmentScanner.next();
-        		sentencePair.parseAlign(srcLine, zeroWAIndexed);
-        	}
-        	else
-        	{   // GIZA++ format
-        		srcAlignmentScanner.next(); srcAlignmentScanner.next(); // skip comment & text
+            if (bidirectionalWA)
+            {
+                srcLine = srcAlignmentScanner.next();
+                sentencePair.parseAlign(srcLine, zeroWAIndexed);
+            }
+            else
+            {   // GIZA++ format
+                srcAlignmentScanner.next(); srcAlignmentScanner.next(); // skip comment & text
                 dstAlignmentScanner.next(); dstAlignmentScanner.next(); // skip comment & text
                 srcLine = srcAlignmentScanner.next();
                 dstLine = dstAlignmentScanner.next();
                 sentencePair.parseSrcAlign(srcLine);
                 sentencePair.parseDstAlign(dstLine);
                 sentencePair.mergeAlignment();
-        	}
+            }
         } catch (BadInstanceException e) {
-        	System.err.println(count);
+            System.err.println(count);
             e.printStackTrace();
             System.err.println(srcLine);
             if (!bidirectionalWA)
-            	System.err.println(dstLine);
+                System.err.println(dstLine);
         } finally {
             ++count;
         }
@@ -129,7 +129,7 @@ public class DefaultSentencePairReader extends SentencePairReader{
     }
     
     @Override
-	public void close()
+    public void close()
     {
         if (srcSentenceReader!=null)
             srcSentenceReader.close();
@@ -150,13 +150,13 @@ public class DefaultSentencePairReader extends SentencePairReader{
         
         if (srcTokenIndexScanner!= null)
         {
-        	srcTokenIndexScanner.close();
-        	srcTokenIndexScanner = null;
+            srcTokenIndexScanner.close();
+            srcTokenIndexScanner = null;
         }
         
         if (dstTokenIndexScanner!=null)
         {
-        	dstTokenIndexScanner.close();
+            dstTokenIndexScanner.close();
             dstTokenIndexScanner = null;
         }
 

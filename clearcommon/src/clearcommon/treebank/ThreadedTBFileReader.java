@@ -13,9 +13,9 @@ import clearcommon.util.PropertyUtil;
 
 public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     
-	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
-	
-	SerialTBFileReader tbReader;
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+    
+    SerialTBFileReader tbReader;
     TBTree lastTree;
     BlockingQueue<TBTree> treeQueue;
     AtomicBoolean keepRunning;
@@ -75,7 +75,7 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
                 tree = tbReader.nextTree();
             } catch(Exception e) {
                 tree = null;
-            	logger.severe(e.toString());
+                logger.severe(e.toString());
             }
             try {
                 if (tree==null)
@@ -84,14 +84,14 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
                         tree = new TBTree(null, Integer.MAX_VALUE, null, 0, 0);
                         keepRunning.set(false);
                     } catch (ParseException e) {
-                    	logger.severe(e.toString());
+                        logger.severe(e.toString());
                     }
                 }
                 //else 
                 //    logger.info("Read tree "+tree.index);
                 treeQueue.put(tree);
             } catch (InterruptedException e) {
-            	logger.severe(e.toString());
+                logger.severe(e.toString());
             }
             
             // the last tree inserted will be null, indicating there are no more trees
@@ -140,11 +140,11 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     @Override
     public void close()
     {
-    	if (!closed)
-    	{
-    		keepRunning.set(false);
-    		treeQueue.clear();
-    		closed = true;
-    	}
+        if (!closed)
+        {
+            keepRunning.set(false);
+            treeQueue.clear();
+            closed = true;
+        }
     }
 }

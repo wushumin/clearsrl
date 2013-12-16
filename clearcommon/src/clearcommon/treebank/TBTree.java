@@ -35,119 +35,119 @@ import clearcommon.propbank.PBFileReader;
  * @author Shumin Wu
  */
 public class TBTree implements Serializable {
-	/**
+    /**
      * 
      */
-	private static final long serialVersionUID = 8010593996914604986L;
+    private static final long serialVersionUID = 8010593996914604986L;
 
-	private static Logger logger = Logger.getLogger(PBFileReader.class
-			.getPackage().getName());
+    private static Logger logger = Logger.getLogger(PBFileReader.class
+            .getPackage().getName());
 
-	String filename;
-	int index;
-	TBNode rootNode;
-	int terminalCount;
-	int tokenCount;
+    String filename;
+    int index;
+    TBNode rootNode;
+    int terminalCount;
+    int tokenCount;
 
-	public TBTree(String treeFile, int treeIndex, TBNode root,
-			int terminalCount, int tokenCount) throws ParseException {
-		this.filename = treeFile;
-		this.index = treeIndex;
-		this.rootNode = root;
-		this.terminalCount = terminalCount;
-		this.tokenCount = tokenCount;
-		if (rootNode != null) {
-			linkIndices(root);
-			rootNode.cleanUpPOS();
-		}
-	}
+    public TBTree(String treeFile, int treeIndex, TBNode root,
+            int terminalCount, int tokenCount) throws ParseException {
+        this.filename = treeFile;
+        this.index = treeIndex;
+        this.rootNode = root;
+        this.terminalCount = terminalCount;
+        this.tokenCount = tokenCount;
+        if (rootNode != null) {
+            linkIndices(root);
+            rootNode.cleanUpPOS();
+        }
+    }
 
-	public String getFilename() {
-		return filename;
-	}
+    public String getFilename() {
+        return filename;
+    }
 
-	public int getIndex() {
-		return index;
-	}
+    public int getIndex() {
+        return index;
+    }
 
-	public TBNode getNodeByTerminalIndex(int terminalIndex) {
-		return rootNode.getNodeByTerminalIndex(terminalIndex);
-	}
+    public TBNode getNodeByTerminalIndex(int terminalIndex) {
+        return rootNode.getNodeByTerminalIndex(terminalIndex);
+    }
 
-	public TBNode getNodeByTokenIndex(int tokenIndex) {
-		return rootNode.getNodeByTokenIndex(tokenIndex);
-	}
-	
-	public TBNode[] getTerminalNodes() {
-		TBNode[] tnodes = new TBNode[terminalCount];
-		rootNode.fillNodeArray(true, tnodes);
-		return tnodes;
-	}
-	
-	public TBNode[] getTokenNodes() {
-		TBNode[] tnodes = new TBNode[tokenCount];
-		rootNode.fillNodeArray(false, tnodes);
-		return tnodes;
-	}
+    public TBNode getNodeByTokenIndex(int tokenIndex) {
+        return rootNode.getNodeByTokenIndex(tokenIndex);
+    }
+    
+    public TBNode[] getTerminalNodes() {
+        TBNode[] tnodes = new TBNode[terminalCount];
+        rootNode.fillNodeArray(true, tnodes);
+        return tnodes;
+    }
+    
+    public TBNode[] getTokenNodes() {
+        TBNode[] tnodes = new TBNode[tokenCount];
+        rootNode.fillNodeArray(false, tnodes);
+        return tnodes;
+    }
 
-	public TBNode getRootNode() {
-		return rootNode;
-	}
+    public TBNode getRootNode() {
+        return rootNode;
+    }
 
-	public int getTerminalCount() {
-		return terminalCount;
-	}
+    public int getTerminalCount() {
+        return terminalCount;
+    }
 
-	public int getTokenCount() {
-		return tokenCount;
-	}
+    public int getTokenCount() {
+        return tokenCount;
+    }
 
-	void linkIndices(TBNode node) throws ParseException {
-		Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
-		if (!matcher.matches()) return;
-		String idxStr = matcher.group(6);
-		if (idxStr != null) {
-			node.indexingNode = rootNode.findIndexedNode(Integer
-					.parseInt(idxStr.substring(1)));
-			if (node.indexingNode == null) {
-				node.pos = node.pos + "-" + idxStr.substring(1);
-				logger.warning(filename + ", " + index
-						+ ": Missing antecedent: " + idxStr);
-			}
-		} else if (node.isEC()) {
-			matcher = TBNode.WORD_PATTERN.matcher(node.word);
-			matcher.matches();
+    void linkIndices(TBNode node) throws ParseException {
+        Matcher matcher = TBNode.POS_PATTERN.matcher(node.pos);
+        if (!matcher.matches()) return;
+        String idxStr = matcher.group(6);
+        if (idxStr != null) {
+            node.indexingNode = rootNode.findIndexedNode(Integer
+                    .parseInt(idxStr.substring(1)));
+            if (node.indexingNode == null) {
+                node.pos = node.pos + "-" + idxStr.substring(1);
+                logger.warning(filename + ", " + index
+                        + ": Missing antecedent: " + idxStr);
+            }
+        } else if (node.isEC()) {
+            matcher = TBNode.WORD_PATTERN.matcher(node.word);
+            matcher.matches();
 
-			idxStr = matcher.group(2);
-			if (idxStr != null) {
-				node.indexingNode = rootNode.findIndexedNode(Integer
-						.parseInt(idxStr.substring(1)));
-				if (node.indexingNode == null) {
-					node.pos = node.pos + "-" + idxStr.substring(1);
-					logger.warning(filename + ", " + index
-							+ ": Missing antecedent: " + idxStr);
-				}
-			}
-		}
+            idxStr = matcher.group(2);
+            if (idxStr != null) {
+                node.indexingNode = rootNode.findIndexedNode(Integer
+                        .parseInt(idxStr.substring(1)));
+                if (node.indexingNode == null) {
+                    node.pos = node.pos + "-" + idxStr.substring(1);
+                    logger.warning(filename + ", " + index
+                            + ": Missing antecedent: " + idxStr);
+                }
+            }
+        }
 
-		if (node.children == null)
-			return;
-		for (TBNode aNode : node.children)
-			linkIndices(aNode);
-	}
+        if (node.children == null)
+            return;
+        for (TBNode aNode : node.children)
+            linkIndices(aNode);
+    }
 
-	@Override
-	public String toString() {
-		return "( " + rootNode.toParse() + " )";
-	}
+    @Override
+    public String toString() {
+        return "( " + rootNode.toParse() + " )";
+    }
 
-	public String toText(boolean wTerminal) {
-		return rootNode.toText(wTerminal);
-	}
+    public String toText(boolean wTerminal) {
+        return rootNode.toText(wTerminal);
+    }
 
-	public String toDependence(boolean wTerminal) {
-		return rootNode.toDependence(wTerminal);
-	}
+    public String toDependence(boolean wTerminal) {
+        return rootNode.toDependence(wTerminal);
+    }
 
-	
+    
 }

@@ -16,9 +16,9 @@ import java.util.TreeMap;
 
 public class AlignmentStat {
     
-	int oneToOne;
-	int total;
-	
+    int oneToOne;
+    int total;
+    
     Map<String, Map<String, TFloatList>> srcDstPredicateMap;
     Map<String, Map<String, TFloatList>> dstSrcPredicateMap;
     
@@ -102,18 +102,18 @@ public class AlignmentStat {
         
         for (ArgAlignmentPair argPair: alignment.getArgAlignmentPairs())
         {
-        	String srcLabel = convertLabel(alignment.getSrcPBArg(argPair.srcArgIdx).getLabel());
-        	String dstLabel = convertLabel(alignment.getDstPBArg(argPair.dstArgIdx).getLabel());
+            String srcLabel = convertLabel(alignment.getSrcPBArg(argPair.srcArgIdx).getLabel());
+            String dstLabel = convertLabel(alignment.getDstPBArg(argPair.dstArgIdx).getLabel());
         
-        	srcArgSet.add(srcLabel);
-        	dstArgSet.add(dstLabel);
-        	
+            srcArgSet.add(srcLabel);
+            dstArgSet.add(dstLabel);
+            
             insert(srcDstArgTypeMap, srcLabel, dstLabel, argPair.score);
             insert(dstSrcArgTypeMap, dstLabel, srcLabel, argPair.score);
             
             if (srcLabel.matches("A\\d") && dstLabel.matches("A\\d"))
             {
-            	insert(srcDstCoreArgTypeMap, srcLabel, dstLabel, argPair.score);
+                insert(srcDstCoreArgTypeMap, srcLabel, dstLabel, argPair.score);
                 insert(dstSrcCoreArgTypeMap, dstLabel, srcLabel, argPair.score);
             }
             
@@ -128,13 +128,13 @@ public class AlignmentStat {
     
     static String convertLabel(String input)
     {
-    	if (input.equals("ARG"))
-    		return "A";
-    	if (input.startsWith("ARG"))
-    		return "A"+input.substring(3);
-    	if (input.startsWith("rel"))
-    		return "V";
-    	return input;
+        if (input.equals("ARG"))
+            return "A";
+        if (input.startsWith("ARG"))
+            return "A"+input.substring(3);
+        if (input.startsWith("rel"))
+            return "V";
+        return input;
     }
     
     long getTotal(Map<String, TFloatList> map)
@@ -195,28 +195,28 @@ public class AlignmentStat {
 
     void printMatrix(PrintStream out, Map<String, Map<String, TFloatArrayList>> map1, Map<String, Map<String, TFloatArrayList>> map2)
     {
-    	Map<String, Map<String, TFloatArrayList>> mapR = map1.size()>map2.size()?map1:map2;
-    	Map<String, Map<String, TFloatArrayList>> mapC = mapR==map1?map2:map1;
-    	
-    	
-    	String[] keysR = mapR.keySet().toArray(new String[0]).clone();
-    	Arrays.sort(keysR);
-    	
-    	String[] keysC = mapC.keySet().toArray(new String[0]).clone();
-    	Arrays.sort(keysC);
-    	
-    	out.print("       ");
-    	for (String keyC:keysC) out.printf("%6s&",keyC);
-    	out.print("\n");
-    	
-    	for (String keyR:keysR)
-    	{
-    		out.printf("%6s&",keyR);
-    		Map<String, TFloatArrayList> innerMap = mapR.get(keyR);
-    		for (String keyC:keysC)
-    			out.printf("%6d&",innerMap.get(keyC)==null?0:innerMap.get(keyC).size());
-    		out.print("\n");
-    	}
+        Map<String, Map<String, TFloatArrayList>> mapR = map1.size()>map2.size()?map1:map2;
+        Map<String, Map<String, TFloatArrayList>> mapC = mapR==map1?map2:map1;
+        
+        
+        String[] keysR = mapR.keySet().toArray(new String[0]).clone();
+        Arrays.sort(keysR);
+        
+        String[] keysC = mapC.keySet().toArray(new String[0]).clone();
+        Arrays.sort(keysC);
+        
+        out.print("       ");
+        for (String keyC:keysC) out.printf("%6s&",keyC);
+        out.print("\n");
+        
+        for (String keyR:keysR)
+        {
+            out.printf("%6s&",keyR);
+            Map<String, TFloatArrayList> innerMap = mapR.get(keyR);
+            for (String keyC:keysC)
+                out.printf("%6d&",innerMap.get(keyC)==null?0:innerMap.get(keyC).size());
+            out.print("\n");
+        }
     }
     
     public void printStats(PrintStream out)

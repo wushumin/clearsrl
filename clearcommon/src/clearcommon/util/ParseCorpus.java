@@ -143,20 +143,20 @@ public class ParseCorpus {
             }
             else {
                 Tree<String> parsedTree = null;
-        		try {
-        		    parsedTree = getParser().getBestConstrainedParse(words,null,null);
-        		} catch (Exception e) {
-        		    logger.severe(e.toString());
-        		    e.printStackTrace();
-        		} finally {
-        		    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
-        		    {
-        			removeUselessNodes(parsedTree.getChildren().get(0));
-        			parse="( "+parsedTree.getChildren().get(0)+" )\n";
-        		    }
-        		    else
-        			parse=makeDefaultParse(words);
-        		}
+                try {
+                    parsedTree = getParser().getBestConstrainedParse(words,null,null);
+                } catch (Exception e) {
+                    logger.severe(e.toString());
+                    e.printStackTrace();
+                } finally {
+                    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
+                    {
+                    removeUselessNodes(parsedTree.getChildren().get(0));
+                    parse="( "+parsedTree.getChildren().get(0)+" )\n";
+                    }
+                    else
+                    parse=makeDefaultParse(words);
+                }
             }
             synchronized (parseQueue)
             {
@@ -221,7 +221,7 @@ public class ParseCorpus {
         
             if (props.getProperty("Chinese")!=null && !props.getProperty("Chinese").equals("false")) 
             {
-            	logger.info("Chinese parsing features enabled.");
+                logger.info("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
             }
             parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
@@ -231,44 +231,44 @@ public class ParseCorpus {
         return parser;
     }
 
-	static void outputTrees(List<Tree<String>> parseTrees, PrintWriter outputData, 
-			CoarseToFineMaxRuleParser parser) {
-		for (Tree<String> parsedTree : parseTrees){
-			if (!parsedTree.getChildren().isEmpty())
-	        	outputData.write("( "+parsedTree.getChildren().get(0)+" )\n");
-			else
-				outputData.write("(())\n");
-		}
-	}
+    static void outputTrees(List<Tree<String>> parseTrees, PrintWriter outputData, 
+            CoarseToFineMaxRuleParser parser) {
+        for (Tree<String> parsedTree : parseTrees){
+            if (!parsedTree.getChildren().isEmpty())
+                outputData.write("( "+parsedTree.getChildren().get(0)+" )\n");
+            else
+                outputData.write("(())\n");
+        }
+    }
 
-	static void removeUselessNodes(Tree<String> node)
-	{
-		if (node.isLeaf()) return;
-		ArrayList<Tree<String>> newChildren = new ArrayList<Tree<String>>();
-		for (Tree<String> child:node.getChildren())
-		{
-			removeUselessNodes(child);
-			if (!child.isLeaf() && child.getLabel().startsWith("@"))
-				newChildren.addAll(child.getChildren());
-			else
-				newChildren.add(child);
-		}
-		node.setChildren(newChildren); 
-	}
-	
-	public static String makeDefaultParse(List<String> sentence)
-	{
-		StringBuilder buffer = new StringBuilder();
-		buffer.append("( (FRAG ");
-		for (String word:sentence)
-			buffer.append("(X "+word+") ");
-		buffer.append(") )\n");
-		return buffer.toString();
-	}
-	
-	public SentenceWriter parse(Reader reader, Writer writer) throws IOException
-	{
-	    BufferedReader inputData = new BufferedReader(reader);
+    static void removeUselessNodes(Tree<String> node)
+    {
+        if (node.isLeaf()) return;
+        ArrayList<Tree<String>> newChildren = new ArrayList<Tree<String>>();
+        for (Tree<String> child:node.getChildren())
+        {
+            removeUselessNodes(child);
+            if (!child.isLeaf() && child.getLabel().startsWith("@"))
+                newChildren.addAll(child.getChildren());
+            else
+                newChildren.add(child);
+        }
+        node.setChildren(newChildren); 
+    }
+    
+    public static String makeDefaultParse(List<String> sentence)
+    {
+        StringBuilder buffer = new StringBuilder();
+        buffer.append("( (FRAG ");
+        for (String word:sentence)
+            buffer.append("(X "+word+") ");
+        buffer.append(") )\n");
+        return buffer.toString();
+    }
+    
+    public SentenceWriter parse(Reader reader, Writer writer) throws IOException
+    {
+        BufferedReader inputData = new BufferedReader(reader);
 
         String line;
         int lineCount = 0;
@@ -284,90 +284,90 @@ public class ParseCorpus {
         
         return sentWriter;
 
-	}
-	
-	public static void main(String[] args) throws Exception
-	{
-		ParseCorpus parser = new ParseCorpus();
-		CmdLineParser cmdParser = new CmdLineParser(parser);
-		
-		try {
-			cmdParser.parseArgument(args);
-	    } catch (CmdLineException e) {
-	    	System.err.println("invalid options:"+e);
-	    	cmdParser.printUsage(System.err);
-	        System.exit(0);
-	    }
-	    if (parser.help){
-	    	cmdParser.printUsage(System.err);
-	        System.exit(0);
-	    }
-
-	    Properties props = new Properties();
-		Reader in = new InputStreamReader(new FileInputStream(parser.propFile), "UTF-8");
-		props.load(in);
-		props = PropertyUtil.resolveEnvironmentVariables(props);
-		in.close();
-		props = PropertyUtil.filterProperties(props, "parser.");
-
-		if (parser.treeDir!=null) props.setProperty("tbdir", parser.treeDir);
-		if (parser.txtDir!=null) props.setProperty("tbtxtdir", parser.txtDir);
-		if (parser.inFileList!=null) props.setProperty("filelist", parser.inFileList);
-		if (parser.outDir!=null) props.setProperty("parsedir", parser.outDir);
-		if (parser.grammar!=null) props.setProperty("grammar",parser.grammar);
-		
-		parser.initialize(props);
+    }
+    
+    public static void main(String[] args) throws Exception
+    {
+        ParseCorpus parser = new ParseCorpus();
+        CmdLineParser cmdParser = new CmdLineParser(parser);
         
-		String txtDir = props.getProperty("tbtxtdir");
-	    String parseDir = props.getProperty("parsedir");
-	    
-	    List<String> fileNames = null;
-	    
-		if (props.getProperty("tbdir")!=null)
-		{
-			String fileList = props.getProperty("filelist");
-			
-			if (fileList != null)
-				fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
-			
-		    Map<String, TBTree[]> treeBank = fileList==null?
-		    		TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
-		    		TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
-		    TBUtil.extractText(txtDir, treeBank);
-		}
-		
-		if (fileNames==null)
-			fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
-		
-		for (String fileName:fileNames)
-		{
-			File inputFile = new File(txtDir, fileName);
-			if (!inputFile.exists()) {
-				logger.severe(inputFile.getAbsolutePath()+" does not exist");
-				continue;
-			}
-			
-			File outputFile = new File(parseDir, fileName);
-			
-			outputFile.getParentFile().mkdirs();
-			
-			System.out.println("Parsing: "+fileName);
-			Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8");
-			Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8");
-			
-		    try{
-		        SentenceWriter sWriter = parser.parse(reader, writer);
-		        sWriter.join();
-		    } catch (Exception ex) {
-		    	ex.printStackTrace();
-		    } finally {
-		        reader.close();
-		        writer.close();
-		    }
-		}
+        try {
+            cmdParser.parseArgument(args);
+        } catch (CmdLineException e) {
+            System.err.println("invalid options:"+e);
+            cmdParser.printUsage(System.err);
+            System.exit(0);
+        }
+        if (parser.help){
+            cmdParser.printUsage(System.err);
+            System.exit(0);
+        }
 
-		parser.close();
+        Properties props = new Properties();
+        Reader in = new InputStreamReader(new FileInputStream(parser.propFile), "UTF-8");
+        props.load(in);
+        props = PropertyUtil.resolveEnvironmentVariables(props);
+        in.close();
+        props = PropertyUtil.filterProperties(props, "parser.");
+
+        if (parser.treeDir!=null) props.setProperty("tbdir", parser.treeDir);
+        if (parser.txtDir!=null) props.setProperty("tbtxtdir", parser.txtDir);
+        if (parser.inFileList!=null) props.setProperty("filelist", parser.inFileList);
+        if (parser.outDir!=null) props.setProperty("parsedir", parser.outDir);
+        if (parser.grammar!=null) props.setProperty("grammar",parser.grammar);
         
-	    System.exit(0);
-	}
+        parser.initialize(props);
+        
+        String txtDir = props.getProperty("tbtxtdir");
+        String parseDir = props.getProperty("parsedir");
+        
+        List<String> fileNames = null;
+        
+        if (props.getProperty("tbdir")!=null)
+        {
+            String fileList = props.getProperty("filelist");
+            
+            if (fileList != null)
+                fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
+            
+            Map<String, TBTree[]> treeBank = fileList==null?
+                    TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
+                    TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
+            TBUtil.extractText(txtDir, treeBank);
+        }
+        
+        if (fileNames==null)
+            fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
+        
+        for (String fileName:fileNames)
+        {
+            File inputFile = new File(txtDir, fileName);
+            if (!inputFile.exists()) {
+                logger.severe(inputFile.getAbsolutePath()+" does not exist");
+                continue;
+            }
+            
+            File outputFile = new File(parseDir, fileName);
+            
+            outputFile.getParentFile().mkdirs();
+            
+            System.out.println("Parsing: "+fileName);
+            Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8");
+            Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8");
+            
+            try{
+                SentenceWriter sWriter = parser.parse(reader, writer);
+                sWriter.join();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            } finally {
+                reader.close();
+                writer.close();
+            }
+        }
+
+        parser.close();
+        
+        System.exit(0);
+    }
 }

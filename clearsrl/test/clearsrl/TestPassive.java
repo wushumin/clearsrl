@@ -28,39 +28,39 @@ import java.util.TreeMap;
 import clearsrl.SRLModel.Feature;
 
 public class TestPassive {
-	static final float THRESHOLD=0.8f;
-	
-	public static void main(String[] args) throws Exception
-	{	
-		Properties props = new Properties();
-		FileInputStream in = new FileInputStream(args[0]);
-		props.load(in);
-		in.close();
-		
-		LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
+    static final float THRESHOLD=0.8f;
+    
+    public static void main(String[] args) throws Exception
+    {   
+        Properties props = new Properties();
+        FileInputStream in = new FileInputStream(args[0]);
+        props.load(in);
+        in.close();
+        
+        LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
         if (!langUtil.init(props))
             System.exit(-1);
-		
-		
-		ArrayList<Feature> features = new ArrayList<Feature>();
-		StringTokenizer tokenizer = new StringTokenizer(props.getProperty("feature"),",");
-		while (tokenizer.hasMoreTokens())
-		{
-			try {
-				features.add(Feature.valueOf(tokenizer.nextToken().trim()));
-			} catch (IllegalArgumentException e) {
-				System.err.println(e);
-			}
-		}
-		System.out.println(EnumSet.copyOf(features));
-		
-		TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
-		
-		String dataFormat = props.getProperty("data.format", "default");
-		
-		if (!dataFormat.equals("conll"))
-		{
-		    String trainRegex = props.getProperty("train.regex");
+        
+        
+        ArrayList<Feature> features = new ArrayList<Feature>();
+        StringTokenizer tokenizer = new StringTokenizer(props.getProperty("feature"),",");
+        while (tokenizer.hasMoreTokens())
+        {
+            try {
+                features.add(Feature.valueOf(tokenizer.nextToken().trim()));
+            } catch (IllegalArgumentException e) {
+                System.err.println(e);
+            }
+        }
+        System.out.println(EnumSet.copyOf(features));
+        
+        TBHeadRules headrules = new TBHeadRules(props.getProperty("headrules"));
+        
+        String dataFormat = props.getProperty("data.format", "default");
+        
+        if (!dataFormat.equals("conll"))
+        {
+            String trainRegex = props.getProperty("train.regex");
             //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), trainRegex);
             Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = 
                 PBUtil.readPBDir(props.getProperty("pbdir"), 
@@ -89,7 +89,7 @@ public class TestPassive {
             }
             for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
             {
-            	SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
+                SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
                 TBTree[] trees = entry.getValue(); 
                 for (int i=0; i<trees.length; ++i)
                 {
@@ -107,24 +107,24 @@ public class TestPassive {
                     }
                 }
             }
-		}
-		else
-		{		
-    		ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
-    		
-    		for (CoNLLSentence sentence:training)
-    		{
-    			TBUtil.linkHeads(sentence.parse, headrules);
-    			for (SRInstance instance:sentence.srls)
-    			{
-    				if (instance.getPredicateNode().getPOS().matches("V.*"))
-    				{
-    					System.out.println(langUtil.getPassive(instance.getPredicateNode())+": "+" "+instance);
-    					System.out.println("   "+instance.tree.toString()+"\n");
-    				}
-    			}
-    		}
-		}
-	}
+        }
+        else
+        {       
+            ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("train.input")), true);
+            
+            for (CoNLLSentence sentence:training)
+            {
+                TBUtil.linkHeads(sentence.parse, headrules);
+                for (SRInstance instance:sentence.srls)
+                {
+                    if (instance.getPredicateNode().getPOS().matches("V.*"))
+                    {
+                        System.out.println(langUtil.getPassive(instance.getPredicateNode())+": "+" "+instance);
+                        System.out.println("   "+instance.tree.toString()+"\n");
+                    }
+                }
+            }
+        }
+    }
 
 }

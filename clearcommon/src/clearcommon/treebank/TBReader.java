@@ -11,9 +11,9 @@ import java.util.logging.Logger;
 import clearcommon.propbank.PBFileReader;
 
 public class TBReader {
-	
-	private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
-	
+    
+    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
+    
     String               dir;
     boolean              cached;
     ThreadedTBFileReader reader;
@@ -29,12 +29,12 @@ public class TBReader {
     
     public TBReader(String dir, boolean cached)
     {
-    	File dirFile = new File(dir);
-    	if (dirFile.isFile())
-    		this.dir = dirFile.getAbsoluteFile().getParentFile().getAbsolutePath();
-    	else
-    		this.dir = dir;
-    	
+        File dirFile = new File(dir);
+        if (dirFile.isFile())
+            this.dir = dirFile.getAbsoluteFile().getParentFile().getAbsolutePath();
+        else
+            this.dir = dir;
+        
         this.cached = cached;
         reader = null;
         if (cached) treeMap = new TreeMap<String, TBTree[]>();

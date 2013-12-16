@@ -106,9 +106,9 @@ public class TwoStageClassifier extends Classifier implements Serializable {
     @Override
     public Classifier getNewInstance() {
         // TODO Auto-generated method stub
-    	Classifier classifier = new TwoStageClassifier();
-    	classifier.initialize(labelMap, prop);
-    	return classifier;
+        Classifier classifier = new TwoStageClassifier();
+        classifier.initialize(labelMap, prop);
+        return classifier;
     }
     */
 }

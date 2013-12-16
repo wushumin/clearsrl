@@ -59,9 +59,9 @@ package clearcommon.treebank;
  * Code:
  * TBReader tbank = new TBReader("wsj_0001.mrg");
  * TBTree tree;
- *		
+ *      
  * while ((tree = tbank.nextTree()) != null)
- *	System.out.println(tree.getWords());
+ *  System.out.println(tree.getWords());
  * 
  * Output:
  * Pierre Vinken , 61 years old , will join the board as a nonexecutive director Nov. 29 .
@@ -73,38 +73,38 @@ package clearcommon.treebank;
  */
 public abstract class TBFileReader
 {
-	boolean       closed;
-	String        fileName;
-	
-	/**
-	 * Initializes the Treebank reader.
-	 * @param filename name of the Treebank file
-	 * @throws FileNotFoundException 
-	 */
-	TBFileReader(String fileName)
-	{
-		this.fileName = fileName;
-	    closed = false;
-	}
-	
-	/**
-	 * Returns the next tree in the Treebank.
-	 * If there is none, returns null.
-	 * @throws ParseException 
-	 */
-	public abstract TBTree nextTree() throws ParseException;
-	
-	/**
-	 * Returns the indexed tree in the Treebank.
-	 * If there is none, returns null. Must be called in order.
-	 * @throws ParseException 
-	 */
+    boolean       closed;
+    String        fileName;
+    
+    /**
+     * Initializes the Treebank reader.
+     * @param filename name of the Treebank file
+     * @throws FileNotFoundException 
+     */
+    TBFileReader(String fileName)
+    {
+        this.fileName = fileName;
+        closed = false;
+    }
+    
+    /**
+     * Returns the next tree in the Treebank.
+     * If there is none, returns null.
+     * @throws ParseException 
+     */
+    public abstract TBTree nextTree() throws ParseException;
+    
+    /**
+     * Returns the indexed tree in the Treebank.
+     * If there is none, returns null. Must be called in order.
+     * @throws ParseException 
+     */
     public abstract TBTree getTree(int index) throws ParseException;
-	
-	public abstract void close();
-	
-	public boolean isOpen()
-	{
-		return !closed;
-	}	
+    
+    public abstract void close();
+    
+    public boolean isOpen()
+    {
+        return !closed;
+    }   
 }

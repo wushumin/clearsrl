@@ -39,173 +39,173 @@ import java.util.Scanner;
  */
 public class LinearDecoder
 {
-	/** Weight vectors for all labels in sparse-vector format. */
-	private SparseVector[] a_weight;
-	
-	/**
-	 * Initializes weight vectors from <code>modelFile</code>.
-	 * @param modelFile name of the file containing weight-vectors
-	 * @param numLabels total number of labels
-	 */
-	public LinearDecoder(String modelFile, int numLabels)
-	{
-		a_weight = getWeights(modelFile, numLabels);
-	}
+    /** Weight vectors for all labels in sparse-vector format. */
+    private SparseVector[] a_weight;
+    
+    /**
+     * Initializes weight vectors from <code>modelFile</code>.
+     * @param modelFile name of the file containing weight-vectors
+     * @param numLabels total number of labels
+     */
+    public LinearDecoder(String modelFile, int numLabels)
+    {
+        a_weight = getWeights(modelFile, numLabels);
+    }
 
-	/**
-	 * Returns weight vectors for all labels.
-	 * <code>modelFile</code> consists of one weight vector per line.
-	 * @param modelFile name of the file containing weight vectors
-	 * @param numLabels total number of labels
-	 */
-	public SparseVector[] getWeights(String modelFile, int numLabels)
-	{
-		System.out.print("Intiializing weights: ");
-		SparseVector[] sWeight = new SparseVector[numLabels];
+    /**
+     * Returns weight vectors for all labels.
+     * <code>modelFile</code> consists of one weight vector per line.
+     * @param modelFile name of the file containing weight vectors
+     * @param numLabels total number of labels
+     */
+    public SparseVector[] getWeights(String modelFile, int numLabels)
+    {
+        System.out.print("Intiializing weights: ");
+        SparseVector[] sWeight = new SparseVector[numLabels];
 
-		try
-		{
-			BufferedReader fin = new BufferedReader(new FileReader(modelFile));
-		//	BufferedReader fin = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(modelFile))));
-			String line;   int i;
-			
-			for (i=0; (line = fin.readLine()) != null; i++)
-			{
-				String[] vector = line.split(SuperTrainer.COL_DELIM);
-				int       label = Integer.parseInt(vector[0]);
-				int   [] aIndex = new int   [vector.length-1];
-				double[] aValue = new double[vector.length-1];
-				
-				for (int j=1; j<vector.length; j++)
-				{
-					String[] str = vector[j].split(SuperTrainer.FTR_DELIM);
-					aIndex[j-1]  = Integer.parseInt   (str[0]);
-					aValue[j-1]  = Double .parseDouble(str[1]);
-				}
-				
-				sWeight[label] = new SparseVector(aIndex, aValue);
-				if (i%10 == 0)	System.out.print("\rInitializing weights: "+i+"+");
-			}	System.out.println("\rInitializing weights: "+i+" ");
-		}
-		catch (IOException e) {e.printStackTrace();}
-		
-		return sWeight;
-	}
-	
-	/**
-	 * Returns priors for all labels.
-	 * <code>priorFile</code> consists of one prior per line.
-	 * @param priorFile name of the file containing priors
-	 * @param numLabels total number of labels
-	 * @throws FileNotFoundException 
-	 */
-	public double[] getPriors(String priorFile, int numLabels) throws FileNotFoundException
-	{
-		Scanner  scan   = new Scanner(new BufferedReader(new FileReader(priorFile)));
-		double[] priors = new double[numLabels];
-		
-		while (scan.hasNextLine())
-		{
-			String[]  ls = scan.nextLine().split(SuperTrainer.COL_DELIM);
-			int    label = Integer.parseInt  (ls[0]);
-			double prior = Double.parseDouble(ls[1]);
-			
-			priors[label] = prior;
-		}
-		
-		return priors;
-	}
-	
-	/**
-	 * Returns a predicated label and its score for a feature vector <code>x</code>. 
-	 * @param x feature vector
-	 * @param min minimum score (<= 0) to be in the positive zone
-	 * @return predicated label and its score for a feature vector<code>x</code>
-	 */
-	public JIntDoubleTuple get(ArrayList<Integer> x, double min)
-	{
-		JIntDoubleTuple max = new JIntDoubleTuple(-1, min);
-		
-		for (int label=0; label<a_weight.length; label++)
-		{
-			if (a_weight[label] == null)	continue;
-			double score = a_weight[label].getScore(x);
-			if (score >= max.value)	max.set(label, score);
-		}
-		
-		return max;
-	}
-	
-	public double getScore(int label, int[] x)
-	{
-		return (a_weight[label] != null) ? a_weight[label].getScore(x) : -1;
-	}
-	
-	public int predict(int[] x)
-	{
-		int label=-1;
-		double highScore=Double.NEGATIVE_INFINITY;
-		double score;
-		for (int i=0; i<a_weight.length;++i)
-			if ((score=getScore(i,x))>highScore)
-			{
-				highScore = score;
-				label = i;
-			}
-		
-		if (a_weight.length==1)
-			return label>0?0:1;
-		return label;
-	}
-	
-	public JIntDoubleTuple get(ArrayList<Integer> x, double min, double max)
-	{
-		JIntDoubleTuple best = new JIntDoubleTuple(-1, min);
-		
-		for (int label=0; label<a_weight.length; label++)
-		{
-			if (a_weight[label] == null)	continue;
-			double score = a_weight[label].getScore(x);
-			if (score > max) score = max;
-			score -= min;
-			
-			if (score >= best.value)	best.set(label, score);
-		}
-		
-		return best;
-	}
-	
-	/**
-	 * Returns a sorted list of predicated labels and their scores for a feature vector <code>x</code>.
-	 * The list is sorted in descending order with respect to the scores.
-	 * @param x feature vector
-	 * @param max maximum score
-	 * @param min minimum score (<= 0) to be in the positive zone
-	 */
-	public ArrayList<JIntDoubleTuple> getAll(ArrayList<Integer> x, double min, double max)
-	{
-		ArrayList<JIntDoubleTuple> aPrediction = new ArrayList<JIntDoubleTuple>();
-		
-		outer: for (short label=0; label<a_weight.length; label++)
-		{
-			if (a_weight[label] == null)	continue;
-			double score = a_weight[label].getScore(x);
-			if (score < min)	continue;
-			score  = (score > max) ? max : score;
-			score -= min;
-			
-			for (int i=0; i<aPrediction.size(); i++)
-			{
-				if (aPrediction.get(i).value < score)
-				{
-					aPrediction.add(i, new JIntDoubleTuple(label, score));
-					continue outer;
-				}
-			}
-			
-			aPrediction.add(new JIntDoubleTuple(label, score));
-		}
-		
-		return aPrediction;
-	}
+        try
+        {
+            BufferedReader fin = new BufferedReader(new FileReader(modelFile));
+        //  BufferedReader fin = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(modelFile))));
+            String line;   int i;
+            
+            for (i=0; (line = fin.readLine()) != null; i++)
+            {
+                String[] vector = line.split(SuperTrainer.COL_DELIM);
+                int       label = Integer.parseInt(vector[0]);
+                int   [] aIndex = new int   [vector.length-1];
+                double[] aValue = new double[vector.length-1];
+                
+                for (int j=1; j<vector.length; j++)
+                {
+                    String[] str = vector[j].split(SuperTrainer.FTR_DELIM);
+                    aIndex[j-1]  = Integer.parseInt   (str[0]);
+                    aValue[j-1]  = Double .parseDouble(str[1]);
+                }
+                
+                sWeight[label] = new SparseVector(aIndex, aValue);
+                if (i%10 == 0)  System.out.print("\rInitializing weights: "+i+"+");
+            }   System.out.println("\rInitializing weights: "+i+" ");
+        }
+        catch (IOException e) {e.printStackTrace();}
+        
+        return sWeight;
+    }
+    
+    /**
+     * Returns priors for all labels.
+     * <code>priorFile</code> consists of one prior per line.
+     * @param priorFile name of the file containing priors
+     * @param numLabels total number of labels
+     * @throws FileNotFoundException 
+     */
+    public double[] getPriors(String priorFile, int numLabels) throws FileNotFoundException
+    {
+        Scanner  scan   = new Scanner(new BufferedReader(new FileReader(priorFile)));
+        double[] priors = new double[numLabels];
+        
+        while (scan.hasNextLine())
+        {
+            String[]  ls = scan.nextLine().split(SuperTrainer.COL_DELIM);
+            int    label = Integer.parseInt  (ls[0]);
+            double prior = Double.parseDouble(ls[1]);
+            
+            priors[label] = prior;
+        }
+        
+        return priors;
+    }
+    
+    /**
+     * Returns a predicated label and its score for a feature vector <code>x</code>. 
+     * @param x feature vector
+     * @param min minimum score (<= 0) to be in the positive zone
+     * @return predicated label and its score for a feature vector<code>x</code>
+     */
+    public JIntDoubleTuple get(ArrayList<Integer> x, double min)
+    {
+        JIntDoubleTuple max = new JIntDoubleTuple(-1, min);
+        
+        for (int label=0; label<a_weight.length; label++)
+        {
+            if (a_weight[label] == null)    continue;
+            double score = a_weight[label].getScore(x);
+            if (score >= max.value) max.set(label, score);
+        }
+        
+        return max;
+    }
+    
+    public double getScore(int label, int[] x)
+    {
+        return (a_weight[label] != null) ? a_weight[label].getScore(x) : -1;
+    }
+    
+    public int predict(int[] x)
+    {
+        int label=-1;
+        double highScore=Double.NEGATIVE_INFINITY;
+        double score;
+        for (int i=0; i<a_weight.length;++i)
+            if ((score=getScore(i,x))>highScore)
+            {
+                highScore = score;
+                label = i;
+            }
+        
+        if (a_weight.length==1)
+            return label>0?0:1;
+        return label;
+    }
+    
+    public JIntDoubleTuple get(ArrayList<Integer> x, double min, double max)
+    {
+        JIntDoubleTuple best = new JIntDoubleTuple(-1, min);
+        
+        for (int label=0; label<a_weight.length; label++)
+        {
+            if (a_weight[label] == null)    continue;
+            double score = a_weight[label].getScore(x);
+            if (score > max) score = max;
+            score -= min;
+            
+            if (score >= best.value)    best.set(label, score);
+        }
+        
+        return best;
+    }
+    
+    /**
+     * Returns a sorted list of predicated labels and their scores for a feature vector <code>x</code>.
+     * The list is sorted in descending order with respect to the scores.
+     * @param x feature vector
+     * @param max maximum score
+     * @param min minimum score (<= 0) to be in the positive zone
+     */
+    public ArrayList<JIntDoubleTuple> getAll(ArrayList<Integer> x, double min, double max)
+    {
+        ArrayList<JIntDoubleTuple> aPrediction = new ArrayList<JIntDoubleTuple>();
+        
+        outer: for (short label=0; label<a_weight.length; label++)
+        {
+            if (a_weight[label] == null)    continue;
+            double score = a_weight[label].getScore(x);
+            if (score < min)    continue;
+            score  = (score > max) ? max : score;
+            score -= min;
+            
+            for (int i=0; i<aPrediction.size(); i++)
+            {
+                if (aPrediction.get(i).value < score)
+                {
+                    aPrediction.add(i, new JIntDoubleTuple(label, score));
+                    continue outer;
+                }
+            }
+            
+            aPrediction.add(new JIntDoubleTuple(label, score));
+        }
+        
+        return aPrediction;
+    }
 }

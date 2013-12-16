@@ -41,11 +41,11 @@ import java.util.TreeSet;
 public class FeatureSet<T extends Enum<T>> implements Serializable {
     
     /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	
-	Set<EnumSet<T>>                                    features;
+     * 
+     */
+    private static final long serialVersionUID = 1L;
+    
+    Set<EnumSet<T>>                                    features;
     EnumSet<T>                                         featuresFlat;
     Map<EnumSet<T>, TObjectIntMap<String>>             featureStrMap;
     
@@ -102,7 +102,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }
     
     public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input) {
-    	return getBigramSet(input, false);
+        return getBigramSet(input, false);
     }
     
     /**
@@ -112,26 +112,26 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
      * @return
      */
     public static <T extends Enum<T>> Set<EnumSet<T>> getBigramSet(Set<EnumSet<T>> input, boolean allPairing) {
-    	Set<EnumSet<T>> output = new HashSet<EnumSet<T>>(input);
-    	if (allPairing) {
-    		List<EnumSet<T>> enumList = new ArrayList<EnumSet<T>>(input);
-    		for (int i=0; i<enumList.size()-1; ++i)
-	        	for (int j=i+1; j<enumList.size(); ++j) {
-	        		List<T> featureList = new ArrayList<T>(enumList.get(i));
-	        		featureList.addAll(enumList.get(j));
-	        		output.add(EnumSet.copyOf(featureList));
-	        	}
-    	} else {
-	    	List<T> featureList = new ArrayList<T>();
-	        for (EnumSet<T> feature:input)
-	        	featureList.addAll(feature);
-	        
-	        for (int i=0; i<featureList.size()-1; ++i)
-	        	for (int j=i+1; j<featureList.size(); ++j)
-	        		output.add(EnumSet.of(featureList.get(i), featureList.get(j)));
-    	}
+        Set<EnumSet<T>> output = new HashSet<EnumSet<T>>(input);
+        if (allPairing) {
+            List<EnumSet<T>> enumList = new ArrayList<EnumSet<T>>(input);
+            for (int i=0; i<enumList.size()-1; ++i)
+                for (int j=i+1; j<enumList.size(); ++j) {
+                    List<T> featureList = new ArrayList<T>(enumList.get(i));
+                    featureList.addAll(enumList.get(j));
+                    output.add(EnumSet.copyOf(featureList));
+                }
+        } else {
+            List<T> featureList = new ArrayList<T>();
+            for (EnumSet<T> feature:input)
+                featureList.addAll(feature);
+            
+            for (int i=0; i<featureList.size()-1; ++i)
+                for (int j=i+1; j<featureList.size(); ++j)
+                    output.add(EnumSet.of(featureList.get(i), featureList.get(j)));
+        }
         
-    	return output;
+        return output;
     }
     
     /**
@@ -175,12 +175,12 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
      * @return
      */
     public int[] addToFeatureVector(Map<EnumSet<T>,Collection<String>> featureValueMap, int[] vec) {
-    	TIntSet featureSet = new TIntHashSet();
-    	if (vec!=null)
-    		for (int val:vec)
-    			featureSet.add(val);
-    	
-    	for(Map.Entry<EnumSet<T>,Collection<String>> entry:featureValueMap.entrySet()) {
+        TIntSet featureSet = new TIntHashSet();
+        if (vec!=null)
+            for (int val:vec)
+                featureSet.add(val);
+        
+        for(Map.Entry<EnumSet<T>,Collection<String>> entry:featureValueMap.entrySet()) {
             TObjectIntMap<String> fMap = featureStrMap.get(entry.getKey());
             // unused feature that was extracted
             if (fMap==null) continue;
@@ -206,11 +206,11 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }
     
     public int[] getFeatureVector(EnumMap<T,Collection<String>> sampleFlat) {
-    	return getFeatureVector(convertFlatSample(sampleFlat));
+        return getFeatureVector(convertFlatSample(sampleFlat));
     }
     
     public void addToDictionary(EnumSet<T> type, Collection<String> values) {
-    	addToDictionary(type, values, 1f);
+        addToDictionary(type, values, 1f);
     }
     
     /**
@@ -225,17 +225,17 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         TObjectFloatMap<String> fMap = featureCountMap.get(type);
         if (fMap==null) return;
         for (String fVal:values)
-        	fMap.adjustOrPutValue(fVal, weight, weight);
+            fMap.adjustOrPutValue(fVal, weight, weight);
             //fMap.put(fVal, fMap.get(fVal)+weight); 
     }
     
     public void addToDictionary(EnumMap<T,Collection<String>> sampleFlat) {
-    	addToDictionary(sampleFlat, 1f);
+        addToDictionary(sampleFlat, 1f);
     }
     
     public void addToDictionary(EnumMap<T,Collection<String>> sampleFlat, float weight) {
-    	for (Map.Entry<EnumSet<T>,Collection<String>> entry:convertFlatSample(sampleFlat).entrySet())
-    		addToDictionary(entry.getKey(),entry.getValue(),weight);
+        for (Map.Entry<EnumSet<T>,Collection<String>> entry:convertFlatSample(sampleFlat).entrySet())
+            addToDictionary(entry.getKey(),entry.getValue(),weight);
     }
     
     /**
@@ -243,43 +243,43 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
      * @param cutoff
      */
     public void rebuildMap(float cutoff) {
-    	rebuildMapFast(cutoff);
+        rebuildMapFast(cutoff);
         dictionaryFinalized = true;
         featureCountMap.clear();
     }
     
     void rebuildMapFast(float cutoff) {
-    	int dimension=0;
+        int dimension=0;
         for (EnumSet<T> feature:features) {
-        	TObjectIntMap<String> indexMap = new TObjectIntHashMap<String>();
-        	featureStrMap.put(feature, indexMap);
-        	
-        	for (TObjectFloatIterator<String> iter = featureCountMap.get(feature).iterator();iter.hasNext();) {
-        		iter.advance();
-        		if (iter.value()>=cutoff)
-        			indexMap.put(iter.key(), ++dimension);
-        	}
+            TObjectIntMap<String> indexMap = new TObjectIntHashMap<String>();
+            featureStrMap.put(feature, indexMap);
+            
+            for (TObjectFloatIterator<String> iter = featureCountMap.get(feature).iterator();iter.hasNext();) {
+                iter.advance();
+                if (iter.value()>=cutoff)
+                    indexMap.put(iter.key(), ++dimension);
+            }
         }
     }
     
     class FeatureValue implements Comparable<FeatureValue>{
-    	EnumSet<T> type;
-    	String value;
-    	float frequency;
-    	
-    	public FeatureValue(EnumSet<T> type, String value, float frequency) {
-    		this.type = type;
-    		this.value = value;
-    		this.frequency = frequency;
-    	}
-    	
-		@Override
-		public int compareTo(FeatureValue rhs) {
-			if (frequency!=rhs.frequency)
-				return frequency>rhs.frequency?-1:1;
-			return 0;
-		}
-    	
+        EnumSet<T> type;
+        String value;
+        float frequency;
+        
+        public FeatureValue(EnumSet<T> type, String value, float frequency) {
+            this.type = type;
+            this.value = value;
+            this.frequency = frequency;
+        }
+        
+        @Override
+        public int compareTo(FeatureValue rhs) {
+            if (frequency!=rhs.frequency)
+                return frequency>rhs.frequency?-1:1;
+            return 0;
+        }
+        
     }
     
     // Sort the feature by frequency so that the generated spare vector will
@@ -287,23 +287,23 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     // but probably won't speed up prediction as it's bounded by feature 
     // extraction and dictionary lookup
     void rebuildMapOptimized(float cutoff) {
-    	
-    	List<FeatureValue> featVals = new ArrayList<FeatureValue>();
+        
+        List<FeatureValue> featVals = new ArrayList<FeatureValue>();
         for (EnumSet<T> feature:features) {
-        	TObjectIntMap<String> indexMap = new TObjectIntHashMap<String>();
-        	featureStrMap.put(feature, indexMap);
-        	
-        	for (TObjectFloatIterator<String> iter = featureCountMap.get(feature).iterator();iter.hasNext();) {
-        		iter.advance();
-        		if (iter.value()>=cutoff)
-        			featVals.add(new FeatureValue(feature, iter.key(), iter.value()));
-        	}
+            TObjectIntMap<String> indexMap = new TObjectIntHashMap<String>();
+            featureStrMap.put(feature, indexMap);
+            
+            for (TObjectFloatIterator<String> iter = featureCountMap.get(feature).iterator();iter.hasNext();) {
+                iter.advance();
+                if (iter.value()>=cutoff)
+                    featVals.add(new FeatureValue(feature, iter.key(), iter.value()));
+            }
         }
         Collections.sort(featVals);
         
         int dimension=0;
         for (FeatureValue featVal:featVals)
-        	featureStrMap.get(featVal.type).put(featVal.value, ++dimension);
+            featureStrMap.get(featVal.type).put(featVal.value, ++dimension);
     }
     
     public static int buildMapIndex(TObjectIntMap<String> mapObj, int startIdx) {
@@ -333,9 +333,9 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }*/
     
     public static void trimMap(TObjectIntMap<String> featureMap, int threshold) {
-    	for (Object key:featureMap.keys())
-    		if (featureMap.get(key)<threshold)
-    			featureMap.remove(key);
+        for (Object key:featureMap.keys())
+            if (featureMap.get(key)<threshold)
+                featureMap.remove(key);
     }
     
     public String toString() {
@@ -369,10 +369,10 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     /*
     public void addFeatures(EnumSet<T> key, TObjectIntHashMap<String> value, boolean isNoArg)
     {
-    	if (isNoArg)
-    		noArgFeatureStrMap.put(key, value);
-    	else
-    		featureStrMap.put(key, value);
+        if (isNoArg)
+            noArgFeatureStrMap.put(key, value);
+        else
+            featureStrMap.put(key, value);
     }*/
     
     public Map<EnumSet<T>, TObjectIntMap<String>> getFeatureStrMap() {

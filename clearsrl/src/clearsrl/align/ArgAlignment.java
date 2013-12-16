@@ -7,7 +7,7 @@ import clearcommon.treebank.TBNode;
 
 public class ArgAlignment {
 
-	PBInstance srcInstance;
+    PBInstance srcInstance;
     int        srcArgIdx;
     TIntSet    dstArgList;
 
@@ -18,7 +18,7 @@ public class ArgAlignment {
     
     public ArgAlignment(PBInstance srcInstance, int srcArgIdx, TIntSet dstArgList, float[] srcTerminalWeights)
     {
-    	this.srcInstance = srcInstance;
+        this.srcInstance = srcInstance;
         this.srcArgIdx   = srcArgIdx;
         this.dstArgList  = dstArgList;
         this.factor      = 1.0f;
@@ -27,12 +27,12 @@ public class ArgAlignment {
         
         weight=0.0f;
         for (TBNode node:nodes)
-        	weight += srcTerminalWeights[node.getTerminalIndex()];
+            weight += srcTerminalWeights[node.getTerminalIndex()];
     }
     
     public PBArg getSrcArg()
     {
-    	return srcInstance.getArgs()[srcArgIdx];
+        return srcInstance.getArgs()[srcArgIdx];
     }
     
     public float getFactoredWeight()

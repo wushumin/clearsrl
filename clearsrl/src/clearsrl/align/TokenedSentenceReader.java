@@ -39,14 +39,14 @@ public class TokenedSentenceReader extends SentenceReader {
     }
 
     @SuppressWarnings("resource")
-	@Override
+    @Override
     public void initialize() throws FileNotFoundException, InstantiationException, IllegalAccessException, ClassNotFoundException {
         close();
 
         if (treeBank==null)
             treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("tb.regex"));
         if (propBank==null) {
-			PBTokenizer tokenzier = props.getProperty("pb.tokenizer")==null?(props.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("pb.tokenizer")).newInstance();
+            PBTokenizer tokenzier = props.getProperty("pb.tokenizer")==null?(props.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("pb.tokenizer")).newInstance();
             propBank = PBUtil.readPBDir(props.getProperty("pbdir"), props.getProperty("pb.regex"), new TBReader(treeBank), tokenzier);
         }
         tokenScanner = new Scanner(new BufferedReader(new FileReader(props.getProperty("token_idx")))).useDelimiter("[\n\r]");

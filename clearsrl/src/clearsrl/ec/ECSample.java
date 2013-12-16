@@ -7,7 +7,7 @@ import java.util.List;
 import clearsrl.ec.ECCommon.Feature;
 
 public class ECSample {
-	public ECSample(EnumMap<Feature,Collection<String>> features, String label) {
+    public ECSample(EnumMap<Feature,Collection<String>> features, String label) {
         this.features = features;
         this.label = label;
         

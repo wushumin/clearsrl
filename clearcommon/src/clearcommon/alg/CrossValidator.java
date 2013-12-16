@@ -39,18 +39,18 @@ public class CrossValidator {
         
         @Override
         public void run() {
-        	System.out.printf("*********** Training fold %d ***************\n",f+1);
-        	
+            System.out.printf("*********** Training fold %d ***************\n",f+1);
+            
             cf.train(Xtrain, ytrain);
             
             if (f<0) return;
             
             for (int i=0; i<ytest.length; ++i)
                 if (permSet.contains(seed[i])) {
-                	if (prob==null)
-                		ytest[i] = cf.predict(X[i]);
-                	else
-                		ytest[i] = cf.predictProb(X[i], prob[i]);
+                    if (prob==null)
+                        ytest[i] = cf.predict(X[i]);
+                    else
+                        ytest[i] = cf.predictProb(X[i], prob[i]);
                 }
         }
     }
@@ -141,19 +141,19 @@ public class CrossValidator {
             List<double[]> probTrain=null;
             
             if (prob!=null)
-            	probTrain = new ArrayList<double[]>();
+                probTrain = new ArrayList<double[]>();
             
             for (int i=0; i<y.length; ++i)
                 if (!permSet.contains(seed[i])) {
                     Xtrain.add(X[i]);
                     ytrain.add(y[i]);
                     if (prob!=null)
-                    	probTrain.add(prob[i]);
+                        probTrain.add(prob[i]);
                 }
             
             Classifier cf = classifier.getNewInstance();
             TrainJob job = new TrainJob(f, cf, Xtrain.toArray(new int[Xtrain.size()][]), 
-            		ytrain.toArray() , prob==null?null:probTrain.toArray(new double[probTrain.size()][]), X, ytest, permSet, seed);
+                    ytrain.toArray() , prob==null?null:probTrain.toArray(new double[probTrain.size()][]), X, ytest, permSet, seed);
             
             if (executor!=null) executor.submit(job);
             else job.run();

@@ -20,14 +20,14 @@ import java.util.TreeMap;
 import clearcommon.util.PropertyUtil;
 
 public class RunTrainer {
-	
-	static Aligner gatherSentences(Properties props, String prefix) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
-	{	
-	    Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+    
+    static Aligner gatherSentences(Properties props, String prefix) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
+    {   
+        Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
         Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 
-	    
-		String htmlOutfile = props.getProperty(prefix+"align.output.html", null);
+        
+        String htmlOutfile = props.getProperty(prefix+"align.output.html", null);
         
         if (htmlOutfile==null)
             htmlOutfile = "/dev/null";
@@ -40,7 +40,7 @@ public class RunTrainer {
         }
         
         PrintStream htmlStream = new PrintStream(htmlOutfile);
-		
+        
         SentencePairReader sentencePairReader = prefix.startsWith("LDC")
             ? new LDCSentencePairReader(PropertyUtil.filterProperties(props, prefix+"align.")) 
             : new DefaultSentencePairReader(PropertyUtil.filterProperties(props, prefix+"align."));
@@ -50,11 +50,11 @@ public class RunTrainer {
         sentencePairReader.initialize();
         Aligner.initAlignmentOutput(htmlStream);
         
-		//Aligner aligner = new Aligner(sentencePairReader);
-		int goodCnt = 0;
-		int badCnt = 0;
+        //Aligner aligner = new Aligner(sentencePairReader);
+        int goodCnt = 0;
+        int badCnt = 0;
         
-		while (true)
+        while (true)
         {
             SentencePair sentencePair = sentencePairReader.nextPair();
             if (sentencePair==null) break;
@@ -110,14 +110,14 @@ public class RunTrainer {
             
             //if (goodCnt>10000) break;
         }
-		
-		sentencePairReader.close();
+        
+        sentencePairReader.close();
         Aligner.finalizeAlignmentOutput(htmlStream);
         if (alignmentStream!=System.out) alignmentStream.close();
         
-		System.out.println(goodCnt+" "+badCnt);
+        System.out.println(goodCnt+" "+badCnt);
 
-		
+        
         Set<String> srcLightVerbs = new HashSet<String>();
         {
                 StringTokenizer tok = new StringTokenizer(props.getProperty("aligner.srcLightVerbs"),",");
@@ -174,13 +174,13 @@ public class RunTrainer {
 
 //        aligner.collectStats();
         
-		return aligner;
-	}
-	
-	
-	public static void main(String[] args) throws Exception
-	{
-	    Properties props = new Properties();
+        return aligner;
+    }
+    
+    
+    public static void main(String[] args) throws Exception
+    {
+        Properties props = new Properties();
         {
             FileInputStream in = new FileInputStream(args[0]);
             InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
@@ -237,5 +237,5 @@ public class RunTrainer {
         System.out.print("intersection: "); sectScorer.printStats(System.out);
         System.out.print("union: "); unionScorer.printStats(System.out);
         */
-	}
+    }
 }

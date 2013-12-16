@@ -30,8 +30,8 @@ import clearcommon.util.PropertyUtil;
 import clearsrl.RunSRL;
 
 public class RunAligner {
-	
-	private static Logger logger = Logger.getLogger("clearsrl");
+    
+    private static Logger logger = Logger.getLogger("clearsrl");
 
     @Option(name="-prop",usage="properties file")
     private File propFile = null; 
@@ -66,127 +66,127 @@ public class RunAligner {
     @Option(name="-h",usage="help message")
     private boolean help = false;
     
-	public static void main(String[] args) throws Exception
-	{	
-		RunAligner options = new RunAligner();
-	    CmdLineParser parser = new CmdLineParser(options);
-	    try {
-	    	parser.parseArgument(args);
-	    } catch (CmdLineException e) {
-	    	System.err.println("invalid options:"+e);
-	    	parser.printUsage(System.err);
-	        System.exit(0);
-	    }
-	    if (options.help){
-	        parser.printUsage(System.err);
-	        System.exit(0);
-	    }
-		
-		Properties props = new Properties();
-		{
-			FileInputStream in = new FileInputStream(options.propFile);
-			InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
-			props.load(iReader);
-			iReader.close();
-			in.close();
-			props = PropertyUtil.resolveEnvironmentVariables(props);
-		}
-		
-		Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
-		Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
-		
-		props = PropertyUtil.filterProperties(props, options.filter+"align.");
-		
-		if (options.srcTreeFile != null) props.setProperty("src.tbfile", options.srcTreeFile);
-		if (options.srcPropFile != null) props.setProperty("src.pbfile", options.srcPropFile);
-		if (options.dstTreeFile != null) props.setProperty("dst.tbfile", options.dstTreeFile);
-		if (options.dstPropFile != null) props.setProperty("dst.pbfile", options.dstPropFile);
-		if (options.alignmentFile != null) props.setProperty("token_alignment", options.alignmentFile);
-		if (options.threshold > 0) props.setProperty("threshold", Double.toString(options.threshold));
-		if (options.outFile != null) props.setProperty("output.txt", options.outFile);
-		
-		logger.info(PropertyUtil.toString(props));
-		
-		SentencePairReader sentencePairReader = null;
-		
-		if (options.filter.startsWith("ldc"))
-		{
-			if (options.filter.startsWith("ldc09"))
-				sentencePairReader = new LDC09SentencePairReader(props, options.reWrite);
-			else
-				sentencePairReader = new LDCSentencePairReader(props, options.reWrite);
-		}
-		else
-		    sentencePairReader = new DefaultSentencePairReader(props, options.reWrite);
-		
-		boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
-		
-		Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
-		
-		//Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
-		//int lineIdx = linesIdx.nextInt();
-		
-		int lines = 0;
-		
-		int srcTokenCnt = 0;
-		int dstTokenCnt = 0;
-		
-		String htmlOutfile = props.getProperty("output.html", null);
-		
-		if (htmlOutfile==null)
-			htmlOutfile = "/dev/null";
+    public static void main(String[] args) throws Exception
+    {   
+        RunAligner options = new RunAligner();
+        CmdLineParser parser = new CmdLineParser(options);
+        try {
+            parser.parseArgument(args);
+        } catch (CmdLineException e) {
+            System.err.println("invalid options:"+e);
+            parser.printUsage(System.err);
+            System.exit(0);
+        }
+        if (options.help){
+            parser.printUsage(System.err);
+            System.exit(0);
+        }
+        
+        Properties props = new Properties();
+        {
+            FileInputStream in = new FileInputStream(options.propFile);
+            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
+            props.load(iReader);
+            iReader.close();
+            in.close();
+            props = PropertyUtil.resolveEnvironmentVariables(props);
+        }
+        
+        Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
+        Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
+        
+        props = PropertyUtil.filterProperties(props, options.filter+"align.");
+        
+        if (options.srcTreeFile != null) props.setProperty("src.tbfile", options.srcTreeFile);
+        if (options.srcPropFile != null) props.setProperty("src.pbfile", options.srcPropFile);
+        if (options.dstTreeFile != null) props.setProperty("dst.tbfile", options.dstTreeFile);
+        if (options.dstPropFile != null) props.setProperty("dst.pbfile", options.dstPropFile);
+        if (options.alignmentFile != null) props.setProperty("token_alignment", options.alignmentFile);
+        if (options.threshold > 0) props.setProperty("threshold", Double.toString(options.threshold));
+        if (options.outFile != null) props.setProperty("output.txt", options.outFile);
+        
+        logger.info(PropertyUtil.toString(props));
+        
+        SentencePairReader sentencePairReader = null;
+        
+        if (options.filter.startsWith("ldc"))
+        {
+            if (options.filter.startsWith("ldc09"))
+                sentencePairReader = new LDC09SentencePairReader(props, options.reWrite);
+            else
+                sentencePairReader = new LDCSentencePairReader(props, options.reWrite);
+        }
+        else
+            sentencePairReader = new DefaultSentencePairReader(props, options.reWrite);
+        
+        boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
+        
+        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
+        
+        //Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
+        //int lineIdx = linesIdx.nextInt();
+        
+        int lines = 0;
+        
+        int srcTokenCnt = 0;
+        int dstTokenCnt = 0;
+        
+        String htmlOutfile = props.getProperty("output.html", null);
+        
+        if (htmlOutfile==null)
+            htmlOutfile = "/dev/null";
 
-		PrintStream alignmentStream;
-		try {
-		    alignmentStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(props.getProperty("output.txt", null))));
-		} catch (Exception e) {
-		    alignmentStream = System.out;
-		}
-		
-		PrintStream htmlStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(htmlOutfile)));
+        PrintStream alignmentStream;
+        try {
+            alignmentStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(props.getProperty("output.txt", null))));
+        } catch (Exception e) {
+            alignmentStream = System.out;
+        }
+        
+        PrintStream htmlStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(htmlOutfile)));
 
-		sentencePairReader.initialize();
-		
-		Aligner.initAlignmentOutput(htmlStream);
-		AlignmentStat stat = new AlignmentStat();
-		
-		while (true)
-		{
-		    SentencePair sentencePair = sentencePairReader.nextPair();
-		    if (sentencePair==null) break;
+        sentencePairReader.initialize();
+        
+        Aligner.initAlignmentOutput(htmlStream);
+        AlignmentStat stat = new AlignmentStat();
+        
+        while (true)
+        {
+            SentencePair sentencePair = sentencePairReader.nextPair();
+            if (sentencePair==null) break;
 
-		    if (sentencePair.id%1000==999)
-		    	logger.info(String.format("processing line %d",sentencePair.id+1));
-		    
-		    if (options.filter.startsWith("ldc09"))
-		    {
-		    	boolean skip = true;
-		    	for (TBNode terminal:sentencePair.src.terminals)
-		    		if (terminal.getWord().equals("*pro*"))
-		    		{
-		    			skip = false;
-		    			break;
-		    		}
-		    	if (skip) continue;
-		    }
-		    
-		    srcTokenCnt += sentencePair.srcAlignment.size();
+            if (sentencePair.id%1000==999)
+                logger.info(String.format("processing line %d",sentencePair.id+1));
+            
+            if (options.filter.startsWith("ldc09"))
+            {
+                boolean skip = true;
+                for (TBNode terminal:sentencePair.src.terminals)
+                    if (terminal.getWord().equals("*pro*"))
+                    {
+                        skip = false;
+                        break;
+                    }
+                if (skip) continue;
+            }
+            
+            srcTokenCnt += sentencePair.srcAlignment.size();
             dstTokenCnt += sentencePair.dstAlignment.size();
 
-		    //System.out.println("*****************");
-		    //System.out.println(sentencePair);
-		    
-		    Alignment[] alignments = aligner.align(sentencePair);
-	       
-		    for (Alignment alignment:alignments)
-		    {
-		        alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
-			//alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toArgTokenString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+            //System.out.println("*****************");
+            //System.out.println(sentencePair);
+            
+            Alignment[] alignments = aligner.align(sentencePair);
+           
+            for (Alignment alignment:alignments)
+            {
+                alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+            //alignmentStream.printf("%d,%s;[%s,%s]\n",sentencePair.id+1, alignment.toArgTokenString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
 
-		        stat.addAlignment(alignment);
-		    }
-		    
-		    Aligner.printAlignment(htmlStream, sentencePair, alignments, true);
+                stat.addAlignment(alignment);
+            }
+            
+            Aligner.printAlignment(htmlStream, sentencePair, alignments, true);
 
             TObjectIntMap<String> tgtMap;
             for (int i=0; i<alignments.length; ++i)
@@ -239,14 +239,14 @@ public class RunAligner {
             HungarianAlgorithm.computeAssignments(costMatrix);
             */
             
-		}
-		sentencePairReader.close();
-		Aligner.finalizeAlignmentOutput(htmlStream);
-		if (alignmentStream!=System.out) alignmentStream.close();
-		
-		logger.info(String.format("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt));
-		//stat.printStats(System.out);
-		//aligner.collectStats();
-	}
+        }
+        sentencePairReader.close();
+        Aligner.finalizeAlignmentOutput(htmlStream);
+        if (alignmentStream!=System.out) alignmentStream.close();
+        
+        logger.info(String.format("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt));
+        //stat.printStats(System.out);
+        //aligner.collectStats();
+    }
 }
 
