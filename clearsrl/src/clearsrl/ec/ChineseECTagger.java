@@ -187,8 +187,8 @@ public class ChineseECTagger {
 			model.setLangUtil(langUtil);
 		}
 
-		if (model instanceof ECDepModel)
-			((ECDepModel)model).setFastPredict(!validateProps.getProperty("fastPredict","true").equals("false"));
+		//if (model instanceof ECDepModel)
+		//	((ECDepModel)model).setFullPredict(!validateProps.getProperty("fullPredict","true").equals("false"));
 		
     	ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
     	
@@ -202,6 +202,8 @@ public class ChineseECTagger {
 		
     	for (Map.Entry<String, TBTree[]> entry : parseValidate.entrySet())
 		{
+    		logger.info("Validating: "+entry.getKey());
+    		
 			TBTree[] tbTrees = tbMapValidate.get(entry.getKey());
 			TBTree[] parseTrees = entry.getValue();
 			SortedMap<Integer, List<PBInstance>> pbInstances = propValidate.get(entry.getKey());

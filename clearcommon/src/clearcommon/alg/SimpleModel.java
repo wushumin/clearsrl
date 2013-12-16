@@ -2,6 +2,7 @@ package clearcommon.alg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -49,11 +50,11 @@ public class SimpleModel<T extends Enum<T>> implements Serializable {
         return featureSet.featuresFlat;
     }
 		
-	public void addTrainingSample(EnumMap<T,List<String>> sampleFlat, String label, boolean buildDictionary) {
+	public void addTrainingSample(EnumMap<T,Collection<String>> sampleFlat, String label, boolean buildDictionary) {
 		addTrainingSample(sampleFlat, label, 1.0f, buildDictionary);
 	}
 	
-	public void addTrainingSample(EnumMap<T,List<String>> sampleFlat, String label, float weight, boolean buildDictionary) {
+	public void addTrainingSample(EnumMap<T,Collection<String>> sampleFlat, String label, float weight, boolean buildDictionary) {
 		if (buildDictionary) {
 			featureSet.addToDictionary(sampleFlat, weight);
 			labelStringMap.adjustOrPutValue(label, 1, 1);
@@ -89,11 +90,11 @@ public class SimpleModel<T extends Enum<T>> implements Serializable {
         logger.info(String.format("training accuracy: %f\n", score/trainingLabels.size()));
 	}
 	
-	public String predictLabel(EnumMap<T,List<String>> sample) {
+	public String predictLabel(EnumMap<T,Collection<String>> sample) {
 		return labelIndexMap.get(classifier.predict(featureSet.getFeatureVector(sample)));
 	}
 	
-	public int predictValues(EnumMap<T,List<String>> sample, double[] vals) {
+	public int predictValues(EnumMap<T,Collection<String>> sample, double[] vals) {
 		return classifier.predictValues(featureSet.getFeatureVector(sample), vals);
 	}
 

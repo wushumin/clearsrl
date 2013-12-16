@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -46,17 +47,6 @@ public class ECModel implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	class Sample {
-	    public Sample(EnumMap<Feature,List<String>> features, String label) {
-	        this.features = features;
-	        this.label = label;
-	        
-	        if (this.label==null) this.label = ECCommon.NOT_EC;
-	    }
-	    EnumMap<Feature,List<String>> features;
-	    String label;
-	}
-	
 	TObjectIntMap<String> labelStringMap;
 	TIntObjectMap<String> labelIndexMap;
 	
@@ -69,7 +59,7 @@ public class ECModel implements Serializable {
 	float                     notECFeatureWeight = 0.2f;
 	
 	// must be a sorted map
-	transient SortedMap<String, List<Sample[]>> trainingSamples;
+	transient SortedMap<String, List<ECTreeSample>> trainingSamples;
 	transient double[]                          labelValues;
 	transient Logger                            logger;
 
@@ -89,7 +79,7 @@ public class ECModel implements Serializable {
 		features = new FeatureSet<Feature>(featureSet);
 		features.initialize();
 		labelStringMap = new TObjectIntHashMap<String>();
-		trainingSamples = new TreeMap<String, List<Sample[]>>();
+		trainingSamples = new TreeMap<String, List<ECTreeSample>>();
 		
 		this.labelType = labelType;
 	}
@@ -102,9 +92,9 @@ public class ECModel implements Serializable {
 		return labelStringMap;
 	}
 	
-	public List<EnumMap<Feature,List<String>>> extractSampleFeature(TBTree tree, List<PBInstance> props, String[] labels, boolean buildDictionary) {
+	public List<EnumMap<Feature,Collection<String>>> extractSampleFeature(TBTree tree, List<PBInstance> props, String[] labels, boolean buildDictionary) {
 		
-		List<EnumMap<Feature,List<String>>> samples = new ArrayList<EnumMap<Feature,List<String>>>();
+		List<EnumMap<Feature,Collection<String>>> samples = new ArrayList<EnumMap<Feature,Collection<String>>>();
 
 		TBNode[] tokens = tree.getTokenNodes();
 
@@ -152,7 +142,7 @@ public class ECModel implements Serializable {
 		}
 
 		for (int i=0; i<=tokens.length; ++i) {
-			EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(Feature.class);
+			EnumMap<Feature,Collection<String>> sample = new EnumMap<Feature,Collection<String>>(Feature.class);
 			for (Feature feature:features.getFeaturesFlat()) {
 				switch (feature) {
 				case T_L_LEMMA:
@@ -445,11 +435,11 @@ public class ECModel implements Serializable {
 	
 	public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
 		String[] labels = ECCommon.getECLabels(goldTree, labelType);
-		List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, props, labels, buildDictionary);
+		List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, props, labels, buildDictionary);
 		
 		if (buildDictionary) {
 			int c=0;
-			for (EnumMap<Feature,List<String>>sample:samples) {
+			for (EnumMap<Feature,Collection<String>>sample:samples) {
 				boolean notEC = ECCommon.NOT_EC.equals(labels[c]);
 				features.addToDictionary(sample, notEC?notECFeatureWeight:1f);
 				//if (!NOT_ARG.equals(SRLUtil.getMaxLabel(labels.get(c))))
@@ -458,18 +448,18 @@ public class ECModel implements Serializable {
 				++c;
 			}
 		} else {  
-			List<Sample> sampleList = new ArrayList<Sample>();
+			List<ECSample> sampleList = new ArrayList<ECSample>();
 			
             for (int i=0; i<samples.size();++i)
                 if (labelStringMap.containsKey(labels[i]))
-                    sampleList.add(new Sample(samples.get(i), labels[i]));
+                    sampleList.add(new ECSample(samples.get(i), labels[i]));
             if (!sampleList.isEmpty()) {
-                List<Sample[]> tSamples = trainingSamples.get(parsedTree.getFilename());
+                List<ECTreeSample> tSamples = trainingSamples.get(parsedTree.getFilename());
                 if (tSamples == null) {
-                    tSamples = new ArrayList<Sample[]>();
+                    tSamples = new ArrayList<ECTreeSample>();
                     trainingSamples.put(parsedTree.getFilename(), tSamples);
                 }
-                tSamples.add(sampleList.toArray(new Sample[sampleList.size()]));
+                tSamples.add(new ECTreeSample(parsedTree, sampleList.toArray(new ECSample[sampleList.size()])));
             }
 		}
 	}
@@ -511,8 +501,9 @@ public class ECModel implements Serializable {
         TIntList seedList = new TIntArrayList();
         int lCnt = 0;
         int treeCnt = 0;
-        for (Map.Entry<String, List<Sample[]>> entry:trainingSamples.entrySet()) {
-            for (Sample[] samples:entry.getValue())
+        for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet()) {
+            for (ECTreeSample treeSample:entry.getValue()) {
+            	ECSample[] samples = treeSample.getECSamples();
                 for (int i=0; i<samples.length;++i) {
                 	if (hasSequenceFeature) {
                 		if (features.getFeaturesFlat().contains(Feature.ECN1)) {
@@ -528,11 +519,12 @@ public class ECModel implements Serializable {
                 		}
                 	}
                 	
-                	xList.add(features.getFeatureVector(features.convertFlatSample(samples[i].features)));
+                	xList.add(features.getFeatureVector(samples[i].features));
                     yList.add(labelStringMap.get(samples[i].label));
                     seedList.add(treeCnt);
                     ++lCnt;
                 }
+            }
             ++treeCnt;
         }
         X = xList.toArray(new int[xList.size()][]);
@@ -572,14 +564,14 @@ public class ECModel implements Serializable {
     }
 	
     public String[] predict(TBTree tree, List<PBInstance> props) {
-    	List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(tree, props, null, false);
+    	List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, props, null, false);
     	
     	boolean hasSequenceFeature = features.getFeaturesFlat().contains(Feature.ECP1) || features.getFeaturesFlat().contains(Feature.ECN1);
     	
     	String[] labels = new String[samples.size()+1];
         for (int i=0; i<samples.size(); ++i) {
         	if (hasSequenceFeature && i>0) samples.get(i).put(Feature.ECP1, Arrays.asList(labels[i-1]));
-        	labels[i]  = labelIndexMap.get(classifier.predict(features.getFeatureVector(features.convertFlatSample(samples.get(i)))));
+        	labels[i]  = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
         }
         labels[samples.size()] = ECCommon.NOT_EC;
         return labels;
@@ -600,9 +592,9 @@ public class ECModel implements Serializable {
         String[] goldLabels = null;
 
         List<String> labelList = new ArrayList<String>();
-        for (Map.Entry<String, List<Sample[]>> entry:trainingSamples.entrySet())
-            for (Sample[] samples:entry.getValue())
-                for (Sample sample:samples)
+        for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
+            for (ECTreeSample treeSample:entry.getValue())
+                for (ECSample sample:treeSample.getECSamples())
                 	labelList.add(sample.label);
         goldLabels = labelList.toArray(new String[labelList.size()]);
 

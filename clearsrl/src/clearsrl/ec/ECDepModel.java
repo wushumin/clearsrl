@@ -2,43 +2,30 @@ package clearsrl.ec;
 
 import clearsrl.ec.ECCommon.Feature;
 import clearsrl.ec.ECCommon.LabelType;
-import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.logging.Logger;
 
 import clearcommon.alg.Classifier;
 import clearcommon.alg.CrossValidator;
-import clearcommon.alg.FeatureSet;
 import clearcommon.alg.LinearClassifier;
-import clearcommon.alg.PairWiseClassifier;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
-import clearcommon.util.ChineseUtil;
-import clearcommon.util.ECDependent;
 
 public class ECDepModel extends ECModel implements Serializable {
 	/**
@@ -46,12 +33,14 @@ public class ECDepModel extends ECModel implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	Classifier stage2Classifier;
+	
 	transient int propCnt;
 	transient int propTotal;
 	transient int elipsisCnt;
 	transient int elipsisTotal;
 	
-	transient boolean fastPredict = true;
+	transient boolean fullPredict = false;
 	
 	public ECDepModel (Set<EnumSet<Feature>> featureSet) {
 		this(featureSet, LabelType.ALL);
@@ -63,8 +52,8 @@ public class ECDepModel extends ECModel implements Serializable {
 		elipsisCnt = elipsisTotal = 0;
 	}
 	
-	public void setFastPredict(boolean fastPredict) {
-		this.fastPredict = fastPredict;
+	public void setFullPredict(boolean fullPredict) {
+		this.fullPredict = fullPredict;
 	}
 	
 	public EnumMap<Feature,List<String>> getHeadFeatures(TBNode head, PBInstance instance) {
@@ -82,8 +71,8 @@ public class ECDepModel extends ECModel implements Serializable {
     	return builder.toString();
     }
         
-	public List<EnumMap<Feature,List<String>>> extractSampleFeature(TBTree tree, BitSet[] headMasks, List<String> labels, List<PBInstance> pList, boolean buildDictionary) {
-		List<EnumMap<Feature,List<String>>> samples = new ArrayList<EnumMap<Feature,List<String>>>();
+	public List<EnumMap<Feature,Collection<String>>> extractSampleFeature(TBTree tree, BitSet[] headMasks, List<PBInstance> pList, boolean buildDictionary) {
+		List<EnumMap<Feature,Collection<String>>> samples = new ArrayList<EnumMap<Feature,Collection<String>>>();
 
 		TBNode[] tokens = tree.getTokenNodes();
 		String[] lemmas = new String[tokens.length];
@@ -406,7 +395,7 @@ public class ECDepModel extends ECModel implements Serializable {
 		for (int h=0; h<tokens.length; ++h) {
 			PBInstance prop = props[h];
 			for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
-				EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(Feature.class);
+				EnumMap<Feature,Collection<String>> sample = new EnumMap<Feature,Collection<String>>(Feature.class);
 				sample.putAll(headSamples.get(h));
 				sample.putAll(positionSamples.get(t));
 				for (Feature feature:features.getFeaturesFlat())
@@ -511,7 +500,112 @@ public class ECDepModel extends ECModel implements Serializable {
 		return samples;
 	}
 
-
+	EnumMap<Feature,Collection<String>> extractSequenceFeatures(TBTree tree, int headIdx, int tokenIdx, String[][] labels, boolean buildDictionary) {
+		EnumMap<Feature,Collection<String>> featureMap = new EnumMap<Feature,Collection<String>>(Feature.class);
+		
+		Set<String> allLabelSet = new TreeSet<String>();
+		for (int h=0; h<labels.length; ++h)
+			for (int t=0; t<labels[h].length; ++t) {
+				if (t==tokenIdx && h==headIdx) continue;
+				if (labels[h][t]!=null && !ECCommon.NOT_EC.equals(labels[h][t]))
+					allLabelSet.add(labels[h][t]);
+			}
+		allLabelSet.add(ECCommon.NOT_EC);
+		
+		for (Feature feature:features.getFeaturesFlat()) {
+			switch (feature) {
+			case EC_LABEL:
+				featureMap.put(feature, Arrays.asList(labels[headIdx][tokenIdx]==null?ECCommon.NOT_EC:labels[headIdx][tokenIdx]));
+				break;				
+			case ECP1:
+				if (tokenIdx>0) {
+					Set<String> labelSet = new TreeSet<String>();
+					for (int h=0; h<labels.length; ++h)
+						if (labels[h][tokenIdx-1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx-1]))
+							labelSet.add(labels[h][tokenIdx-1]);
+					featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+				}
+				break;
+			case ECN1:
+				if (tokenIdx<tree.getTokenCount()) {
+					Set<String> labelSet = new TreeSet<String>();
+					for (int h=0; h<labels.length; ++h)
+						if (labels[h][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx+1]))
+							labelSet.add(labels[h][tokenIdx+1]);
+					featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+				}
+				break;
+			case ECALL:
+				if (!allLabelSet.isEmpty())
+					featureMap.put(feature, allLabelSet);
+				break;
+			case EC_TOKEN_LEFT:
+				if (tokenIdx>0) {
+					Set<String> labelSet = new TreeSet<String>();
+					for (int t=0; t<tokenIdx; ++t)
+						if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+							labelSet.add(labels[headIdx][t]);
+					if (!labelSet.isEmpty())
+						featureMap.put(feature, labelSet);
+				}
+				break;
+			case EC_TOKEN_RIGHT:
+				if (tokenIdx<tree.getTokenCount()) {
+					Set<String> labelSet = new TreeSet<String>();
+					for (int t=tokenIdx+1; t<=tree.getTokenCount(); ++t)
+						if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+							labelSet.add(labels[headIdx][t]);
+					if (!labelSet.isEmpty())
+						featureMap.put(feature, labelSet);
+				}
+				break;
+			case EC_TOKEN_ALL:
+			{
+				Set<String> labelSet = new TreeSet<String>();
+				for (int t=0; t<=tree.getTokenCount(); ++t) {
+					if (t==tokenIdx) continue;
+					if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+						labelSet.add(labels[headIdx][t]);
+				}
+				if (!labelSet.isEmpty())
+					featureMap.put(feature, labelSet);
+			}
+				break;
+			case EC_HEAD_PARENT:
+				if (buildDictionary) {
+					if (!allLabelSet.isEmpty())
+						featureMap.put(feature, allLabelSet);
+				}  else {
+					Set<String> labelSet = new TreeSet<String>();
+					TBNode headParent = tree.getNodeByTokenIndex(headIdx);
+					if (headParent!=null)
+						for (int t=0; t<=tree.getTokenCount(); ++t)
+							if (labels[headParent.getTokenIndex()][t]!=null && !ECCommon.NOT_EC.equals(labels[headParent.getTokenIndex()][t]))
+								labelSet.add(labels[headParent.getTokenIndex()][t]);
+					featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+				}
+				break;
+			case EC_HEAD_ALL:
+				if (buildDictionary) {
+					if (!allLabelSet.isEmpty())
+						featureMap.put(feature, allLabelSet);
+				} else {
+					Set<String> labelSet = new TreeSet<String>();
+					for (int h=0; h<labels.length; ++h) {
+						if (h==headIdx) continue;
+						if (labels[h][tokenIdx]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx]))
+							labelSet.add(labels[h][tokenIdx]);
+					}
+					featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		return featureMap;
+	}
+	
 	public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
 		parsedTree = parsedTree==null?goldTree:parsedTree;
 		
@@ -519,85 +613,82 @@ public class ECDepModel extends ECModel implements Serializable {
 		// TODO: test whether this is better?
 		ECCommon.addGoldCandidates(goldTree, headCandidates);
 		
-		List<String> labels = ECCommon.makeECDepLabels(goldTree, headCandidates);
-		
-		List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, headCandidates, labels, props, buildDictionary);
+		String[] labels = ECCommon.makeECDepLabels(goldTree, headCandidates);
+		List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, headCandidates, props, buildDictionary);
 		
 		if (buildDictionary) {
-			for (int i=0; i<samples.size();++i) {
-				boolean notEC = ECCommon.NOT_EC.equals(labels.get(i));
-				features.addToDictionary(samples.get(i), notEC?notECFeatureWeight:1f);
-				labelStringMap.adjustOrPutValue(labels.get(i), 1, 1);
-			}
+			int i=0;
+			for (int h=0; h<headCandidates.length; ++h)
+				for (int t=headCandidates[h].nextSetBit(0); t>=0; t=headCandidates[h].nextSetBit(t+1)) {
+					boolean notEC = ECCommon.NOT_EC.equals(labels[i]);
+					features.addToDictionary(samples.get(i), notEC?notECFeatureWeight:1f);
+					features.addToDictionary(extractSequenceFeatures(parsedTree, h, t, ECDepTreeSample.makeLabels(headCandidates, labels), true), notEC?notECFeatureWeight:1f);
+					labelStringMap.adjustOrPutValue(labels[i], 1, 1);
+					++i;
+				}
 		} else {  
-			List<Sample> sampleList = new ArrayList<Sample>();
-            for (int i=0; i<samples.size();++i)
-                if (labelStringMap.containsKey(labels.get(i)))
-                    sampleList.add(new Sample(samples.get(i), labels.get(i)));
+			List<ECSample> sampleList = new ArrayList<ECSample>();
+			
+			int i=0;
+			for (int h=0; h<headCandidates.length; ++h)
+				for (int t=headCandidates[h].nextSetBit(0); t>=0; t=headCandidates[h].nextSetBit(t+1)) {
+	                if (labelStringMap.containsKey(labels[i]))
+	                    sampleList.add(new ECSample(samples.get(i), labels[i]));
+	                else
+	                	headCandidates[h].clear(t);
+	                ++i;
+				}
             
             if (!sampleList.isEmpty()) {
-                List<Sample[]> tSamples = trainingSamples.get(parsedTree.getFilename());
+                List<ECTreeSample> tSamples = trainingSamples.get(parsedTree.getFilename());
                 if (tSamples == null) {
-                    tSamples = new ArrayList<Sample[]>();
+                    tSamples = new ArrayList<ECTreeSample>();
                     trainingSamples.put(parsedTree.getFilename(), tSamples);
                 }
-                tSamples.add(sampleList.toArray(new Sample[sampleList.size()]));
+                tSamples.add(new ECDepTreeSample(parsedTree, sampleList.toArray(new ECSample[sampleList.size()]), headCandidates));
             }
 		}
 	}
 	
-    String[] train(int folds, int threads, String[] labels) {   			
+    String[] train(Classifier classifier, int folds, int threads, String[] labels) {   			
         int[][] X = null;
         int[] y = null;
         int[] seed = null;
     	
-    	boolean hasSequenceFeature = features.getFeaturesFlat().contains(Feature.ECP1) || features.getFeaturesFlat().contains(Feature.ECN1);
         List<int[]> xList = new ArrayList<int[]>();
         TIntList yList = new TIntArrayList();
         TIntList seedList = new TIntArrayList();
         int lCnt = 0;
         int treeCnt = 0;
-        for (Map.Entry<String, List<Sample[]>> entry:trainingSamples.entrySet()) {
-            for (Sample[] samples:entry.getValue())
-                for (int i=0; i<samples.length;++i) {
-                	if (hasSequenceFeature) {
-                		if (features.getFeaturesFlat().contains(Feature.ECN1)) {
-                			if (i+1<samples.length) {
-                				String label = labels==null?samples[i+1].label:labels[lCnt+1];
-                        		samples[i].features.put(Feature.ECN1, Arrays.asList(label));
-                			}
-                		} else if (features.getFeaturesFlat().contains(Feature.ECP1)) {
-                			if (i>0) {	
-                        		String label = labels==null?samples[i-1].label:labels[lCnt-1];
-                        		samples[i].features.put(Feature.ECP1, Arrays.asList(label));
-                			}
+        for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet()) {
+            for (ECTreeSample treeSample:entry.getValue()) {
+            	ECSample[] samples = treeSample.getECSamples();
+
+            	if (labels!=null) {
+            		ECDepTreeSample depSample = (ECDepTreeSample)treeSample;
+            		BitSet[] headMasks = depSample.headMasks;
+            		String[][] labelMatrix = ECDepTreeSample.makeLabels(headMasks, Arrays.copyOfRange(labels, lCnt, lCnt+samples.length));
+            		
+                	int i=0;
+                	for (int h=0; h<headMasks.length; ++h)
+                		for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
+                			samples[i] = new ECSample(new EnumMap<Feature, Collection<String>>(samples[i].features), samples[i].label);
+                			samples[i].features.putAll(extractSequenceFeatures(treeSample.tree, h, t, labelMatrix, false));
+                			++i;
                 		}
-                	}
-                	
-                	xList.add(features.getFeatureVector(features.convertFlatSample(samples[i].features)));
-                    yList.add(labelStringMap.get(samples[i].label));
-                    seedList.add(treeCnt);
-                    ++lCnt;
-                }
+            	}
+            	for (int i=0;i<samples.length; ++i) {
+	        		xList.add(features.getFeatureVector(samples[i].features));
+	                yList.add(labelStringMap.get(samples[i].label));
+	                seedList.add(treeCnt);
+            	}
+            	lCnt+=samples.length;
+            }
             ++treeCnt;
         }
         X = xList.toArray(new int[xList.size()][]);
         y = yList.toArray();
         seed = seedList.toArray();
-
-        double[] weights = new double[labelStringMap.size()];
-            
-        String[] labelTypes = labelStringMap.keys(new String[labelStringMap.size()]);
-        Arrays.sort(labelTypes);
- 
-        int idx=0;
-        for (String label:labelTypes) {
-            if (label.equals(ECCommon.NOT_EC))
-                weights[idx] = 1;
-            else
-                weights[idx] = 1;
-            ++idx;
-        }
 
         int[] yV;
         if (folds>1) {
@@ -633,20 +724,27 @@ public class ECDepModel extends ECModel implements Serializable {
     }
     
     public String[] predict(TBTree tree, List<PBInstance> props) {
-		BitSet[] headMasks = ECCommon.getECCandidates(tree, !fastPredict);
+    	
+		BitSet[] headMasks = ECCommon.getECCandidates(tree, fullPredict);
 
-    	List<EnumMap<Feature,List<String>>> samples = extractSampleFeature(tree, headMasks, null, props, false);
+    	List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, headMasks, props, false);
     	
     	String[] prediction = new String[samples.size()];
     	for (int i=0; i<samples.size(); ++i)
     		prediction[i] = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
     	
-    	String[][] headPrediction = new String[headMasks.length][headMasks.length+1];
+    	if (stage2Classifier!=null) {
+    		int i=0;
+    		String[][] labelMatrix = ECDepTreeSample.makeLabels(headMasks, prediction);
+    		for (int h=0; h<headMasks.length; ++h)
+        		for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
+        			samples.get(i).putAll(extractSequenceFeatures(tree, h, t, labelMatrix, false));
+        			prediction[i] = labelIndexMap.get(stage2Classifier.predict(features.getFeatureVector(samples.get(i))));
+        			++i;
+        		}
+    	}
     	
-    	int cnt=0;
-    	for (int h=0; h<headMasks.length; ++h)
-    		for (int t=headMasks[h].nextSetBit(0);t>=0;t=headMasks[h].nextSetBit(t+1))
-    			headPrediction[h][t] = prediction[cnt++];
+    	String[][] headPrediction = ECDepTreeSample.makeLabels(headMasks, prediction);
     	String[] labels = new String[tree.getTokenCount()+1];
     	
     	fillLinearLabel(tree.getRootNode().getHead(), headPrediction, labels);
@@ -683,20 +781,50 @@ public class ECDepModel extends ECModel implements Serializable {
     	int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));
     	int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","2"));
 
-    	boolean hasSequenceFeature = features.getFeaturesFlat().contains(Feature.ECP1) || features.getFeaturesFlat().contains(Feature.ECN1);
+    	//boolean hasSequenceFeature = true;
+    	boolean hasSequenceFeature = Feature.hasSequenceFeature(features.getFeaturesFlat());
     	
         classifier = new LinearClassifier();
         classifier.initialize(labelStringMap, prop);
         
+        String[] goldLabels = null;
+
+        List<String> labelList = new ArrayList<String>();
+        for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
+            for (ECTreeSample treeSample:entry.getValue())
+                for (ECSample sample:treeSample.getECSamples())
+                	labelList.add(sample.label);
+        goldLabels = labelList.toArray(new String[labelList.size()]);
+        
+        String[] newLabels = train(classifier, hasSequenceFeature?folds:1, threads, null);
+    
+    	ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+    	for (int i=0; i<newLabels.length; ++i)
+    		score.addResult(newLabels[i], goldLabels[i]);
+    
+    	System.out.println(score.toString());
+        
+    	if (hasSequenceFeature) {
+    		stage2Classifier = new LinearClassifier();
+    		stage2Classifier.initialize(labelStringMap, prop);
+    		newLabels = train(stage2Classifier, 1, threads, newLabels);
+    		
+    		score = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+        	for (int i=0; i<newLabels.length; ++i)
+        		score.addResult(newLabels[i], goldLabels[i]);
+    	}
+    		
+        
+        /*
         int rounds = hasSequenceFeature?5:1;
         double threshold = 0.001;
         
         String[] goldLabels = null;
 
         List<String> labelList = new ArrayList<String>();
-        for (Map.Entry<String, List<Sample[]>> entry:trainingSamples.entrySet())
-            for (Sample[] samples:entry.getValue())
-                for (Sample sample:samples)
+        for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
+            for (ECTreeSample treeSample:entry.getValue())
+                for (ECSample sample:treeSample.getECSamples())
                 	labelList.add(sample.label);
         goldLabels = labelList.toArray(new String[labelList.size()]);
 
@@ -719,7 +847,7 @@ public class ECDepModel extends ECModel implements Serializable {
         	System.out.println(score.toString());
         	
         	if (1-agreement<=threshold) break;
-        }
+        }*/
     }
 
 }

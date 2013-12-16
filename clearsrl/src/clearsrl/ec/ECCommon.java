@@ -3,10 +3,13 @@ package clearsrl.ec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearsrl.SRLModel.Feature;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.TObjectIntMap;
@@ -67,10 +70,38 @@ public final class ECCommon {
 		SRL_PARENTPRED,
 		SRL_PARALLEL,
 		
-		// previous token EC feature
-		ECP1,
-		ECN1, 
-		ECALL
+		// sequence feature
+		EC_LABEL(true),
+		ECP1(true),
+		ECN1(true), 
+		ECALL(true),
+		
+		EC_TOKEN_LEFT(true),
+		EC_TOKEN_RIGHT(true),
+		EC_TOKEN_ALL(true),
+		EC_HEAD_PARENT(true),
+		EC_HEAD_ALL;
+		
+		boolean sequence;
+
+		Feature() {
+			this.sequence = false;
+		}
+		
+		Feature(boolean sequence) {
+			this.sequence = sequence;
+		}
+		
+		public boolean isSequence() {
+			return sequence;
+		}
+		
+		static boolean hasSequenceFeature(EnumSet<Feature> features) {
+			for (Feature feature:features)
+				if (feature.isSequence())
+					return true;
+			return false;
+		}
 	};
 	
 	public enum LabelType {
@@ -95,7 +126,7 @@ public final class ECCommon {
 	    return (((long)treeIndex)<<32)|terminalIndex;
 	}
 	
-	public static List<String> makeECDepLabels(TBTree goldTree, BitSet[] headCandidates) {
+	public static String[] makeECDepLabels(TBTree goldTree, BitSet[] headCandidates) {
 		TLongObjectMap<String> ecMap = new TLongObjectHashMap<String>();
 		int tokenIdx=0;
 		for (TBNode node:goldTree.getTerminalNodes()) {
@@ -114,7 +145,7 @@ public final class ECCommon {
 				label = ecMap.get(makeIndex(i,j));
 				labels.add(label==null?ECCommon.NOT_EC:label);
 			}
-		return labels;
+		return labels.toArray(new String[labels.size()]);
 	}
 	
 	public static BitSet[] getECCandidates(TBTree tree, boolean full) {
