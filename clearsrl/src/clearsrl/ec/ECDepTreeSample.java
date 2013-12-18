@@ -6,8 +6,8 @@ import clearcommon.treebank.TBTree;
 public class ECDepTreeSample extends ECTreeSample {
     BitSet[] headMasks;
     
-    public ECDepTreeSample(TBTree tree, ECSample[] samples, BitSet[] headMasks) {       
-        super(tree, samples);
+    public ECDepTreeSample(TBTree goldTree, TBTree parsedTree, ECSample[] samples, BitSet[] headMasks) {       
+        super(goldTree, parsedTree, samples);
         this.headMasks = headMasks;
         int cnt=0;
         for (BitSet headMask:headMasks)

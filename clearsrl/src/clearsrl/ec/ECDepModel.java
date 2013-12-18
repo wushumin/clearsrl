@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -41,6 +42,32 @@ public class ECDepModel extends ECModel implements Serializable {
     transient int elipsisTotal;
     
     transient boolean fullPredict = false;
+    
+    class DepLabel implements Comparable<DepLabel> {
+        
+        TBNode head;
+        boolean inFront;
+        String label;
+        
+        public DepLabel(TBNode head, boolean inFront, String label) {
+            this.head = head;
+            this.inFront = inFront;
+            this.label = label;
+        }
+        
+        @Override
+        public int compareTo(DepLabel rhs) {
+            if (head==rhs.head) return 0;
+            
+            if (inFront!=rhs.inFront)
+                return inFront?1:-1;
+            if (head.getConstituentByHead().isDecendentOf(rhs.head.getConstituentByHead()))
+                return inFront?1:-1;
+            else if (rhs.head.getConstituentByHead().isDecendentOf(head.getConstituentByHead()))
+                return inFront?-1:1;
+            return inFront^(head.getTokenIndex()>rhs.head.getTokenIndex())?-1:1;
+        }
+    }
     
     public ECDepModel (Set<EnumSet<Feature>> featureSet) {
         this(featureSet, LabelType.ALL);
@@ -611,18 +638,19 @@ public class ECDepModel extends ECModel implements Serializable {
         
         BitSet[] headCandidates = ECCommon.getECCandidates(parsedTree);
         // TODO: test whether this is better?
-        ECCommon.addGoldCandidates(goldTree, headCandidates);
+        //ECCommon.addGoldCandidates(goldTree, headCandidates);
         
         String[] labels = ECCommon.makeECDepLabels(goldTree, headCandidates);
         List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, headCandidates, props, buildDictionary);
         
         if (buildDictionary) {
             int i=0;
+            String[][] labelMatrix = ECDepTreeSample.makeLabels(headCandidates, labels);
             for (int h=0; h<headCandidates.length; ++h)
                 for (int t=headCandidates[h].nextSetBit(0); t>=0; t=headCandidates[h].nextSetBit(t+1)) {
                     boolean notEC = ECCommon.NOT_EC.equals(labels[i]);
                     features.addToDictionary(samples.get(i), notEC?notECFeatureWeight:1f);
-                    features.addToDictionary(extractSequenceFeatures(parsedTree, h, t, ECDepTreeSample.makeLabels(headCandidates, labels), true), notEC?notECFeatureWeight:1f);
+                    features.addToDictionary(extractSequenceFeatures(parsedTree, h, t, labelMatrix, true), notEC?notECFeatureWeight:1f);
                     labelStringMap.adjustOrPutValue(labels[i], 1, 1);
                     ++i;
                 }
@@ -645,7 +673,7 @@ public class ECDepModel extends ECModel implements Serializable {
                     tSamples = new ArrayList<ECTreeSample>();
                     trainingSamples.put(parsedTree.getFilename(), tSamples);
                 }
-                tSamples.add(new ECDepTreeSample(parsedTree, sampleList.toArray(new ECSample[sampleList.size()]), headCandidates));
+                tSamples.add(new ECDepTreeSample(goldTree, parsedTree, sampleList.toArray(new ECSample[sampleList.size()]), headCandidates));
             }
         }
     }
@@ -659,7 +687,11 @@ public class ECDepModel extends ECModel implements Serializable {
         TIntList yList = new TIntArrayList();
         TIntList seedList = new TIntArrayList();
         int lCnt = 0;
+        
+        
         int treeCnt = 0;
+        String[] labelc = labels==null?null:new String[labels.length];
+        int n=0;
         for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet()) {
             for (ECTreeSample treeSample:entry.getValue()) {
                 ECSample[] samples = treeSample.getECSamples();
@@ -673,7 +705,11 @@ public class ECDepModel extends ECModel implements Serializable {
                     for (int h=0; h<headMasks.length; ++h)
                         for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
                             samples[i] = new ECSample(new EnumMap<Feature, Collection<String>>(samples[i].features), samples[i].label);
-                            samples[i].features.putAll(extractSequenceFeatures(treeSample.tree, h, t, labelMatrix, false));
+                            samples[i].features.putAll(extractSequenceFeatures(treeSample.parsedTree, h, t, labelMatrix, false));
+                            labelc[n] = samples[i].features.get(Feature.EC_LABEL).iterator().next();
+                            if (!labels[n].equals(labelc[n]))
+                                System.err.println("wtf!!");
+                            ++n;
                             ++i;
                         }
                 }
@@ -722,10 +758,53 @@ public class ECDepModel extends ECModel implements Serializable {
                     labels[i] += ' '+predictions[head.getTokenIndex()][i];
             }
     }
+    /*
+    public String[] makeLinearLabel(TBTree tree, BitSet[] headMasks, String[] depLabels) {
+        String[][] headPrediction = ECDepTreeSample.makeLabels(headMasks, depLabels);
+        String[] linearLabels = new String[tree.getTokenCount()+1];
+        
+        fillLinearLabel(tree.getRootNode().getHead(), headPrediction, linearLabels);
+        
+        for (int l=0; l<linearLabels.length; ++l)
+            if (linearLabels[l]==null)
+                linearLabels[l] = ECCommon.NOT_EC;
+            else
+                linearLabels[l] = linearLabels[l].trim();
+        return linearLabels;
+    }*/
+    
+    public String[] makeLinearLabel(TBTree tree, BitSet[] headMasks, String[] depLabels) {
+       
+        List<DepLabel>[] depLabelList =(List<DepLabel>[]) new List[tree.getTokenCount()+1];
+        TBNode[] tokens = tree.getTokenNodes();
+        
+        int i=0;
+        for (int h=0;h<headMasks.length; ++h)
+            for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
+                if (depLabels[i]!=null&&!ECCommon.NOT_EC.equals(depLabels[i])) {
+                    if (depLabelList[t]==null)
+                        depLabelList[t] = new ArrayList<DepLabel>();
+                    depLabelList[t].add(new DepLabel(tokens[h], t<=h, depLabels[i]));
+                }
+                ++i;
+            }
+        
+        String[] linearLabels = new String[tree.getTokenCount()+1];
+        for (i=0; i<depLabelList.length; ++i)
+            if (depLabelList[i]==null)
+                linearLabels[i] = ECCommon.NOT_EC;
+            else {
+                Collections.sort(depLabelList[i]);
+                for (DepLabel label:depLabelList[i])
+                    linearLabels[i] = linearLabels[i]==null?label.label:linearLabels[i]+' '+label.label;
+            }
+
+        return linearLabels;
+    }
     
     public String[] predict(TBTree tree, List<PBInstance> props) {
         
-        BitSet[] headMasks = ECCommon.getECCandidates(tree, fullPredict);
+        BitSet[] headMasks = ECCommon.getECCandidates(tree, false);
 
         List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, headMasks, props, false);
         
@@ -743,17 +822,7 @@ public class ECDepModel extends ECModel implements Serializable {
                     ++i;
                 }
         }
-        
-        String[][] headPrediction = ECDepTreeSample.makeLabels(headMasks, prediction);
-        String[] labels = new String[tree.getTokenCount()+1];
-        
-        fillLinearLabel(tree.getRootNode().getHead(), headPrediction, labels);
-        
-        for (int l=0; l<labels.length; ++l)
-            if (labels[l]==null)
-                labels[l] = ECCommon.NOT_EC;
-            else
-                labels[l] = labels[l].trim();
+
         /*
         TBNode[] nodes = tree.getTokenNodes();
         for (int h=0; h<headMasks.length; ++h) {
@@ -772,7 +841,7 @@ public class ECDepModel extends ECModel implements Serializable {
         }
         System.out.print('\n');
         */
-        return labels;
+        return makeLinearLabel(tree, headMasks, prediction);
     }
     
     public void train(Properties prop) {
@@ -797,21 +866,48 @@ public class ECDepModel extends ECModel implements Serializable {
         goldLabels = labelList.toArray(new String[labelList.size()]);
         
         String[] newLabels = train(classifier, hasSequenceFeature?folds:1, threads, null);
-    
-        ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
-        for (int i=0; i<newLabels.length; ++i)
-            score.addResult(newLabels[i], goldLabels[i]);
-    
-        System.out.println(score.toString());
+        {
+            ECScore scorePlain = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+            for (int i=0; i<newLabels.length; ++i)
+                scorePlain.addResult(newLabels[i], goldLabels[i]);
+            System.out.println("Plain:");
+            System.out.println(scorePlain.toString());
+            
+            ECScore scoreStructured = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+            int c=0;
+            for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
+                for (ECTreeSample treeSample:entry.getValue()) {
+                    String[] gLabels = ECCommon.getECLabels(treeSample.goldTree, labelType);
+                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length));
+                    for (int i=0; i<gLabels.length; ++i)
+                        scoreStructured.addResult(sLabels[i]==null?ECCommon.NOT_EC:sLabels[i].trim(), gLabels[i]);
+                }
+            System.out.println("Structured:");
+            System.out.println(scoreStructured.toString());
+        }
         
         if (hasSequenceFeature) {
             stage2Classifier = new LinearClassifier();
             stage2Classifier.initialize(labelStringMap, prop);
-            newLabels = train(stage2Classifier, 1, threads, newLabels);
             
-            score = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+            newLabels = train(stage2Classifier, folds, threads, newLabels);
+            ECScore scorePlain = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
             for (int i=0; i<newLabels.length; ++i)
-                score.addResult(newLabels[i], goldLabels[i]);
+                scorePlain.addResult(newLabels[i], goldLabels[i]);
+            System.out.println("Plain:");
+            System.out.println(scorePlain.toString());
+            
+            ECScore scoreStructured = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
+            int c=0;
+            for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
+                for (ECTreeSample treeSample:entry.getValue()) {
+                    String[] gLabels = ECCommon.getECLabels(treeSample.goldTree, labelType);
+                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length));
+                    for (int i=0; i<gLabels.length; ++i)
+                        scoreStructured.addResult(sLabels[i]==null?ECCommon.NOT_EC:sLabels[i].trim(), gLabels[i]);
+                }
+            System.out.println("Structured:");
+            System.out.println(scoreStructured.toString());
         }
             
         

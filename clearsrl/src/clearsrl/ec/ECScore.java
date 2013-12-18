@@ -29,11 +29,16 @@ public class ECScore {
         String[] systemLabels = systemLabel.split(" ");
         String[] goldLabels = goldLabel.split(" ");
 
+        if (systemLabels.length==1 && goldLabels.length==1) {
+            countMatrix[labelMap.get(systemLabels[0])][labelMap.get(goldLabels[0])]++;
+            return;
+        }
+        
         if (systemLabels.length==goldLabels.length)
             for (int i=0; i<goldLabels.length && i<systemLabels.length; ++i)
                 countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;
         else if (goldLabels.length<systemLabels.length) {
-            if (goldLabels[0]==systemLabels[0])
+            if (goldLabels[0].equals(systemLabels[0]))
                 for (int i=0; i<systemLabels.length; ++i)
                     if (i<goldLabels.length)
                         countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;
@@ -46,7 +51,7 @@ public class ECScore {
                     else
                         countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i-systemLabels.length+goldLabels.length])]++;
         } else if (systemLabels.length<goldLabels.length) {
-            if (goldLabels[0]==systemLabels[0])
+            if (goldLabels[0].equals(systemLabels[0]))
                 for (int i=0; i<goldLabels.length; ++i)
                     if (i<systemLabels.length)
                         countMatrix[labelMap.get(systemLabels[i])][labelMap.get(goldLabels[i])]++;

@@ -459,7 +459,7 @@ public class ECModel implements Serializable {
                     tSamples = new ArrayList<ECTreeSample>();
                     trainingSamples.put(parsedTree.getFilename(), tSamples);
                 }
-                tSamples.add(new ECTreeSample(parsedTree, sampleList.toArray(new ECSample[sampleList.size()])));
+                tSamples.add(new ECTreeSample(goldTree, parsedTree, sampleList.toArray(new ECSample[sampleList.size()])));
             }
         }
     }
