@@ -1,0 +1,10 @@
+<project>
+    <target name="jar" depends="clearcommon, clearsrl"/>
+
+    <target name="clearcommon">
+	<ant dir="clearcommon" target="jar"/>
+    </target>
+    <target name="clearsrl">
+	<ant dir ="clearsrl" target="jar"/>
+    </target>
+</project>
