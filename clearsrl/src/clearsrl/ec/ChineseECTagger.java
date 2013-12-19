@@ -187,8 +187,10 @@ public class ChineseECTagger {
             model.setLangUtil(langUtil);
         }
 
-        //if (model instanceof ECDepModel)
-        //  ((ECDepModel)model).setFullPredict(!validateProps.getProperty("fullPredict","true").equals("false"));
+        if (model instanceof ECDepModel) {
+        	((ECDepModel)model).setQuickClassify(!validateProps.getProperty("quickClassify","false").equals("false"));
+        	((ECDepModel)model).setFullPredict(!validateProps.getProperty("fullPredict","false").equals("false"));
+        }
         
         ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         

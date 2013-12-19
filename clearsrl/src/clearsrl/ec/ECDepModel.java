@@ -41,6 +41,7 @@ public class ECDepModel extends ECModel implements Serializable {
     transient int elipsisCnt;
     transient int elipsisTotal;
     
+    transient boolean quickClassify = false;
     transient boolean fullPredict = false;
     
     class DepLabel implements Comparable<DepLabel> {
@@ -81,6 +82,10 @@ public class ECDepModel extends ECModel implements Serializable {
     
     public void setFullPredict(boolean fullPredict) {
         this.fullPredict = fullPredict;
+    }
+    
+    public void setQuickClassify(boolean quickClassify) {
+    	this.quickClassify = quickClassify;
     }
     
     public EnumMap<Feature,List<String>> getHeadFeatures(TBNode head, PBInstance instance) {
@@ -812,7 +817,7 @@ public class ECDepModel extends ECModel implements Serializable {
         for (int i=0; i<samples.size(); ++i)
             prediction[i] = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
         
-        if (stage2Classifier!=null) {
+        if (!quickClassify && stage2Classifier!=null) {
             int i=0;
             String[][] labelMatrix = ECDepTreeSample.makeLabels(headMasks, prediction);
             for (int h=0; h<headMasks.length; ++h)
