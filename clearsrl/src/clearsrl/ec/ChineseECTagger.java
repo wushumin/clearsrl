@@ -193,6 +193,7 @@ public class ChineseECTagger {
         }
         
         ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
+        ECScore score2 = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         
         String corpus = validateProps.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
@@ -202,66 +203,66 @@ public class ChineseECTagger {
         Map<String, SortedMap<Integer, List<PBInstance>>>  propValidate = 
                 PBUtil.readPBDir(validateProps.getProperty(corpus+"propdir"), validateProps.getProperty(corpus+"pb.regex"), new TBReader(parseValidate));
         
-        for (Map.Entry<String, TBTree[]> entry : parseValidate.entrySet())
-        {
+        for (Map.Entry<String, TBTree[]> entry : parseValidate.entrySet()) {
             logger.info("Validating: "+entry.getKey());
             
             TBTree[] tbTrees = tbMapValidate.get(entry.getKey());
             TBTree[] parseTrees = entry.getValue();
             SortedMap<Integer, List<PBInstance>> pbInstances = propValidate.get(entry.getKey());
 
-            for (int i=0; i<parseTrees.length; ++i)
-            {
+            for (int i=0; i<parseTrees.length; ++i) {
                 String[] goldLabels = ECCommon.getECLabels(tbTrees[i], model.labelType);
                 
                 TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
                 List<PBInstance> propList = pbInstances==null?null:pbInstances.get(i);
+                
+                if (model instanceof ECDepModel)
+                	((ECDepModel)model).setQuickClassify(true);
                 String[] labels = model.predict(parseTrees[i], propList);
                 for (int l=0; l<labels.length; ++l)
                     score.addResult(labels[l], goldLabels[l]);
+                
+                if (model instanceof ECDepModel)
+                	((ECDepModel)model).setQuickClassify(false);
+                String[] labels2 = model.predict(parseTrees[i], propList);
+                for (int l=0; l<labels2.length; ++l)
+                    score2.addResult(labels2[l], goldLabels[l]);
+
+                boolean same=true;
+                for (int l=0; l<labels.length; ++l)
+                	if (!labels[l].equals(labels2[l])) {
+                		same = false;
+                		break;
+                	}
+                if (!same) {
+                	System.out.println(tbTrees[i]);
+                	System.out.println(parseTrees[i]);
+	                TBNode[] tokens = tbTrees[i].getTokenNodes();
+	                printEC(tokens, goldLabels);
+	                printEC(tokens, labels);
+	                printEC(tokens, labels2);
+	                System.out.println(score.toString(score.countMatrix, true));
+	                System.out.println(score2.toString(score2.countMatrix, true));	                
+	                System.out.println("");
+                }
                 /*
-                {
-                    boolean hasPro = false;
-                    boolean correctPro = true;
-                    for (int l=0; l<labels.length; ++l)
-                        if (goldLabels[l].toLowerCase().equals("*pro*") || (labels[l].toLowerCase().equals("*pro*"))) {
-                            if (goldLabels[l].toLowerCase().equals("*pro*"))
-                                hasPro = true;
-                            if (!goldLabels[l].equals(labels[l]))
-                                correctPro = false;
-                        }
-                    if (hasPro && !correctPro) {
-                        StringBuilder builder = new StringBuilder(tbTrees[i].getFilename()+" "+tbTrees[i].getIndex()+"\n");
-                        builder.append(Arrays.toString(goldLabels));
-                        builder.append("\n");
-                        builder.append(Arrays.toString(labels));
-                        builder.append("\n");
-                        for (TBNode node: tbTrees[i].getTerminalNodes())
-                            builder.append((node.isEC()?node.getECType():node.getWord())+' ');
-                        builder.append("\n");
-                        
-                        TBNode[] nodes = parseTrees[i].getTokenNodes();
-                        for (int l=0; l<labels.length; ++l) {
-                            if (!labels[l].equals(ECCommon.NOT_EC))
-                                builder.append(labels[l]+' ');
-                            if (l<nodes.length)
-                                builder.append(nodes[l].getWord()+' ');
-                        }
-                        builder.append("\n");
-                        
-                        if (propList!=null)
-                            for (PBInstance prop:propList)
-                                builder.append(prop.toText()+'\n');
-                        builder.append(parseTrees[i]); builder.append("\n");
-                        builder.append(tbTrees[i]); builder.append("\n");
-                        
-                        System.err.println(builder.toString());
-                    }
-                }*/
+                for (int l=0; l<labels.length; ++l)
+                	if (ECCommon.NOT_EC.equals(goldLabels[l]))
+                		System.out.print(goldLabels);*/
                 
             }
         }
         System.out.println(score.toString());
+        System.out.println(score2.toString());
+    }
+            
+    static void printEC(TBNode[] nodes, String[] labels) {
+    	for (int i=0; i<nodes.length;++i) {
+    		if (!ECCommon.NOT_EC.equals(labels[i]))
+    			System.out.print(labels[i]+' ');
+    		System.out.print(nodes[i].getWord()+' ');
+    	}
+    	System.out.println(ECCommon.NOT_EC.equals(labels[nodes.length])?"":labels[nodes.length]);
     }
     
     static void train(Properties props, ChineseUtil langUtil) throws IOException, ClassNotFoundException {  
@@ -302,6 +303,8 @@ public class ChineseECTagger {
                 TBUtil.linkHeads(tbTrees[i], langUtil.getHeadRules());
                 TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
                 model.addTrainingSentence(tbTrees[i], parseTrees[i], pbInstances==null?null:pbInstances.get(i), true);
+                
+                /*
                 logger.info(tbTrees[i].toString());
                 
                 StringBuilder builder = new StringBuilder();
@@ -317,6 +320,7 @@ public class ChineseECTagger {
                     builder.append(node.getWord()+' ');
                 }
                 logger.info(builder.toString());
+                */
             }
         }
         model.finalizeDictionary(Integer.parseInt(trainProps.getProperty("dictionary.cutoff", "5")));

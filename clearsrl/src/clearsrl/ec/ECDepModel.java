@@ -696,7 +696,6 @@ public class ECDepModel extends ECModel implements Serializable {
         
         int treeCnt = 0;
         String[] labelc = labels==null?null:new String[labels.length];
-        int n=0;
         for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet()) {
             for (ECTreeSample treeSample:entry.getValue()) {
                 ECSample[] samples = treeSample.getECSamples();
@@ -711,10 +710,6 @@ public class ECDepModel extends ECModel implements Serializable {
                         for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
                             samples[i] = new ECSample(new EnumMap<Feature, Collection<String>>(samples[i].features), samples[i].label);
                             samples[i].features.putAll(extractSequenceFeatures(treeSample.parsedTree, h, t, labelMatrix, false));
-                            labelc[n] = samples[i].features.get(Feature.EC_LABEL).iterator().next();
-                            if (!labels[n].equals(labelc[n]))
-                                System.err.println("wtf!!");
-                            ++n;
                             ++i;
                         }
                 }
@@ -780,6 +775,7 @@ public class ECDepModel extends ECModel implements Serializable {
     
     public String[] makeLinearLabel(TBTree tree, BitSet[] headMasks, String[] depLabels) {
        
+        @SuppressWarnings("unchecked")
         List<DepLabel>[] depLabelList =(List<DepLabel>[]) new List[tree.getTokenCount()+1];
         TBNode[] tokens = tree.getTokenNodes();
         

@@ -243,7 +243,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
      * @param cutoff
      */
     public void rebuildMap(float cutoff) {
-        rebuildMapFast(cutoff);
+        rebuildMapOptimized(cutoff);
         dictionaryFinalized = true;
         featureCountMap.clear();
     }
