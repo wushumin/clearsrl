@@ -2,7 +2,7 @@ package clearcommon.util;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
-
+import clearcommon.util.PBFrame.Roleset;
 import gnu.trove.map.TObjectIntMap;
 
 import java.util.Arrays;
@@ -54,6 +54,13 @@ public abstract class LanguageUtil {
     
     public PBFrame getFrame(TBNode node) {
         return getFrame(PBFrame.makeKey(node, this));
+    }
+    
+    public Roleset getRoleSet(TBNode node, String roleSetId) {
+    	PBFrame frame = getFrame(node);
+    	if (frame==null)
+    		return null;
+    	return frame.getRolesets().get(roleSetId.substring(roleSetId.length()-2));
     }
 
     public POS getPOS(String pos) {

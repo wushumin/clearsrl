@@ -27,6 +27,7 @@ import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearcommon.util.PBFrame;
 
 public class ECDepModel extends ECModel implements Serializable {
     /**
@@ -44,7 +45,7 @@ public class ECDepModel extends ECModel implements Serializable {
     transient boolean quickClassify = false;
     transient boolean fullPredict = false;
     
-    class DepLabel implements Comparable<DepLabel> {
+    static class DepLabel implements Comparable<DepLabel> {
         
         TBNode head;
         boolean inFront;
@@ -99,6 +100,16 @@ public class ECDepModel extends ECModel implements Serializable {
             if (builder.length()!=0)
                 builder.append(nodes.get(i-1).getParent()==nodes.get(i)?ECCommon.UP_CHAR:ECCommon.DOWN_CHAR);
             builder.append(nodes.get(i).getPOS());
+        }
+        return builder.toString();
+    }
+    
+    static String makeDepPath(List<TBNode> nodes, boolean includeToken) {
+        StringBuilder builder = new StringBuilder();
+        for (int i=(includeToken?0:1); i<nodes.size()-(includeToken?0:1); ++i) {
+            if (builder.length()!=0)
+                builder.append(nodes.get(i-1).getHeadOfHead()==nodes.get(i)?ECCommon.UP_CHAR:ECCommon.DOWN_CHAR);
+            builder.append(nodes.get(i).getDepLabel()==null?nodes.get(i).getPOS():nodes.get(i).getDepLabel());
         }
         return builder.toString();
     }
@@ -167,9 +178,32 @@ public class ECDepModel extends ECModel implements Serializable {
                 case H_POS:
                     sample.put(feature, Arrays.asList(poses[h]));
                     break;
+                case H_TOP_VERB:
+                	if (chLangUtil.isVerb(poses[h])) {
+                		boolean topVerb = true;
+                		for (TBNode node:tokens[h].getDepPathToRoot())
+                			if (node!=tokens[h] && chLangUtil.isVerb(node.getPOS())) {
+                				topVerb = false;
+                				break;
+                			}
+                		sample.put(feature, Arrays.asList(Boolean.toString(topVerb)));
+                	}
+                	break;
                 case H_CONSTITUENT:
-                    if (head.getConstituentByHead()!=null)
-                        sample.put(feature, Arrays.asList(head.getConstituentByHead().getPOS()));
+                	sample.put(feature, Arrays.asList(head.getConstituentByHead().getPOS()));
+                case H_CONSTITUENT_PARENT:
+                	if (head.getConstituentByHead().getParent()!=null)
+                	sample.put(feature, Arrays.asList(head.getConstituentByHead().getParent().getPOS()));
+                case H_CONSTITUENT_VP_FIRST:
+                    if (head.getConstituentByHead()!=null && head.getConstituentByHead().getPOS().equals("VP")) {
+                    	boolean isFirst=true;
+                    	for (int i=0;i<head.getConstituentByHead().getChildIndex(); ++i)
+                    		if (head.getConstituentByHead().getParent().getChildren()[i].getPOS().equals("VP")) {
+                    			isFirst=false;
+                    			break;
+                    		}
+                    	sample.put(feature, Arrays.asList(Boolean.toString(isFirst)));
+                    } 
                     break;
                 case H_ORG_LEMMA:
                     if (token!=head)
@@ -184,7 +218,8 @@ public class ECDepModel extends ECModel implements Serializable {
                         sample.put(feature, Arrays.asList(makePath(head.getConstituentByHead().getPath(token), true)));
                     break;
                 case H_ORG_DPATH:  // dependency path from head to modified head
-                    // TODO:
+                	if (token!=head)
+                        sample.put(feature, Arrays.asList(makeDepPath(head.getConstituentByHead().getDepPath(token), true)));
                     break;      
                 case H_H_LEMMA:    // head of head
                     if (token.getHeadOfHead()!=null)
@@ -192,7 +227,7 @@ public class ECDepModel extends ECModel implements Serializable {
                     break;
                 case H_H_POS:      // head of head lemma
                     if (token.getHeadOfHead()!=null)
-                        sample.put(feature, Arrays.asList(poses[token.getHeadOfHead().getTokenIndex()]));
+                        sample.put(feature, Arrays.asList(token.getHeadOfHead().getPOS(), token.getHeadOfHead().getConstituentByHead().getPOS()));
                     break;
                 case H_H_SPATH:    // syntactic path to head of head
                     if (token.getHeadOfHead()!=null)
@@ -210,6 +245,18 @@ public class ECDepModel extends ECModel implements Serializable {
                     sample.put(feature, Arrays.asList(builder.toString()));
                     break;
                 }
+                case H_CONSTSFRAME:
+                	if (head.getConstituentByHead().getParent()!=null) {
+	                    StringBuilder builder = new StringBuilder();
+	                    for (TBNode node:head.getConstituentByHead().getParent().getChildren()) {
+	                        if (node != head.getConstituentByHead())
+	                            builder.append(node.getPOS().toLowerCase()+"-");
+	                        else
+	                            builder.append(node.getPOS().toUpperCase()+"-");
+	                    }
+	                    sample.put(feature, Arrays.asList(builder.toString()));
+                	}
+                    break;
                 case H_VOICE:
                     if (chLangUtil.isVerb(head.getPOS())) {
                         int passive = chLangUtil.getPassive(head);
@@ -219,10 +266,99 @@ public class ECDepModel extends ECModel implements Serializable {
                             sample.put(feature, Arrays.asList("active"));
                     }
                     break;
+                case SRL_NONLOCAL_ARG:
+                	if (prop!= null) {
+                    	TBNode hConst = head.getConstituentByHead();
+                    	List<String> args = new ArrayList<String>();
+                        for (PBArg arg:prop.getAllArgs())
+                            if (arg.getLabel().matches("ARG\\d") && !arg.getNode().isDecendentOf(hConst))
+                                args.add(arg.getLabel());
+                        sample.put(feature, args.isEmpty()?Arrays.asList(Boolean.toString(false)):args);
+                    }
+                	break;
+                case SRL_FRAMEFILE:
+                	if (prop!= null) {
+                		PBFrame frame = chLangUtil.frameMap.get(prop.getPredicate().getWord()+"-v");
+                		if (frame!=null && frame.getRolesets().size()==1) {
+                			Set<String> roles = new HashSet<String>(frame.getRolesets().values().iterator().next().getRoles());
+                			Set<String> foundRoles = new HashSet<String>();
+                			for (PBArg arg:prop.getAllArgs())
+                				if (roles.contains(arg.getLabel().toLowerCase())) {
+                					foundRoles.add(arg.getLabel().toLowerCase());
+                					roles.remove(arg.getLabel().toLowerCase());
+                				}
+                			List<String> featVals = new ArrayList<String>(roles.size()+foundRoles.size());
+                			for (String role:roles)
+                				featVals.add("m-"+role);
+                			for (String role:foundRoles)
+                				featVals.add("f-"+role);
+                			if (!featVals.isEmpty())
+                				sample.put(feature, featVals);
+                		}
+                	}
+                	break;
+                case SRL_FRAMEFILE_LOCAL:
+                	if (prop!= null) {
+                		PBFrame frame = chLangUtil.frameMap.get(prop.getPredicate().getWord()+"-v");
+                		if (frame!=null && frame.getRolesets().size()==1) {
+                			Set<String> roles = new HashSet<String>(frame.getRolesets().values().iterator().next().getRoles());
+                			Set<String> foundRoles = new HashSet<String>();
+                			
+                			TBNode hConst = head.getConstituentByHead();
+                			for (PBArg arg:prop.getAllArgs())
+                				if (arg.getNode().isDecendentOf(hConst) && roles.contains(arg.getLabel().toLowerCase())) {
+                					foundRoles.add(arg.getLabel().toLowerCase());
+                					roles.remove(arg.getLabel().toLowerCase());
+                				}
+                			List<String> featVals = new ArrayList<String>(roles.size()+foundRoles.size());
+                			for (String role:roles)
+                				featVals.add("m-"+role);
+                			for (String role:foundRoles)
+                				featVals.add("f-"+role);
+                			if (!featVals.isEmpty())
+                				sample.put(feature, featVals);
+                		}
+                	}
+                	break;
                 case SRL_NOARG0:             // predicate has no ARG0
                     if (prop!= null) {
                         for (PBArg arg:prop.getAllArgs())
                             if (arg.getLabel().equals("ARG0")) {
+                                sample.put(feature, Arrays.asList(Boolean.toString(false), arg.getNode().getPOS()));
+                                break;
+                            }
+                        if (sample.get(feature)==null)
+                            sample.put(feature, Arrays.asList(Boolean.toString(true)));
+                    }
+                    break;
+                case SRL_NOARG1:             // predicate has no ARG1
+                    if (prop!= null) {
+                        for (PBArg arg:prop.getAllArgs())
+                            if (arg.getLabel().equals("ARG1")) {
+                                sample.put(feature, Arrays.asList(Boolean.toString(false), arg.getNode().getPOS()));
+                                break;
+                            }
+                        if (sample.get(feature)==null)
+                            sample.put(feature, Arrays.asList(Boolean.toString(true)));
+                    }
+                    break;
+                case SRL_LOCAL_NOARG0:             // predicate has no local ARG0
+                    if (prop!= null) {
+                    	TBNode hConst = head.getConstituentByHead();
+                        for (PBArg arg:prop.getAllArgs())
+                            if (arg.getLabel().equals("ARG0") && arg.getNode().isDecendentOf(hConst)) {
+                                sample.put(feature, Arrays.asList(Boolean.toString(false), arg.getNode().getPOS()));
+                                break;
+                            }
+                        if (sample.get(feature)==null)
+                            sample.put(feature, Arrays.asList(Boolean.toString(true)));
+                    }
+                    break;
+                case SRL_LOCAL_NOARG1:             // predicate has no local ARG1
+                    if (prop!= null) {
+                    	TBNode hConst = head.getConstituentByHead();
+                        for (PBArg arg:prop.getAllArgs())
+                            if (arg.getLabel().equals("ARG1") && arg.getNode().isDecendentOf(hConst)) {
                                 sample.put(feature, Arrays.asList(Boolean.toString(false), arg.getNode().getPOS()));
                                 break;
                             }
@@ -426,7 +562,9 @@ public class ECDepModel extends ECModel implements Serializable {
         // dependency args
         for (int h=0; h<tokens.length; ++h) {
             PBInstance prop = props[h];
+            TBNode head = tokens[h];
             for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
+                TBNode token = t<tokens.length?tokens[t]:null;
                 EnumMap<Feature,Collection<String>> sample = new EnumMap<Feature,Collection<String>>(Feature.class);
                 sample.putAll(headSamples.get(h));
                 sample.putAll(positionSamples.get(t));
@@ -439,15 +577,58 @@ public class ECDepModel extends ECModel implements Serializable {
                         sample.put(feature, Arrays.asList(Integer.toString(t-h)));
                         break;
                     case D_SPATH:
-                        if (t<=h && t>0)
+                    	/*
+                        if (t<=h && t>0)                       	
                             sample.put(feature, Arrays.asList(makePath(tokens[t-1].getPath(tokens[h]), false)));
                         else if (t>h && t<tokens.length)
-                            sample.put(feature, Arrays.asList(makePath(tokens[t].getPath(tokens[h]), false)));
-                        break;
+                            sample.put(feature, Arrays.asList(makePath(tokens[t].getPath(tokens[h]), false)));*/
+                    	if (token!=null && token!=head) {
+                    		TBNode node=token;
+                    		//while (node.getParent()!=null && !node.getTokenSet().get(h))
+                    		//	node=node.getParent();
+                    		sample.put(feature, Arrays.asList(makePath(node.getPath(head), true)));
+                    	}
+                    	break;
+                    case D_SFRONTIER:
+                    	if (t>0 && token!=null) {
+                    		TBNode topNode = tokens[t-1];
+                    		topNode = topNode.getLowestCommonAncestor(token);
+                    		TBNode lcaNode = token.getLowestCommonAncestor(head);
+                    		sample.put(feature, Arrays.asList(makePath(lcaNode.getPath(topNode), true)));
+                    	}
+                    	break;
                     case D_DPATH:
-                        // TODO:
+                    	if (t<=h && t>0)
+                            sample.put(feature, Arrays.asList(makeDepPath(tokens[t-1].getDepPath(tokens[h]), false)));
+                        else if (t>h && t<tokens.length)
+                            sample.put(feature, Arrays.asList(makeDepPath(tokens[t].getDepPath(tokens[h]), false)));
                         break;
-                    case SRL_INFRONTARG:
+                    case D_V_DIST:
+                    {
+                    	int count=0;
+                        for (int i=(t<h?t:h)+1;i<(t<h?h:t); ++i)
+                        	if (chLangUtil.isVerb(tokens[i].getPOS()))
+                        		++count;
+                        sample.put(feature, Arrays.asList(Boolean.toString(count==0)));
+                    	break;
+                    }
+                    case D_COMMA_DIST:
+                    {
+                    	int count=0;
+                        for (int i=(t<h?t:h)+1;i<(t<h?h:t); ++i)
+                        	if (tokens[i].getWord().matches("，|,"))
+                        		++count;
+                        sample.put(feature, Arrays.asList(Boolean.toString(count==0)));
+                    	break;
+                    }
+                    /*
+                    case D_SRL_ARG01_SAME_SIDE:
+                    	if (prop!= null) {
+                            for (PBArg arg:prop.getArgs())
+                            	if (arg.getTokenSet().nextSetBit(0)<h && ) {
+                            	
+                    	break;*/
+                    case D_SRL_INFRONTARG:
                         if (prop!= null) {
                             for (PBArg arg:prop.getArgs())
                                 if (arg.getTokenSet().nextSetBit(0)==t) {
@@ -456,7 +637,7 @@ public class ECDepModel extends ECModel implements Serializable {
                                 }
                         }
                         break;
-                    case SRL_BEHINDARG:
+                    case D_SRL_BEHINDARG:
                         if (prop!= null) {
                             for (PBArg arg:prop.getArgs())
                                 if (arg.getTokenSet().length()==t) {
@@ -465,7 +646,7 @@ public class ECDepModel extends ECModel implements Serializable {
                                 }
                         }
                         break;
-                    case SRL_INARG:              // positioned inside an argument of the predicate
+                    case D_SRL_INARG:              // positioned inside an argument of the predicate
                         if (prop!= null) {
                             for (PBArg arg:prop.getArgs())
                                 if (t>0 && arg.getTokenSet().get(t-1) && arg.getTokenSet().get(t)) {
@@ -551,20 +732,30 @@ public class ECDepModel extends ECModel implements Serializable {
                 break;              
             case ECP1:
                 if (tokenIdx>0) {
-                    Set<String> labelSet = new TreeSet<String>();
-                    for (int h=0; h<labels.length; ++h)
-                        if (labels[h][tokenIdx-1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx-1]))
-                            labelSet.add(labels[h][tokenIdx-1]);
-                    featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+                	if (buildDictionary) {
+    	                if (!allLabelSet.isEmpty())
+    	                    featureMap.put(feature, allLabelSet);
+    	            } else {
+	                    Set<String> labelSet = new TreeSet<String>();
+	                    for (int h=0; h<labels.length; ++h)
+	                        if (labels[h][tokenIdx-1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx-1]))
+	                            labelSet.add(labels[h][tokenIdx-1]);
+	                    featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+    	            }
                 }
                 break;
             case ECN1:
                 if (tokenIdx<tree.getTokenCount()) {
-                    Set<String> labelSet = new TreeSet<String>();
-                    for (int h=0; h<labels.length; ++h)
-                        if (labels[h][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx+1]))
-                            labelSet.add(labels[h][tokenIdx+1]);
-                    featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+                	if (buildDictionary) {
+    	                if (!allLabelSet.isEmpty())
+    	                    featureMap.put(feature, allLabelSet);
+    	            } else {
+	                    Set<String> labelSet = new TreeSet<String>();
+	                    for (int h=0; h<labels.length; ++h)
+	                        if (labels[h][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[h][tokenIdx+1]))
+	                            labelSet.add(labels[h][tokenIdx+1]);
+	                    featureMap.put(feature, labelSet.isEmpty()?Arrays.asList(ECCommon.NOT_EC):labelSet);
+    	            }
                 }
                 break;
             case ECALL:
@@ -573,35 +764,85 @@ public class ECDepModel extends ECModel implements Serializable {
                 break;
             case EC_TOKEN_LEFT:
                 if (tokenIdx>0) {
-                    Set<String> labelSet = new TreeSet<String>();
-                    for (int t=0; t<tokenIdx; ++t)
-                        if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
-                            labelSet.add(labels[headIdx][t]);
-                    if (!labelSet.isEmpty())
-                        featureMap.put(feature, labelSet);
+                	if (buildDictionary) {
+    	                if (!allLabelSet.isEmpty())
+    	                    featureMap.put(feature, allLabelSet);
+    	            } else {
+	                    Set<String> labelSet = new TreeSet<String>();
+	                    for (int t=0; t<tokenIdx; ++t)
+	                        if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+	                            labelSet.add(labels[headIdx][t]);
+	                    if (!labelSet.isEmpty())
+	                        featureMap.put(feature, labelSet);
+    	            }
                 }
                 break;
             case EC_TOKEN_RIGHT:
                 if (tokenIdx<tree.getTokenCount()) {
-                    Set<String> labelSet = new TreeSet<String>();
-                    for (int t=tokenIdx+1; t<=tree.getTokenCount(); ++t)
-                        if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
-                            labelSet.add(labels[headIdx][t]);
-                    if (!labelSet.isEmpty())
-                        featureMap.put(feature, labelSet);
+                	if (buildDictionary) {
+    	                if (!allLabelSet.isEmpty())
+    	                    featureMap.put(feature, allLabelSet);
+    	            } else {
+	                    Set<String> labelSet = new TreeSet<String>();
+	                    for (int t=tokenIdx+1; t<=tree.getTokenCount(); ++t)
+	                        if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+	                            labelSet.add(labels[headIdx][t]);
+	                    if (!labelSet.isEmpty())
+	                        featureMap.put(feature, labelSet);
+    	            }
                 }
                 break;
+            case EC_TOKEN_SAMESIDE:
+            	if (buildDictionary) {
+	                if (!allLabelSet.isEmpty())
+	                    featureMap.put(feature, allLabelSet);
+	            } else {
+	            	 Set<String> labelSet = new TreeSet<String>();
+	            	 if (tokenIdx<=headIdx) {
+	            		 for (int t=0; t<=headIdx; ++t)
+	            			 if (t!=tokenIdx && labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+	            				 labelSet.add(labels[headIdx][t]);
+	            	 } else {
+	            		 for (int t=headIdx+1; t<=tree.getTokenCount(); ++t)
+	            			 if (t!=tokenIdx && labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+	            				 labelSet.add(labels[headIdx][t]);
+	            	 }
+	            	 if (!labelSet.isEmpty())
+	                        featureMap.put(feature, labelSet);
+	            }
+            	break;
             case EC_TOKEN_ALL:
-            {
-                Set<String> labelSet = new TreeSet<String>();
-                for (int t=0; t<=tree.getTokenCount(); ++t) {
-                    if (t==tokenIdx) continue;
-                    if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
-                        labelSet.add(labels[headIdx][t]);
-                }
-                if (!labelSet.isEmpty())
-                    featureMap.put(feature, labelSet);
-            }
+            	if (buildDictionary) {
+	                if (!allLabelSet.isEmpty())
+	                    featureMap.put(feature, allLabelSet);
+	            } else {
+	                Set<String> labelSet = new TreeSet<String>();
+	                for (int t=0; t<=tree.getTokenCount(); ++t) {
+	                    if (t==tokenIdx) continue;
+	                    if (labels[headIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[headIdx][t]))
+	                        labelSet.add(labels[headIdx][t]);
+	                }
+	                if (!labelSet.isEmpty())
+	                    featureMap.put(feature, labelSet);
+	            }
+                break;
+            case EC_CP_CHILD:
+            	if (tree.getRootNode().getNodeByTokenIndex(headIdx).getConstituentByHead().getPOS().equals("CP")) {
+            		int childHeadIdx = tree.getRootNode().getNodeByTokenIndex(headIdx).getConstituentByHead().getChildren()[0].getHead().getTokenIndex();
+            		if (buildDictionary) {
+                        if (!allLabelSet.isEmpty())
+                            featureMap.put(feature, allLabelSet);
+                    } else {
+                    	Set<String> labelSet = new TreeSet<String>();
+                        for (int t=0; t<=tree.getTokenCount(); ++t) {
+                            if (t==tokenIdx) continue;
+                            if (labels[childHeadIdx][t]!=null && !ECCommon.NOT_EC.equals(labels[childHeadIdx][t]))
+                                labelSet.add(labels[childHeadIdx][t]);
+                        }
+                        if (!labelSet.isEmpty())
+                            featureMap.put(feature, labelSet);
+                    }
+            	}
                 break;
             case EC_HEAD_PARENT:
                 if (buildDictionary) {
@@ -609,7 +850,7 @@ public class ECDepModel extends ECModel implements Serializable {
                         featureMap.put(feature, allLabelSet);
                 }  else {
                     Set<String> labelSet = new TreeSet<String>();
-                    TBNode headParent = tree.getNodeByTokenIndex(headIdx);
+                    TBNode headParent = tree.getNodeByTokenIndex(headIdx).getHeadOfHead();
                     if (headParent!=null)
                         for (int t=0; t<=tree.getTokenCount(); ++t)
                             if (labels[headParent.getTokenIndex()][t]!=null && !ECCommon.NOT_EC.equals(labels[headParent.getTokenIndex()][t]))
@@ -650,7 +891,7 @@ public class ECDepModel extends ECModel implements Serializable {
         
         if (buildDictionary) {
             int i=0;
-            String[][] labelMatrix = ECDepTreeSample.makeLabels(headCandidates, labels);
+            String[][] labelMatrix = ECDepTreeSample.makeDepLabels(headCandidates, labels);
             for (int h=0; h<headCandidates.length; ++h)
                 for (int t=headCandidates[h].nextSetBit(0); t>=0; t=headCandidates[h].nextSetBit(t+1)) {
                     boolean notEC = ECCommon.NOT_EC.equals(labels[i]);
@@ -703,7 +944,7 @@ public class ECDepModel extends ECModel implements Serializable {
                 if (labels!=null) {
                     ECDepTreeSample depSample = (ECDepTreeSample)treeSample;
                     BitSet[] headMasks = depSample.headMasks;
-                    String[][] labelMatrix = ECDepTreeSample.makeLabels(headMasks, Arrays.copyOfRange(labels, lCnt, lCnt+samples.length));
+                    String[][] labelMatrix = ECDepTreeSample.makeDepLabels(headMasks, Arrays.copyOfRange(labels, lCnt, lCnt+samples.length));
                     
                     int i=0;
                     for (int h=0; h<headMasks.length; ++h)
@@ -773,19 +1014,19 @@ public class ECDepModel extends ECModel implements Serializable {
         return linearLabels;
     }*/
     
-    public String[] makeLinearLabel(TBTree tree, BitSet[] headMasks, String[] depLabels) {
+    public static String[] makeLinearLabel(TBTree tree, String[][] depLabels) {
        
         @SuppressWarnings("unchecked")
         List<DepLabel>[] depLabelList =(List<DepLabel>[]) new List[tree.getTokenCount()+1];
         TBNode[] tokens = tree.getTokenNodes();
         
         int i=0;
-        for (int h=0;h<headMasks.length; ++h)
-            for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
-                if (depLabels[i]!=null&&!ECCommon.NOT_EC.equals(depLabels[i])) {
+        for (int h=0;h<depLabels.length; ++h)
+            for (int t=0; t<depLabels[h].length; ++t) {
+                if (depLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(depLabels[h][t])) {
                     if (depLabelList[t]==null)
                         depLabelList[t] = new ArrayList<DepLabel>();
-                    depLabelList[t].add(new DepLabel(tokens[h], t<=h, depLabels[i]));
+                    depLabelList[t].add(new DepLabel(tokens[h], t<=h, depLabels[h][t]));
                 }
                 ++i;
             }
@@ -803,46 +1044,30 @@ public class ECDepModel extends ECModel implements Serializable {
         return linearLabels;
     }
     
+    public String[][] predictDep(TBTree tree, List<PBInstance> props) {
+    	 BitSet[] headMasks = ECCommon.getECCandidates(tree, false);
+
+         List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, headMasks, props, false);
+         
+         String[] prediction = new String[samples.size()];
+         for (int i=0; i<samples.size(); ++i)
+             prediction[i] = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
+         
+         if (!quickClassify && stage2Classifier!=null) {
+             int i=0;
+             String[][] labelMatrix = ECDepTreeSample.makeDepLabels(headMasks, prediction);
+             for (int h=0; h<headMasks.length; ++h)
+                 for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
+                     samples.get(i).putAll(extractSequenceFeatures(tree, h, t, labelMatrix, false));
+                     prediction[i] = labelIndexMap.get(stage2Classifier.predict(features.getFeatureVector(samples.get(i))));
+                     ++i;
+                 }
+         }
+         return ECDepTreeSample.makeDepLabels(headMasks, prediction);    
+    }
+    
     public String[] predict(TBTree tree, List<PBInstance> props) {
-        
-        BitSet[] headMasks = ECCommon.getECCandidates(tree, false);
-
-        List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, headMasks, props, false);
-        
-        String[] prediction = new String[samples.size()];
-        for (int i=0; i<samples.size(); ++i)
-            prediction[i] = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
-        
-        if (!quickClassify && stage2Classifier!=null) {
-            int i=0;
-            String[][] labelMatrix = ECDepTreeSample.makeLabels(headMasks, prediction);
-            for (int h=0; h<headMasks.length; ++h)
-                for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
-                    samples.get(i).putAll(extractSequenceFeatures(tree, h, t, labelMatrix, false));
-                    prediction[i] = labelIndexMap.get(stage2Classifier.predict(features.getFeatureVector(samples.get(i))));
-                    ++i;
-                }
-        }
-
-        /*
-        TBNode[] nodes = tree.getTokenNodes();
-        for (int h=0; h<headMasks.length; ++h) {
-            System.out.print(nodes[h].getWord());
-            for (int t=0; t<headPrediction[h].length;++t)
-                if (headPrediction[h][t]!=null && !headPrediction[h][t].equals(ECCommon.NOT_EC))
-                    System.out.print("/"+headPrediction[h][t]+'-'+t);
-            System.out.print(' ');
-        }
-        System.out.print('\n');
-        for (int l=0; l<labels.length; ++l) {
-            if (!labels[l].equals(ECCommon.NOT_EC))
-                System.out.print(labels[l]+'-'+l+' ');
-            if (l<nodes.length)
-                System.out.print(nodes[l].getWord()+' ');
-        }
-        System.out.print('\n');
-        */
-        return makeLinearLabel(tree, headMasks, prediction);
+    	return makeLinearLabel(tree, predictDep(tree, props));
     }
     
     public void train(Properties prop) {
@@ -879,7 +1104,7 @@ public class ECDepModel extends ECModel implements Serializable {
             for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
                 for (ECTreeSample treeSample:entry.getValue()) {
                     String[] gLabels = ECCommon.getECLabels(treeSample.goldTree, labelType);
-                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length));
+                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ECDepTreeSample.makeDepLabels(((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length)));
                     for (int i=0; i<gLabels.length; ++i)
                         scoreStructured.addResult(sLabels[i]==null?ECCommon.NOT_EC:sLabels[i].trim(), gLabels[i]);
                 }
@@ -891,7 +1116,7 @@ public class ECDepModel extends ECModel implements Serializable {
             stage2Classifier = new LinearClassifier();
             stage2Classifier.initialize(labelStringMap, prop);
             
-            newLabels = train(stage2Classifier, folds, threads, newLabels);
+            newLabels = train(stage2Classifier, 1, threads, newLabels);
             ECScore scorePlain = new ECScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
             for (int i=0; i<newLabels.length; ++i)
                 scorePlain.addResult(newLabels[i], goldLabels[i]);
@@ -903,7 +1128,7 @@ public class ECDepModel extends ECModel implements Serializable {
             for (Map.Entry<String, List<ECTreeSample>> entry:trainingSamples.entrySet())
                 for (ECTreeSample treeSample:entry.getValue()) {
                     String[] gLabels = ECCommon.getECLabels(treeSample.goldTree, labelType);
-                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length));
+                    String[] sLabels = makeLinearLabel(treeSample.parsedTree, ECDepTreeSample.makeDepLabels(((ECDepTreeSample)treeSample).headMasks, Arrays.copyOfRange(newLabels, c, c+=treeSample.samples.length)));
                     for (int i=0; i<gLabels.length; ++i)
                         scoreStructured.addResult(sLabels[i]==null?ECCommon.NOT_EC:sLabels[i].trim(), gLabels[i]);
                 }

@@ -143,7 +143,7 @@ public class TrainSRL {
                 System.out.println(PropertyUtil.toString(srcProps));
                 
                 String treeRegex = srcProps.getProperty("tb.regex");
-                Map<String, TBTree[]> srcTreeBank = TBUtil.readTBDir(srcProps.getProperty("tbdir"), treeRegex);
+                Map<String, TBTree[]> srcTreeBank = TBUtil.readTBDir(srcProps.getProperty("tbdir"), treeRegex, langUtil.getHeadRules());
                 
                 String filename = srcProps.getProperty("pb.filelist");
                 List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"), true)
@@ -163,8 +163,10 @@ public class TrainSRL {
                             System.out.println("Reading "+srcProps.getProperty("parsedir")+File.separatorChar+entry.getKey());
                             ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
                             TBTree tree;
-                            while ((tree = tbreader.nextTree()) != null)
+                            while ((tree = tbreader.nextTree()) != null) {
+                            	TBUtil.linkHeads(tree, langUtil.getHeadRules());
                                 a_tree.add(tree);
+                            }
                             parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
                         } catch (FileNotFoundException e) {
                         } catch (ParseException e) {
@@ -201,14 +203,11 @@ public class TrainSRL {
                 
                 for (int i=0; i<trees.length; ++i)
                 {
-                    TBUtil.linkHeads(trees[i], langUtil.getHeadRules());
                     List<PBInstance> pbInstances = pbFileMap.get(i);
 
                     ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
                         
                     if (pbInstances!=null)  {
-                        if (!pbInstances.isEmpty())
-                            TBUtil.linkHeads(pbInstances.get(0).getTree(), langUtil.getHeadRules());
                         for (PBInstance instance:pbInstances) {
                             srls.add(new SRInstance(instance));
                             if (instance.getArgs().length>1)

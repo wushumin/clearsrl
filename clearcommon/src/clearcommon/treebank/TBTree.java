@@ -140,6 +140,10 @@ public class TBTree implements Serializable {
     public String toString() {
         return "( " + rootNode.toParse() + " )";
     }
+    
+    public String toPrettyParse() {
+    	return "( " + rootNode.toPrettyParse(1) + " )\n";
+    }
 
     public String toText(boolean wTerminal) {
         return rootNode.toText(wTerminal);

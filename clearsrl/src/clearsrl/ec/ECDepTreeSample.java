@@ -13,15 +13,15 @@ public class ECDepTreeSample extends ECTreeSample {
         for (BitSet headMask:headMasks)
             cnt+=headMask.cardinality();
         if (cnt!=samples.length)
-            System.err.println("wtf?");
+            System.err.println("huh?");
         
     }
     
-    public String[][] makeLabels(String[] labels) {
-        return makeLabels(headMasks, labels);
+    public String[][] makeDepLabels(String[] labels) {
+        return makeDepLabels(headMasks, labels);
     }
     
-    public static String[][] makeLabels(BitSet[] headMasks, String[] labels) {
+    public static String[][] makeDepLabels(BitSet[] headMasks, String[] labels) {
         String[][] labelArray = new String[headMasks.length][headMasks.length+1];
         
         int cnt=0;

@@ -2,20 +2,37 @@ package clearcommon.util;
 
 import gnu.trove.map.TObjectIntMap;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.xml.sax.Attributes;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.XMLReaderFactory;
+
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
+import clearcommon.util.EnglishUtil.FrameParseHandler;
+import clearcommon.util.PBFrame.Roleset;
 
 public class ChineseUtil extends LanguageUtil {
 
+    public Map<String, PBFrame> frameMap;
+	
     static final Set<String> NOUN_POS = new HashSet<String>();
     static {
         NOUN_POS.add("NR");
@@ -41,6 +58,12 @@ public class ChineseUtil extends LanguageUtil {
             e.printStackTrace();
             return false;
         }
+        
+        frameMap = new HashMap<String, PBFrame>();
+        String frameDir = props.getProperty("frame_dir");
+        if (frameDir != null)
+            readFrameFiles(new File(frameDir));
+        
         return true;
     }
     
@@ -100,6 +123,82 @@ public class ChineseUtil extends LanguageUtil {
         
         return 0;
     }
+    
+    class FrameParseHandler extends DefaultHandler {
+        PBFrame frame;
+        PBFrame.Roleset roleset;
+        
+        boolean predicate;
+        
+        public FrameParseHandler(PBFrame frame) {
+            this.frame = frame; 
+            predicate = false;
+        }
+        
+        @Override
+        public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
+        	if (localName.equals("id")) {
+        		predicate = true;
+        	} else if (localName.equals("frameset")) {
+                roleset = frame.new Roleset(atts.getValue("id"));
+                frame.rolesets.put(roleset.getId(), roleset);
+            } else if (localName.equals("role")) {
+            	roleset.roles.add("arg"+atts.getValue("argnum").toLowerCase());
+            }
+        }
+        
+        @Override
+        public void characters(char ch[], int start, int length) throws SAXException {
+            if (predicate) {
+                frame.predicate=new String(ch, start, length).replaceAll("[\\s「」]", "");
+                predicate = false;
+            }
+        }
+    }
+    
+    void readFrameFiles(final File dir) {
+        XMLReader parser=null;
+        try {
+            parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
+            parser.setEntityResolver(new EntityResolver() {
+                @Override
+                public InputSource resolveEntity(String publicId, String systemId)
+                        throws SAXException, IOException {
+                    if (systemId.contains("verb.dtd")) {
+                        return new InputSource(new FileReader(new File(dir, "verb.dtd")));
+                    } else {
+                        return null;
+                    }
+                }
+            });
+        } catch (SAXException e) {
+            e.printStackTrace();
+            return;
+        }
+        
+        for (String fileName:FileUtil.getFiles(dir, ".+-v\\.xml"))
+            readFrameFile(parser, new File(dir, fileName));
+    }
+    
+    void readFrameFile(XMLReader parser, File file) {
+        String key = file.getName();
+        key = key.substring(0, key.length()-4);
+        String predicate = key.substring(0, key.length()-2);
+        //System.out.println(file.getName());
+        PBFrame frame = new PBFrame(predicate, LanguageUtil.POS.VERB);
+        try {
+            parser.setContentHandler(new FrameParseHandler(frame));
+            parser.parse(new InputSource(new FileReader(file)));
+            frameMap.put(frame.getPredicate()+key.substring(key.length()-2), frame);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (SAXException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
     
     int countConstituents(String pos, Deque<TBNode> nodes, boolean left, int depth)
     {   

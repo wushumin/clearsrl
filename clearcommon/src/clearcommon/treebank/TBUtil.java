@@ -3,7 +3,10 @@ package clearcommon.treebank;
 import clearcommon.propbank.PBFileReader;
 import clearcommon.util.FileUtil;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,15 +152,15 @@ public final class TBUtil {
         return null;
     }
 
-    public static TBTree[] readTBFile(String dirName, String treeFile)
-    {
+    public static TBTree[] readTBFile(String dirName, String treeFile, TBHeadRules headrules) {
         ArrayList<TBTree>  a_tree = new ArrayList<TBTree>();
         try {
             TBFileReader tbreader     = new SerialTBFileReader(dirName, treeFile);
             TBTree       tree         = null;
             
-            while ((tree = tbreader.nextTree()) != null)
-            {
+            while ((tree = tbreader.nextTree()) != null) {
+            	if (headrules!=null)
+            		linkHeads(tree, headrules);
                 a_tree.add(tree);
                 if (tree.index!=0 && tree.index%10000==0)
                     logger.info("reading tree "+tree.index);
@@ -170,29 +173,69 @@ public final class TBUtil {
         }
     }
     
-    public static Map<String, TBTree[]> readTBDir(String dirName, String regex)
-    {
-        File dir = new File(dirName);
+    public static TBTree[] readTBFile(String dirName, String treeFile) {
+    	return readTBFile(dirName, treeFile, null);
+    }
+    
+    public static Map<String, TBTree[]> readTBDir(String dirName, String regex, TBHeadRules headrules) {
+    	 File dir = new File(dirName);
+         
+         List<String> files = FileUtil.getFiles(dir, regex);
+         if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
+             files.add(dir.getName());
+         
+         return readTBDir(dirName, files, headrules);
+    }
+    
+    public static Map<String, TBTree[]> readTBDir(String dirName, String regex) {
+        return readTBDir(dirName, regex, null);
+    }
+
+    public static Map<String, TBTree[]> readTBDir(String dirName, List<String> files, TBHeadRules headrules) {
+        Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
+        for (String treeFile: files) {
+            logger.info("Reading "+dirName+File.separatorChar+treeFile);
+            
+            TBTree[] trees = readTBFile(dirName, treeFile, headrules);
+            
+            if (trees!=null) tbMap.put(treeFile, trees);
+        }
+        return tbMap;
+    }
+    
+    public static Map<String, TBTree[]> readTBDir(String dirName, List<String> files) {
+    	return readTBDir(dirName, files, null);
+    }
+
+    
+    public static Map<String, TBTree[]> readTBDir(String dirName, String regex, String depDir, int idxCol, int labelCol) {
+    	File dir = new File(dirName);
         
         List<String> files = FileUtil.getFiles(dir, regex);
         if (!dir.isDirectory() && Pattern.matches(regex, dir.getName()))
             files.add(dir.getName());
         
-        return readTBDir(dirName, files);
+        return readTBDir(dirName, files, depDir, idxCol, labelCol);
     }
     
-    public static Map<String, TBTree[]> readTBDir(String dirName, List<String> files)
-    {
+    public static Map<String, TBTree[]> readTBDir(String dirName, List<String> files, String depDir, int idxCol, int labelCol) {
         Map<String, TBTree[]> tbMap = new TreeMap<String, TBTree[]>();
-        for (String treeFile: files)
-        {
+        for (String treeFile: files) {
             logger.info("Reading "+dirName+File.separatorChar+treeFile);
             
-            TBTree[] trees = readTBFile(dirName, treeFile);
+            TBTree[] trees = readTBFile(dirName, treeFile, null);
             
-            if (trees!=null) tbMap.put(treeFile, trees);
+            File depFile = new File(depDir, treeFile.replaceAll("\\.\\w+\\z", ".dep"));
+            try {
+            	if (trees!=null) { 
+            		addDependency(trees, depFile, idxCol, labelCol);
+            		tbMap.put(treeFile, trees);
+            	}
+            } catch (IOException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+            }
         }
-        
         return tbMap;
     }
     
@@ -224,4 +267,70 @@ public final class TBUtil {
             }
         }
     }
+    
+	public static final class Dependency {
+		public int index;
+		public String label;
+		public Dependency(int index, String label) {
+			this.index = index;
+			this.label = label;
+		}
+	}
+	
+	public static Dependency[] readCoNLLTree(BufferedReader reader, int idxCol, int labelCol) throws IOException {
+		List<Dependency> depList = new ArrayList<Dependency>();
+		String line;
+		while ((line=reader.readLine())!=null) {
+			line = line.trim();
+			if (line.isEmpty()) {
+				if (!depList.isEmpty())
+					break;
+				else
+					continue;
+			}
+			String[] tokens = line.split("\\s+");
+			int index = -1;
+			try {
+				index = Integer.parseInt(tokens[idxCol]);
+			} catch (NumberFormatException e) {}
+			
+			depList.add(new Dependency(index, tokens[labelCol]));
+		}
+		return depList.isEmpty()?null:depList.toArray(new Dependency[depList.size()]);
+	}
+
+	static void addDependency(TBNode node, TBNode[] tokens, Dependency[] deps) {
+		node.depLabel = deps[node.terminalIndex].label;
+		node.head = node;
+		if (deps[node.terminalIndex].index>0 && tokens[deps[node.terminalIndex].index-1].head==null)
+			addDependency(tokens[deps[node.terminalIndex].index-1], tokens, deps);
+		TBNode ancestor = node;
+		while (ancestor.parent!=null && ancestor.parent.head==null) {
+			ancestor = ancestor.parent;
+			ancestor.head = node;
+		}
+		node.headConstituent = ancestor;
+	}
+	
+	public static void addDependency(TBTree tree, Dependency[] deps) {
+		TBNode[] tokens = tree.getTokenNodes();
+		for (TBNode node:tree.getTerminalNodes())
+			if (node.head==null)
+				addDependency(node, tokens, deps);
+	}
+	
+	public static void addDependency(TBTree[] trees, File depFile, int idxCol, int labelCol) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new FileReader(depFile))) {
+			Dependency[] deps;
+			int count=0;
+			for (;;) {
+				deps = readCoNLLTree(reader, idxCol, labelCol);
+				if (deps==null) break;
+				if (trees[count].getFilename().endsWith("0310.nw") && count==22)
+					System.err.println(""+count+" "+trees[count]);
+				addDependency(trees[count++], deps);
+			}
+		}
+	}
+    
 }

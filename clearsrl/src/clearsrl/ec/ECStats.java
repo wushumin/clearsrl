@@ -68,8 +68,8 @@ public class ECStats {
             System.exit(-1);
         
         options.corpus=options.corpus==null?"":options.corpus+"."; 
-        Map<String, TBTree[]> tbMap = TBUtil.readTBDir(props.getProperty(options.corpus+"tbdir"), props.getProperty(options.corpus+"tb.regex"));
-        Map<String, TBTree[]> parseMap = TBUtil.readTBDir(props.getProperty(options.corpus+"parsedir"), props.getProperty(options.corpus+"tb.regex"));
+        Map<String, TBTree[]> tbMap = TBUtil.readTBDir(props.getProperty(options.corpus+"tbdir"), props.getProperty(options.corpus+"tb.regex"), chLangUtil.getHeadRules());
+        Map<String, TBTree[]> parseMap = TBUtil.readTBDir(props.getProperty(options.corpus+"parsedir"), props.getProperty(options.corpus+"tb.regex"), chLangUtil.getHeadRules());
         Map<String, SortedMap<Integer, List<PBInstance>>>  propMap = 
                 PBUtil.readPBDir(props.getProperty(options.corpus+"propdir"), props.getProperty(options.corpus+"pb.regex"), new TBReader(parseMap));
         
@@ -90,8 +90,6 @@ public class ECStats {
             SortedMap<Integer, List<PBInstance>> pbInstances = propMap.get(entry.getKey());
             
             for (int i=0; i<parseTrees.length; ++i) {
-                TBUtil.linkHeads(tbTrees[i], chLangUtil.getHeadRules());
-                TBUtil.linkHeads(parseTrees[i], chLangUtil.getHeadRules());
                 String[] labels = new String[tbTrees[i].getTokenCount()];
                 
                 BitSet[] goldBitsets = ECCommon.getECCandidates(tbTrees[i]);

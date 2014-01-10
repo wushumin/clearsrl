@@ -126,7 +126,7 @@ public class RunSRL {
                 //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
                 //for (TBNode node:nodes)
                 //    System.out.println(node.toParse());
-                TBUtil.linkHeads(tree, langUtil.getHeadRules());
+                //TBUtil.linkHeads(tree, langUtil.getHeadRules());
 
                
                 List<SRInstance> predictions = null;
@@ -171,8 +171,8 @@ public class RunSRL {
                             List<String> stem = langUtil.findStems(goldInstances[j].predicateNode);
                             predictions.add(new SRInstance(goldInstances[j].predicateNode, tree, stem.get(0)+".XX", 1.0));
                         }
-                        if (goldInstances!=null && goldInstances.length!=0)
-                            TBUtil.linkHeads(goldInstances[0].tree, langUtil.getHeadRules());
+                        //if (goldInstances!=null && goldInstances.length!=0)
+                        //    TBUtil.linkHeads(goldInstances[0].tree, langUtil.getHeadRules());
                         predictions = model.predict(tree, goldInstances, null);
                     }
                         
@@ -240,6 +240,7 @@ public class RunSRL {
         
         TBTree tree;
         while ((tree=treeReader.nextTree())!=null){
+        	TBUtil.linkHeads(tree, langUtil.getHeadRules());
             queue.put(tree);            
             if (parseOut!=null)
                 parseOut.println(tree.toString());
@@ -442,7 +443,7 @@ public class RunSRL {
                 String treeRegex = runSRLProps.getProperty("tb.regex");
                 String propRegex = runSRLProps.getProperty("pb.regex");
 
-                treeBank = TBUtil.readTBDir(runSRLProps.getProperty("tbdir"), treeRegex);
+                treeBank = TBUtil.readTBDir(runSRLProps.getProperty("tbdir"), treeRegex, options.langUtil.getHeadRules());
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
                 PBTokenizer tokenzier = runSRLProps.getProperty("pb.tokenizer")==null?(runSRLProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(runSRLProps.getProperty("pb.tokenizer")).newInstance();
 

@@ -326,8 +326,18 @@ public class ChineseECDepTagger {
         String corpus = validateProps.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
         
-        Map<String, TBTree[]> tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"));
-        Map<String, TBTree[]> parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"));
+        Map<String, TBTree[]> tbMapValidate = null;
+        if (validateProps.getProperty(corpus+"tbdepdir")!=null)
+        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"tbdepdir"), 8, 10);
+        else 
+        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
+        Map<String, TBTree[]> parseValidate = null;
+        if (validateProps.getProperty(corpus+"parsedepdir")!=null)
+        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"parsedepdir"), 8, 10);
+        else
+        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
         Map<String, SortedMap<Integer, List<PBInstance>>>  propValidate = 
                 PBUtil.readPBDir(validateProps.getProperty(corpus+"propdir"), validateProps.getProperty(corpus+"pb.regex"), new TBReader(parseValidate));
         
@@ -339,8 +349,6 @@ public class ChineseECDepTagger {
 
             for (int i=0; i<parseTrees.length; ++i)
             {
-                TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
-                TBUtil.linkHeads(tbTrees[i], langUtil.getHeadRules());
                 List<PBInstance> propList = pbInstances==null?null:pbInstances.get(i);
                 String[] goldLabels = ECCommon.getECLabels(tbTrees[i], model.labelType);
                 String[] labels = model.predict(parseTrees[i], propList);
@@ -426,8 +434,18 @@ public class ChineseECDepTagger {
         String corpus = trainProps.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
 
-        Map<String, TBTree[]> tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"));
-        Map<String, TBTree[]> parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"));
+        Map<String, TBTree[]> tbMapTrain = null;
+        if (trainProps.getProperty(corpus+"tbdepdir")!=null)
+        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"tbdepdir"), 8, 10);
+        else 
+        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
+        Map<String, TBTree[]> parseTrain = null;
+        if (trainProps.getProperty(corpus+"parsedepdir")!=null)
+        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"parsedepdir"), 8, 10);
+        else
+        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
         Map<String, SortedMap<Integer, List<PBInstance>>>  propTrain = 
                 PBUtil.readPBDir(trainProps.getProperty(corpus+"propdir"), trainProps.getProperty(corpus+"pb.regex"), new TBReader(parseTrain));
 
@@ -438,7 +456,6 @@ public class ChineseECDepTagger {
             SortedMap<Integer, List<PBInstance>> pbInstances = propTrain.get(entry.getKey());
             
             for (int i=0; i<parseTrees.length; ++i) {
-                TBUtil.linkHeads(tbTrees[i], langUtil.getHeadRules());
                 /*System.out.println(tbTrees[i]);
                 for (TBNode node : tbTrees[i].getRootNode().getTerminalNodes()) {
                     if (node.isEC()|| node.getParent()!=null)
@@ -452,7 +469,6 @@ public class ChineseECDepTagger {
                     System .out.print(node.getWord()+' ');
                 }
                 System .out.print("\n");*/
-                TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
                 model.addTrainingSentence(tbTrees[i], parseTrees[i], pbInstances==null?null:pbInstances.get(i), true);
             }
         }

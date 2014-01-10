@@ -195,13 +195,35 @@ public class ChineseECTagger {
         ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         ECScore score2 = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         
+        ECScore dScore = null;
+        ECScore dScore2 = null;
+
+        if (model instanceof ECDepModel) {
+        	dScore = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
+        	dScore2 = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
+        	
+        }
+        
         String corpus = validateProps.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
         
-        Map<String, TBTree[]> tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"));
-        Map<String, TBTree[]> parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"));
+        Map<String, TBTree[]> tbMapValidate = null;
+        if (validateProps.getProperty(corpus+"tbdepdir")!=null)
+        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"tbdepdir"), 8, 10);
+        else 
+        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
+        Map<String, TBTree[]> parseValidate = null;
+        if (validateProps.getProperty(corpus+"parsedepdir")!=null)
+        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"parsedepdir"), 8, 10);
+        else
+        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
         Map<String, SortedMap<Integer, List<PBInstance>>>  propValidate = 
                 PBUtil.readPBDir(validateProps.getProperty(corpus+"propdir"), validateProps.getProperty(corpus+"pb.regex"), new TBReader(parseValidate));
+        
+        int ecCount=0;
+        int ecDepCount=0;
         
         for (Map.Entry<String, TBTree[]> entry : parseValidate.entrySet()) {
             logger.info("Validating: "+entry.getKey());
@@ -212,22 +234,60 @@ public class ChineseECTagger {
 
             for (int i=0; i<parseTrees.length; ++i) {
                 String[] goldLabels = ECCommon.getECLabels(tbTrees[i], model.labelType);
-                
-                TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
+
                 List<PBInstance> propList = pbInstances==null?null:pbInstances.get(i);
                 
-                if (model instanceof ECDepModel)
+                String[] labels = null;
+                if (model instanceof ECDepModel) {
                 	((ECDepModel)model).setQuickClassify(true);
-                String[] labels = model.predict(parseTrees[i], propList);
-                for (int l=0; l<labels.length; ++l)
+                	String[][] depLabels = ((ECDepModel)model).predictDep(parseTrees[i], propList);
+                	labels = ECDepModel.makeLinearLabel(parseTrees[i], depLabels);
+                	
+                	String[][] goldDepLabels = ECCommon.getECDepLabels(tbTrees[i], model.labelType);
+                	
+                	for (int h=0; h<depLabels.length;++h)
+                		for (int t=0; t<depLabels[h].length;++t) {
+                			//if (depLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(depLabels[h][t]) ||
+                			//		goldDepLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
+                				dScore.addResult(depLabels[h][t]==null?ECCommon.NOT_EC:depLabels[h][t],
+                						goldDepLabels[h][t]==null?ECCommon.NOT_EC:goldDepLabels[h][t]);
+                				if (goldDepLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(goldDepLabels[h][t])) {
+                					String[] tokens = goldDepLabels[h][t].trim().split("\\s+");
+                					if (tokens.length>1)
+                						System.err.println(Arrays.asList(tokens));
+                					ecDepCount+=tokens.length;
+                				}
+                		}
+                	
+                } else 
+                	labels = model.predict(parseTrees[i], propList);
+ 
+                for (int l=0; l<labels.length; ++l) {
                     score.addResult(labels[l], goldLabels[l]);
+                }
                 
-                if (model instanceof ECDepModel)
+                String[] labels2 = null;
+                if (model instanceof ECDepModel) {
                 	((ECDepModel)model).setQuickClassify(false);
-                String[] labels2 = model.predict(parseTrees[i], propList);
-                for (int l=0; l<labels2.length; ++l)
+                	String[][] depLabels = ((ECDepModel)model).predictDep(parseTrees[i], propList);
+                	labels2 = ECDepModel.makeLinearLabel(parseTrees[i], depLabels);
+                	
+                	String[][] goldDepLabels = ECCommon.getECDepLabels(tbTrees[i], model.labelType);
+                	
+                	for (int h=0; h<depLabels.length;++h)
+                		for (int t=0; t<depLabels[h].length;++t)
+                			if (depLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(depLabels[h][t]) ||
+                					goldDepLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
+                				dScore2.addResult(depLabels[h][t]==null?ECCommon.NOT_EC:depLabels[h][t],
+                						goldDepLabels[h][t]==null?ECCommon.NOT_EC:goldDepLabels[h][t]);
+                } else 
+                	labels2 = model.predict(parseTrees[i], propList);
+                for (int l=0; l<labels2.length; ++l) {
                     score2.addResult(labels2[l], goldLabels[l]);
-
+                    if (goldLabels[l]!=null&&!ECCommon.NOT_EC.equals(goldLabels[l]))
+                    	ecCount+=goldLabels[l].trim().split("\\s+").length;
+                }
+                    
                 boolean same=true;
                 for (int l=0; l<labels.length; ++l)
                 	if (!labels[l].equals(labels2[l])) {
@@ -235,15 +295,19 @@ public class ChineseECTagger {
                 		break;
                 	}
                 if (!same) {
-                	System.out.println(tbTrees[i]);
-                	System.out.println(parseTrees[i]);
+                	/*
+                	System.out.println(tbTrees[i].toPrettyParse());
+                	System.out.println(parseTrees[i].toPrettyParse());
 	                TBNode[] tokens = tbTrees[i].getTokenNodes();
 	                printEC(tokens, goldLabels);
 	                printEC(tokens, labels);
 	                printEC(tokens, labels2);
+	                if (pbInstances!=null) 
+	                	for (PBInstance prop:propList)
+	                		System.out.println(prop.toText());
 	                System.out.println(score.toString(score.countMatrix, true));
 	                System.out.println(score2.toString(score2.countMatrix, true));	                
-	                System.out.println("");
+	                System.out.println("");*/
                 }
                 /*
                 for (int l=0; l<labels.length; ++l)
@@ -254,6 +318,13 @@ public class ChineseECTagger {
         }
         System.out.println(score.toString());
         System.out.println(score2.toString());
+        if (dScore!=null)
+        	System.out.println(dScore.toString());
+        if (dScore2!=null)
+        	System.out.println(dScore2.toString());
+        
+        System.out.printf("EC count: %d, dep count: %d\n", ecCount, ecDepCount);
+        
     }
             
     static void printEC(TBNode[] nodes, String[] labels) {
@@ -289,8 +360,18 @@ public class ChineseECTagger {
         String corpus = trainProps.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
 
-        Map<String, TBTree[]> tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"));
-        Map<String, TBTree[]> parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"));
+        Map<String, TBTree[]> tbMapTrain = null;
+        if (trainProps.getProperty(corpus+"tbdepdir")!=null)
+        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"tbdepdir"), 8, 10);
+        else 
+        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
+        Map<String, TBTree[]> parseTrain = null;
+        if (trainProps.getProperty(corpus+"parsedepdir")!=null)
+        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"parsedepdir"), 8, 10);
+        else
+        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
+        
         Map<String, SortedMap<Integer, List<PBInstance>>>  propTrain = 
                 PBUtil.readPBDir(trainProps.getProperty(corpus+"propdir"), trainProps.getProperty(corpus+"pb.regex"), new TBReader(parseTrain));
 
@@ -300,8 +381,6 @@ public class ChineseECTagger {
             SortedMap<Integer, List<PBInstance>> pbInstances = propTrain.get(entry.getKey());
             
             for (int i=0; i<parseTrees.length; ++i) {
-                TBUtil.linkHeads(tbTrees[i], langUtil.getHeadRules());
-                TBUtil.linkHeads(parseTrees[i], langUtil.getHeadRules());
                 model.addTrainingSentence(tbTrees[i], parseTrees[i], pbInstances==null?null:pbInstances.get(i), true);
                 
                 /*

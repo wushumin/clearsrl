@@ -372,7 +372,7 @@ public class ECModel implements Serializable {
                         pathList.trimToSize();
                         if (!pathList.isEmpty()) sample.put(feature, pathList);
                     }
-                case SRL_INFRONTARG:
+                case D_SRL_INFRONTARG:
                     if (rightPred[i]!= null) {
                         for (PBArg arg:rightPred[i].getArgs())
                             if (arg.getTokenSet().nextSetBit(0)==i) {
@@ -381,7 +381,7 @@ public class ECModel implements Serializable {
                             }
                     }
                     break;
-                case SRL_BEHINDARG:
+                case D_SRL_BEHINDARG:
                     if (rightPred[i]!= null) {
                         for (PBArg arg:rightPred[i].getArgs())
                             if (arg.getTokenSet().length()==i) {
@@ -407,7 +407,7 @@ public class ECModel implements Serializable {
                                 argTypes.add(arg.getLabel());
                         if (argTypes.isEmpty()) sample.put(feature, argTypes);
                     }
-                case SRL_INARG:              // positioned inside an argument of the predicate
+                case D_SRL_INARG:              // positioned inside an argument of the predicate
                     if (rightPred[i]!= null) {
                         for (PBArg arg:rightPred[i].getArgs())
                             if (i>0 && arg.getTokenSet().get(i-1) && arg.getTokenSet().get(i)) {

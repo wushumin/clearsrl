@@ -145,13 +145,21 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         
         for (EnumSet<T> feature:features)  {   
             Iterator<T> iter = feature.iterator();
-            Collection<String> sList = sampleFlat.get(iter.next());
-            for (;iter.hasNext() && sList!=null && !sList.isEmpty();)
-                sList = permute(sList, sampleFlat.get(iter.next()));
             
-            if (sList!=null && !sList.isEmpty()) {
-                //if (feature.size()>1) System.out.println(toString(feature)+": "+sList);
-                sample.put(feature, sList);
+            Collection<String> sList = sampleFlat.get(iter.next());
+            for (;iter.hasNext();)
+                sList = permute(sList, sampleFlat.get(iter.next()));
+
+            if (sList!=null) {
+            	/*
+	            for (Iterator<String> sIter=sList.iterator(); sIter.hasNext();)
+	            	if (sIter.next().matches("null( null)*"))
+	            		sIter.remove();
+            	 */
+	            if (!sList.isEmpty()) {
+	                //if (feature.size()>1) System.out.println(toString(feature)+": "+sList);
+	                sample.put(feature, sList);
+	            }
             }
         }
         
@@ -159,9 +167,11 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }
 
     static Collection<String> permute(Collection<String> lhs, Collection<String> rhs) {   
-        if (lhs==null || rhs==null) return new ArrayList<String>(0);
-
-        ArrayList<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
+        if (lhs==null || rhs==null) return null;
+    	//if (lhs==null) lhs = Arrays.asList("null");
+    	//if (rhs==null) rhs = Arrays.asList("null");
+    		
+    	List<String> ret = new ArrayList<String>(lhs.size()*rhs.size());
         for (String a2:rhs)
             for (String a1:lhs)
                 ret.add(a1+" "+a2);

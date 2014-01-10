@@ -59,7 +59,6 @@ public class TBNode implements Serializable {
     // Pattern.compile("([a-zA-Z]+|\\-NONE\\-)((\\-[a-zA-Z]+)*)(\\-\\d+)?");
 
     TBNode parent;
-    TBNode headConstituent;
     String pos;
     Set<String> functionTags;
     String word;
@@ -67,8 +66,12 @@ public class TBNode implements Serializable {
     int terminalIndex;
     int tokenIndex;
     TBNode indexingNode;
-    TBNode head;
     TBNode[] children;
+
+    TBNode head;            // head of this terminal (self) or constituent    
+    String depLabel;        // only for terminals
+    TBNode headConstituent; // highest level constituent headed by this terminal
+    
 
     /**
      * Initializes the node and sets its parent and pos-tag.
@@ -240,7 +243,7 @@ public class TBNode implements Serializable {
     }
 
     public TBNode getHead() {
-        return head;
+        return isTerminal()?this:head;
     }
 
     /**
@@ -382,10 +385,18 @@ public class TBNode implements Serializable {
     public TBNode getParent() {
         return parent;
     }
-
+    
+    public ArrayList<TBNode> getDepPath(TBNode node) {
+    	return getPath(node, true);
+    }
+    
     public ArrayList<TBNode> getPath(TBNode node) {
-        ArrayList<TBNode> lhs = getPathToRoot();
-        ArrayList<TBNode> rhs = node.getPathToRoot();
+        return getPath(node, false);
+    }
+    
+    ArrayList<TBNode> getPath(TBNode node, boolean dependency) {
+    	ArrayList<TBNode> lhs = getPathToRoot(dependency);
+        ArrayList<TBNode> rhs = node.getPathToRoot(dependency);
         
         TBNode anchor=null;
         
@@ -419,12 +430,22 @@ public class TBNode implements Serializable {
         return nodeList;
     }
 
+    
+    
     public ArrayList<TBNode> getPathToRoot() {
+    	return getPathToRoot(false);
+    }
+    
+    public ArrayList<TBNode> getDepPathToRoot() {
+    	return getPathToRoot(true);
+    }
+    
+    ArrayList<TBNode> getPathToRoot(boolean dependency) {
         TBNode node = this;
         ArrayList<TBNode> nodeList = new ArrayList<TBNode>();
         do {
             nodeList.add(node);
-        } while ((node = node.getParent()) != null);
+        } while ((node = (dependency?node.getHeadOfHead():node.getParent())) != null);
 
         return nodeList;
     }
@@ -593,6 +614,37 @@ public class TBNode implements Serializable {
         StringBuilder str = new StringBuilder();
         for (TBNode node : (wTerminal ? getTerminalNodes() : getTokenNodes()))
             str.append(node.getWord() + "_" + (wTerminal?node.getTerminalIndex():node.getTokenIndex())+"/"+(node.getHeadOfHead()==null?-1:(wTerminal?node.getHeadOfHead().getTerminalIndex():node.getHeadOfHead().getTokenIndex()))+' ');
+        return str.toString();
+    }
+
+	public String getDepLabel() {
+	    return depLabel;
+    }
+
+	public String toPrettyParse(int indent) {
+	    // TODO Auto-generated method stub
+		StringBuilder str = new StringBuilder();
+		
+		if (childIndex>0)
+			for (int i=0; i<indent; ++i)
+				str.append(' ');
+		
+        str.append('(');
+        str.append(pos);
+        if (functionTags != null)
+            for (String tag : functionTags)
+                str.append('-' + tag);
+        if (word != null)
+            str.append(' ' + word);
+
+        int slen = str.length()+1;
+        
+        for (TBNode node : children) {
+            str.append(" " + node.toPrettyParse(childIndex==0?slen+indent:slen));
+            if (node.childIndex!=children.length-1)
+            	str.append('\n');	
+        }
+        str.append(')');
         return str.toString();
     }
 

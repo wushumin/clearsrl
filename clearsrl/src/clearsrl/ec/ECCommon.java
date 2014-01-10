@@ -33,7 +33,10 @@ public final class ECCommon {
         // head feature
         H_LEMMA,
         H_POS,
-        H_CONSTITUENT, 
+        H_TOP_VERB,
+        H_CONSTITUENT, // top level constituent of headed by this node
+        H_CONSTITUENT_PARENT,
+        H_CONSTITUENT_VP_FIRST, // for VP constituent, whether it's the first
         H_ORG_LEMMA,  // modified head (find head of VP)
         H_ORG_POS,    // modified head POS
         H_ORG_SPATH,  // syntactic path from head to modified head
@@ -41,34 +44,49 @@ public final class ECCommon {
         H_H_LEMMA,    // head of head
         H_H_POS,      // head of head lemma
         H_H_SPATH,    // syntactic path to head of head
-        H_SFRAME,
+        H_SFRAME,     // syntactic frame of head
+        H_CONSTSFRAME, 
+        
         H_VOICE,
+
+     // SRL feature
+        SRL_LEMMA,              // lemma of the closest predicate to the right
+        SRL_POS,                // part-of-speech of the closest predicate to the right
+        SRL_ANCESTOR,           // ancestor POS of the predicate
+        SRL_NONLOCAL_ARG,
+        SRL_FRAMEFILE,
+        SRL_FRAMEFILE_LOCAL,
+        SRL_NOARG0,             // predicate has no ARG0
+        SRL_NOARG1,             // predicate has no ARG1
+        SRL_LOCAL_NOARG0,       // predicate has no local ARG0
+        SRL_LOCAL_NOARG1,       // predicate has no local ARG1
+        SRL_NOLEFTCOREARG,      // predicate has no core argument to its left
+        SRL_NOLEFTNPARG,        // predicate has no NP argument to its left
+        SRL_PATH,               // tree path from position to predicate
+        SRL_FRAME,              // relative position of argument types in front of predicate
+        SRL_LEFTARGTYPE,        // argument types to the left 
+        SRL_FIRSTARGPOS,        // positioned right in front of the first argument
+        SRL_BETWEENCOREARG,     // positioned between the predicate and one of its core argument 
+        SRL_PARENTPRED,
+        SRL_PARALLEL,
         
         // dependency features
         D_POSITION,
         D_DIST,
         D_SPATH,
+        D_SFRONTIER,
         D_DPATH,
+        D_V_DIST,
+        D_COMMA_DIST,
+        D_SRL_ARG01_SAME_SIDE,
+        D_SRL_INFRONTARG,         // positioned right in front of an argument (include arg label)
+        D_SRL_BEHINDARG,          // positioned behind an argument
+        D_SRL_INARG,              // positioned inside an argument of the predicate
+
         
         PARSE_FRAME,
         
-        // SRL feature
-        SRL_LEMMA,              // lemma of the closest predicate to the right
-        SRL_POS,                // part-of-speech of the closest predicate to the right
-        SRL_ANCESTOR,           // ancestor POS of the predicate
-        SRL_NOARG0,             // predicate has no ARG0
-        SRL_NOLEFTCOREARG,      // predicate has no core argument to its left
-        SRL_NOLEFTNPARG,        // predicate has no NP argument to its left
-        SRL_PATH,               // tree path from position to predicate
-        SRL_FRAME,              // relative position of argument types in front of predicate
-        SRL_INFRONTARG,         // positioned right in front of an argument (include arg label)
-        SRL_BEHINDARG,          // positioned behind an argument
-        SRL_LEFTARGTYPE,        // argument types to the left 
-        SRL_FIRSTARGPOS,        // positioned right in front of the first argument
-        SRL_INARG,              // positioned inside an argument of the predicate
-        SRL_BETWEENCOREARG,     // positioned between the predicate and one of its core argument 
-        SRL_PARENTPRED,
-        SRL_PARALLEL,
+        
         
         // sequence feature
         EC_LABEL(true),
@@ -78,7 +96,9 @@ public final class ECCommon {
         
         EC_TOKEN_LEFT(true),
         EC_TOKEN_RIGHT(true),
+        EC_TOKEN_SAMESIDE(true),
         EC_TOKEN_ALL(true),
+        EC_CP_CHILD(true),
         EC_HEAD_PARENT(true),
         EC_HEAD_ALL;
         
@@ -248,6 +268,47 @@ public final class ECCommon {
             }
             if (ecType!=ECCommon.NOT_EC)
                 labels[tokenIdx+1]=labels[tokenIdx+1]==ECCommon.NOT_EC?ecType:labels[tokenIdx+1]+' '+ecType;
+        }
+        
+        return labels;
+    }
+    
+    public static String[][] getECDepLabels(TBTree tree, LabelType labelType) {
+    	String[][] labels = new String[tree.getTokenCount()][tree.getTokenCount()+1];
+    	
+        int tokenIdx = -1;
+        for (TBNode terminal: tree.getTerminalNodes()) {
+        	if (terminal.isToken()) {
+                tokenIdx = terminal.getTokenIndex();
+                continue;
+            }
+        	if (terminal.getHeadOfHead()==null || !terminal.getHeadOfHead().isToken()) {
+        		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex());
+        		continue;
+        	}
+        	
+            String ecType = terminal.getECType();
+            
+            switch (labelType) {
+            case ALL:
+                break;
+            case PRO:
+                if (!ecType.toLowerCase().equals("*pro*"))
+                    ecType=ECCommon.NOT_EC;
+                break;
+            case LITTLEPRO:
+                if (!ecType.equals("*pro*"))
+                    ecType=ECCommon.NOT_EC;
+                break;
+            case UNLABELED:
+                ecType = ECCommon.IS_EC;
+                break;
+            }
+            if (!ecType.equals(ECCommon.NOT_EC)) {
+            	if (labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]))
+            		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex());
+                labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]=(labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]==null||labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]==ECCommon.NOT_EC)?ecType:labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]+' '+ecType;
+            }
         }
         
         return labels;
