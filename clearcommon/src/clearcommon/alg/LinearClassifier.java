@@ -16,23 +16,17 @@ public class LinearClassifier extends Classifier implements Serializable {
     double C;
     double eps = 1e-3;
     liblinearbinary.Model model;
-    double[] values;
     int[] mLabelIdx;
     
-    public LinearClassifier()
-    {
+    public LinearClassifier() {
     }
     
     @Override
     public int predict(int[] x) {
-        return Linear.predictValues(model, convertToLibLinear(x), values);
+        return Linear.predict(model, convertToLibLinear(x));
         //return predict(convertToNodes(x));
     }
-/*
-    public int predict(FeatureNode[] x) {
-        return Linear.predictValues(model, x, values);
-    }
-*/
+    
     @Override
     public boolean canPredictProb() {
         return solverType==SolverType.L2R_LR;
@@ -41,25 +35,28 @@ public class LinearClassifier extends Classifier implements Serializable {
     @Override
     public int predictProb(int[] x, double[] prob) {
         int[] xConv = convertToLibLinear(x);
+        
+        double[] values = new double[model.getNrClass()];
         int label = Linear.predictProbability(model, xConv, values);
         
         if (label==0) {
             label = Linear.predictValues(model, xConv, values);
             Arrays.fill(prob, 0);
-            prob[labelIdxMap.get(label)]=1;
+            prob[label-1]=1;
             return label;
         }
         
-        for (int i=0; i<values.length; ++i)
-            prob[labelIdxMap.get(mLabelIdx[i])] = values[i];
+        for (int i=0; i<mLabelIdx.length; ++i)
+            prob[mLabelIdx[i]-1] = values[i];
         return label;
     }
     
     @Override
     public int predictValues(int[] x, double[] val) {
+    	double[] values = new double[model.getNrClass()];
         int label = Linear.predictValues(model, convertToLibLinear(x), values);
-        for (int i=0; i<values.length; ++i)
-            val[labelIdxMap.get(mLabelIdx[i])] = values[i];
+        for (int i=0; i<mLabelIdx.length; ++i)
+            val[mLabelIdx[i]-1] = values[i];
         return label;
     }
 
@@ -82,12 +79,10 @@ public class LinearClassifier extends Classifier implements Serializable {
         liblinearbinary.Parameter param = new liblinearbinary.Parameter(solverType,C,eps);
         
         model = Linear.train(problem, param);
-        values = new double[model.getNrClass()];
         mLabelIdx = model.getLabels();
     }
     
-    int[] convertToLibLinear(int[] x)
-    {
+    int[] convertToLibLinear(int[] x) {
         int[] xMod = new int[x.length+(model.getBias()>=0?1:0)];
         for (int i=0; i<x.length; ++i)
             xMod[i] = x[i]+1;
@@ -109,18 +104,16 @@ public class LinearClassifier extends Classifier implements Serializable {
         return nodes;
     }
     */
-    public static liblinearbinary.Problem convertToProblem(int[][] X, int[] Y, double[] weightY, double bias)
-    {
+    
+    public static liblinearbinary.Problem convertToProblem(int[][] X, int[] Y, double[] weightY, double bias) {
         liblinearbinary.Problem problem = new liblinearbinary.Problem();
         
         problem.bias = bias;
         problem.l = X.length;
         problem.x = new int[X.length][];
-        for (int i=0; i<X.length;++i)
-        {
+        for (int i=0; i<X.length;++i) {
             problem.x[i] = new int[X[i].length+(bias>0?1:0)];
-            for (int j=0; j<X[i].length;++j)
-            {
+            for (int j=0; j<X[i].length;++j) {
                 problem.x[i][j] = X[i][j]+1;
                 problem.n = Math.max(problem.n, problem.x[i][j]);
             }
@@ -139,8 +132,7 @@ public class LinearClassifier extends Classifier implements Serializable {
             }
         }*/
         
-        if (problem.bias >=0)
-        {
+        if (problem.bias >=0) {
             ++problem.n;
             for (int i=0; i<X.length;++i)
                 problem.x[i][problem.x[i].length-1] = problem.n;

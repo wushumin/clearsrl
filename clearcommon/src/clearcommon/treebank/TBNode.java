@@ -173,7 +173,7 @@ public class TBNode implements Serializable {
      * @return
      */
     public TBNode getConstituentByHead() {
-        return headConstituent;
+        return head.headConstituent;
     }
 
     
@@ -188,14 +188,21 @@ public class TBNode implements Serializable {
     
     public List<TBNode> getDependentNodes(boolean terminal) {
         ArrayList<TBNode> dependents = new ArrayList<TBNode>();
-
-        for (TBNode token : terminal?headConstituent.getTerminalNodes():headConstituent.getTokenNodes())
-            if (token.getHeadOfHead() == this && token != this)
-                dependents.add(token);
-
+        headConstituent.findDependentNodes(this, dependents, terminal);
         return dependents;
     }
-
+    
+    void findDependentNodes(TBNode head, List<TBNode> dependents, boolean terminal) {
+    	for (TBNode child:children) { 
+    		if (!terminal && !child.head.isToken())
+    			continue;
+    		if (child.head.getHeadOfHead()==head)
+    			dependents.add(child);
+    		else if (child.head==head)
+    			child.findDependentNodes(head, dependents, terminal);
+    	}
+    }
+    
     public String getECType() {
         if (!isEC())
             return word;

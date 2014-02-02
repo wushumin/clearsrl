@@ -140,7 +140,9 @@ public class ChineseUtil extends LanguageUtil {
         	if (localName.equals("id")) {
         		predicate = true;
         	} else if (localName.equals("frameset")) {
-                roleset = frame.new Roleset(atts.getValue("id"));
+        		String rolesetId = atts.getValue("id");
+        		rolesetId = frame.predicate+'.'+(rolesetId.length()==2?"0":"")+rolesetId.substring(1);
+                roleset = frame.new Roleset(rolesetId);
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
             	roleset.roles.add("arg"+atts.getValue("argnum").toLowerCase());
@@ -199,6 +201,10 @@ public class ChineseUtil extends LanguageUtil {
         }
     }
 
+    @Override
+    public PBFrame getFrame(String key) {
+        return frameMap==null?null:frameMap.get(key);
+    }
     
     int countConstituents(String pos, Deque<TBNode> nodes, boolean left, int depth)
     {   
@@ -262,6 +268,34 @@ public class ChineseUtil extends LanguageUtil {
     public boolean isRelativeClause(String POS) {
         // TODO: this is very termporary 
         return POS.equals("CP");
+    }
+
+	@Override
+    public List<String> getConstructionTypes(TBNode predicateNode) {
+		List<String> constructions = new ArrayList<String>();
+		
+	    int passive = getPassive(predicateNode);
+	    if (passive>0) {
+	    	constructions.add("passive");
+	    	constructions.add(passive==1?"SB":"LB");
+	    } else if (passive==0 && predicateNode.getHeadOfHead()!=null && predicateNode.getHeadOfHead().getPOS().equals("BA"))
+	    	constructions.add("BA");
+
+	    // identifies predicate in a complementizer
+	    TBNode modifiedHead = constructions.contains("LB")||constructions.contains("BA")?predicateNode.getHeadOfHead():predicateNode;
+	    if (modifiedHead.getConstituentByHead().getPOS().equals("CP") 
+	    		|| modifiedHead.getHeadOfHead()!=null 
+	    		&& modifiedHead.getHeadOfHead().getConstituentByHead().getPOS().equals("CP")) {
+	    	if (constructions.isEmpty())
+		    	constructions.add("active");
+	    	int count = constructions.size();
+	    	for (int i=0; i<count; ++i)
+	    		constructions.add(constructions.get(i)+"-CP");
+	    	constructions.add("CP");
+	    } else if (constructions.isEmpty())
+	    	constructions.add("active");
+	    
+	    return constructions;
     }
 
 }

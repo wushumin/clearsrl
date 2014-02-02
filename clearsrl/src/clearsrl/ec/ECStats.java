@@ -149,14 +149,14 @@ public class ECStats {
                     // if (node.getWord().equals("*OP*"))
                     //  label = node.getECType();
                     if (head==null || !head.isToken()) {
-                        System.err.println(entry.getKey()+' '+node.getECType()+'-'+(head==null?"NULL":head)+' '+tbTrees[i].getRootNode().toParse());
+                        System.err.println(entry.getKey()+' '+tbTrees[i].getIndex()+' '+node.getECType()+'-'+(head==null?"NULL":head)+'\n'+tbTrees[i].toPrettyParse());
                         continue;
                     }
                     
 
                     
                     if (!head.getPOS().matches("V.*|DEC")) {
-                        System.err.println(entry.getKey()+' '+tbTrees[i].getIndex()+' '+node.getECType()+'-'+(head==null?"NULL":head)+' '+tbTrees[i].getRootNode().toParse());
+                        System.err.println(entry.getKey()+' '+tbTrees[i].getIndex()+' '+node.getECType()+'-'+(head==null?"NULL":head)+'\n'+tbTrees[i].toPrettyParse());
                         
                         boolean hasVP=false;
                         for (TBNode ancestor:head.getPathToAncestor(head.getConstituentByHead()))
@@ -165,11 +165,11 @@ public class ECStats {
                                 while (ancestor.getParent()!=null && ancestor.getParent().isPos("VP") && ancestor.getParent().getHead()==head)
                                     ancestor=ancestor.getParent();
                                 if (ancestor.getParent()!=node.getParent().getParent())
-                                    System.err.println(entry.getKey()+' '+node.getECType()+'-'+(head==null?"NULL":head)+' '+tbTrees[i].getRootNode().toParse());
+                                    System.err.println(entry.getKey()+' '+tbTrees[i].getIndex()+' '+node.getECType()+'-'+(head==null?"NULL":head)+'\n'+tbTrees[i].toPrettyParse());
                                 break;
                             }
                         if (!hasVP)
-                            System.out.println(entry.getKey()+' '+node.getECType()+'-'+(head==null?"NULL":head)+' '+tbTrees[i].getRootNode().toParse());
+                            System.out.println(entry.getKey()+' '+tbTrees[i].getIndex()+' '+node.getECType()+'-'+(head==null?"NULL":head)+'\n'+tbTrees[i].toPrettyParse());
                         //if (hasVP)
                         //  continue;
                         

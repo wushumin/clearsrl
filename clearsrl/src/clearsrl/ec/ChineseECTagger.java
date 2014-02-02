@@ -1,37 +1,29 @@
 package clearsrl.ec;
 
+import clearsrl.Sentence;
+import clearsrl.Sentence.Source;
 import clearsrl.ec.ECCommon.Feature;
-import gnu.trove.iterator.TObjectIntIterator;
-import gnu.trove.map.TObjectIntMap;
 import clearcommon.alg.FeatureSet;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
 import clearcommon.util.ChineseUtil;
-import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,7 +37,6 @@ import org.kohsuke.args4j.Option;
 public class ChineseECTagger {
 
     enum Task {
-        EXTRACT,
         TRAIN,
         VALIDATE,
         DECODE
@@ -117,133 +108,57 @@ public class ChineseECTagger {
             cLabel = getFeatures(child, tokens, poses, labels, cLabel);
         return cLabel;
     }
-    
-    static void extract(Properties props) throws FileNotFoundException, IOException {
-        /*
-        Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
-        {
-            String[] tokens = props.getProperty("feature.value").trim().split(",");
-            for (String token:tokens)
-                try {
-                    features.add(FeatureSet.toEnumSet(Feature.class, token));
-                } catch (IllegalArgumentException e) {
-                    System.err.println(e);
-                }
-        }
 
-        ECModel model = new ECModel(features);
-        
-        Map<String, TBTree[]> tbMapTrain = TBUtil.readTBDir(props.getProperty("corpus"), props.getProperty("train.regex"));
-        System.out.println(props.getProperty("corpus"));
-        System.out.println(props.getProperty("train.regex"));
-        
-        
-        Map<String, TBTree[]> tbMapTest = TBUtil.readTBDir(props.getProperty("corpus"), props.getProperty("test.regex"));
-        
-        for (Map.Entry<String, TBTree[]> entry : tbMapTrain.entrySet())
-            for (TBTree tree:entry.getValue())
-                model.addTrainingSentence(tree, true);
-        
-        model.features.rebuildMap(5, 5);
-        
-        for (Map.Entry<String, TBTree[]> entry : tbMapTrain.entrySet())
-            for (TBTree tree:entry.getValue())
-                model.addTrainingSentence(tree, false);
-        
-        //System.out.printf("hit: %d, total: %d\n", model.hit, model.total);
-    */
-        
-        /*
-        PrintStream tout = new PrintStream(new FileOutputStream(props.getProperty("test.file")));
-        
-        for (Map.Entry<String, TBTree[]> entry : tbMapTest.entrySet())
-            for (TBTree tree:entry.getValue())
-            {
-                tokens.clear(); poses.clear(); labels.clear();
-                getFeatures(tree.getRootNode(), tokens, poses, labels, ECCommon.NOT_EC);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-                
-                model.writeSample(tout, tokens.toArray(new String[tokens.size()]), poses.toArray(new String[poses.size()]), labels.toArray(new String[labels.size()]), InstanceFormat.valueOf(props.getProperty("file_format")));               
-                //model.addTrainingSentence(tokens.toArray(new String[tokens.size()]), poses.toArray(new String[poses.size()]), labels.toArray(new String[labels.size()]));
-            }
-    
-        tout.close();
-        */
-        /*
-        ObjectOutputStream mOut = new ObjectOutputStream(new FileOutputStream(props.getProperty("model_file")));
-        mOut.writeObject(model);
-        mOut.close();
-        */
-        //model.writeTrainingData(props.getProperty("train.file"), InstanceFormat.valueOf(props.getProperty("file_format")));
-    }
-    
-    
-    static void validate(ECModel model, Properties props, ChineseUtil langUtil) throws IOException, ClassNotFoundException {
-        Properties validateProps = PropertyUtil.filterProperties(props, "validate.", true);
+    static void validate(ECModel model, Properties inProps, ChineseUtil langUtil) throws IOException, ClassNotFoundException {
+        Properties props = PropertyUtil.filterProperties(inProps, "validate.", true);
         
         if (model == null) {
-            ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(validateProps.getProperty("model_file"))));
+            ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("model_file"))));
             model = (ECModel)mIn.readObject();
             mIn.close();
             model.setLangUtil(langUtil);
         }
 
         if (model instanceof ECDepModel) {
-        	((ECDepModel)model).setQuickClassify(!validateProps.getProperty("quickClassify","false").equals("false"));
-        	((ECDepModel)model).setFullPredict(!validateProps.getProperty("fullPredict","false").equals("false"));
+        	((ECDepModel)model).setQuickClassify(!props.getProperty("quickClassify","false").equals("false"));
+        	((ECDepModel)model).setFullPredict(!props.getProperty("fullPredict","false").equals("false"));
         }
         
-        ECScore score = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
-        ECScore score2 = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
+        TreeSet<String> labelSet = new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()])));
+        labelSet.add("*OP*");
+        
+        ECScore score = new ECScore(labelSet);
+        ECScore score2 = new ECScore(labelSet);
         
         ECScore dScore = null;
         ECScore dScore2 = null;
 
         if (model instanceof ECDepModel) {
-        	dScore = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
-        	dScore2 = new ECScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
-        	
+        	dScore = new ECScore(labelSet);
+        	dScore2 = new ECScore(labelSet);
         }
         
-        String corpus = validateProps.getProperty("corpus");
+        String corpus = props.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
-        
-        Map<String, TBTree[]> tbMapValidate = null;
-        if (validateProps.getProperty(corpus+"tbdepdir")!=null)
-        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"tbdepdir"), 8, 10);
-        else 
-        	tbMapValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"tbdir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
-        
-        Map<String, TBTree[]> parseValidate = null;
-        if (validateProps.getProperty(corpus+"parsedepdir")!=null)
-        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), validateProps.getProperty(corpus+"parsedepdir"), 8, 10);
-        else
-        	parseValidate = TBUtil.readTBDir(validateProps.getProperty(corpus+"parsedir"), validateProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
-        
-        Map<String, SortedMap<Integer, List<PBInstance>>>  propValidate = 
-                PBUtil.readPBDir(validateProps.getProperty(corpus+"propdir"), validateProps.getProperty(corpus+"pb.regex"), new TBReader(parseValidate));
-        
+       
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
+        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL, Source.TREEBANK, Source.TB_DEP));
+
         int ecCount=0;
         int ecDepCount=0;
-        
-        for (Map.Entry<String, TBTree[]> entry : parseValidate.entrySet()) {
+
+        for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet()) {
             logger.info("Validating: "+entry.getKey());
-            
-            TBTree[] tbTrees = tbMapValidate.get(entry.getKey());
-            TBTree[] parseTrees = entry.getValue();
-            SortedMap<Integer, List<PBInstance>> pbInstances = propValidate.get(entry.getKey());
-
-            for (int i=0; i<parseTrees.length; ++i) {
-                String[] goldLabels = ECCommon.getECLabels(tbTrees[i], model.labelType);
-
-                List<PBInstance> propList = pbInstances==null?null:pbInstances.get(i);
-                
+            for (Sentence sent: entry.getValue()) {
+            	String[] goldLabels = ECCommon.getECLabels(sent.treeTB, model.labelType);
+            	
                 String[] labels = null;
                 if (model instanceof ECDepModel) {
                 	((ECDepModel)model).setQuickClassify(true);
-                	String[][] depLabels = ((ECDepModel)model).predictDep(parseTrees[i], propList);
-                	labels = ECDepModel.makeLinearLabel(parseTrees[i], depLabels);
+                	String[][] depLabels = ((ECDepModel)model).predictDep(sent.parse, sent.props);
+                	labels = ECDepModel.makeLinearLabel(sent.parse, depLabels);
+                	String[][] goldDepLabels = ECCommon.getECDepLabels(sent.treeTB, model.labelType);
                 	
-                	String[][] goldDepLabels = ECCommon.getECDepLabels(tbTrees[i], model.labelType);
                 	
                 	for (int h=0; h<depLabels.length;++h)
                 		for (int t=0; t<depLabels[h].length;++t) {
@@ -260,19 +175,18 @@ public class ChineseECTagger {
                 		}
                 	
                 } else 
-                	labels = model.predict(parseTrees[i], propList);
- 
+                	labels = model.predict(sent.parse, sent.props);
+                
                 for (int l=0; l<labels.length; ++l) {
                     score.addResult(labels[l], goldLabels[l]);
                 }
                 
                 String[] labels2 = null;
-                if (model instanceof ECDepModel) {
+                if (model instanceof ECDepModel && ((ECDepModel)model).stage2Classifier!=null) {
                 	((ECDepModel)model).setQuickClassify(false);
-                	String[][] depLabels = ((ECDepModel)model).predictDep(parseTrees[i], propList);
-                	labels2 = ECDepModel.makeLinearLabel(parseTrees[i], depLabels);
-                	
-                	String[][] goldDepLabels = ECCommon.getECDepLabels(tbTrees[i], model.labelType);
+                	String[][] depLabels = ((ECDepModel)model).predictDep(sent.parse, sent.props);
+                	labels2 = ECDepModel.makeLinearLabel(sent.parse, depLabels);
+                	String[][] goldDepLabels = ECCommon.getECDepLabels(sent.treeTB, model.labelType);
                 	
                 	for (int h=0; h<depLabels.length;++h)
                 		for (int t=0; t<depLabels[h].length;++t)
@@ -280,20 +194,24 @@ public class ChineseECTagger {
                 					goldDepLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
                 				dScore2.addResult(depLabels[h][t]==null?ECCommon.NOT_EC:depLabels[h][t],
                 						goldDepLabels[h][t]==null?ECCommon.NOT_EC:goldDepLabels[h][t]);
-                } else 
-                	labels2 = model.predict(parseTrees[i], propList);
-                for (int l=0; l<labels2.length; ++l) {
-                    score2.addResult(labels2[l], goldLabels[l]);
-                    if (goldLabels[l]!=null&&!ECCommon.NOT_EC.equals(goldLabels[l]))
-                    	ecCount+=goldLabels[l].trim().split("\\s+").length;
-                }
-                    
+                } 
+                
                 boolean same=true;
-                for (int l=0; l<labels.length; ++l)
-                	if (!labels[l].equals(labels2[l])) {
-                		same = false;
-                		break;
-                	}
+                
+                if (labels2!=null) {
+	                for (int l=0; l<labels2.length; ++l) {
+	                    score2.addResult(labels2[l], goldLabels[l]);
+	                    if (goldLabels[l]!=null&&!ECCommon.NOT_EC.equals(goldLabels[l]))
+	                    	ecCount+=goldLabels[l].trim().split("\\s+").length;
+	                }
+	                    
+	               
+	                for (int l=0; l<labels.length; ++l)
+	                	if (!labels[l].equals(labels2[l])) {
+	                		same = false;
+	                		break;
+	                	}
+                }
                 if (!same) {
                 	/*
                 	System.out.println(tbTrees[i].toPrettyParse());
@@ -317,10 +235,11 @@ public class ChineseECTagger {
             }
         }
         System.out.println(score.toString());
-        System.out.println(score2.toString());
+        if (model instanceof ECDepModel && ((ECDepModel)model).stage2Classifier!=null)
+        	System.out.println(score2.toString());
         if (dScore!=null)
         	System.out.println(dScore.toString());
-        if (dScore2!=null)
+        if (dScore2!=null && ((ECDepModel)model).stage2Classifier!=null)
         	System.out.println(dScore2.toString());
         
         System.out.printf("EC count: %d, dep count: %d\n", ecCount, ecDepCount);
@@ -336,11 +255,11 @@ public class ChineseECTagger {
     	System.out.println(ECCommon.NOT_EC.equals(labels[nodes.length])?"":labels[nodes.length]);
     }
     
-    static void train(Properties props, ChineseUtil langUtil) throws IOException, ClassNotFoundException {  
-        Properties trainProps = PropertyUtil.filterProperties(props, "train.", true);
+    static void train(Properties inProps, ChineseUtil langUtil) throws IOException, ClassNotFoundException {  
+        Properties props = PropertyUtil.filterProperties(inProps, "train.", true);
         Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
         {
-            String[] tokens = trainProps.getProperty("feature").trim().split(",");
+            String[] tokens = props.getProperty("feature").trim().split(",");
             for (String token:tokens)
                 try {
                     features.add(FeatureSet.toEnumSet(Feature.class, token));
@@ -352,36 +271,20 @@ public class ChineseECTagger {
         
         logger.info("features: "+features);
         
-        boolean useDepModel = !trainProps.getProperty("dependency", "false").equals("false");
+        boolean useDepModel = !props.getProperty("dependency", "false").equals("false");
 
         ECModel model = useDepModel?new ECDepModel(features):new ECModel(features);
         model.setLangUtil(langUtil);
         
-        String corpus = trainProps.getProperty("corpus");
+        String corpus = props.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
-
-        Map<String, TBTree[]> tbMapTrain = null;
-        if (trainProps.getProperty(corpus+"tbdepdir")!=null)
-        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"tbdepdir"), 8, 10);
-        else 
-        	tbMapTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"tbdir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
         
-        Map<String, TBTree[]> parseTrain = null;
-        if (trainProps.getProperty(corpus+"parsedepdir")!=null)
-        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), trainProps.getProperty(corpus+"parsedepdir"), 8, 10);
-        else
-        	parseTrain = TBUtil.readTBDir(trainProps.getProperty(corpus+"parsedir"), trainProps.getProperty(corpus+"tb.regex"), langUtil.getHeadRules());
-        
-        Map<String, SortedMap<Integer, List<PBInstance>>>  propTrain = 
-                PBUtil.readPBDir(trainProps.getProperty(corpus+"propdir"), trainProps.getProperty(corpus+"pb.regex"), new TBReader(parseTrain));
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
+        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL, Source.TREEBANK, Source.TB_DEP));
 
-        for (Map.Entry<String, TBTree[]> entry : parseTrain.entrySet()) {
-            TBTree[] tbTrees = tbMapTrain.get(entry.getKey());
-            TBTree[] parseTrees = entry.getValue();
-            SortedMap<Integer, List<PBInstance>> pbInstances = propTrain.get(entry.getKey());
-            
-            for (int i=0; i<parseTrees.length; ++i) {
-                model.addTrainingSentence(tbTrees[i], parseTrees[i], pbInstances==null?null:pbInstances.get(i), true);
+        for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
+            for (Sentence sent:entry.getValue()) {
+                model.addTrainingSentence(sent.treeTB, sent.parse, sent.props, true);
                 
                 /*
                 logger.info(tbTrees[i].toString());
@@ -401,25 +304,65 @@ public class ChineseECTagger {
                 logger.info(builder.toString());
                 */
             }
-        }
-        model.finalizeDictionary(Integer.parseInt(trainProps.getProperty("dictionary.cutoff", "5")));
-        
-        for (Map.Entry<String, TBTree[]> entry : parseTrain.entrySet()) {
-            TBTree[] tbTrees = tbMapTrain.get(entry.getKey());
-            TBTree[] parseTrees = entry.getValue();
-            SortedMap<Integer, List<PBInstance>> pbInstances = propTrain.get(entry.getKey());
-            
-            for (int i=0; i<parseTrees.length; ++i)
-                model.addTrainingSentence(tbTrees[i], parseTrees[i], pbInstances==null?null:pbInstances.get(i), false);
-        }
 
-        model.train(trainProps);
+        model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "5")));
         
-        ObjectOutputStream mOut = new ObjectOutputStream(new GZIPOutputStream(new FileOutputStream(trainProps.getProperty("model_file"))));
+        for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
+            for (Sentence sent:entry.getValue())
+                model.addTrainingSentence(sent.treeTB, sent.parse, sent.props, false);
+
+        model.train(props);
+        
+        ObjectOutputStream mOut = new ObjectOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("model_file"))));
         mOut.writeObject(model);
         mOut.close();
         
         //validate(model, props);   
+    }
+   
+	static void decode(Properties parentProps, ChineseUtil langUtil) throws IOException, ClassNotFoundException {
+	    // TODO Auto-generated method stub
+        Properties props= PropertyUtil.filterProperties(parentProps, "decode.", true);
+    
+        ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(props.getProperty("model_file"))));
+        ECModel model = (ECModel)mIn.readObject();
+        mIn.close();
+        model.setLangUtil(langUtil);
+
+        if (model instanceof ECDepModel) {
+        	((ECDepModel)model).setQuickClassify(!props.getProperty("quickClassify","false").equals("false"));
+        	((ECDepModel)model).setFullPredict(!props.getProperty("fullPredict","false").equals("false"));
+        }
+
+        String corpus = props.getProperty("corpus");
+        corpus=corpus==null?"":corpus+"."; 
+        
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
+        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL));
+
+        File outputDir = new File(props.getProperty(corpus+"ecdep.dir"));
+        
+        for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet()) {
+            logger.info("Decoding: "+entry.getKey());
+
+            File outFile = new File(outputDir, entry.getKey()+".ec");
+            if (outFile.getParentFile()!=null)
+                outFile.getParentFile().mkdirs();
+            PrintWriter writer = new PrintWriter(outFile);
+            
+            for (Sentence sent:entry.getValue()) {
+                String[] labels = null;
+                if (model instanceof ECDepModel) {
+                	((ECDepModel)model).setQuickClassify(true);
+                	String[][] depLabels = ((ECDepModel)model).predictDep(sent.parse, sent.props);
+                	labels = ECDepModel.makeLinearLabel(sent.parse, depLabels);           
+                	ECCommon.writeDepEC(writer, sent.parse, depLabels);
+                } else 
+                	labels = model.predict(sent.parse, sent.props);
+            }
+            writer.close();
+        }
+        
     }
     
     public static void main(String[] args) throws Exception {
@@ -463,9 +406,6 @@ public class ChineseECTagger {
             System.exit(-1);
         
         switch (options.task) {
-        case EXTRACT:
-            extract(props);
-            break;
         case TRAIN:
             train(props, chLangUtil);
             break;
@@ -473,7 +413,9 @@ public class ChineseECTagger {
             validate(null, props, chLangUtil);
             break;
         case DECODE:
+        	decode(props, chLangUtil);
             break;
         }
     }
+
 }

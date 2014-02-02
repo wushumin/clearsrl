@@ -435,6 +435,7 @@ public class ECModel implements Serializable {
     
     public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
         String[] labels = ECCommon.getECLabels(goldTree, labelType);
+
         List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, props, labels, buildDictionary);
         
         if (buildDictionary) {
@@ -480,7 +481,7 @@ public class ECModel implements Serializable {
         
         features.rebuildMap(cutoff);
 
-        FeatureSet.buildMapIndex(labelStringMap, 0);
+        FeatureSet.buildMapIndex(labelStringMap, 0, true);
         
         labelIndexMap = new TIntObjectHashMap<String>();
         for (TObjectIntIterator<String> iter=labelStringMap.iterator();iter.hasNext();) {

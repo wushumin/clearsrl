@@ -5,6 +5,7 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -14,44 +15,43 @@ import java.util.concurrent.TimeUnit;
 public class CrossValidator {
     
     class TrainJob implements Runnable{
-        int f;
+        int fold;
         Classifier cf;
-        int[][] Xtrain;
-        int[] ytrain;
-        double[][] prob;
         int[][] X;
-        int[] ytest;
-        TIntSet permSet;
-        int[] seed;
+        int[] y;
+        int[] yValidate;
+        double[][] labelValues;
+        BitSet testIndices;
         
-        public TrainJob(int f, Classifier cf, int[][]Xtrain, int[]ytrain, double[][] prob, int[][] X, int[]ytest, TIntSet permSet, int[] seed)
+        public TrainJob(int fold, Classifier cf, int[][] X, int[] y, int[] yValidate, double[][] labelValues, BitSet validateIndices)
         {
-            this.f = f;
+            this.fold = fold;
             this.cf = cf;
-            this.Xtrain = Xtrain;
-            this.ytrain = ytrain;
-            this.prob = prob;
             this.X = X;
-            this.ytest = ytest;
-            this.permSet = permSet;
-            this.seed = seed;
+            this.y = y;
+            this.yValidate = yValidate;
+            this.labelValues = labelValues;
+            this.testIndices = validateIndices;
         }
         
         @Override
         public void run() {
-            System.out.printf("*********** Training fold %d ***************\n",f+1);
+            System.out.printf("*********** Training fold %d ***************\n",fold+1);
+            if (testIndices==null || testIndices.isEmpty()) {
+            	cf.train(X, y);
+            	return;
+            }
+
+            List<int[]> Xtrain = new ArrayList<int[]>();
+            TIntArrayList ytrain = new TIntArrayList();
+            for (int i=testIndices.nextClearBit(0) ; i<y.length; i=testIndices.nextClearBit(i+1)) {
+                Xtrain.add(X[i]);
+                ytrain.add(y[i]);
+            }
+            cf.train(Xtrain.toArray(new int[Xtrain.size()][]), ytrain.toArray());
             
-            cf.train(Xtrain, ytrain);
-            
-            if (f<0) return;
-            
-            for (int i=0; i<ytest.length; ++i)
-                if (permSet.contains(seed[i])) {
-                    if (prob==null)
-                        ytest[i] = cf.predict(X[i]);
-                    else
-                        ytest[i] = cf.predictProb(X[i], prob[i]);
-                }
+            for (int i=testIndices.nextSetBit(0) ; i>=0; i=testIndices.nextSetBit(i+1))
+            	yValidate[i] = labelValues==null?cf.predict(X[i]):cf.predictValues(X[i], labelValues[i]);
         }
     }
     
@@ -80,16 +80,16 @@ public class CrossValidator {
         return validate(foldNum, X, y, null, null, false);
     }
     
-    public int[] validate(int foldNum, int[][] X, int[] y, double[][] prob) {
-        return validate(foldNum, X, y, prob, null, false);
+    public int[] validate(int foldNum, int[][] X, int[] y, double[][] labelValues) {
+        return validate(foldNum, X, y, labelValues, null, false);
     }
     
     public int[] validate(int foldNum, int[][] X, int[] y, int[] seed) {
         return validate(foldNum, X, y, null, seed, false);
     }
     
-    public int[] validate(int foldNum, int[][] X, int[] y, double[][] prob, int[] seed) {
-        return validate(foldNum, X, y, prob, seed, false);
+    public int[] validate(int foldNum, int[][] X, int[] y, double[][] labelValues, int[] seed) {
+        return validate(foldNum, X, y, labelValues, seed, false);
     }
     
     public int[] validate(int foldNum, int[][] X, int[] y, int[] seed, boolean trainAll) {
@@ -100,22 +100,22 @@ public class CrossValidator {
      * @param foldNum number of validation folds
      * @param X feature vector
      * @param y label
-     * @param prob probability vector of the predicted labels if desired
+     * @param yValues raw class values from classifier if desired
      * @param seed seed vector used to select samples for each fold (same seed value will be in the same fold)
      * @param trainAll train an classifier with all the samples
      * @return predicted labels through cross validation
      */
-    public int[] validate(int foldNum, int[][] X, int[] y, double[][] prob, int[] seed, boolean trainAll) {
+    public int[] validate(int foldNum, int[][] X, int[] y, double[][] yValues, int[] seed, boolean trainAll) {
         ExecutorService executor = null;
         if (threads>1) executor = Executors.newFixedThreadPool(threads);
           
         if (trainAll) { 
-            TrainJob job = new TrainJob(-1, classifier, X, y, null, null, null, null, null);
-            if (executor!=null) executor.submit(job);
+            TrainJob job = new TrainJob(foldNum, classifier, X, y, null, null, null);
+            if (executor!=null) executor.execute(job);
             else job.run();
         }
          
-        int[] ytest = new int[y.length];
+        int[] yValidate = new int[y.length];
         
         int[] perm = null;
         
@@ -136,26 +136,16 @@ public class CrossValidator {
             for (int i=f; i<perm.length; i+=foldNum)
                 permSet.add(perm[i]);
             
-            List<int[]> Xtrain = new ArrayList<int[]>();
-            TIntArrayList ytrain = new TIntArrayList();
-            List<double[]> probTrain=null;
-            
-            if (prob!=null)
-                probTrain = new ArrayList<double[]>();
+            BitSet validateIndices = new BitSet(y.length);
             
             for (int i=0; i<y.length; ++i)
-                if (!permSet.contains(seed[i])) {
-                    Xtrain.add(X[i]);
-                    ytrain.add(y[i]);
-                    if (prob!=null)
-                        probTrain.add(prob[i]);
-                }
+                if (permSet.contains(seed[i]))
+                	validateIndices.set(i);
             
             Classifier cf = classifier.getNewInstance();
-            TrainJob job = new TrainJob(f, cf, Xtrain.toArray(new int[Xtrain.size()][]), 
-                    ytrain.toArray() , prob==null?null:probTrain.toArray(new double[probTrain.size()][]), X, ytest, permSet, seed);
+            TrainJob job = new TrainJob(f, cf, X, y, yValidate, yValues, validateIndices);
             
-            if (executor!=null) executor.submit(job);
+            if (executor!=null) executor.execute(job);
             else job.run();
         }
 
@@ -170,6 +160,6 @@ public class CrossValidator {
             }
         }
         
-        return ytest;
+        return yValidate;
     }
 }

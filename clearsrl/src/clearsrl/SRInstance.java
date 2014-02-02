@@ -15,7 +15,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 
-public class SRInstance implements Serializable {
+public class SRInstance implements Comparable<SRInstance>, Serializable {
 
     /**
      * 
@@ -41,12 +41,12 @@ public class SRInstance implements Serializable {
         args = new ArrayList<SRArg>();
     }
     
-    public SRInstance(TBNode predicateNode, TBTree tree, String rolesetId, double score)
-    {
+    public SRInstance(TBNode predicateNode, TBTree tree, String rolesetId, double score) {
         this(predicateNode, tree);
         this.rolesetId = rolesetId;
         args.add(new SRArg("rel",this.predicateNode, score));
     }
+    
     /*
     public SRInstance(PBInstance instance) {
         this(instance.predicateNode, instance.tree);
@@ -461,6 +461,11 @@ public class SRInstance implements Serializable {
             return toCONLLString();
         }
         return toString();
+    }
+
+	@Override
+    public int compareTo(SRInstance rhs) {
+	    return predicateNode.getTokenIndex()-rhs.predicateNode.getTokenIndex();
     }
     
 }

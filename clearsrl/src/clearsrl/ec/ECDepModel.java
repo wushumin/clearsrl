@@ -4,6 +4,8 @@ import clearsrl.ec.ECCommon.Feature;
 import clearsrl.ec.ECCommon.LabelType;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +13,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -259,11 +262,13 @@ public class ECDepModel extends ECModel implements Serializable {
                     break;
                 case H_VOICE:
                     if (chLangUtil.isVerb(head.getPOS())) {
+                   
                         int passive = chLangUtil.getPassive(head);
                         if (passive !=0)
                             sample.put(feature, Arrays.asList("passive", Integer.toString(passive)));
                         else
                             sample.put(feature, Arrays.asList("active"));
+                    	//sample.put(feature, chLangUtil.getConstructionTypes(head));
                     }
                     break;
                 case SRL_NONLOCAL_ARG:
@@ -848,7 +853,7 @@ public class ECDepModel extends ECModel implements Serializable {
                 if (buildDictionary) {
                     if (!allLabelSet.isEmpty())
                         featureMap.put(feature, allLabelSet);
-                }  else {
+                } else {
                     Set<String> labelSet = new TreeSet<String>();
                     TBNode headParent = tree.getNodeByTokenIndex(headIdx).getHeadOfHead();
                     if (headParent!=null)
@@ -887,6 +892,36 @@ public class ECDepModel extends ECModel implements Serializable {
         //ECCommon.addGoldCandidates(goldTree, headCandidates);
         
         String[] labels = ECCommon.makeECDepLabels(goldTree, headCandidates);
+        
+        Comparator<String> labelComp = new Comparator<String>() {
+			@Override
+            public int compare(String lhs, String rhs) {
+				if (lhs.equals("*OP*")) 
+					return rhs.equals("*OP*")?0:1;
+				if (rhs.equals("*OP*")) 
+					return -1;
+				if (lhs.equals("*T*"))
+					return rhs.equals("*T*")?0:-1;
+				if (rhs.equals("*T*"))
+					return 1;
+				if (lhs.equals("*pro*"))
+					return rhs.equals("*pro*")?0:-1;
+				if (rhs.equals("*pro*"))
+					return 1;	
+	            return String.CASE_INSENSITIVE_ORDER.compare(lhs, rhs);
+            }
+        };
+        
+        for (int l=0; l<labels.length; ++l) {
+        	String[] subLabels = labels[l].trim().split("\\s+");
+        	if (subLabels.length>1)
+        		Arrays.sort(subLabels, labelComp);
+        	//labels[l] = subLabels[0].equals("*OP*")?ECCommon.NOT_EC:subLabels[0];
+        	labels[l] = subLabels[0];
+        	if (subLabels.length>1 && !subLabels[1].equals(ECCommon.NOT_EC))
+        		System.out.println(goldTree.getFilename()+':'+goldTree.getIndex()+' '+Arrays.asList(subLabels));
+        }
+        
         List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(parsedTree==null?goldTree:parsedTree, headCandidates, props, buildDictionary);
         
         if (buildDictionary) {
@@ -1044,26 +1079,115 @@ public class ECDepModel extends ECModel implements Serializable {
         return linearLabels;
     }
     
+    String[][] addOPLabels(TBTree tree, String[][] labels) {
+    	for (TBNode head:tree.getTokenNodes()) {
+    		if (head.getConstituentByHead().getPOS().equals("CP")) {
+    			int h = head.getPOS().equals("DEC")?head.getConstituentByHead().getChildren()[0].getHead().getTokenIndex():head.getTokenIndex();
+    			boolean found=false;
+    			for (String label:labels[h])
+    				if (label!=null && label.equals("*T*")) {
+    					found = true;
+    					break;
+    				}	
+    			if (found) {
+    				int t = head.getConstituentByHead().getTokenSet().nextSetBit(0);
+    				if (labels[head.getTokenIndex()][t]!=null && labels[head.getTokenIndex()][t].startsWith("*OP*"))
+    					continue;
+    				labels[head.getTokenIndex()][t] = labels[head.getTokenIndex()][t]==null||labels[head.getTokenIndex()][t].equals(ECCommon.NOT_EC)?"*OP*":"*OP* "+labels[head.getTokenIndex()][t];
+    			}
+    		}
+    	}
+    	return labels;
+    }
+    
+    static class Prediction {
+    	public Prediction(int labelNum) {
+    		values = new double[labelNum];
+    	}
+    	
+    	void makeLabel(TIntObjectMap<String> labelMap) {
+    		double highVal = Double.MIN_VALUE;
+    		int highIdx = 0;
+    		for (int i=0; i<values.length; ++i)
+    			if (values[i]>highVal) {
+    				highVal = values[i];
+    				highIdx = i;
+    			}
+    		label = labelMap.get(highIdx+1);
+    	}
+    	
+    	String label;
+    	double[] values;
+    }
+    
+    
+    void constrainSingleType(Prediction[] predictions, int lhs, int rhs, String type) {
+    	
+    	int typeIndex = labelStringMap.get(type)-1;
+    	
+    	double highVal = Double.MIN_VALUE;
+		for (int t=lhs; t<rhs;++t) {
+			if (predictions[t]==null) continue;
+			if (type.equals(predictions[t].label) && predictions[t].values[typeIndex]>highVal)
+				highVal = predictions[t].values[typeIndex];
+		}
+		if (highVal==Double.MIN_VALUE) 
+			return;
+		for (int t=lhs; t<rhs;++t) {
+			if (predictions[t]==null) continue;
+			if (predictions[t].values[typeIndex]<highVal) {
+				predictions[t].values[typeIndex] = Double.MIN_VALUE;
+				String oldLabel = predictions[t].label;
+				predictions[t].makeLabel(labelIndexMap);
+				if (!oldLabel.equals(predictions[t].label))
+					System.out.printf("%s changed to %s\n", oldLabel, predictions[t].label);
+				
+			}
+		}
+    }
+    
+    String[][] applyConstraints(Prediction[][] predictions) {
+    	String[][] labels = new String[predictions.length][predictions.length+1];
+    	
+    	for (int h=0; h<predictions.length; ++h) {    		
+    		//constrainSingleType(predictions[h], 0, predictions[h].length, "*T*");
+    		//constrainSingleType(predictions[h], 0, predictions[h].length, "*PRO*");
+    		//constrainSingleType(predictions[h], 0, h+1, "*pro*");
+    		//constrainSingleType(predictions[h], h+1, predictions[h].length, "*pro*");
+    		
+    		for (int t=0; t<predictions[h].length; ++t)
+    			if (predictions[h][t]!=null)
+    				labels[h][t]=predictions[h][t].label;
+    	}
+    	
+    	return labels;
+    }
+    
     public String[][] predictDep(TBTree tree, List<PBInstance> props) {
     	 BitSet[] headMasks = ECCommon.getECCandidates(tree, false);
 
          List<EnumMap<Feature,Collection<String>>> samples = extractSampleFeature(tree, headMasks, props, false);
          
-         String[] prediction = new String[samples.size()];
-         for (int i=0; i<samples.size(); ++i)
-             prediction[i] = labelIndexMap.get(classifier.predict(features.getFeatureVector(samples.get(i))));
+         Prediction[] prediction = new Prediction[samples.size()];
+         for (int i=0; i<samples.size(); ++i) {
+        	 prediction[i] = new Prediction(labelStringMap.size());
+             prediction[i].label = labelIndexMap.get(classifier.predictValues(features.getFeatureVector(samples.get(i)), prediction[i].values));
+         }
          
          if (!quickClassify && stage2Classifier!=null) {
+             String[] linearLabels = new String[prediction.length];
+             for (int i=0; i<linearLabels.length; ++i)
+            	 linearLabels[i] = prediction[i].label;
              int i=0;
-             String[][] labelMatrix = ECDepTreeSample.makeDepLabels(headMasks, prediction);
+             String[][] labelMatrix = ECDepTreeSample.makeDepLabels(headMasks, linearLabels);
              for (int h=0; h<headMasks.length; ++h)
                  for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
                      samples.get(i).putAll(extractSequenceFeatures(tree, h, t, labelMatrix, false));
-                     prediction[i] = labelIndexMap.get(stage2Classifier.predict(features.getFeatureVector(samples.get(i))));
+                     prediction[i].label = labelIndexMap.get(stage2Classifier.predictValues(features.getFeatureVector(samples.get(i)), prediction[i].values));
                      ++i;
                  }
-         }
-         return ECDepTreeSample.makeDepLabels(headMasks, prediction);    
+         }         
+         return addOPLabels(tree,applyConstraints(ECDepTreeSample.makeDepLabels(headMasks, new Prediction[headMasks.length][headMasks.length+1], prediction)));    
     }
     
     public String[] predict(TBTree tree, List<PBInstance> props) {

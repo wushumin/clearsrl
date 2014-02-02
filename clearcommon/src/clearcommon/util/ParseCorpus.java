@@ -28,10 +28,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Properties;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -39,6 +42,14 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+/**
+ * @author shumin
+ *
+ */
+/**
+ * @author shumin
+ *
+ */
 public class ParseCorpus {
     
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
@@ -65,13 +76,18 @@ public class ParseCorpus {
     private boolean help = false;
     
     ExecutorService executor;
-    PriorityQueue<Sentence> parseQueue;
+    ArrayBlockingQueue<Future<String>> parseQueue;
     Map<Long, CoarseToFineMaxRuleParser> parserMap;
     Properties props;
     PTBLineLexer tokenizer;
     
-    public ParseCorpus()
-    {
+    boolean flushOutput;
+    
+    /**
+     * @param flushOutput whether to immediately flush the writer (used if the output is connected to a pipe for another stage of processing)
+     */
+    public ParseCorpus(boolean flushOutput) {
+    	this.flushOutput = flushOutput;
     }
     
     public void initialize(Properties props)
@@ -82,9 +98,12 @@ public class ParseCorpus {
 
         String threadCnt = props.getProperty("threads","auto");
 
-        if (threadCnt.equals("auto"))
+        if (threadCnt.equals("auto")) {
             threads = Runtime.getRuntime().availableProcessors();
-        else 
+            // more than 4 processors is probably hyper-thread cores
+            if (threads>4) 
+            	threads = threads/2;
+        } else 
             try {
                 threads = Integer.parseInt(threadCnt);
             } catch (NumberFormatException e) {
@@ -96,19 +115,17 @@ public class ParseCorpus {
         logger.info(String.format("Using %d threads\n",threads));
         
         executor = Executors.newFixedThreadPool(threads);
-        parseQueue = new PriorityQueue<Sentence>();
+        parseQueue = new ArrayBlockingQueue<Future<String>>(threads*25);
         parserMap = new HashMap<Long, CoarseToFineMaxRuleParser>();
         
         if (props.getProperty("tokenize")!=null && !props.getProperty("tokenize").equals("false"))
             tokenizer = new PTBLineLexer();
     }
     
-    public void close()
-    {
+    public void close() {
         executor.shutdown();
         
-        while (true)
-        {
+        while (true) {
             try {
                 if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
             } catch (InterruptedException e) {
@@ -118,97 +135,86 @@ public class ParseCorpus {
         
     }
 
-    class Sentence implements Comparable<Sentence>, Runnable  {
-        int linenum;
+    class Sentence implements Callable<String>  {
         List<String> words;
-        String parse;
         
-        public Sentence(int linenum, List<String> words){
-            this.linenum = linenum;
+        public Sentence(List<String> words){
             this.words = words;
         }
-        @Override
-        public int compareTo(Sentence arg0) {
-            return linenum-arg0.linenum;
-        }
         
         @Override
-        public void run() {
+        public String call() {
+        	if (words==null) return null;
             if (words.isEmpty())
-                parse=makeDefaultParse(words);
-            else if (words.size()>=250) { 
-                parse=makeDefaultParse(words);
-                
+                return makeDefaultParse(words);
+            if (words.size()>=250) { 
                 logger.warning("Skipping sentence with "+words.size()+" words since it is too long.");
+                return makeDefaultParse(words);
             }
-            else {
-                Tree<String> parsedTree = null;
-                try {
-                    parsedTree = getParser().getBestConstrainedParse(words,null,null);
-                } catch (Exception e) {
-                    logger.severe(e.toString());
-                    e.printStackTrace();
-                } finally {
-                    if (parsedTree!=null&&!parsedTree.getChildren().isEmpty())
-                    {
-                    removeUselessNodes(parsedTree.getChildren().get(0));
-                    parse="( "+parsedTree.getChildren().get(0)+" )\n";
-                    }
-                    else
-                    parse=makeDefaultParse(words);
+            String parse = null;
+            Tree<String> parsedTree = null;
+            try {
+                parsedTree = getParser().getBestConstrainedParse(words,null,null);
+            } catch (Exception e) {
+                logger.severe(e.toString());
+                e.printStackTrace();
+            } finally {
+                if (parsedTree!=null&&!parsedTree.getChildren().isEmpty()) {
+                	removeUselessNodes(parsedTree.getChildren().get(0));
+                	parse = "( "+parsedTree.getChildren().get(0)+" )\n";
                 }
+                else
+                	parse = makeDefaultParse(words);
             }
-            synchronized (parseQueue)
-            {
-                parseQueue.add(this);
-                parseQueue.notify();
-            }
+            return parse;
         }
     }
     
     public class SentenceWriter extends Thread {
         Writer outputData;
-        int lineCount;
         
-        public SentenceWriter(Writer outputData, int lineCount) {
+        public SentenceWriter(Writer outputData) {
             this.outputData = outputData;
-            this.lineCount = lineCount;
         }
 
         public void run() {
-            int lineNum = 0;
-            while (lineNum!=lineCount)
-            {
-                Sentence sentence;
-                synchronized (parseQueue) {
-                    sentence = parseQueue.peek();
-                    if (sentence==null || sentence.linenum!=lineNum)
-                    {
-                        try {
-                            parseQueue.wait();
-                        } catch (InterruptedException e) {
-                            logger.severe(e.toString());
-                        }
-                        continue;
-                    }
-                    sentence = parseQueue.remove();
-                }
+            while (true) {
+            	Future<String> future;
                 try {
-                    outputData.write(sentence.parse);outputData.flush();
-                    //System.out.println(lineNum+" "+sentence.parse);
+	                future = parseQueue.take();
+                } catch (InterruptedException e) {
+	                continue;
+                }
+            	
+            	String parse=null;
+            	while (true)
+	                try {
+		                parse = future.get();
+		                break;
+	                } catch (InterruptedException e) {
+	                	continue;
+	                } catch (ExecutionException e) {
+		                e.printStackTrace();
+		                break;
+	                }
+
+            	if (parse==null) break;
+            	
+            	try {
+                    outputData.write(parse);
+                    if (flushOutput)
+                    	outputData.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
+                    break;
                 }
-                ++lineNum;
             }
         }
     }
 
-    CoarseToFineMaxRuleParser getParser()
-    {
+    CoarseToFineMaxRuleParser getParser() {
         CoarseToFineMaxRuleParser parser;
-        if ((parser=parserMap.get(Thread.currentThread().getId()))==null)
-        {
+        if ((parser=parserMap.get(Thread.currentThread().getId()))==null) {
             double threshold = 1.0;
             ParserData pData = ParserData.Load(props.getProperty("grammar"));
             if (pData==null) {
@@ -219,8 +225,7 @@ public class ParseCorpus {
             Lexicon lexicon = pData.getLexicon();
             Numberer.setNumberers(pData.getNumbs());
         
-            if (props.getProperty("Chinese")!=null && !props.getProperty("Chinese").equals("false")) 
-            {
+            if (props.getProperty("Chinese")!=null && !props.getProperty("Chinese").equals("false"))  {
                 logger.info("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
             }
@@ -241,8 +246,7 @@ public class ParseCorpus {
         }
     }
 
-    static void removeUselessNodes(Tree<String> node)
-    {
+    static void removeUselessNodes(Tree<String> node) {
         if (node.isLeaf()) return;
         ArrayList<Tree<String>> newChildren = new ArrayList<Tree<String>>();
         for (Tree<String> child:node.getChildren())
@@ -256,8 +260,7 @@ public class ParseCorpus {
         node.setChildren(newChildren); 
     }
     
-    public static String makeDefaultParse(List<String> sentence)
-    {
+    public static String makeDefaultParse(List<String> sentence) {
         StringBuilder buffer = new StringBuilder();
         buffer.append("( (FRAG ");
         for (String word:sentence)
@@ -266,29 +269,39 @@ public class ParseCorpus {
         return buffer.toString();
     }
     
-    public SentenceWriter parse(Reader reader, Writer writer) throws IOException
-    {
+    public SentenceWriter parse(Reader reader, Writer writer) throws IOException {
         BufferedReader inputData = new BufferedReader(reader);
 
+        SentenceWriter sentWriter = new SentenceWriter(writer);
+        sentWriter.start();
+        
         String line;
-        int lineCount = 0;
-
         while((line=inputData.readLine()) != null){
-            List<String> words = tokenizer==null?Arrays.asList(line.split(" ")):tokenizer.tokenizeLine(line);
-            executor.execute(new Sentence(lineCount++, words));
+            List<String> words = tokenizer==null?Arrays.asList(line.trim().split(" +")):tokenizer.tokenizeLine(line);
+            Future<String> future = executor.submit(new Sentence(words));
+            while(true)
+    	        try {
+    	        	parseQueue.put(future);
+    	        	break;
+    	        } catch (InterruptedException e) {
+    	        }
             //System.out.println(lineCount);
         }
         
-        SentenceWriter sentWriter = new SentenceWriter(writer, lineCount);
-        sentWriter.start();
-        
+        // add a dummy termination sentence
+        Future<String> future = executor.submit(new Sentence(null));
+        while(true)
+	        try {
+	        	parseQueue.put(future);
+		        break;
+	        } catch (InterruptedException e) {
+	        }
+	  
         return sentWriter;
-
     }
     
-    public static void main(String[] args) throws Exception
-    {
-        ParseCorpus parser = new ParseCorpus();
+    public static void main(String[] args) throws Exception {
+        ParseCorpus parser = new ParseCorpus(false);
         CmdLineParser cmdParser = new CmdLineParser(parser);
         
         try {

@@ -1,11 +1,19 @@
 package clearsrl.ec;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
@@ -155,8 +163,13 @@ public final class ECCommon {
                 continue;
             }
             TBNode head = node.getHeadOfHead();
-            if (head!=null && head.isToken())
-                ecMap.put(makeIndex(head.getTokenIndex(), tokenIdx), node.getECType());
+            if (head!=null && head.isToken()) {
+            	long index = makeIndex(head.getTokenIndex(), tokenIdx);
+            	if (ecMap.containsKey(index))
+            		ecMap.put(index, ecMap.get(index)+' '+node.getECType());
+            	else
+            		ecMap.put(makeIndex(head.getTokenIndex(), tokenIdx), node.getECType());
+            }
         }
         List<String> labels = new ArrayList<String>();
         String label;
@@ -191,11 +204,13 @@ public final class ECCommon {
                 node = node.getParent();
                 candidateSet.set(node.getTokenSet().nextSetBit(0));
                 for (TBNode child:node.getChildren()) {
-                    BitSet tokenSet = child.getTokenSet();
+                	// code for pre 1.7 compatibility
+                    /*BitSet tokenSet = child.getTokenSet();
                     int idx = -1;
                     while (tokenSet.nextSetBit(idx+1)>=0 && tokenSet.nextSetBit(idx+1)<=tree.getTokenCount())
-                        idx = tokenSet.nextSetBit(idx+1);
-                    //int idx = child.getTokenSet().previousSetBit(tree.getTokenCount());
+                        idx = tokenSet.nextSetBit(idx+1);*/
+                	// code that runs post 1.7
+                    int idx = child.getTokenSet().previousSetBit(tree.getTokenCount());
                     if (idx>=0)
                         candidateSet.set(idx+1);
                 }
@@ -313,6 +328,73 @@ public final class ECCommon {
         
         return labels;
     }
+    
+    public static Map<String, Map<Integer, String[][]>> readDepEC(File ecDir, Map<String, TBTree[]> parseMap) {
+    	Map<String, Map<Integer, String[][]>>  ecLabelMap = new HashMap<String, Map<Integer, String[][]>>();
+    	
+    	for (Map.Entry<String, TBTree[]> entry:parseMap.entrySet()) {
+    		try {
+    			File ecFile = new File(ecDir, entry.getKey()+".ec");
+    			readDepEC(new BufferedReader(new FileReader(ecFile)), parseMap, ecLabelMap);
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		}
+    	}
+    	return ecLabelMap;
+    }
+    
+    public static void readDepEC(BufferedReader reader, Map<String, TBTree[]> parseMap, Map<String, Map<Integer, String[][]>> ecLabelMap) throws IOException {
+    	String line = null;
+    	while ((line=reader.readLine())!=null){
+    		String[] tokens = line.trim().split("\\s");
+    		String name = tokens[0];
+    		int index = Integer.parseInt(tokens[1]);
+    		
+    		TBTree tree = parseMap.get(name)[index];
+    		
+    		Map<Integer, String[][]> ecInnerMap = ecLabelMap.get(name);
+    		if (ecInnerMap==null) {
+    			ecInnerMap = new TreeMap<Integer, String[][]>();
+    			ecLabelMap.put(name, ecInnerMap);
+    		}
+    		String[][] labels = ecInnerMap.get(index);
+    		if (labels==null) {
+    			labels = new String[tree.getTokenCount()][tree.getTokenCount()+1];
+    			ecInnerMap.put(index, labels);
+    		}
+    		
+    		String[] hLabels = labels[Integer.parseInt(tokens[2])];
+    		for (int i=4; i<tokens.length; ++i) {
+    			int t = Integer.parseInt(tokens[i].substring(0, tokens[i].indexOf(':')));
+    			hLabels[t] = tokens[i].substring(tokens[i].indexOf(':')+1).replaceAll(",", " ");
+    		}
+    	}
+    }
+    
+    public static void writeDepEC(PrintWriter writer, TBTree tree, String[][] labels) throws IOException{
+    	TBNode[] tokens = tree.getTokenNodes();
+    	
+    	for (int h=0; h<labels.length; ++h) {
+    		boolean found = false;
+    		for (int t=0; t<labels[h].length; ++t) {
+    			if (labels[h][t]==null || ECCommon.NOT_EC.equals(labels[h][t]))
+    				continue;
+    			if (!found) {
+    				writer.printf("%s %d %d %s", tree.getFilename(), tree.getIndex(), h, tokens[h].getWord());
+    				found = true;
+    			}
+    			
+    			writer.printf(" %d:",t);
+    			String[] subLabels = labels[h][t].trim().split("\\s+");
+    			
+    			for (int l=0; l<subLabels.length; ++l)
+    				writer.print(l==0?subLabels[l]:";"+subLabels[l]);
+    		}
+    		if (found)
+    			writer.print('\n');
+    	}
+    }
+
     
     public static double getFMeasure(TObjectIntMap<String> labelMap, int[] yRef, int[]ySys) {
         double pLabeled = 0;

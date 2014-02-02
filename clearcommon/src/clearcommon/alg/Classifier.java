@@ -1,5 +1,6 @@
 package clearcommon.alg;
 
+import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -21,38 +22,35 @@ public abstract class Classifier implements Serializable {
     
     transient Properties prop;
     
-    TObjectIntMap<String> labelMap;
     String[] labels;
-    TIntIntMap labelIdxMap;
-
-    int[] labelIdx;
+    
+    TObjectIntMap<String> labelMap;
     
     Classifier()
     {
     }
     
+    /**
+     * initializes the classifier 
+     * @param labelMap The string class labels are for debugging purposes, the label values must be 1-size of classes
+     * @param prop
+     */
     public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
+        labels = new String[labelMap.size()];
+        for (TObjectIntIterator<String> iter=labelMap.iterator(); iter.hasNext();) {
+        	iter.advance();
+        	labels[iter.value()-1] = iter.key();
+        }
+    	
         this.labelMap = labelMap;
         this.prop = prop;
-        labels = labelMap.keys(new String[labelMap.size()]);
-        Arrays.sort(labels);
-        labelIdxMap = new TIntIntHashMap();
-        
-        labelIdx = new int[labels.length];
-        for (int i=0; i<labels.length; ++i)
-        {
-            labelIdx[i] = labelMap.get(labels[i]);
-            labelIdxMap.put(labelIdx[i], i);
-        }
     }
     
-    public int getClassCnt()
-    {
-        return labels.length;
+    public int getClassCnt() {
+        return labelMap.size();
     }
     
-    public void train(int [][] X, int[] Y)
-    {
+    public void train(int [][] X, int[] Y) {
         train(X, Y, null);
     }
     
@@ -80,25 +78,15 @@ public abstract class Classifier implements Serializable {
         return false;
     }
     
-    public int predictProb(int[] x, double[] prob)
-    {
+    public int predictProb(int[] x, double[] prob) {
         int label = predict(x);
-        prob[labelIdxMap.get(label)]=1;
+        prob[label-1]=1;
         return label;
     }
     
-    public int predictValues(int[] x, double[] val)
-    {
+    public int predictValues(int[] x, double[] val) {
         int label = predict(x);
-        val[labelIdxMap.get(label)]=1;
+        val[label-1]=1;
         return label;
-    }
-
-    public int[] getLabelIdx() {
-        return labelIdx;
-    }
-    
-    public TIntIntMap getLabelIdxMap() {
-        return labelIdxMap;
     }
 }

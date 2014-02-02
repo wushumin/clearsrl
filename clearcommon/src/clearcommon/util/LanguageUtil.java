@@ -37,6 +37,15 @@ public abstract class LanguageUtil {
     }
     
     public abstract int getPassive(TBNode predicateNode);
+    
+    /**
+     * Language specific constructions based on the predicate. These can 
+     * include active/passive voice in English, BA/BEI constructions in 
+     * Chinese. 
+     * @param predicateNode
+     * @return a list of all found predicate constructions
+     */
+    public abstract List<String> getConstructionTypes(TBNode predicateNode);
 
     public abstract TBHeadRules getHeadRules();
 
@@ -60,7 +69,7 @@ public abstract class LanguageUtil {
     	PBFrame frame = getFrame(node);
     	if (frame==null)
     		return null;
-    	return frame.getRolesets().get(roleSetId.substring(roleSetId.length()-2));
+    	return frame.getRolesets().get(roleSetId);
     }
 
     public POS getPOS(String pos) {

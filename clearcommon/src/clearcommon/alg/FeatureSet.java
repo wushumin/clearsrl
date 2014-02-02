@@ -316,8 +316,10 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
             featureStrMap.get(featVal.type).put(featVal.value, ++dimension);
     }
     
-    public static int buildMapIndex(TObjectIntMap<String> mapObj, int startIdx) {
+    public static int buildMapIndex(TObjectIntMap<String> mapObj, int startIdx , boolean sorted) {
         String[] keys = mapObj.keys(new String[mapObj.size()]);
+        if (sorted) Arrays.sort(keys);
+        
         mapObj.clear();
         for (String key:keys)
             mapObj.put(key, ++startIdx);

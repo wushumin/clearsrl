@@ -1,44 +1,25 @@
 package clearsrl;
 
 import clearcommon.alg.FeatureSet;
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.OntoNotesTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBTokenizer;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.treebank.ParseException;
-import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
-
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.zip.GZIPOutputStream;
 
 import clearsrl.SRLModel.Feature;
+import clearsrl.Sentence.Source;
 
 public class TrainSRL {
     static final float THRESHOLD=0.90f;
@@ -69,13 +50,14 @@ public class TrainSRL {
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);
         
-        props = PropertyUtil.filterProperties(props, "srl.");
+        props = PropertyUtil.filterProperties(props, "srl.", true);
         props = PropertyUtil.filterProperties(props, "train.", true);
         
         System.out.print(PropertyUtil.toString(props));
         
-        LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("language.util-class")).newInstance();
-        if (!langUtil.init(props))
+        Properties langProps = PropertyUtil.filterProperties(props, props.getProperty("language").trim()+'.');
+        LanguageUtil langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
+        if (!langUtil.init(langProps))
             System.exit(-1);
         
         Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
@@ -99,6 +81,7 @@ public class TrainSRL {
                     System.err.println(e);
                 }  
         }
+        EnumSet<Source> srcSet = Sentence.readSources(props.getProperty("corpus.source"));
 
         SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
         
@@ -129,95 +112,44 @@ public class TrainSRL {
         TObjectIntMap<String> rolesetArg = new TObjectIntHashMap<String>();
         if (!dataFormat.equals("conll"))
         {
-            String sourceList = props.getProperty("sources","");
+            String sourceList = props.getProperty("corpus","");
             String[] sources = sourceList.trim().split("\\s*,\\s*");
-            
-            Map<String, TBTree[]> treeBank = null;
-            Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
-            Map<String, TBTree[]> parsedTreeBank = props.getProperty("goldparse", "false").equals("true")?null:new TreeMap<String, TBTree[]>();
-            Map<String, Integer> trainWeights =new TreeMap<String, Integer>();
+
+            Map<String, Sentence[]> sentenceMap = null;
+            TObjectIntMap<String> trainWeights =new TObjectIntHashMap<String>();
 
             for (String source:sources) {
-                System.out.println("Processing source "+source);
+                System.out.println("Processing corpus "+source);
                 Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
                 System.out.println(PropertyUtil.toString(srcProps));
                 
-                String treeRegex = srcProps.getProperty("tb.regex");
-                Map<String, TBTree[]> srcTreeBank = TBUtil.readTBDir(srcProps.getProperty("tbdir"), treeRegex, langUtil.getHeadRules());
+                Map<String, Sentence[]> corpusMap = Sentence.readCorpus(srcProps, srcSet.contains(Source.PARSE)?Source.PARSE:Source.TREEBANK, srcSet);
                 
-                String filename = srcProps.getProperty("pb.filelist");
-                List<String> fileList = filename==null?FileUtil.getFiles(new File(srcProps.getProperty("pbdir")), srcProps.getProperty("pb.regex"), true)
-                        :FileUtil.getFileList(new File(srcProps.getProperty("pbdir")), new File(filename), true);
-                
-                PBTokenizer tokenzier = srcProps.getProperty("pb.tokenizer")==null?(srcProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("pb.tokenizer")).newInstance();
-                
-                Map<String, SortedMap<Integer, List<PBInstance>>> srcPropBank = PBUtil.readPBDir(fileList, new TBReader(srcTreeBank), tokenzier);
-
                 int weight = Integer.parseInt(srcProps.getProperty("weight", "1"));
-                
-                if (parsedTreeBank!=null)
-                    for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:srcPropBank.entrySet())
-                    {
-                        try {
-                            TBFileReader tbreader    = new SerialTBFileReader(srcProps.getProperty("parsedir"), entry.getKey());
-                            System.out.println("Reading "+srcProps.getProperty("parsedir")+File.separatorChar+entry.getKey());
-                            ArrayList<TBTree> a_tree = new ArrayList<TBTree>();
-                            TBTree tree;
-                            while ((tree = tbreader.nextTree()) != null) {
-                            	TBUtil.linkHeads(tree, langUtil.getHeadRules());
-                                a_tree.add(tree);
-                            }
-                            parsedTreeBank.put(entry.getKey(), a_tree.toArray(new TBTree[a_tree.size()]));
-                        } catch (FileNotFoundException e) {
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                
-                if (treeBank==null) treeBank = srcTreeBank;
-                else treeBank.putAll(srcTreeBank);
-                
-                for (String key:srcPropBank.keySet())
+                for (String key:corpusMap.keySet())
                     trainWeights.put(key, weight);
                 
-                if (propBank==null) propBank = srcPropBank;
-                else propBank.putAll(srcPropBank);
+                if (sentenceMap==null) sentenceMap = corpusMap;
+                else sentenceMap.putAll(corpusMap);
             }
 
-            System.out.println(propBank.size());
+            System.out.printf("%d training files read\n",sentenceMap.size());
 
-            if (parsedTreeBank==null) {
-                parsedTreeBank = treeBank;
+            if (!srcSet.contains(Source.PARSE))
                 model.setTrainGoldParse(true);
-            }
 
             model.initialize(props);
-            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-            {
-                SortedMap<Integer, List<PBInstance>> pbFileMap = propBank.get(entry.getKey());
-                if (pbFileMap==null) continue;
+            for (Map.Entry<String, Sentence[]> entry: sentenceMap.entrySet()) {
                 int weight = trainWeights.get(entry.getKey());
+                weight = weight==0?1:weight;
                 
                 System.out.println("Processing "+entry.getKey());
-                TBTree[] trees = entry.getValue();
-                
-                for (int i=0; i<trees.length; ++i)
-                {
-                    List<PBInstance> pbInstances = pbFileMap.get(i);
-
+                for (Sentence sent:entry.getValue()) {
                     ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
                         
-                    if (pbInstances!=null)  {
-                        for (PBInstance instance:pbInstances) {
-                            srls.add(new SRInstance(instance));
-                            if (instance.getArgs().length>1)
-                                rolesetArg.put(instance.getRoleset(), rolesetArg.get(instance.getRoleset())+1);
-                            else
-                                rolesetEmpty.put(instance.getRoleset(), rolesetEmpty.get(instance.getRoleset())+1);
-                        }
-                    }
+                    
                     for (int w=0; w<weight; ++w)
-                        model.addTrainingSentence(trees[i], srls, null, THRESHOLD);
+                        model.addTrainingSentence(sent, THRESHOLD);
                 }
             }
             System.out.println("***************************************************");
@@ -231,12 +163,13 @@ public class TrainSRL {
             System.out.println("***************************************************");            
         }
         else if (dataFormat.equals("conll")) {
+        	/*
             ArrayList<CoNLLSentence> training = CoNLLSentence.read(new FileReader(props.getProperty("input")), true);
             model.initialize(props);
             for (CoNLLSentence sentence:training) {
                 TBUtil.linkHeads(sentence.parse, langUtil.getHeadRules());
                 model.addTrainingSentence(sentence.parse, Arrays.asList(sentence.srls), sentence.namedEntities, THRESHOLD);
-            }
+            }*/
         }       
         System.out.println("Reference arg instance count: "+gCount);
         System.out.println("Training arg instance count: "+tCount);

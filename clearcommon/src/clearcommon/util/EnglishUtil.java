@@ -27,7 +27,6 @@ import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.Pointer;
 import edu.mit.jwi.morph.WordnetStemmer;
-
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
 
@@ -123,7 +122,7 @@ public class EnglishUtil extends LanguageUtil {
         @Override
         public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
             if (localName.equals("roleset")) {
-                roleset = frame.new Roleset(atts.getValue("id"));
+                roleset = frame.new Roleset(frame.predicate+'.'+atts.getValue("id"));
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
                 if (atts.getValue("f")==null)
@@ -391,5 +390,10 @@ public class EnglishUtil extends LanguageUtil {
         return POS.equals("SBAR");
     }
 
+	@Override
+    public List<String> getConstructionTypes(TBNode predicateNode) {
+	    int passive = getPassive(predicateNode);
+	    return passive==0?Arrays.asList("active"):(passive>3?Arrays.asList("reduced_passive", "passive"):Arrays.asList("passive"));
+    }
 
 }

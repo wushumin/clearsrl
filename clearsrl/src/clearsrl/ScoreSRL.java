@@ -12,6 +12,7 @@ import java.util.TreeSet;
 
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
+import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
@@ -43,11 +44,15 @@ public class ScoreSRL {
         SRLScore[] scores = new SRLScore[systems.length];
         SRLScore[] vScores = new SRLScore[systems.length];
         SRLScore[] nScores = new SRLScore[systems.length];
+        SRLScore[] proScore = new SRLScore[systems.length];
+        SRLScore[] noproScore = new SRLScore[systems.length];
         
         for (int i=0; i<scores.length; ++i) {
             scores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
             vScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
             nScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
+            proScore[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
+            noproScore[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
         }
         Map<String, SortedMap<Integer, List<PBInstance>>>  goldPB = 
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
@@ -136,9 +141,20 @@ public class ScoreSRL {
                     for (int i=0; i<scores.length;++i)
                     {
                         scores[i].addResult(sysInstances.get(i), goldInstance);
-                        if (goldInstance.getPredicateNode().getPOS().startsWith("V"))
+                        if (goldInstance.getPredicateNode().getPOS().startsWith("V")) {
                             vScores[i].addResult(sysInstances.get(i), goldInstance);
-                        else
+                            boolean foundPro = false;
+                            for (PBArg arg:goldProp.getAllArgs())
+                            	//if (arg.getLabel().matches("ARG\\d") && 
+                            	if(arg.getAllNodes().length>1)
+                            		//&&arg.getNode().getTerminalNodes().size()==1 && arg.getNode().getTerminalNodes().get(0).getECType().equals("*pro*"))
+                            		foundPro = true;
+                            if (foundPro)
+                            	proScore[i].addResult(sysInstances.get(i), goldInstance);
+                            else
+                            	noproScore[i].addResult(sysInstances.get(i), goldInstance);
+                            
+                        } else
                             nScores[i].addResult(sysInstances.get(i), goldInstance);
                         
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
@@ -216,6 +232,10 @@ public class ScoreSRL {
             System.out.println(vScores[i]);
             System.out.println("nominal predicates:");
             System.out.println(nScores[i]);
+            System.out.println("pro argument:");
+            System.out.println(proScore[i]);
+            System.out.println("no pro argument:");
+            System.out.println(noproScore[i]);
         }
         
         if (scores.length>1)

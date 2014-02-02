@@ -32,14 +32,13 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         int[] Y1 = new int[Y.length];
         
-        for (int i=0; i<Y.length; ++i)
-        {
-            Y1[i] = Y[i]==labelIdx[0]?labelIdx[0]:labelIdx[1];
+        for (int i=0; i<Y.length; ++i) {
+            Y1[i] = Y[i]==1?1:2;
         }
         
         TObjectIntMap<String> lMap = new TObjectIntHashMap<String>();
-        lMap.put(labels[0], labelIdx[0]);
-        lMap.put(labels[1], labelIdx[1]);
+        lMap.put(labels[0], 1);
+        lMap.put(labels[1], 2);
         
         Properties propMod = (Properties)prop.clone();
         propMod.setProperty("liblinear.solverType", "L2R_LR");
@@ -58,14 +57,14 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         {
             int pred = stageOneClassifier.predictProb(X[i], prob);
             
-            if (pred==labelIdx[1])
+            if (pred==2)
             {
                 if (prob[0]<cutoff)
                     p++;
                 pd++;
             }
             
-            if (Y1[i]==labelIdx[1])
+            if (Y1[i]==2)
             {
                 if (prob[0]<cutoff)
                     r++;
@@ -85,7 +84,7 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         TObjectIntMap<String> labelMap = new TObjectIntHashMap<String>();
         for (int i=0; i<labels.length;++i)
-            labelMap.put(labels[i], labelIdx[i]);
+            labelMap.put(labels[i], i+1);
         
         stageTwoClassifier = new PairWiseClassifier();
         stageTwoClassifier.initialize(labelMap, prop);

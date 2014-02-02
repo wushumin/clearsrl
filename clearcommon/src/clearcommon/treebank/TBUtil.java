@@ -312,13 +312,6 @@ public final class TBUtil {
 		node.headConstituent = ancestor;
 	}
 	
-	public static void addDependency(TBTree tree, Dependency[] deps) {
-		TBNode[] tokens = tree.getTokenNodes();
-		for (TBNode node:tree.getTerminalNodes())
-			if (node.head==null)
-				addDependency(node, tokens, deps);
-	}
-	
 	public static void addDependency(TBTree[] trees, File depFile, int idxCol, int labelCol) throws IOException {
 		try (BufferedReader reader = new BufferedReader(new FileReader(depFile))) {
 			Dependency[] deps;
@@ -326,10 +319,27 @@ public final class TBUtil {
 			for (;;) {
 				deps = readCoNLLTree(reader, idxCol, labelCol);
 				if (deps==null) break;
-				if (trees[count].getFilename().endsWith("0310.nw") && count==22)
-					System.err.println(""+count+" "+trees[count]);
-				addDependency(trees[count++], deps);
+				//if (trees[count].getFilename().endsWith("0310.nw") && count==22)
+				//	System.err.println(""+count+" "+trees[count]);
+				TBNode[] tokens = trees[count].getTokenNodes();
+				for (TBNode node:trees[count].getTerminalNodes())
+					if (node.head==null)
+						addDependency(node, tokens, deps);
+				++count;
 			}
+		}
+	}
+	
+	public static void addDependency(Map<String, TBTree[]> treeMap, File depDir, int idxCol, int labelCol) {
+		for (Map.Entry<String, TBTree[]> entry:treeMap.entrySet()) {
+			 File depFile = new File(depDir, entry.getKey().replaceAll("\\.\\w+\\z", ".dep"));
+	         try {
+	        	 logger.info(String.format("Reading CoNLL dependency %s", depFile.getCanonicalPath()));
+	        	 addDependency(entry.getValue(), depFile, idxCol, labelCol);
+	         } catch (IOException e) {
+		            // TODO Auto-generated catch block
+		            e.printStackTrace();
+	         }
 		}
 	}
     

@@ -1,5 +1,6 @@
 package clearcommon.alg;
 
+import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -20,10 +21,6 @@ public class PairWiseClassifier extends Classifier implements Serializable {
 
     Classifier [][] classifiers;
     Classifier probClassifier;
-    
-    BitSet[] valueMatrix;
-    
-    double[] values;
     
     int topN;
     
@@ -68,32 +65,30 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     
     public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         super.initialize(labelMap, prop);
-        classifiers = new Classifier[labelIdx.length][labelIdx.length];
-        values = new double[labelIdx.length];
-        valueMatrix = new BitSet[labelIdx.length];
-        for (int i=0; i<valueMatrix.length;++i)
-            valueMatrix[i] = new BitSet(labelIdx.length);
-        topN = ((int)Math.round(labelIdx.length*0.1))+1;
+
+        
+        classifiers = new Classifier[labelMap.size()][labelMap.size()];
+        
+        topN = ((int)Math.round(labelMap.size()*0.1))+1;
         threads = Integer.parseInt(prop.getProperty("pairwise.threads","1"));
     }
     
     @Override
-    public int predict(int[] x)
-    {
-        return predictValues(x, values);
+    public int predict(int[] x) {
+        return predictValues(x, new double[labelMap.size()]);
     }
     
     @Override
     public int predictValues(int[] x, double[] values) {
         //double[] prob = new double[probClassifier.getClassCnt()];
         //probClassifier.predictProb(x, prob);
-        for (BitSet valueVec:valueMatrix)
-            valueVec.clear();
-        Arrays.fill(values, 0);
+    	
+    	BitSet[] valueMatrix = new BitSet[labelMap.size()];
+        for (int i=0; i<valueMatrix.length;++i)
+            valueMatrix[i] = new BitSet(labelMap.size());
         
-        for (int i=0; i<labels.length-1; ++i)
-            for (int j=i+1; j<labels.length; ++j)
-            {
+        for (int i=0; i<labelMap.size()-1; ++i)
+            for (int j=i+1; j<labelMap.size(); ++j) {
                 double[] probs = new double[classifiers[i][j].getClassCnt()];
                 int label = classifiers[i][j].predictValues(x,probs);
                 //double a = 1 / (1 + Math.exp(-probs[0]));
@@ -103,13 +98,11 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 //values[i]+= a/s;
                 //values[j]+= b/s;
                 
-                if (label==labelIdx[i])
-                {
+                if (label==i+1) {
                     values[i]++;
                     valueMatrix[i].set(j);
                 }
-                else //if (probs[0]<0)
-                {
+                else {
                     values[j]++;
                     valueMatrix[j].set(i);
                 }
@@ -138,18 +131,18 @@ public class PairWiseClassifier extends Classifier implements Serializable {
             }
         */
         
-        if (topN>=1)
-        {
+        if (topN>=1) {
             Arrays.sort(values);
             double cutoffValue = values[values.length-topN];
-            BitSet mask = new BitSet(labelIdx.length);
+            BitSet mask = new BitSet(labelMap.size());
            
+            
+            
             for (int i=0; i<valueMatrix.length; ++i)
                 if (valueMatrix[i].cardinality()>=cutoffValue)
                     mask.set(i);
             
-            for (int i=0; i<valueMatrix.length; ++i)
-            {
+            for (int i=0; i<valueMatrix.length; ++i) {
                 //values[i] = valueMatrix[i].cardinality()/(values.length*100-100.0);
                 valueMatrix[i].and(mask);
                 values[i] = valueMatrix[i].cardinality()/(mask.cardinality()-1.0);
@@ -174,18 +167,18 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         //      cnt++;
         //if (cnt>1) System.out.print("TIE ");
             
-        return labelIdx[highIdx];
+        return highIdx+1;
 
     }
     
     @Override
     public void train(int[][] X, int[] Y, double[] weightY) {
         
-        TIntArrayList[] classLabels = new TIntArrayList[labels.length];
-        for (int i=0; i<labels.length; ++i)
+        TIntArrayList[] classLabels = new TIntArrayList[labelMap.size()];
+        for (int i=0; i<labelMap.size(); ++i)
             classLabels[i] = new TIntArrayList();
         for (int i=0; i<Y.length; ++i)
-            classLabels[labelIdxMap.get(Y[i])].add(i);
+            classLabels[Y[i]-1].add(i);
         /*
         // the probabilistic classifier can only use L2R_LR
         {
@@ -203,35 +196,30 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         ExecutorService executor = null;
         if (threads>1) executor = Executors.newFixedThreadPool(threads);
         
-        for (int i=0; i<labels.length-1; ++i)
-        {
-            for (int j=i+1; j<labels.length; ++j)
-            {
+        for (int i=0; i<labelMap.size()-1; ++i) {
+            for (int j=i+1; j<labelMap.size(); ++j) {
                 System.out.printf("Training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length);
                 System.out.println("Pairwise:");
                 {
                     TObjectIntMap<String> map = new TObjectIntHashMap<String>();
-                    map.put(labels[i], labelIdx[i]);
-                    map.put(labels[j], labelIdx[j]);
+                    map.put(labels[i], i+1);
+                    map.put(labels[j], j+1);
                     
                     classifiers[i][j] = new LinearClassifier();
                     classifiers[i][j].initialize(map, prop);
                     
                     int[][] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
                     int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
-                    for (int c=0; c<classLabels[i].size(); ++c)
-                    {
+                    for (int c=0; c<classLabels[i].size(); ++c) {
                         XPair[c] = X[classLabels[i].get(c)];
-                        YPair[c] = labelIdx[i];
+                        YPair[c] = i+1;
                     }
-                    for (int c=0; c<classLabels[j].size(); ++c)
-                    {
+                    for (int c=0; c<classLabels[j].size(); ++c) {
                         XPair[c+classLabels[i].size()] = X[classLabels[j].get(c)];
-                        YPair[c+classLabels[i].size()] = labelIdx[j];
+                        YPair[c+classLabels[i].size()] = j+1;
                     }
                     double [] weights =null;
-                    if (weightY!=null)
-                    {
+                    if (weightY!=null) {
                         weights = new double[2];
                         weights[0] = weightY[i];
                         weights[1] = weightY[j];

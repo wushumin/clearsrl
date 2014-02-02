@@ -1,29 +1,21 @@
 package clearsrl;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.OntoNotesTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBTokenizer;
-import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.ParseException;
 import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.ParseCorpus;
 import clearcommon.util.PropertyUtil;
-import clearcommon.util.LanguageUtil.POS;
 import clearsrl.SRInstance.OutputFormat;
+import clearsrl.Sentence.Source;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -34,17 +26,16 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.SortedMap;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -91,169 +82,145 @@ public class RunSRL {
     
     static final float THRESHOLD=0.8f;
 
-    class Runner implements Runnable
-    {
-        BlockingQueue<TBTree> treeQueue;
+    ExecutorService executor;
+    ArrayBlockingQueue<Future<List<SRInstance>>> srlQueue;
+    
+    class RunnableSentence implements Callable<List<SRInstance>>  {
+    	Sentence sent = null;
+    	
+    	public RunnableSentence(Sentence sent) {
+    		this.sent = sent;
+    	}
+    	
+		@Override
+        public List<SRInstance> call() {
+			if (sent==null) 
+				return null;
+			TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
+            return model.predict(tree, sent.propPB, sent.depEC, sent.namedEntities);
+		}
+    }
+    
+    class SRLWriter extends Thread {
         PrintWriter writer;
-        SortedMap<Integer, List<PBInstance>> pbFileMap;
         LanguageUtil langUtil;
 
-        public Runner(BlockingQueue<TBTree> treeQueue, 
-                PrintWriter writer, 
-                SortedMap<Integer, List<PBInstance>> pbFileMap,
-                LanguageUtil langUtil)
-        {
-            this.treeQueue = treeQueue;
+        public SRLWriter(PrintWriter writer, LanguageUtil langUtil) {
             this.writer    = writer;
-            this.pbFileMap = pbFileMap;
             this.langUtil  = langUtil;
         }
         
         public void run() {
-            while (true)
-            {
-                TBTree tree;
-                try {
-                    tree = treeQueue.take();
+            while (true) {
+            	Future<List<SRInstance>> future;
+            	try {
+            		
+            		
+	                future = srlQueue.take();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    continue;
+	                continue;
                 }
-                if (tree.getRootNode()==null) break;
-                logger.fine("Processing tree "+tree.getIndex());
-                
-                //System.out.println(i+" "+trees[i].getRootNode().toParse());
-                //List<TBNode> nodes = SRLUtil.getArgumentCandidates(trees[i].getRootNode());
-                //for (TBNode node:nodes)
-                //    System.out.println(node.toParse());
-                //TBUtil.linkHeads(tree, langUtil.getHeadRules());
+            	
+            	List<SRInstance> srls=null;
+            	while (true)
+	                try {
+	                	srls = future.get();
+	                	break;
+	                } catch (InterruptedException e) {
+	                	continue;
+	                } catch (ExecutionException e) {
+		                e.printStackTrace();
+		                break;
+	                }
 
-               
-                List<SRInstance> predictions = null;
-                
-                if (pbFileMap==null) {
-                    predictions = model.predict(tree, null, null);
-                    
-                    /*
-                    BitSet goldPredicates = new BitSet();
-                    for (SRInstance instance:goldInstances)
-                        goldPredicates.set(instance.getPredicateNode().getTokenIndex());
-                
-                    BitSet predPredicates = new BitSet();
-                    for (SRInstance instance:predictions)
-                        predPredicates.set(instance.getPredicateNode().getTokenIndex());
-
-                    if (!goldPredicates.equals(predPredicates))
-                    {
-                        System.out.print(entry.getKey()+","+i+": ");
-                        List<TBNode> nodes = trees[i].getRootNode().getTokenNodes();
-                        for (int j=0; j<nodes.size(); ++j)
-                        {
-                            if (goldPredicates.get(j)&& predPredicates.get(j))
-                                System.out.print("["+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"] ");
-                            else if (goldPredicates.get(j))
-                                System.out.print("("+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+") ");
-                            else if (predPredicates.get(j))
-                                System.out.print("{"+nodes.get(j).getWord()+" "+nodes.get(j).getPOS()+"} ");
-                            else
-                                System.out.print(nodes.get(j).getWord()+" ");
-                        }
-                        System.out.print("\n");
-                    }*/
-                } else  {
-                    List<PBInstance> pbInstances = pbFileMap==null?null:pbFileMap.get(tree.getIndex());
-                    if (pbInstances!=null) {
-                        
-                        predictions = new ArrayList<SRInstance>();
-                        SRInstance[] goldInstances = new SRInstance[pbInstances.size()];
-                        for (int j=0; j<goldInstances.length; ++j) {
-                            goldInstances[j] = new SRInstance(pbInstances.get(j));
-                            List<String> stem = langUtil.findStems(goldInstances[j].predicateNode);
-                            predictions.add(new SRInstance(goldInstances[j].predicateNode, tree, stem.get(0)+".XX", 1.0));
-                        }
-                        //if (goldInstances!=null && goldInstances.length!=0)
-                        //    TBUtil.linkHeads(goldInstances[0].tree, langUtil.getHeadRules());
-                        predictions = model.predict(tree, goldInstances, null);
-                    }
-                        
-                        /*
-
-                        ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-                        ArrayList<Map<String, Float>> labels = new ArrayList<Map<String, Float>>();
-                        SRLUtil.getSamplesFromParse(goldInstance, tree, langUtil, THRESHOLD, argNodes, labels);
-                        
-                        SRInstance trainInstance = new SRInstance(goldInstance.predicateNode, tree, goldInstance.getRolesetId(), 1.0);
-                        for (int l=0; l<labels.size(); ++l)
-                        {
-                            if (SRLUtil.getMaxLabel(labels.get(l)).equals(SRLModel.NOT_ARG)) continue;
-                            trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(l)), argNodes.get(l)));
-                        } */
-                }
-                
-                if (predictions!=null) {
-                    if (outputFormat.equals(OutputFormat.CONLL))
-                        writer.println(CoNLLSentence.toString(tree, predictions.toArray(new SRInstance[predictions.size()])));
-                    else
-                        for (SRInstance instance:predictions)
-                            writer.println(instance.toString(outputFormat));
-                }
-                
+            	if (srls==null) break;
+            	
+            	if (!srls.isEmpty()) {
+	            	if (outputFormat.equals(OutputFormat.CONLL))
+	                    writer.println(CoNLLSentence.toString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+	                else
+	                    for (SRInstance instance:srls)
+	                        writer.println(instance.toString(outputFormat));
+            	}
+            	
             }
             logger.info("done");
         }
     }
     
-    void processInput(Reader reader, String inName, PrintWriter writer, String outName, ParseCorpus parser, SortedMap<Integer, List<PBInstance>>  propBank, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
+    void processInput(Reader reader, String inName, PrintWriter writer, String outName, ParseCorpus parser, Sentence[]  sentences, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
     {
         logger.info("Processing "+(inName==null?"stdin":inName)+", outputing to "+(outName==null?"stdout":outName));
         
-        BlockingQueue<TBTree> queue = new ArrayBlockingQueue<TBTree>(100);
-        
-        Thread srlThread = new Thread(new Runner(queue, writer, propBank, langUtil));
-        srlThread.start();
+        Thread writerThread = new SRLWriter(writer, langUtil);
+        writerThread.start();
         
         Reader parseIn = null;
         PrintWriter parseOut = null;
         PipedWriter pipedWriter = null;
-        if (parsed)
-        {
-            parseIn = reader;
-        }
-        else
-        {
-            pipedWriter = new PipedWriter();
-            parseIn = new PipedReader(pipedWriter);
-            
-            parser.parse(reader, pipedWriter);
-            
-            if (outputParse)
-            {
-                if (outName==null)
-                    inName = "stdout.parse";
-                else
-                    inName = (outName.endsWith(".prop") ? outName.substring(0, outName.length()-5) : outName) + ".parse";
-                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(inName), "UTF-8"));
-            }
+
+        if (sentences==null) {
+	        if (parsed)
+	        		parseIn = reader;
+	        else {
+	            pipedWriter = new PipedWriter();
+	            parseIn = new PipedReader(pipedWriter);
+	            
+	            parser.parse(reader, pipedWriter);
+	            
+	            if (outputParse)
+	            {
+	                if (outName==null)
+	                    inName = "stdout.parse";
+	                else
+	                    inName = (outName.endsWith(".prop") ? outName.substring(0, outName.length()-5) : outName) + ".parse";
+	                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(inName), "UTF-8"));
+	            }
+	        }
+	        
+	        TBFileReader treeReader = new SerialTBFileReader(parseIn, inName);
+	        
+	        TBTree tree;
+	        while ((tree=treeReader.nextTree())!=null){
+	        	TBUtil.linkHeads(tree, langUtil.getHeadRules());
+	        	
+	        	Future<List<SRInstance>> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null)));
+	            while(true)
+	    	        try {
+	    	        	srlQueue.put(future);
+	    	        	break;
+	    	        } catch (InterruptedException e) {
+	    	        }  
+	            if (parseOut!=null)
+	                parseOut.println(tree.toString());
+	        }
+	        treeReader.close();
+        } else {
+    		for (Sentence sentence:sentences) {
+    			Future<List<SRInstance>> future = executor.submit(new RunnableSentence(sentence));
+	            while(true)
+	    	        try {
+	    	        	srlQueue.put(future);
+	    	        	break;
+	    	        } catch (InterruptedException e) {
+	    	        }  
+    		}
         }
         
-        TBFileReader treeReader = new SerialTBFileReader(parseIn, inName);
-        
-        TBTree tree;
-        while ((tree=treeReader.nextTree())!=null){
-        	TBUtil.linkHeads(tree, langUtil.getHeadRules());
-            queue.put(tree);            
-            if (parseOut!=null)
-                parseOut.println(tree.toString());
-        }
-        queue.put(new TBTree(null, Integer.MAX_VALUE, null, 0, 0));
-        treeReader.close();
-        
-        parseIn.close();
+        if (parseIn!=null) parseIn.close();
         if (parseOut!=null) parseOut.close();
         if (pipedWriter!=null) pipedWriter.close();
-        reader.close();
-        
-        srlThread.join();
+        if (reader!=null) reader.close();
+
+        Future<List<SRInstance>> future = executor.submit(new RunnableSentence(null));
+        while (true)
+		    try {
+		        srlQueue.put(future);
+		        break;
+	        } catch (InterruptedException e) {
+	        }
+
+        writerThread.join();
     }
     
     public static void main(String[] args) throws Exception
@@ -279,16 +246,16 @@ public class RunSRL {
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);
         
-        logger.info(PropertyUtil.toString(props));
-        
-        Properties runSRLProps = PropertyUtil.filterProperties(props, "srl.");
+        Properties runSRLProps = PropertyUtil.filterProperties(props, "srl.", true);
         runSRLProps = PropertyUtil.filterProperties(runSRLProps, "run.", true);
+        
+        logger.info(PropertyUtil.toString(runSRLProps));
         
         if (options.outFile!=null) runSRLProps.setProperty("output.dir", options.outFile.getAbsolutePath());
 
-        options.langUtil = (LanguageUtil) Class.forName(runSRLProps.getProperty("language.util-class")).newInstance();
-        if (!options.langUtil.init(runSRLProps))
-        {
+        Properties langProps = PropertyUtil.filterProperties(runSRLProps, runSRLProps.getProperty("language").trim()+'.', true);
+        options.langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
+        if (!options.langUtil.init(langProps)) {
             logger.severe(String.format("Language utility (%s) initialization failed",runSRLProps.getProperty("language.util-class")));
             System.exit(-1);
         }
@@ -313,6 +280,28 @@ public class RunSRL {
         }
         
         options.model.setLanguageUtil(options.langUtil);
+       
+        int threads = -1;
+        String threadCnt = runSRLProps.getProperty("threads","auto");
+
+        if (threadCnt.equals("auto")) {
+            threads = Runtime.getRuntime().availableProcessors();
+            // more than 4 processors is probably hyper-thread cores
+            if (threads>4) 
+            	threads = threads/2;
+        } else 
+            try {
+                threads = Integer.parseInt(threadCnt);
+            } catch (NumberFormatException e) {
+                threads = -1;
+            } finally {
+                if (threads <=0) threads = Runtime.getRuntime().availableProcessors();
+            }
+        if (threads>40) threads=40;
+        logger.info(String.format("Using %d threads\n",threads));
+        
+        options.executor = Executors.newFixedThreadPool(threads);
+        options.srlQueue = new ArrayBlockingQueue<Future<List<SRInstance>>>(threads*20);
         
         int pCount = 0;
         String dataFormat = runSRLProps.getProperty("data.format", "default");
@@ -416,7 +405,7 @@ public class RunSRL {
         PrintStream output = null;
         if (options.outFile!=null)
         {
-            if (!options.inFile.isDirectory())
+            if (options.inFile!=null && !options.inFile.isDirectory())
                 try {
                     output = new PrintStream(options.outFile);
                 } catch (FileNotFoundException e) {
@@ -434,12 +423,15 @@ public class RunSRL {
         
         //SRLScore score = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         //SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
-        if (!dataFormat.equals("conll"))
-        {   
-            Map<String, SortedMap<Integer, List<PBInstance>>>  propBank = null;
-            Map<String, TBTree[]> treeBank = null;
-            if (options.usePropBank && runSRLProps.getProperty("pbdir")!=null)
+        if (!dataFormat.equals("conll")) {   
+            Map<String, Sentence[]>  sentenceMap = null;
+            if (options.usePropBank)
             {
+            	String source = runSRLProps.getProperty("corpus","");
+            	Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
+            	
+            	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources(runSRLProps.getProperty("corpus.source")));            	
+            	/*
                 String treeRegex = runSRLProps.getProperty("tb.regex");
                 String propRegex = runSRLProps.getProperty("pb.regex");
 
@@ -447,51 +439,62 @@ public class RunSRL {
                 //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
                 PBTokenizer tokenzier = runSRLProps.getProperty("pb.tokenizer")==null?(runSRLProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(runSRLProps.getProperty("pb.tokenizer")).newInstance();
 
-                propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), propRegex, 
-                                     new TBReader(treeBank),tokenzier);
+                //propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), propRegex, 
+                //                    new TBReader(treeBank),tokenzier);*/
             }
             
             ParseCorpus phraseParser = null;
             
             if (!options.parsed)
             {
-                phraseParser = new ParseCorpus();
+                phraseParser = new ParseCorpus(true);
                 phraseParser.initialize(PropertyUtil.filterProperties(props, "parser."));
             }   
-            if (options.inFile==null)
+            if (options.inFile==null && sentenceMap==null)
                 options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null, options.langUtil);
             else {
-                List<String> fileList = options.inFileList==null?FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"))
+                List<String> fileList = null;
+                
+                if (sentenceMap==null)
+                	fileList = options.inFileList==null?FileUtil.getFiles(options.inFile, runSRLProps.getProperty("regex",".*\\.(parse|txt)"))
                         :FileUtil.getFileList(options.inFile, options.inFileList);
+                else
+                	fileList = new ArrayList<String>(sentenceMap.keySet());
                     
-                for (String fName:fileList)
-                {
-                    File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
+                for (String fName:fileList) {
+                    Reader reader = null;
+                    Sentence[] sentences = null;
                     
-                    Reader reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
+                    if (sentenceMap==null) {
+                    	File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
+                    	reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
+                    } else
+                    	sentences = sentenceMap.get(fName);
+                    
 
                     String foutName=null;
                     PrintWriter writer=null;
-                    if (options.outFile==null)
+                    if (options.outFile==null&&sentenceMap==null)
                         writer = new PrintWriter(System.out);
                     else
                     {
                         foutName = fName.endsWith(".gz")?fName.substring(0, fName.length()-3):fName;
-                        foutName = foutName.replaceAll("\\.(parse|txt)\\z", ".prop");
+                        foutName = foutName.replaceAll("\\.\\w+\\z", ".prop");
 
                         if (options.compressOutput) foutName=foutName+".gz";
                         
-                        foutName = options.inFile.isFile()?options.outFile.getPath():foutName;
+                        if (options.inFile==null)
+                        	
+                        foutName = options.inFile!=null&&options.inFile.isFile()?options.outFile.getPath():foutName;
 
-                        File outFile = new File(options.inFile.isFile()?null:options.outFile, foutName);
+                        File outFile = new File(options.inFile!=null&&options.inFile.isFile()?null:options.outFile, foutName);
                         if (outFile.getParentFile()!=null)
                             outFile.getParentFile().mkdirs();
                         writer = new PrintWriter(new OutputStreamWriter(options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile), "UTF-8"));
                         foutName = outFile.getPath();
                     }
-                    
-                    options.processInput(reader, fName, writer, foutName, phraseParser, propBank==null?null:propBank.get(fName), options.langUtil);
-                    reader.close();
+                    options.processInput(reader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
+                    if (reader!=null) reader.close();
                     writer.close();
                 }
             }
@@ -686,5 +689,17 @@ public class RunSRL {
         //System.out.printf("%d/%d %.2f%%\n", count, y.length, count*100.0/y.length);
         
         //System.out.println(SRLUtil.getFMeasure(model.labelStringMap, testProb.y, y));
+        
+        if (options.executor!=null) {
+	        options.executor.shutdown();
+	        
+	        while (true) {
+	            try {
+	                if (options.executor.awaitTermination(1, TimeUnit.MINUTES)) break;
+	            } catch (InterruptedException e) {
+	                logger.severe(e.getMessage());
+	            }
+	        }
+        }
     }
 }
