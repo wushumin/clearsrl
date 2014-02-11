@@ -59,6 +59,10 @@ public class TBTree implements Serializable {
         if (rootNode != null) {
             linkIndices(root);
             rootNode.cleanUpPOS();
+            rootNode.headConstituent = rootNode;
+            rootNode.findHead();
+            if (rootNode.head==null)
+            	rootNode.head = null;
         }
     }
 

@@ -1,6 +1,5 @@
 package clearcommon.alg;
 
-import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -20,7 +19,6 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     private static final long serialVersionUID = 1L;
 
     Classifier [][] classifiers;
-    Classifier probClassifier;
     
     int topN;
     
@@ -28,11 +26,11 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     
     class TrainJob implements Runnable{
         Classifier cf;
-        int[][] X;
+        Object[] X;
         int[] y;
         double[] weights;
         
-        public TrainJob(Classifier cf, int[][] X, int[]y, double[] weights)
+        public TrainJob(Classifier cf, Object[] X, int[]y, double[] weights)
         {
             this.cf = cf;
             this.X = X;
@@ -42,7 +40,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         
         @Override
         public void run() {
-            cf.train(X, y, weights);
+            cf.trainNative(X, y, weights);
         }
     }
     
@@ -74,12 +72,12 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     }
     
     @Override
-    public int predict(int[] x) {
-        return predictValues(x, new double[labelMap.size()]);
+    public int predictNative(Object x) {
+        return predictValuesNative(x, new double[labelMap.size()]);
     }
     
     @Override
-    public int predictValues(int[] x, double[] values) {
+    public int predictValuesNative(Object x, double[] values) {
         //double[] prob = new double[probClassifier.getClassCnt()];
         //probClassifier.predictProb(x, prob);
     	
@@ -90,7 +88,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         for (int i=0; i<labelMap.size()-1; ++i)
             for (int j=i+1; j<labelMap.size(); ++j) {
                 double[] probs = new double[classifiers[i][j].getClassCnt()];
-                int label = classifiers[i][j].predictValues(x,probs);
+                int label = classifiers[i][j].predictValuesNative(x,probs);
                 //double a = 1 / (1 + Math.exp(-probs[0]));
                 //double b = 1 / (1 + Math.exp(-probs[1]));
                 //double s = a+b;
@@ -98,7 +96,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 //values[i]+= a/s;
                 //values[j]+= b/s;
                 
-                if (label==i+1) {
+                if (label==1) {
                     values[i]++;
                     valueMatrix[i].set(j);
                 }
@@ -133,7 +131,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         
         if (topN>=1) {
             Arrays.sort(values);
-            double cutoffValue = values[values.length-topN];
+            double cutoffValue = values[values.length-2];
             BitSet mask = new BitSet(labelMap.size());
            
             
@@ -172,7 +170,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     }
     
     @Override
-    public void train(int[][] X, int[] Y, double[] weightY) {
+    public void trainNative(Object[] X, int[] Y, double[] weightY) {
         
         TIntArrayList[] classLabels = new TIntArrayList[labelMap.size()];
         for (int i=0; i<labelMap.size(); ++i)
@@ -202,21 +200,22 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 System.out.println("Pairwise:");
                 {
                     TObjectIntMap<String> map = new TObjectIntHashMap<String>();
-                    map.put(labels[i], i+1);
-                    map.put(labels[j], j+1);
+                    map.put(labels[i], 1);
+                    map.put(labels[j], 2);
                     
                     classifiers[i][j] = new LinearClassifier();
+                    classifiers[i][j].dimension = dimension;
                     classifiers[i][j].initialize(map, prop);
-                    
-                    int[][] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
+
+                    Object[] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
                     int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
                     for (int c=0; c<classLabels[i].size(); ++c) {
                         XPair[c] = X[classLabels[i].get(c)];
-                        YPair[c] = i+1;
+                        YPair[c] = 1;
                     }
                     for (int c=0; c<classLabels[j].size(); ++c) {
                         XPair[c+classLabels[i].size()] = X[classLabels[j].get(c)];
-                        YPair[c+classLabels[i].size()] = j+1;
+                        YPair[c+classLabels[i].size()] = 2;
                     }
                     double [] weights =null;
                     if (weightY!=null) {
@@ -228,7 +227,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                     
                     TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights);
                     
-                    if (executor !=null) executor.submit(job);
+                    if (executor !=null) executor.execute(job);
                     else job.run();
                 }
                 /*
@@ -250,8 +249,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
             }
         }
         
-        if (executor!=null)
-        {
+        if (executor!=null) {
             executor.shutdown();
             while (true)
             {
@@ -263,6 +261,15 @@ public class PairWiseClassifier extends Classifier implements Serializable {
             }
         }
     }
+    
+    public BitSet getFeatureMask() {
+    	BitSet mask = new BitSet();
+    	for (int i=0; i<labelMap.size()-1; ++i)
+            for (int j=i+1; j<labelMap.size(); ++j)
+            	mask.or(classifiers[i][j].getFeatureMask());
+    	return mask;
+    }
+    
 /*
     @Override
     public Classifier getNewInstance() {

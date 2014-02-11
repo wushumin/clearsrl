@@ -142,7 +142,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
        
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL, Source.TREEBANK, Source.TB_DEP));
+        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL, Source.TREEBANK, Source.TB_HEAD), null);
 
         int ecCount=0;
         int ecDepCount=0;
@@ -280,7 +280,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
         
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL, Source.TREEBANK, Source.TB_DEP));
+        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL, Source.TREEBANK, Source.TB_HEAD), null);
 
         for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
             for (Sentence sent:entry.getValue()) {
@@ -338,7 +338,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
         
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_DEP, Source.SRL));
+        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL), null);
 
         File outputDir = new File(props.getProperty(corpus+"ecdep.dir"));
         

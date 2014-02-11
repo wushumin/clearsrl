@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -268,6 +269,11 @@ public class RunSRL {
         
         logger.info("model loaded");
         
+        BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
+        BitSet mask2 = (options.model.argLabelStage2Classifier.getFeatureMask());
+        
+        System.out.printf("%d features, reduceable to %d %d\n", options.model.argLabelFeatures.getDimension(), mask1.cardinality(), mask2.cardinality());
+        
         logger.info("Argument features: "+options.model.argLabelFeatures.getFeatures());
         //for (EnumSet<SRLModel.Feature> feature:model.featureSet)
         //  logger.info(SRLModel.toString(feature));
@@ -430,7 +436,7 @@ public class RunSRL {
             	String source = runSRLProps.getProperty("corpus","");
             	Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
             	
-            	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources(runSRLProps.getProperty("corpus.source")));            	
+            	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources(runSRLProps.getProperty("corpus.source")), options.langUtil);            	
             	/*
                 String treeRegex = runSRLProps.getProperty("tb.regex");
                 String propRegex = runSRLProps.getProperty("pb.regex");

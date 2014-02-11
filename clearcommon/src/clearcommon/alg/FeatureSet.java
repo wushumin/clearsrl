@@ -197,7 +197,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
             
             for (String fVal:entry.getValue()) {
                 int mapIdx = fMap.get(fVal);
-                if (mapIdx>0) featureSet.add(mapIdx-1);
+                if (mapIdx>0) featureSet.add(mapIdx);
             }
         }
         int [] features = featureSet.toArray();
@@ -259,7 +259,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
     }
     
     void rebuildMapFast(float cutoff) {
-        int dimension=0;
+        dimension=0;
         for (EnumSet<T> feature:features) {
             TObjectIntMap<String> indexMap = new TObjectIntHashMap<String>();
             featureStrMap.put(feature, indexMap);
@@ -311,7 +311,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         }
         Collections.sort(featVals);
         
-        int dimension=0;
+        dimension=0;
         for (FeatureValue featVal:featVals)
             featureStrMap.get(featVal.type).put(featVal.value, ++dimension);
     }

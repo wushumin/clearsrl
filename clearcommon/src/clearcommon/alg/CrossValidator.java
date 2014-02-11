@@ -17,13 +17,13 @@ public class CrossValidator {
     class TrainJob implements Runnable{
         int fold;
         Classifier cf;
-        int[][] X;
+        Object[] X;
         int[] y;
         int[] yValidate;
         double[][] labelValues;
         BitSet testIndices;
         
-        public TrainJob(int fold, Classifier cf, int[][] X, int[] y, int[] yValidate, double[][] labelValues, BitSet validateIndices)
+        public TrainJob(int fold, Classifier cf, Object[] X, int[] y, int[] yValidate, double[][] labelValues, BitSet validateIndices)
         {
             this.fold = fold;
             this.cf = cf;
@@ -38,20 +38,20 @@ public class CrossValidator {
         public void run() {
             System.out.printf("*********** Training fold %d ***************\n",fold+1);
             if (testIndices==null || testIndices.isEmpty()) {
-            	cf.train(X, y);
+            	cf.trainNative(X, y);
             	return;
             }
 
-            List<int[]> Xtrain = new ArrayList<int[]>();
+            List<Object> Xtrain = new ArrayList<Object>();
             TIntArrayList ytrain = new TIntArrayList();
             for (int i=testIndices.nextClearBit(0) ; i<y.length; i=testIndices.nextClearBit(i+1)) {
                 Xtrain.add(X[i]);
                 ytrain.add(y[i]);
             }
-            cf.train(Xtrain.toArray(new int[Xtrain.size()][]), ytrain.toArray());
+            cf.trainNative(Xtrain.toArray(), ytrain.toArray());
             
             for (int i=testIndices.nextSetBit(0) ; i>=0; i=testIndices.nextSetBit(i+1))
-            	yValidate[i] = labelValues==null?cf.predict(X[i]):cf.predictValues(X[i], labelValues[i]);
+            	yValidate[i] = labelValues==null?cf.predictNative(X[i]):cf.predictValuesNative(X[i], labelValues[i]);
         }
     }
     
@@ -76,6 +76,7 @@ public class CrossValidator {
          }
     }
     
+    /*
     public int[] validate(int foldNum, int[][] X, int[] y) {
         return validate(foldNum, X, y, null, null, false);
     }
@@ -90,12 +91,24 @@ public class CrossValidator {
     
     public int[] validate(int foldNum, int[][] X, int[] y, double[][] labelValues, int[] seed) {
         return validate(foldNum, X, y, labelValues, seed, false);
-    }
+    }*/
     
     public int[] validate(int foldNum, int[][] X, int[] y, int[] seed, boolean trainAll) {
         return validate(foldNum, X, y, null, seed, trainAll);
     }
+    
+    public int[] validate(int foldNum, Object[] X, int[] y, int[] seed, boolean trainAll) {
+        return validate(foldNum, X, y, null, seed, trainAll);
+    }
  
+    public int[] validate(int foldNum, int[][] X, int[] y, double[][] yValues, int[] seed, boolean trainAll) {
+    	classifier.makeDimension(X);
+    	Object[] xNative = new Object[X.length];
+    	for (int i=0; i<X.length; ++i)
+    		xNative[i] = classifier.getNativeFormat(X[i]);
+    	return validate(foldNum, xNative, y, yValues, seed, trainAll);
+    }
+    
     /**
      * @param foldNum number of validation folds
      * @param X feature vector
@@ -105,7 +118,7 @@ public class CrossValidator {
      * @param trainAll train an classifier with all the samples
      * @return predicted labels through cross validation
      */
-    public int[] validate(int foldNum, int[][] X, int[] y, double[][] yValues, int[] seed, boolean trainAll) {
+    public int[] validate(int foldNum, Object[] X, int[] y, double[][] yValues, int[] seed, boolean trainAll) {
         ExecutorService executor = null;
         if (threads>1) executor = Executors.newFixedThreadPool(threads);
           

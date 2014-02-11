@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
@@ -19,6 +20,7 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.FileUtil;
+import clearcommon.util.LanguageUtil;
 import clearsrl.ec.ECCommon;
 
 public class Sentence implements Serializable{
@@ -29,14 +31,26 @@ public class Sentence implements Serializable{
     private static final long serialVersionUID = 1L;
 
 	public enum Source {
-		TREEBANK,
-		TB_DEP,
-		PROPBANK,
-		PARSE,
-		PARSE_DEP,
-		SRL,
-		EC_DEP,
-		NAMED_ENTITY
+		TREEBANK("tb", true),
+		TB_HEAD("tb.headed", true),
+		PROPBANK("pb"),
+		PARSE("parse", true),
+		PARSE_HEAD("parse.headed", true),
+		SRL("prop"),
+		EC_DEP("ecdep"),
+		NAMED_ENTITY("ne");
+		
+		Source(String prefix) {
+			this(prefix, false);
+		}
+		
+		Source(String prefix, boolean isTree) {
+			this.prefix = prefix;
+			this.isTree = isTree;
+		}
+		
+		public String prefix;
+		public boolean isTree;
 	}
 
 	public TBTree treeTB;
@@ -45,7 +59,6 @@ public class Sentence implements Serializable{
 	public TBTree parse;
 	public List<PBInstance> props;
 	public String[][] depEC;
-
 
 	public String[] namedEntities;
 	
@@ -85,43 +98,46 @@ public class Sentence implements Serializable{
 		return PBUtil.readPBDir(fileList, new TBReader(treeMap), tokenzier);
 	}
 			
-	public static Map<String, Sentence[]> readCorpus(Properties props, Source headSource, EnumSet<Source> sources) {
+	public static Map<String, Sentence[]> readCorpus(Properties props, Source headSource, EnumSet<Source> sources, LanguageUtil langUtil) {
 		Map<String, Sentence[]> sentenceMap = new TreeMap<String, Sentence[]>();
+
+		if (!headSource.isTree) {
+			Logger.getLogger("clearsrl").warning("head source is not a tree source!!!");
+			return null;
+		}
 		
-		String propPrefix = headSource.equals(Source.PARSE)?"parse":"tb";
-		
-		String treeDir = props.getProperty(propPrefix+".dir");
-		String filename = props.getProperty(propPrefix+".filelist");
-		String treeRegex = props.getProperty(propPrefix+".regex");
+		String treeDir = props.getProperty(headSource.prefix+".dir");
+		String filename = props.getProperty(headSource.prefix+".filelist");
+		String treeRegex = props.getProperty(headSource.prefix+".regex");
 		
 		List<String> fileList = filename==null?FileUtil.getFiles(new File(treeDir), treeRegex, false)
                  :FileUtil.getFileList(new File(treeDir), new File(filename), false);
 		
-		Map<String, TBTree[]> sourceMap = TBUtil.readTBDir(treeDir, fileList);
+		Map<String, TBTree[]> sourceMap = TBUtil.readTBDir(treeDir, fileList, headSource.equals(Source.PARSE)||headSource.equals(Source.TREEBANK)?langUtil.getHeadRules():null);
 
 		Map<String, TBTree[]> treeMap=null;
 		if (sources.contains(Source.TREEBANK))
-			treeMap = headSource.equals(Source.TREEBANK)?sourceMap:TBUtil.readTBDir(props.getProperty("tb.dir"), fileList);
-		if (sources.contains(Source.TB_DEP) && treeMap!=null) 
-			TBUtil.addDependency(treeMap, new File(props.getProperty("tb.dep.dir")), 8, 10);
+			treeMap = headSource.equals(Source.TREEBANK)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.TREEBANK.prefix+".dir"), fileList, langUtil.getHeadRules());
+		else if (sources.contains(Source.TB_HEAD))
+			treeMap = headSource.equals(Source.TB_HEAD)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.TB_HEAD.prefix+".dir"), fileList);
 		
 		Map<String, SortedMap<Integer, List<PBInstance>>> pbMap=null;
 		if (sources.contains(Source.PROPBANK) && treeMap!=null)
-			pbMap = readProps(props, "pb", treeMap);
+			pbMap = readProps(props, Source.PROPBANK.prefix, treeMap);
 		
 		Map<String, TBTree[]> parseMap=null;
 		if (sources.contains(Source.PARSE))
-			parseMap = headSource.equals(Source.PARSE)?sourceMap:TBUtil.readTBDir(props.getProperty("parse.dir"), fileList);
-		if (sources.contains(Source.PARSE_DEP) && parseMap!=null) 
-			TBUtil.addDependency(parseMap, new File(props.getProperty("parse.dep.dir")), 8, 10);
+			parseMap = headSource.equals(Source.PARSE)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.PARSE.prefix+".dir"), fileList, langUtil.getHeadRules());
+		else if (sources.contains(Source.PARSE_HEAD))
+			parseMap = headSource.equals(Source.PARSE_HEAD)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.PARSE_HEAD.prefix+".dir"), fileList);
 		
 		Map<String, SortedMap<Integer, List<PBInstance>>> srlMap=null;
 		if (sources.contains(Source.SRL) && parseMap!=null)
-			srlMap = readProps(props, "prop", parseMap);
+			srlMap = readProps(props, Source.SRL.prefix, parseMap);
 		
 		Map<String, Map<Integer, String[][]>> ecDepMap=null;
 		if (sources.contains(Source.EC_DEP) && parseMap!=null)
-			ecDepMap = ECCommon.readDepEC(new File(props.getProperty("ecdep.dir")), parseMap);
+			ecDepMap = ECCommon.readDepEC(new File(props.getProperty(Source.EC_DEP.prefix+".dir")), parseMap);
 		
 		for (Map.Entry<String, TBTree[]> entry:sourceMap.entrySet()) {
 			Sentence[] sentences = new Sentence[entry.getValue().length];

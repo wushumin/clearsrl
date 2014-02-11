@@ -122,7 +122,7 @@ public class EnglishUtil extends LanguageUtil {
         @Override
         public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
             if (localName.equals("roleset")) {
-                roleset = frame.new Roleset(frame.predicate+'.'+atts.getValue("id"));
+                roleset = frame.new Roleset(atts.getValue("id"));
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
                 if (atts.getValue("f")==null)

@@ -7,6 +7,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Properties;
 
 public abstract class Classifier implements Serializable {
@@ -20,14 +21,12 @@ public abstract class Classifier implements Serializable {
         SVM
     };
     
-    transient Properties prop;
-    
+    Properties prop;
     String[] labels;
-    
     TObjectIntMap<String> labelMap;
+    int dimension = -1;
     
-    Classifier()
-    {
+    Classifier(){
     }
     
     /**
@@ -50,18 +49,47 @@ public abstract class Classifier implements Serializable {
         return labelMap.size();
     }
     
+    
+    public BitSet getFeatureMask() {
+    	return null;
+    }
+    
+    public Object getNativeFormat(int[] x) {
+    	return x;
+    }
+    
+    
     public void train(int [][] X, int[] Y) {
         train(X, Y, null);
     }
     
-    public abstract void train(int [][] X, int[] Y, double[] weightY);
+    public  void train(int[][] X, int[] Y, double[] weightY) {
+    	makeDimension(X);
+    	Object[] xNative = new Object[X.length];
+    	for (int i=0; i<X.length; ++i)
+    		xNative[i] = getNativeFormat(X[i]);
+    	trainNative(xNative, Y, weightY);
+    }
     
-    public abstract int predict(int[] x);
+    public void trainNative(Object[] X, int[] Y) {
+    	trainNative(X, Y, null);
+    }
+
+    public abstract void trainNative(Object[] X, int[] Y, double[] weightY);
+    
+
+    
+    public int predict(int[] x) {
+    	return predictNative(getNativeFormat(x));
+    }
+
+    public abstract int predictNative(Object x);
     
     public Classifier getNewInstance() {
         Classifier classifier = null;
         try {
             classifier = this.getClass().newInstance();
+            classifier.dimension = this.dimension;
             classifier.initialize(labelMap, prop);
             return classifier;
         } catch (InstantiationException e) {
@@ -74,18 +102,44 @@ public abstract class Classifier implements Serializable {
         return null;
     }
     
+    public void makeDimension(int[][] X) {
+    	if (dimension<=0) {
+    		for (int[] x:X)
+    			for (int xi:x)
+    				if (xi>dimension)
+    					dimension = xi;
+    		dimension++;
+    	}
+    }
+    
+    public void setDimension(int dimension) {
+    	this.dimension = dimension;
+    }
+    
+    public int getDimension() {
+    	return dimension;
+    }
+    
     public boolean canPredictProb() {
         return false;
     }
-    
+
     public int predictProb(int[] x, double[] prob) {
-        int label = predict(x);
+        return predictProbNative(getNativeFormat(x), prob);
+    }
+    
+    public int predictProbNative(Object x, double[] prob) {
+        int label = predictNative(x);
         prob[label-1]=1;
         return label;
     }
     
     public int predictValues(int[] x, double[] val) {
-        int label = predict(x);
+        return predictValuesNative(getNativeFormat(x), val);
+    }
+    
+    public int predictValuesNative(Object x, double[] val) {
+        int label = predictNative(x);
         val[label-1]=1;
         return label;
     }

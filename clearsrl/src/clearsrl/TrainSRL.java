@@ -16,12 +16,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
 import clearsrl.SRLModel.Feature;
 import clearsrl.Sentence.Source;
 
 public class TrainSRL {
+	static Logger logger = Logger.getLogger("clearsrl");
+	
     static final float THRESHOLD=0.90f;
     /*
     static List<SRInstance> addTrainingSentence(SRLModel model, SRInstance[] instances, TBTree parsedTree, String[] namedEntities, float threshold, boolean buildDictionary) {
@@ -52,6 +58,16 @@ public class TrainSRL {
         
         props = PropertyUtil.filterProperties(props, "srl.", true);
         props = PropertyUtil.filterProperties(props, "train.", true);
+
+        {
+	        String logLevel = props.getProperty("logger.level");
+	        if (logLevel!=null) {
+		        ConsoleHandler ch = new ConsoleHandler();
+		        ch.setLevel(Level.parse(logLevel));
+		        logger.addHandler(ch);
+		        logger.setLevel(Level.parse(logLevel));
+	        }
+        }
         
         System.out.print(PropertyUtil.toString(props));
         
@@ -81,6 +97,7 @@ public class TrainSRL {
                     System.err.println(e);
                 }  
         }
+        Source srcTreeType = Source.valueOf(props.getProperty("corpus.tree", "PARSE"));
         EnumSet<Source> srcSet = Sentence.readSources(props.getProperty("corpus.source"));
 
         SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
@@ -123,7 +140,7 @@ public class TrainSRL {
                 Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
                 System.out.println(PropertyUtil.toString(srcProps));
                 
-                Map<String, Sentence[]> corpusMap = Sentence.readCorpus(srcProps, srcSet.contains(Source.PARSE)?Source.PARSE:Source.TREEBANK, srcSet);
+                Map<String, Sentence[]> corpusMap = Sentence.readCorpus(srcProps, srcTreeType, srcSet, langUtil);
                 
                 int weight = Integer.parseInt(srcProps.getProperty("weight", "1"));
                 for (String key:corpusMap.keySet())
@@ -135,7 +152,7 @@ public class TrainSRL {
 
             System.out.printf("%d training files read\n",sentenceMap.size());
 
-            if (!srcSet.contains(Source.PARSE))
+            if (srcTreeType.equals(Source.TREEBANK)||srcTreeType.equals(Source.TB_HEAD))
                 model.setTrainGoldParse(true);
 
             model.initialize(props);
@@ -143,11 +160,9 @@ public class TrainSRL {
                 int weight = trainWeights.get(entry.getKey());
                 weight = weight==0?1:weight;
                 
-                System.out.println("Processing "+entry.getKey());
-                for (Sentence sent:entry.getValue()) {
-                    ArrayList<SRInstance> srls = new ArrayList<SRInstance>();
-                        
-                    
+                logger.info("Processing "+entry.getKey());
+                for (Sentence sent:entry.getValue()) {                        
+                    logger.fine("Processing tree "+(sent.parse==null?sent.treeTB.getIndex():sent.parse.getIndex()));
                     for (int w=0; w<weight; ++w)
                         model.addTrainingSentence(sent, THRESHOLD);
                 }

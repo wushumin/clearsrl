@@ -3,6 +3,7 @@ package clearcommon.util;
 import gnu.trove.map.TObjectIntMap;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -26,8 +26,6 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
-import clearcommon.util.EnglishUtil.FrameParseHandler;
-import clearcommon.util.PBFrame.Roleset;
 
 public class ChineseUtil extends LanguageUtil {
 
@@ -193,10 +191,8 @@ public class ChineseUtil extends LanguageUtil {
             parser.parse(new InputSource(new FileReader(file)));
             frameMap.put(frame.getPredicate()+key.substring(key.length()-2), frame);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (SAXException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -278,7 +274,7 @@ public class ChineseUtil extends LanguageUtil {
 	    if (passive>0) {
 	    	constructions.add("passive");
 	    	constructions.add(passive==1?"SB":"LB");
-	    } else if (passive==0 && predicateNode.getHeadOfHead()!=null && predicateNode.getHeadOfHead().getPOS().equals("BA"))
+	    } else if (passive==0 && (predicateNode.getHeadOfHead()!=null && predicateNode.getHeadOfHead().getPOS().equals("BA")))
 	    	constructions.add("BA");
 
 	    // identifies predicate in a complementizer
@@ -297,5 +293,17 @@ public class ChineseUtil extends LanguageUtil {
 	    
 	    return constructions;
     }
+	
+	public static void main(String[] args) throws IOException {
+		Properties props = new Properties();
+        FileInputStream in = new FileInputStream(args[0]);
+        props.load(in);
+        in.close();
+        props = PropertyUtil.resolveEnvironmentVariables(props);
+        Properties langProps = PropertyUtil.filterProperties(props, "chinese.");
+        ChineseUtil langUtil = new ChineseUtil();
+        langUtil.init(langProps);
+        System.out.printf("%d frames read\n", langUtil.frameMap.size());
+	}
 
 }

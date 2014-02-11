@@ -298,18 +298,22 @@ public final class TBUtil {
 		}
 		return depList.isEmpty()?null:depList.toArray(new Dependency[depList.size()]);
 	}
-
-	static void addDependency(TBNode node, TBNode[] tokens, Dependency[] deps) {
-		node.depLabel = deps[node.terminalIndex].label;
-		node.head = node;
-		if (deps[node.terminalIndex].index>0 && tokens[deps[node.terminalIndex].index-1].head==null)
-			addDependency(tokens[deps[node.terminalIndex].index-1], tokens, deps);
-		TBNode ancestor = node;
-		while (ancestor.parent!=null && ancestor.parent.head==null) {
-			ancestor = ancestor.parent;
-			ancestor.head = node;
-		}
-		node.headConstituent = ancestor;
+	
+	static void addDependency(int index, TBNode[] terminals, Dependency[] deps) {
+		for (int i=0; i<deps.length; ++i)
+			if (deps[i].index==index) {
+				TBNode node = terminals[i];
+				node.depLabel = deps[i].label;
+				node.head = node;
+				TBNode ancestor = node;
+				while (ancestor.getParent()!=null && ancestor.getParent().head==null) {
+					ancestor = ancestor.parent;
+					ancestor.head = node;
+				}
+				node.headConstituent = ancestor;
+				if (node.isToken())
+					addDependency(node.getTokenIndex()+1, terminals, deps);
+			}
 	}
 	
 	public static void addDependency(TBTree[] trees, File depFile, int idxCol, int labelCol) throws IOException {
@@ -318,14 +322,24 @@ public final class TBUtil {
 			int count=0;
 			for (;;) {
 				deps = readCoNLLTree(reader, idxCol, labelCol);
+
+				// bug workaround
+				TBNode[] terminals = trees[count].getTerminalNodes();
+				if  (terminals.length==1 && (deps==null || deps.length!=1)) {
+					Dependency[] dummy = {new Dependency(0, "ROOT")};
+					addDependency(0, terminals, dummy);
+					
+					if (++count>=trees.length) break;
+					terminals = trees[count].getTerminalNodes();
+				}
+				
 				if (deps==null) break;
-				//if (trees[count].getFilename().endsWith("0310.nw") && count==22)
-				//	System.err.println(""+count+" "+trees[count]);
-				TBNode[] tokens = trees[count].getTokenNodes();
-				for (TBNode node:trees[count].getTerminalNodes())
-					if (node.head==null)
-						addDependency(node, tokens, deps);
-				++count;
+				
+				addDependency(0, terminals, deps);
+				addDependency(-1, terminals, deps);
+
+				if (++count>=trees.length)
+					break;
 			}
 		}
 	}

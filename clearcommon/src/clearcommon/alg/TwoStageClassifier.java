@@ -28,7 +28,7 @@ public class TwoStageClassifier extends Classifier implements Serializable {
     }
 
     @Override
-    public void train(int[][] X, int[] Y, double[] weightY) {
+    public void trainNative(Object[] X, int[] Y, double[] weightY) {
         
         int[] Y1 = new int[Y.length];
         
@@ -46,16 +46,16 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         stageOneClassifier = new LinearClassifier();
         stageOneClassifier.initialize(lMap, propMod);
         
-        stageOneClassifier.train(X, Y1);
+        stageOneClassifier.trainNative(X, Y1);
         
         double p=0, pd=0, r=0, rd=0, f=0;
         
-        ArrayList<int[]> X2 = new ArrayList<int[]>();
+        ArrayList X2 = new ArrayList();
         TIntArrayList    Y2 = new TIntArrayList();
         double [] prob = new double[2];
         for (int i=0; i<Y.length; ++i)
         {
-            int pred = stageOneClassifier.predictProb(X[i], prob);
+            int pred = stageOneClassifier.predictProbNative(X[i], prob);
             
             if (pred==2)
             {
@@ -89,17 +89,17 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         stageTwoClassifier = new PairWiseClassifier();
         stageTwoClassifier.initialize(labelMap, prop);
         
-        stageTwoClassifier.train(X2.toArray(new int[X2.size()][]), Y2.toArray(), weightY);
+        stageTwoClassifier.trainNative(X2.toArray(), Y2.toArray(), weightY);
     }
     
     @Override
-    public int predict(int[] x) {
+    public int predictNative(Object x) {
         double [] prob = new double[2];
-        int pred = stageOneClassifier.predictProb(x, prob);
+        int pred = stageOneClassifier.predictProbNative(x, prob);
         if (prob[0]>=cutoff)
             return pred;
         
-        return stageTwoClassifier.predict(x);
+        return stageTwoClassifier.predictNative(x);
     }
     /*
     @Override

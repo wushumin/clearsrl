@@ -655,4 +655,26 @@ public class TBNode implements Serializable {
         return str.toString();
     }
 
+	public TBNode findHead() {
+		if (isTerminal())
+			return head = this;
+
+		TBNode headChild = null;
+		for (TBNode child:children)
+			if (child.hasFunctionTag("HEAD")) {
+				headChild = child;
+				break;
+			}
+		// sentence not head annotated
+		if (headChild==null) return null;
+		for (TBNode child:children)
+			if (child==headChild) {
+				child.headConstituent = this.headConstituent;
+				this.head = child.findHead();
+			} else {
+				child.headConstituent = child;
+				child.findHead();
+			}
+		return this.head;
+    }
 }
