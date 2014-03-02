@@ -412,17 +412,16 @@ public class SRLUtil {
         return nodes;
     }
     
-
-    
-    public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
-        List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
-        filterPredicateNode(nodes, predicate);
-        return nodes;
+    public static List<TBNode> getArgumentCandidates(TBNode predicate, boolean filter, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
+    	if (!filter) {
+    		List<TBNode> nodes = getArgumentCandidates(predicate.getRoot());
+            filterPredicateNode(nodes, predicate);
+            return nodes;
+    	}
+    	return getArgumentCandidates(predicate, support, langUtil, levelDown, allHeadPhrases);
     }
     
-    
-    /*
-    public static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
+    static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
         boolean toRoot = true;
         
         boolean isVerb = langUtil.isVerb(predicate.getPOS());
@@ -539,7 +538,6 @@ public class SRLUtil {
         }
         return new ArrayList<TBNode>(candidates);
     }
-    */
     
     static List<TBNode> getNodes(TBNode node, int levelUp, int levelDown, boolean getHeadPhrases) {
         List<TBNode> nodes = new ArrayList<TBNode>();

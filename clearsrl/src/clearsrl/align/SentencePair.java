@@ -394,10 +394,9 @@ public  class SentencePair implements Serializable {
         }
     }
     
-    public String toString()
-    {
-        StringBuilder builder = new StringBuilder(src+"\n"+dst+"\n");
-        int cnt=0;
+    public String toAlignmentString() {
+    	StringBuilder builder = new StringBuilder();
+    	int cnt=0;
         for (Map.Entry<Long, int[]> entry:srcAlignment.entrySet())
         {
             builder.append(src.tokens[cnt++].getWord()+" [");
@@ -415,9 +414,11 @@ public  class SentencePair implements Serializable {
                 builder.append(src.tokens[id].getWord()+' ');
             builder.append("] ");
         }
-        builder.append('\n');
-        
         return builder.toString();
+    }
+    
+    public String toString() {
+        return src+"\n"+dst+"\n"+toAlignmentString();
     }
 
 }

@@ -16,9 +16,56 @@ import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.propbank.PBTokenizer;
 import clearcommon.propbank.PBUtil;
+import clearcommon.treebank.TBUtil;
+import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
+import clearsrl.util.Topics;
 
 public class ScoreSRL {
+	
+	static String getHeadStr(SRInstance instance) {
+		String a0="";
+		String a1="";
+		for (SRArg arg:instance.args)
+			if (arg.getLabel().equals("ARG0")) {
+				a0 = Topics.getTopicHeadword(arg.node);
+				break;
+			}
+		for (SRArg arg:instance.args)
+			if (arg.getLabel().equals("ARG1")) {
+				a1 = Topics.getTopicHeadword(arg.node);
+				break;
+			}
+		return a0+'-'+instance.getPredicateNode().getWord()+'-'+a1;		
+	}
+	
+	static void printARGDiff(SRInstance sys, SRInstance gold) {
+		
+		boolean match = true;
+		
+		for (SRArg gArg:gold.args)
+			if (gArg.getLabel().matches("ARG[01]")) {
+				for (SRArg sArg:sys.args) {
+					if (gArg.getLabel().equals(sArg.getLabel())) {
+						if (!gArg.getTokenSet().equals(sArg.tokenSet))
+							match = false;
+						break;
+					}
+				}
+				if (match==false)
+					break;
+			}
+
+		if (match)
+			return;
+		
+		System.out.println(gold.getTree());
+		System.out.println(getHeadStr(gold)+' '+gold.toString());
+		System.out.println(getHeadStr(sys)+' '+sys.toString());
+		System.out.println(sys.getTree());
+		System.out.print("\n");
+	}
+	
     public static void main(String[] args) throws Exception
     {   
         Properties props = new Properties();
@@ -26,10 +73,22 @@ public class ScoreSRL {
         props.load(in);
         in.close();
         
-        props = PropertyUtil.filterProperties(props, "srl.");
+        props = PropertyUtil.resolveEnvironmentVariables(props);
+
+        
+        
+        props = PropertyUtil.filterProperties(props, "srl.", true);
         props = PropertyUtil.filterProperties(props, "score.", true);
         PBTokenizer goldTokenizer = props.getProperty("gold.pb.tokenizer")==null?(props.getProperty("gold.data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("gold.pb.tokenizer")).newInstance();
      
+        
+        Properties langProps = PropertyUtil.filterProperties(props, props.getProperty("language").trim()+'.', true);
+        LanguageUtil langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
+        if (!langUtil.init(langProps)) {
+            System.err.println(String.format("Language utility (%s) initialization failed",props.getProperty("language.util-class")));
+            System.exit(-1);
+        }
+        
         String[] systems = props.getProperty("systems").trim().split(",");
         for (int i=0; i< systems.length; ++i)
             systems[i] = systems[i].trim();
@@ -108,10 +167,17 @@ public class ScoreSRL {
             for (Map.Entry<Integer, List<PBInstance>> e2:goldMap.entrySet())
             {
                 List<PBInstance> goldProps = e2.getValue();
+                
+                if (!goldProps.isEmpty())
+                	TBUtil.linkHeads(goldProps.get(0).getTree(), langUtil.getHeadRules());
+                
                 List<List<PBInstance>> sysPropsList = new ArrayList<List<PBInstance>>();
                 for (SortedMap<Integer, List<PBInstance>> sysMap:sysMaps)
                 {
                     sysPropsList.add(sysMap.get(e2.getKey()));
+                    if (sysMap.get(e2.getKey())!=null && !sysMap.get(e2.getKey()).isEmpty())
+                    	TBUtil.linkHeads(sysMap.get(e2.getKey()).get(0).getTree(), langUtil.getHeadRules());
+                    
                     if (sysPropsList.get(sysPropsList.size()-1)==null) break;
                 }
                 if (sysPropsList.get(sysPropsList.size()-1)==null) continue;
@@ -140,6 +206,7 @@ public class ScoreSRL {
                     
                     for (int i=0; i<scores.length;++i)
                     {
+                    	printARGDiff(sysInstances.get(i), goldInstance);
                         scores[i].addResult(sysInstances.get(i), goldInstance);
                         if (goldInstance.getPredicateNode().getPOS().startsWith("V")) {
                             vScores[i].addResult(sysInstances.get(i), goldInstance);
@@ -160,6 +227,8 @@ public class ScoreSRL {
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
                     }
                     goldPropOut.println(goldInstance.toPropbankString());
+                    
+                    
                     
                     if (scores.length==1) continue;
                     

@@ -153,6 +153,9 @@ public class PBFileReader
             if (!label.matches(PBArg.LABEL_PATTERN))
                 throw new PBFormatException("unrecognized argument label: "+label+"\n"+Arrays.toString(tokens));
 
+            if (label.matches("(A[A-Z]*\\d)-.*"))
+            	label = label.substring(0, label.indexOf('-'));
+            
             List<TBNode> nodeList = new ArrayList<TBNode>();
             List<TBNode> nestedNodeList = new ArrayList<TBNode>();
             String[] locs = tokens[t].substring(0, idx).split("(?=[\\*,;&])");

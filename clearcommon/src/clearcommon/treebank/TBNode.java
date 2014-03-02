@@ -437,8 +437,6 @@ public class TBNode implements Serializable {
         return nodeList;
     }
 
-    
-    
     public ArrayList<TBNode> getPathToRoot() {
     	return getPathToRoot(false);
     }

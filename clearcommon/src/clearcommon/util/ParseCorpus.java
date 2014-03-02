@@ -72,6 +72,9 @@ public class ParseCorpus {
     @Option(name="-out",usage="output file/directory")
     private String outDir = null;
     
+    @Option(name="-lower",usage="convert to lowercase")
+    private boolean toLowerCase = false; 
+    
     @Option(name="-h",usage="help message")
     private boolean help = false;
     
@@ -277,6 +280,8 @@ public class ParseCorpus {
         
         String line;
         while((line=inputData.readLine()) != null){
+        	if (toLowerCase)
+        		line = line.toLowerCase();
             List<String> words = tokenizer==null?Arrays.asList(line.trim().split(" +")):tokenizer.tokenizeLine(line);
             Future<String> future = executor.submit(new Sentence(words));
             while(true)

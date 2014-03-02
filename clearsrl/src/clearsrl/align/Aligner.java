@@ -60,7 +60,11 @@ public class Aligner {
      * @param sentence input sentence pair to be aligned
      * @return alignments
      */
-    public Alignment[] align(SentencePair sentence)
+    public Alignment[] align(SentencePair sentence) {
+    	return align(sentence, alignThreshold);
+    }
+    
+    public static Alignment[] align(SentencePair sentence, float alignThreshold)
     {
         Alignment[][] alignMatrix = new Alignment[sentence.src.pbInstances.length][sentence.dst.pbInstances.length];
             
@@ -71,7 +75,7 @@ public class Aligner {
                 alignMatrix[i][j].computeSymmetricAlignment();
             }
         
-        return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix);
+        return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix, alignThreshold);
     }
     
     /**
@@ -82,7 +86,7 @@ public class Aligner {
      * @param simMatrix computed similarity measure
      * @return the alignment array
      */
-    public Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix)
+    public static Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix, float alignThreshold)
     {       
         if (alignMatrix.length==0)
             return new Alignment[0];
