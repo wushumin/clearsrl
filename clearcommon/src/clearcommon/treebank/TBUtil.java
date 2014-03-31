@@ -238,7 +238,7 @@ public final class TBUtil {
         }
         return tbMap;
     }
-    
+
     public static void extractText(PrintStream out, TBTree[] trees) {
         for (TBTree tree:trees) {
             for (TBNode node: tree.getRootNode().getTokenNodes())
@@ -247,7 +247,19 @@ public final class TBUtil {
         }
     }
 
-    public static void extractText(String outputDir, Map<String, TBTree[]> trees)
+    public static void extractCoNLLText(PrintStream out, TBTree[] trees) {
+        for (TBTree tree:trees) {
+            for (TBNode node: tree.getRootNode().getTokenNodes())
+                out.println(node.word+" "+node.getPOS());
+            out.print('\n');
+        }
+    }
+    
+    public static void extractText(String outputDir, Map<String, TBTree[]> trees) {
+    	extractText(outputDir, trees, false);
+    }
+    
+    public static void extractText(String outputDir, Map<String, TBTree[]> trees, boolean isCoNLL)
     {
         File dir = new File(outputDir);
         if (!dir.isDirectory())
@@ -259,7 +271,10 @@ public final class TBUtil {
                 File file = new File(dir, entry.getKey());
                 file.getParentFile().mkdirs();
                 PrintStream pStream = new PrintStream(file, "UTF-8");
-                extractText(pStream, entry.getValue());
+                if (isCoNLL)
+                	extractCoNLLText(pStream, entry.getValue());
+                else
+                	extractText(pStream, entry.getValue());
                 pStream.close();
             } catch (Exception e)
             {

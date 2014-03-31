@@ -17,8 +17,13 @@ import clearcommon.treebank.TBNode;
 
 public class Topics {
     public static String getTopicHeadword(TBNode node) {
-    	String head = node.getHeadword().toLowerCase();
-		if (node.getHead().getPOS().equals("PU"))
+    	TBNode head = getTopicHeadNode(node);
+		return head==null?null:head.getHeadword().toLowerCase();
+    }
+    
+    public static TBNode getTopicHeadNode(TBNode node) {
+    	TBNode head = node.getHead();
+		if (head.getPOS().equals("PU"))
 			return null;
 		if (node.getPOS().equals("PP")) {
 			for (TBNode child:node.getChildren())
@@ -26,17 +31,17 @@ public class Topics {
             		if (child.getPOS().equals("LCP")) {
             			for (TBNode grandChild:child.getChildren())
             				if (grandChild.getHead()!=child.getHead()) {
-            					head = grandChild.getHeadword().toLowerCase();
+            					head = grandChild.getHead();
             					break;
             				}
             		} else
-            			head = child.getHeadword().toLowerCase();
+            			head = child.getHead();
             		break;
             	}
 		}
 		return head;
     }
-	
+
 	public static Map<String, int[]> readTopics(File file){
 		Map<String, int[]> topicMap = new HashMap<String, int[]>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -58,7 +63,10 @@ public class Topics {
 	
 	public static Map<String, List<String>> readAllTopics(Properties prop) {
 		Map<String, List<String>> argTopicMap = new HashMap<String, List<String>>();
-		Set<String> topics = new TreeSet<String>(Arrays.asList(prop.getProperty("topics","").trim().split("\\s*,\\s*")));
+		String tlist = prop.getProperty("topics");
+		if (tlist==null) return argTopicMap;
+		
+		Set<String> topics = new TreeSet<String>(Arrays.asList(tlist.trim().split("\\s*,\\s*")));
 		if (topics.contains("ALLARG")) {
 			topics.clear();
 			topics.add("ALLARG");

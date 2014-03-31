@@ -126,9 +126,9 @@ public class EnglishUtil extends LanguageUtil {
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
                 if (atts.getValue("f")==null)
-                    roleset.roles.add("arg"+atts.getValue("n").toLowerCase());
+                    roleset.addRole("arg"+atts.getValue("n").toLowerCase());
                 else
-                    roleset.roles.add("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
+                    roleset.addRole("arg"+atts.getValue("n").toLowerCase()+'-'+atts.getValue("f").toLowerCase());
             }
         }
     }

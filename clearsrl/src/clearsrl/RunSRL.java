@@ -252,6 +252,8 @@ public class RunSRL {
         
         logger.info(PropertyUtil.toString(runSRLProps));
         
+        
+        
         if (options.outFile!=null) runSRLProps.setProperty("output.dir", options.outFile.getAbsolutePath());
 
         Properties langProps = PropertyUtil.filterProperties(runSRLProps, runSRLProps.getProperty("language").trim()+'.', true);
@@ -270,9 +272,13 @@ public class RunSRL {
         logger.info("model loaded");
         
         BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
-        BitSet mask2 = (options.model.argLabelStage2Classifier.getFeatureMask());
+        BitSet mask2 = options.model.argLabelStage2Classifier==null?new BitSet():(options.model.argLabelStage2Classifier.getFeatureMask());
         
         System.out.printf("%d features, reduceable to %d %d\n", options.model.argLabelFeatures.getDimension(), mask1.cardinality(), mask2.cardinality());
+        
+        boolean useStage2 = !runSRLProps.getProperty("useStage2", "true").equals("false");
+        if (!useStage2)
+        	options.model.argLabelStage2Classifier = null;
         
         logger.info("Argument features: "+options.model.argLabelFeatures.getFeatures());
         //for (EnumSet<SRLModel.Feature> feature:model.featureSet)

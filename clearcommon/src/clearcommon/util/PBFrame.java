@@ -12,11 +12,21 @@ import clearcommon.treebank.TBNode;
 public class PBFrame {
     public class Roleset {
         String id;
-        Set<String> roles;
+        private Set<String> roles;
         
         public Roleset(String id) {
             this.id = id;
             this.roles = new HashSet<String>();
+        }
+        
+        public void addRole(String label) {
+        	roles.add(label.toLowerCase());
+        	if (label.toLowerCase().matches("arg\\d.+"))
+        		roles.add(label.toLowerCase().substring(0, 4));
+        }
+        
+        public boolean hasRole(String label) {
+        	return roles.contains(label.toLowerCase());
         }
         
         public String getId() {

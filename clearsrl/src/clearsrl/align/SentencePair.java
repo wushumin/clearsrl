@@ -397,7 +397,7 @@ public  class SentencePair implements Serializable {
     public String toAlignmentString() {
     	StringBuilder builder = new StringBuilder();
     	int cnt=0;
-        for (Map.Entry<Long, int[]> entry:srcAlignment.entrySet())
+        for (SortedMap.Entry<Long, int[]> entry:srcAlignment.entrySet())
         {
             builder.append(src.tokens[cnt++].getWord()+" [");
             for (int id:entry.getValue())
@@ -407,7 +407,7 @@ public  class SentencePair implements Serializable {
         builder.append('\n');
         
         cnt=0;
-        for (Map.Entry<Long, int[]> entry:dstAlignment.entrySet())
+        for (SortedMap.Entry<Long, int[]> entry:dstAlignment.entrySet())
         {
             builder.append(dst.tokens[cnt++].getWord()+" [");
             for (int id:entry.getValue())

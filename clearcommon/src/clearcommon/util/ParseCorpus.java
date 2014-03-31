@@ -66,6 +66,9 @@ public class ParseCorpus {
     @Option(name="-txtdir",usage="list of files in the input directory to process (overwrites regex)")
     private String txtDir = null; 
     
+    @Option(name="-conll", usage="use conll POS format")
+    private boolean isCoNLL = false;
+    
     @Option(name="-model",usage="list of files in the input directory to process (overwrites regex)")
     private String grammar = null; 
     
@@ -74,6 +77,9 @@ public class ParseCorpus {
     
     @Option(name="-lower",usage="convert to lowercase")
     private boolean toLowerCase = false; 
+    
+    @Option(name="-overWrite",usage="overwrites output")
+    private boolean overWrite = false;
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -140,9 +146,15 @@ public class ParseCorpus {
 
     class Sentence implements Callable<String>  {
         List<String> words;
+        List<String> poses;
         
-        public Sentence(List<String> words){
+        public Sentence(List<String> words) {
+        	this(words, null);
+        }
+        
+        public Sentence(List<String> words, List<String> poses){
             this.words = words;
+            this.poses = poses;
         }
         
         @Override
@@ -157,7 +169,9 @@ public class ParseCorpus {
             String parse = null;
             Tree<String> parsedTree = null;
             try {
-                parsedTree = getParser().getBestConstrainedParse(words,null,null);
+            	//System.out.println(words);
+            	//System.out.println(poses);
+                parsedTree = getParser().getBestConstrainedParse(words,poses,null);
             } catch (Exception e) {
                 logger.severe(e.toString());
                 e.printStackTrace();
@@ -279,19 +293,48 @@ public class ParseCorpus {
         sentWriter.start();
         
         String line;
-        while((line=inputData.readLine()) != null){
-        	if (toLowerCase)
-        		line = line.toLowerCase();
-            List<String> words = tokenizer==null?Arrays.asList(line.trim().split(" +")):tokenizer.tokenizeLine(line);
-            Future<String> future = executor.submit(new Sentence(words));
-            while(true)
-    	        try {
-    	        	parseQueue.put(future);
-    	        	break;
-    	        } catch (InterruptedException e) {
-    	        }
-            //System.out.println(lineCount);
+        
+        if (!isCoNLL)
+	        while((line=inputData.readLine()) != null){
+	        	if (toLowerCase)
+	        		line = line.toLowerCase();
+	            List<String> words = tokenizer==null?Arrays.asList(line.trim().split(" +")):tokenizer.tokenizeLine(line);
+	            Future<String> future = executor.submit(new Sentence(words));
+	            while(true)
+	    	        try {
+	    	        	parseQueue.put(future);
+	    	        	break;
+	    	        } catch (InterruptedException e) {
+	    	        }
+	            //System.out.println(lineCount);
+	        }
+        else {
+        	ArrayList<String> words=new ArrayList<String>();
+        	ArrayList<String> poses=new ArrayList<String>();
+        	while((line=inputData.readLine()) != null){
+        		line = line.trim();
+        		if (line.isEmpty()) {
+        			if (words.isEmpty()) continue;
+        			words.trimToSize();
+        			poses.trimToSize();
+        			Future<String> future = executor.submit(new Sentence(words, poses));
+    	            while(true)
+    	    	        try {
+    	    	        	parseQueue.put(future);
+    	    	        	break;
+    	    	        } catch (InterruptedException e) {
+    	    	        }
+    	            words = new ArrayList<String>();
+    	            poses = new ArrayList<String>();
+    	            continue;
+        		}
+        		String[] tokens = line.split(" ");
+        		words.add(toLowerCase?tokens[0].toLowerCase():tokens[0]);
+        		poses.add(tokens[1]);
+	        }
         }
+        
+        
         
         // add a dummy termination sentence
         Future<String> future = executor.submit(new Sentence(null));
@@ -351,7 +394,7 @@ public class ParseCorpus {
             Map<String, TBTree[]> treeBank = fileList==null?
                     TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
                     TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
-            TBUtil.extractText(txtDir, treeBank);
+            TBUtil.extractText(txtDir, treeBank, parser.isCoNLL);
         }
         
         if (fileNames==null)
@@ -366,6 +409,8 @@ public class ParseCorpus {
             }
             
             File outputFile = new File(parseDir, fileName);
+            if (!parser.overWrite && outputFile.exists())
+            	continue;
             
             outputFile.getParentFile().mkdirs();
             

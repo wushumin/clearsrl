@@ -143,7 +143,7 @@ public class ChineseUtil extends LanguageUtil {
                 roleset = frame.new Roleset(rolesetId);
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
-            	roleset.roles.add("arg"+atts.getValue("argnum").toLowerCase());
+            	roleset.addRole("arg"+atts.getValue("argnum").toLowerCase());
             }
         }
         

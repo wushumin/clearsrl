@@ -71,6 +71,8 @@ public class MakeLDASamples {
     private boolean help = false;
     
     public static void makeArgOutput(Map<String, Map<String, TObjectIntMap<String>>> argMap, File outDir, int wCntThreshold, int docSizeThreshold) throws IOException {
+    	if (!outDir.exists()) outDir.mkdirs();
+    	
     	Map<String, String> dict = new HashMap<String, String>();
         
     	Map<String, TObjectIntMap<String>> allArgMap = new HashMap<String, TObjectIntMap<String>>();

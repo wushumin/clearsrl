@@ -7,14 +7,14 @@ import clearcommon.treebank.TBNode;
 
 public class ArgAlignment {
 
-    PBInstance srcInstance;
-    int        srcArgIdx;
-    TIntSet    dstArgList;
+    public PBInstance srcInstance;
+    public int        srcArgIdx;
+    public TIntSet    dstArgList;
 
-    float       weight;
-    float       factor;
+    public float       weight;
+    public float       factor;
    
-    float       score;
+    public float       score;
     
     public ArgAlignment(PBInstance srcInstance, int srcArgIdx, TIntSet dstArgList, float[] srcTerminalWeights)
     {
