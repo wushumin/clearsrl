@@ -15,8 +15,8 @@ public class TestPBInstance {
     @Test
     public void testPBArg() throws FileNotFoundException {
         System.out.println(Arrays.toString("19:1*27:0;31:4".split("(?=[\\*,;])")));
-        assertTrue("19:1*27:0-LINK-SLC".matches(PBArg.ARG_PATTERN));
-        assertFalse("19:1*27:0LINK-SLC".matches(PBArg.ARG_PATTERN));
+        assertTrue(PBArg.ARG_PATTERN.matcher("19:1*27:0-LINK-SLC").matches());
+        assertFalse(PBArg.ARG_PATTERN.matcher("19:1*27:0LINK-SLC").matches());
         
         String treeDir = "/home/verbs/student/shumin/corpora/ontonotes-release-4.0/data/english/annotations/";
         

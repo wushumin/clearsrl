@@ -7,11 +7,11 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import clearcommon.treebank.*;
 
-public class PBArg implements Comparable<PBArg>, Serializable
-{
+public class PBArg implements Comparable<PBArg>, Serializable {
     /**
      * 
      */
@@ -19,12 +19,15 @@ public class PBArg implements Comparable<PBArg>, Serializable
  
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
-    static final String LABEL_PATTERN = "(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
-    static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
+    //static final String LABEL_PATTERN = "(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?)";
+    //static final String ARG_PATTERN = "\\d+:\\d+([\\*,;&]\\d+:\\d+)*-[A-Za-z].*";
+    
+    static final Pattern ARG_PATTERN = Pattern.compile("(?<locs>\\d+:\\d+([\\*,;&]\\d+:\\d+)*)-(?<label>(R-)?((A[A-Z]*\\d)(\\-[A-Za-z]+)?|[A-Za-z]+(\\-[A-Za-z]+)?))(\\|(?<prob>[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?))?");
     
     static final PBArg[] NO_ARGS = new PBArg[0];
     
     String       label;
+    double       score;
     TBNode       node;
     TBNode[]     allNodes;
     PBArg        linkingArg;
@@ -36,16 +39,19 @@ public class PBArg implements Comparable<PBArg>, Serializable
     BitSet       terminalSet;
     BitSet       tokenSet;
 
-    public PBArg(String label)
-    {
+    public PBArg(String label) {
+        this(label, 1.0);
+    }
+    
+    public PBArg(String label, double score) {
         this.label = label;
+        this.score = score;
         node       = null;
         linkingArg = null;
         nestedArgs = NO_ARGS;
     }
     
-    void processNodes() throws PBFormatException
-    {       
+    void processNodes() throws PBFormatException {       
         //System.out.print(label+":");
         //for (TBNode node:tokenNodes)
         //    System.out.print(" "+node.toParse());
@@ -58,22 +64,18 @@ public class PBArg implements Comparable<PBArg>, Serializable
         boolean addedNodes;
         do {
             addedNodes = false;
-            for (int i=0; i<mainNodes.size();++i)
-            {
-                if ((traceNode=mainNodes.get(i).getTrace())!=null)
-                {
+            for (int i=0; i<mainNodes.size();++i) {
+                if ((traceNode=mainNodes.get(i).getTrace())!=null) {
                     boolean found = false;
                     for (TBNode mainNode:mainNodes)
-                        if (mainNode == traceNode)
-                        {
+                        if (mainNode == traceNode) {
                             found = true;
                             break;
                         }
                     // if it's a reference arg, make sure the trace node doesn't trace back to the main argument
                     if (linkingArg!=null && traceNode==linkingArg.node)
                         found = true;
-                    if (!found)
-                    {
+                    if (!found) {
                         mainNodes.add(traceNode);
                         addedNodes = true;
                         break;
@@ -97,11 +99,9 @@ public class PBArg implements Comparable<PBArg>, Serializable
         if (mainNodes.size()==1)
             node = mainNodes.get(0);
         // just find the WH node for R- arguments
-        else if (label.startsWith("R-"))
-        {
+        else if (label.startsWith("R-")) {
             for (TBNode aNode:mainNodes)
-                if (aNode.getPOS().startsWith("WH"))
-                {
+                if (aNode.getPOS().startsWith("WH")) {
                     node = aNode;
                     break;
                 }
@@ -112,13 +112,10 @@ public class PBArg implements Comparable<PBArg>, Serializable
                     builder.append(" "+aNode.toParse());
                 logger.warning("Didn't find WH node for "+label+builder.toString());
             }
-        }
-        else {
+        } else {
             for (TBNode mainNode:mainNodes)
-                if (!mainNode.isEC() && !mainNode.getTokenSet().isEmpty())
-                {
-                    if (node!=null)
-                    {   
+                if (!mainNode.isEC() && !mainNode.getTokenSet().isEmpty()) {
+                    if (node!=null) {   
                         StringBuilder builder = new StringBuilder();
                         for (TBNode aNode:mainNodes)
                             builder.append("\n    "+aNode.toParse());
@@ -139,8 +136,7 @@ public class PBArg implements Comparable<PBArg>, Serializable
         
         List<PBArg> nestedArgList = new ArrayList<PBArg>(Arrays.asList(nestedArgs));
         for (int i=0; i<nestedArgList.size()-1; ++i)
-            for (int j=i+1; j<nestedArgList.size();)
-            {
+            for (int j=i+1; j<nestedArgList.size();) {
                 if (nestedArgList.get(i).node==nestedArgList.get(j).node)
                     nestedArgList.remove(j);
                 else
@@ -149,14 +145,11 @@ public class PBArg implements Comparable<PBArg>, Serializable
         
         nestedArgs = nestedArgList.toArray(NO_ARGS);
         
-        for (PBArg nestedArg:nestedArgs)
-        {
-            if (terminalSet.intersects(nestedArg.terminalSet))
-            {
+        for (PBArg nestedArg:nestedArgs) {
+            if (terminalSet.intersects(nestedArg.terminalSet)) {
                 StringBuilder builder = new StringBuilder();
                 builder.append("\n    "+node.toParse());
-                for (PBArg arg: nestedArgs)
-                {
+                for (PBArg arg: nestedArgs) {
                     builder.append("\n    "+arg.node.toParse());
                 }
                 throw new PBFormatException(label+": terminal overlap detected"+builder.toString());
@@ -173,8 +166,7 @@ public class PBArg implements Comparable<PBArg>, Serializable
         tokenNodes = tNodes.toArray(new TBNode[tNodes.size()]);
     }
 
-    public boolean isLabel(String label)
-    {
+    public boolean isLabel(String label) {
         return this.label.equals(label);
     }
     
@@ -188,43 +180,39 @@ public class PBArg implements Comparable<PBArg>, Serializable
         return l.length()>4?l.substring(0, 4):l;
     }
     
-    public boolean isPredicate()
-    {
+    public double getScore() {
+    	return score;
+    }
+    
+    public boolean isPredicate() {
         return label.equals("rel");
     }
     
-    public boolean isMainArg()
-    {
+    public boolean isMainArg() {
         return isPredicate() || label.equals("ARG0") || label.equals("ARG1");
     }
     
-    public boolean hasTerminal(int terminalIndex)
-    {
+    public boolean hasTerminal(int terminalIndex) {
         return terminalSet.get(terminalIndex);
     }
     
-    public boolean hasToken(int tokenIndex)
-    {
+    public boolean hasToken(int tokenIndex) {
         return false;
     }
     
-    public TBNode getNode()
-    {
+    public TBNode getNode() {
         return node;
     }
     
-    public TBNode[] getAllNodes()
-    {
+    public TBNode[] getAllNodes() {
         return allNodes;
     }
     
-    public PBArg[] getNestedArgs()
-    {
+    public PBArg[] getNestedArgs() {
         return nestedArgs;
     }
     
-    public TBNode[] getTerminalNodes()
-    {
+    public TBNode[] getTerminalNodes() {
         ArrayList<TBNode> tnodes = new ArrayList<TBNode>();
         
         for (TBNode aNode:allNodes)
@@ -236,8 +224,7 @@ public class PBArg implements Comparable<PBArg>, Serializable
         return tnodes.toArray(new TBNode[tnodes.size()]);
     }
     
-    public TBNode[] getTokenNodes()
-    {
+    public TBNode[] getTokenNodes() {
         return tokenNodes;
     }
 
@@ -250,15 +237,12 @@ public class PBArg implements Comparable<PBArg>, Serializable
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         StringBuilder str = new StringBuilder(label + ": ");
         
-        if (tokenNodes.length>0)
-        {
+        if (tokenNodes.length>0) {
             str.append(tokenNodes[0].getWord()+" ");
-            for (int i=1; i<tokenNodes.length; ++i)
-            {
+            for (int i=1; i<tokenNodes.length; ++i) {
                 if (tokenNodes[i-1].getTokenIndex()+1!=tokenNodes[i].getTokenIndex()) 
                     str.append("|");
                 str.append(tokenNodes[i].getWord()+" ");
@@ -267,8 +251,7 @@ public class PBArg implements Comparable<PBArg>, Serializable
         return str.toString();
     }
     
-    public boolean isEmpty()
-    {
+    public boolean isEmpty() {
         return tokenSet.isEmpty();
     }
 

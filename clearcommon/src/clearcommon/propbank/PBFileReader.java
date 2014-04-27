@@ -38,6 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
 
 
 /**
@@ -144,9 +145,17 @@ public class PBFileReader
 
         for (++t;t<tokens.length; ++t)
         {
-            if (!tokens[t].matches(PBArg.ARG_PATTERN))
+        	Matcher matcher = PBArg.ARG_PATTERN.matcher(tokens[t]);
+        	
+            if (!matcher.matches())
                 throw new PBFormatException("malformed argument: "+tokens[t]+"\n"+Arrays.toString(tokens));
             
+            String label = matcher.group("label"); 
+            
+            String probStr = matcher.group("prob");
+            double prob = probStr==null?1.0:Double.parseDouble(probStr);
+            
+            /*
             int idx    = tokens[t].indexOf(PBLib.ARG_DELIM);
             
             String label = tokens[t].substring(idx+1);
@@ -154,13 +163,13 @@ public class PBFileReader
                 throw new PBFormatException("unrecognized argument label: "+label+"\n"+Arrays.toString(tokens));
 
             if (label.matches("(A[A-Z]*\\d)-.*"))
-            	label = label.substring(0, label.indexOf('-'));
+            	label = label.substring(0, label.indexOf('-'));*/
             
             List<TBNode> nodeList = new ArrayList<TBNode>();
             List<TBNode> nestedNodeList = new ArrayList<TBNode>();
-            String[] locs = tokens[t].substring(0, idx).split("(?=[\\*,;&])");
+            String[] locs = matcher.group("locs").split("(?=[\\*,;&])");
             
-            String[] loc      = locs[0].split(":");
+            String[] loc  = locs[0].split(":");
             
             TBNode node = instance.tree.getRootNode().getNode(Integer.parseInt(loc[0]),Integer.parseInt(loc[1]));
             if (node==null)

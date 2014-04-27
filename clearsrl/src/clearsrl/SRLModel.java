@@ -1287,7 +1287,7 @@ public class SRLModel implements Serializable {
             prob_estimates[i] = 1 / (1 + Math.exp(-prob_estimates[i]));
 
         if (prob_estimates.length == 2) // for binary classification
-            prob_estimates[1] = 1. - prob_estimates[0];
+            prob_estimates[0] = 1. - prob_estimates[1];
         else {
             double sum = 0;
             for (int i = 0; i < prob_estimates.length; i++)
@@ -1692,8 +1692,10 @@ public class SRLModel implements Serializable {
             for (TBNode node: nodes) {
                 if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
-                if (predicateModel.predictValues(predFeatures, vals)==isPredVal)
-                    predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), vals[1]-vals[0])); 
+                if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
+                	makeProb(vals);
+                    predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), vals[1])); 
+                }
                     //if (!langUtil.isVerb(node.getPOS()))
                     //  System.out.println(node);
             }
