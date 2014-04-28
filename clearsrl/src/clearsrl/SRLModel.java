@@ -1869,8 +1869,14 @@ public class SRLModel implements Serializable {
         	
                 double[] labelValues = new double[argLabelIndexMap.size()];
                 int[] x = getFeatureVector(prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
-                int labelIndex = argLabelStage2Classifier.predictValues(x, labelValues);
-              
+                int labelIndex;
+                if (argLabelStage2Classifier.canPredictProb())
+                    labelIndex = argLabelStage2Classifier.predictProb(x, labelValues);
+                else {
+                    labelIndex = argLabelStage2Classifier.predictValues(x, labelValues);
+                    makeProb(labelValues);
+                }
+                
                 fsamples[i].label = argLabelIndexMap.get(labelIndex);
                 if (labeled && !fsamples[i].label.equals(NOT_ARG))
                     prediction.addArg(new SRArg(fsamples[i].label, fsamples[i].node, labelValues, argLabelStringMap));
