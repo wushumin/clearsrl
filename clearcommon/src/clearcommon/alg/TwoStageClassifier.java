@@ -50,7 +50,7 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         double p=0, pd=0, r=0, rd=0, f=0;
         
-        ArrayList X2 = new ArrayList();
+        ArrayList<Object> X2 = new ArrayList<Object>();
         TIntArrayList    Y2 = new TIntArrayList();
         double [] prob = new double[2];
         for (int i=0; i<Y.length; ++i)
@@ -101,13 +101,4 @@ public class TwoStageClassifier extends Classifier implements Serializable {
         
         return stageTwoClassifier.predictNative(x);
     }
-    /*
-    @Override
-    public Classifier getNewInstance() {
-        // TODO Auto-generated method stub
-        Classifier classifier = new TwoStageClassifier();
-        classifier.initialize(labelMap, prop);
-        return classifier;
-    }
-    */
 }

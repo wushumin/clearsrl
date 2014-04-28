@@ -13,6 +13,7 @@ import clearcommon.util.EnglishUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PBFrame;
 import clearcommon.util.PBFrame.Roleset;
+import clearcommon.util.PropertyUtil;
 import clearsrl.ec.ECCommon;
 import clearsrl.util.Topics;
 import gnu.trove.iterator.TObjectIntIterator;
@@ -1329,7 +1330,7 @@ public class SRLModel implements Serializable {
         int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));
         int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","1"));
         
-        double stage2Threshold = Double.parseDouble(prop.getProperty("stage2.threshold","0.95"));
+        double stage2Threshold = 1.0;
         
         boolean hasSequenceFeature = Feature.hasSequenceFeature(argLabelFeatures.getFeaturesFlat());
         boolean hasStage2Feature = Feature.hasStage2Feature(argLabelFeatures.getFeaturesFlat());
@@ -1341,9 +1342,11 @@ public class SRLModel implements Serializable {
             argLabelClassifier.initialize(argLabelStringMap, prop);
             
             if (hasStage2Feature) {
-            	argLabelStage2Classifier = (Classifier)Class.forName(prop.getProperty("stage2Classifier", "clearcommon.alg.PairWiseClassifier")).newInstance();
+            	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
+            	stage2Threshold = Double.parseDouble(stage2Prop.getProperty("threshold","0.95"));
+            	argLabelStage2Classifier = (Classifier)Class.forName(stage2Prop.getProperty("classifier", "clearcommon.alg.PairWiseClassifier")).newInstance();
             	argLabelStage2Classifier.setDimension(argLabelFeatures.getDimension());
-            	argLabelStage2Classifier.initialize(argLabelStringMap, prop);
+            	argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
             }
             
         } catch (InstantiationException e2) {
