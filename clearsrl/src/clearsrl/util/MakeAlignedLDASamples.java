@@ -1,8 +1,7 @@
 package clearsrl.util;
 
-import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
-import gnu.trove.set.TIntSet;
+import gnu.trove.map.TObjectDoubleMap;
+import gnu.trove.map.hash.TObjectDoubleHashMap;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,16 +34,12 @@ import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
-import clearcommon.util.ChineseUtil;
-import clearcommon.util.EnglishUtil;
-import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PBFrame;
 import clearcommon.util.PBFrame.Roleset;
 import clearcommon.util.PropertyUtil;
 import clearsrl.align.Aligner;
 import clearsrl.align.Alignment;
-import clearsrl.align.ArgAlignment;
 import clearsrl.align.ArgAlignmentPair;
 import clearsrl.align.Sentence;
 import clearsrl.align.SentencePair;
@@ -115,28 +110,28 @@ public class MakeAlignedLDASamples {
     	return sp;
     }
     
-    static void updateMap(TBNode predicate, List<ArgWeight> args, Map<String, Map<String, TObjectIntMap<String>>> argMap) {
+    static void updateMap(TBNode predicate, List<ArgWeight> args, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
     	String predWord = predicate.getWord().toLowerCase();
     	logger.fine(predWord+": "+args);
     	for (ArgWeight arg:args) {
     		if (arg.label.equals("rel"))
 				continue;
-			Map<String, TObjectIntMap<String>> wordMap = argMap.get(arg.label);
+			Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(arg.label);
 			if (wordMap==null) {
-				wordMap = new TreeMap<String, TObjectIntMap<String>>();
+				wordMap = new TreeMap<String, TObjectDoubleMap<String>>();
 				argMap.put(arg.label, wordMap);
 			}
 			
-			TObjectIntMap<String> innerMap = wordMap.get(predWord);
+			TObjectDoubleMap<String> innerMap = wordMap.get(predWord);
 			if (innerMap==null) {
-				innerMap = new TObjectIntHashMap<String>();
+				innerMap = new TObjectDoubleHashMap<String>();
 				wordMap.put(predWord, innerMap);
 			}
 			innerMap.adjustOrPutValue(arg.head, arg.weight, arg.weight);
     	}
     }
     
-    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectIntMap<String>>> argMap) {
+    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
     	List<ArgWeight> args = new ArrayList<ArgWeight>();
     	for (PBArg arg:instance.getArgs()) {
 			if (arg.getLabel().equals("rel"))
@@ -199,7 +194,7 @@ public class MakeAlignedLDASamples {
     	return null;
     }
     
-    static void processAlignment(Alignment a, Map<String, Map<String, TObjectIntMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW) {
+    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW) {
     	PBInstance chProp = a.getDstPBInstance();
     	PBArg[] chArgs = chProp.getArgs();
     	
@@ -299,7 +294,7 @@ public class MakeAlignedLDASamples {
     
     public static void main(String[] args) throws Exception {
 
-    	Map<String, Map<String, TObjectIntMap<String>>> argMap = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
+    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new TreeMap<String, Map<String, TObjectDoubleMap<String>>>();
     	
     	MakeAlignedLDASamples options = new MakeAlignedLDASamples();
     	CmdLineParser parser = new CmdLineParser(options);
@@ -410,7 +405,7 @@ public class MakeAlignedLDASamples {
         	}
         	
         }
-        
+        idReader.close();
         System.out.printf("Counts: %d/%d\n", aCnt, tCnt);
         
         /*
