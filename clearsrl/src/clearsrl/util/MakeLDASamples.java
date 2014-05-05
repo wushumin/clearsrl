@@ -99,7 +99,7 @@ public class MakeLDASamples {
 	        PrintWriter wordWriter = new PrintWriter(new File(outDir, aEntry.getKey()+"-words.txt"));
 	        for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
 	        	tIter.advance();
-	        	wordWriter.printf("%s %df\n", tIter.key(), tIter.value());
+	        	wordWriter.printf("%s %f\n", tIter.key(), tIter.value());
 	        	if (tIter.value()<wCntThreshold)
 	        		tIter.remove();
 	        }
