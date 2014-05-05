@@ -65,7 +65,7 @@ public class MakeAlignedLDASamples {
     private int docSizeThreshold = 25;
     
     @Option(name="-fw",usage="full match weight")
-    private int fmWeight = 5;
+    private int fmWeight = 10;
     
     @Option(name="-pw",usage="part match weight")
     private int pmWeight = 3;

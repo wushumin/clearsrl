@@ -69,7 +69,7 @@ public class MakeLDASamples {
     private int wCntThreshold = 10;
     
     @Option(name="-dt",usage="threshold")
-    private int docSizeThreshold = 50;
+    private int docSizeThreshold = 25;
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -99,7 +99,7 @@ public class MakeLDASamples {
 	        PrintWriter wordWriter = new PrintWriter(new File(outDir, aEntry.getKey()+"-words.txt"));
 	        for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
 	        	tIter.advance();
-	        	wordWriter.printf("%s %d\n", tIter.key(), tIter.value());
+	        	wordWriter.printf("%s %df\n", tIter.key(), tIter.value());
 	        	if (tIter.value()<wCntThreshold)
 	        		tIter.remove();
 	        }
