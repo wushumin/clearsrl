@@ -193,13 +193,13 @@ public class PBFileReader
                 continue;
             }
             
-            PBArg arg = new PBArg(label);
+            PBArg arg = new PBArg(label, prob);
             arg.allNodes = nodeList.toArray(new TBNode[nodeList.size()]);
             
             if (!nestedNodeList.isEmpty()) {
                 arg.nestedArgs = new PBArg[nestedNodeList.size()];
                 for (int i=0; i<nestedNodeList.size(); ++i)  {
-                    arg.nestedArgs[i] = new PBArg("C-"+label);
+                    arg.nestedArgs[i] = new PBArg("C-"+label, prob);
                     arg.nestedArgs[i].allNodes = new TBNode[1];
                     arg.nestedArgs[i].allNodes[0] = nestedNodeList.get(i);
                 }
