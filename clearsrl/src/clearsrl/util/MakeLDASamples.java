@@ -185,6 +185,7 @@ public class MakeLDASamples {
         			val = "w"+dict.size();
         			dict.put(word, val);
         		}
+        		if (Math.round(entry.getValue().get(key))==0) continue;
         		docWriter.print(val+':'+key.substring(0,key.indexOf(':'))+" "+Math.round(entry.getValue().get(key))+" ");
         	}
         	docWriter.print("\n");
