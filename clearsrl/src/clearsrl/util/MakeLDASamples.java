@@ -92,6 +92,10 @@ public class MakeLDASamples {
 	        		allArgCntMap = new TObjectDoubleHashMap<String>();
 	        		allArgMap.put(entry.getKey(), allArgCntMap);
 	        	}
+	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+	        		tIter.advance();
+	        		allArgCntMap.adjustOrPutValue(aEntry.getKey()+':'+tIter.key(), tIter.value(), tIter.value());
+	        	}
         	}
         		
 /*        	TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
@@ -120,8 +124,6 @@ public class MakeLDASamples {
 	        	
 	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
-	        		
-	        		allArgCntMap.adjustOrPutValue(aEntry.getKey()+':'+tIter.key(), tIter.value(), tIter.value());
 	        		
 	        		if (wCntMap.containsKey(tIter.key()))
 	        			wCnt+=tIter.value();
