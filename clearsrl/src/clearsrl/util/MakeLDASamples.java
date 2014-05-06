@@ -83,9 +83,18 @@ public class MakeLDASamples {
     	
         for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> aEntry:argMap.entrySet()) {
 
-        	TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
-        	
         	Map<String, TObjectDoubleMap<String>> wordMap = aEntry.getValue();
+        	
+        	for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
+        		Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
+        		TObjectDoubleMap<String> allArgCntMap = allArgMap.get(entry.getKey());
+	        	if (allArgCntMap==null){
+	        		allArgCntMap = new TObjectDoubleHashMap<String>();
+	        		allArgMap.put(entry.getKey(), allArgCntMap);
+	        	}
+        	}
+        		
+/*        	TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
         	
 	        logger.info(aEntry.getKey()+" pre-trim size: "+wordMap.size());
 	        
@@ -108,12 +117,6 @@ public class MakeLDASamples {
 	        for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
 	        	int wCnt = 0;
 	        	Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
-	        	
-	        	TObjectDoubleMap<String> allArgCntMap = allArgMap.get(entry.getKey());
-	        	if (allArgCntMap==null){
-	        		allArgCntMap = new TObjectDoubleHashMap<String>();
-	        		allArgMap.put(entry.getKey(), allArgCntMap);
-	        	}
 	        	
 	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
@@ -151,6 +154,7 @@ public class MakeLDASamples {
 	        }
 	        docWriter.close();
 	        labelWriter.close();
+	        */
         }
         
         logger.info("all arg pre-trim size: "+allArgMap.size());
@@ -179,7 +183,7 @@ public class MakeLDASamples {
         			val = "w"+dict.size();
         			dict.put(word, val);
         		}
-        		docWriter.print(val+':'+key.substring(0,key.indexOf(':'))+" "+entry.getValue().get(key)+" ");
+        		docWriter.print(val+':'+key.substring(0,key.indexOf(':'))+" "+Math.round(entry.getValue().get(key))+" ");
         	}
         	docWriter.print("\n");
         }
