@@ -69,6 +69,9 @@ public class MakeAlignedLDASamples {
     
     @Option(name="-pw",usage="part match weight")
     private int pmWeight = 3;
+    
+    @Option(name="-prob",usage="argument probability")
+	private double prob = -1; 
  
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -131,10 +134,12 @@ public class MakeAlignedLDASamples {
     	}
     }
     
-    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
+    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, double prob) {
     	List<ArgWeight> args = new ArrayList<ArgWeight>();
     	for (PBArg arg:instance.getArgs()) {
 			if (arg.getLabel().equals("rel"))
+				continue;
+			if (arg.getScore()<prob)
 				continue;
 			String head = Topics.getTopicHeadword(arg.getNode());
 			if (head==null)
@@ -194,7 +199,7 @@ public class MakeAlignedLDASamples {
     	return null;
     }
     
-    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW) {
+    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW, double prob) {
     	PBInstance chProp = a.getDstPBInstance();
     	PBArg[] chArgs = chProp.getArgs();
     	
@@ -210,7 +215,7 @@ public class MakeAlignedLDASamples {
     	if (!found) {
     		if (chProp.getRoleset().endsWith(".XX"))
     			return;
-    		updateMap(chProp, argMap);
+    		updateMap(chProp, argMap, prob);
     		return;
     	}
     	
@@ -223,7 +228,12 @@ public class MakeAlignedLDASamples {
     	List<ArgWeight> args = new ArrayList<ArgWeight>();
     	
     	int[] weights = new int[chArgs.length];
-    	Arrays.fill(weights, 1);
+    	for (int i=0; i<chArgs.length; ++i)
+    		if (chArgs[i].getScore()<prob)
+    			weights[i]=0;
+    		else
+    			weights[i]=1;
+
     	String[] labelMod = new String[chArgs.length];
     	
     	BitSet enArgBitSet = new BitSet(enArgs.length);
@@ -270,15 +280,15 @@ public class MakeAlignedLDASamples {
     				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, pmW));
     		}
     	}
-    	
-    	
+
     	for (int i=0; i<chArgs.length; ++i) {
 			if (chArgs[i].getLabel().equals("rel"))
 				continue;
 			String head = Topics.getTopicHeadword(chArgs[i].getNode());
 			if (head==null)
 				continue;
-			args.add(new ArgWeight(labelMod[i]==null?chArgs[i].getLabel():labelMod[i], head, weights[i]));
+			if (weights[i]!=0)
+				args.add(new ArgWeight(labelMod[i]==null?chArgs[i].getLabel():labelMod[i], head, weights[i]));
 		}
     	updateMap(chProp.getPredicate(), args, argMap);
     	StringBuilder builder = new StringBuilder(enProp.getPredicate()+": [");
@@ -386,7 +396,7 @@ public class MakeAlignedLDASamples {
         						logger.fine(alignment.srcPBIdx+" "+sp.src.pbInstances[alignment.srcPBIdx].toText());
         						logger.fine(alignment.toString());
         						
-        						processAlignment(alignment, argMap, chUtil, enUtil, options.fmWeight, options.pmWeight);
+        						processAlignment(alignment, argMap, chUtil, enUtil, options.fmWeight, options.pmWeight, options.prob);
 
         						found = true;
         						break;
@@ -395,7 +405,7 @@ public class MakeAlignedLDASamples {
         				if (!found) {
         					logger.fine(p+" "+sp.dst.pbInstances[p].toText());
         					if (!sp.dst.pbInstances[p].getRoleset().endsWith(".XX"))
-        						updateMap(sp.dst.pbInstances[p], argMap);
+        						updateMap(sp.dst.pbInstances[p], argMap, options.prob);
         				}
         				//System.out.print('\n');
         			}
