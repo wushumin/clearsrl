@@ -245,6 +245,10 @@ public class MakeAlignedLDASamples {
     		enArgBitSet.set(ap.srcArgIdx);
     		if (enArgs[ap.srcArgIdx].getLabel().equals("rel") || chArgs[ap.dstArgIdx].getLabel().equals("rel")) 
     			continue;
+    		double cProb = 1-(1-enArgs[ap.srcArgIdx].getScore())*(1-chArgs[ap.dstArgIdx].getScore());
+    		if (cProb<prob)
+    			continue;
+    		
     		if (hasWA(a.sentence, Topics.getTopicHeadNode(enArgs[ap.srcArgIdx].getNode()), Topics.getTopicHeadNode(chArgs[ap.dstArgIdx].getNode()))) {
     			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles))
     				weights[ap.dstArgIdx] = fmW;
