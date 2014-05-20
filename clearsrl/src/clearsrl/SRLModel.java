@@ -1284,12 +1284,20 @@ public class SRLModel implements Serializable {
     }
     
     static void makeProb(double[] prob_estimates) {
-    	for (int i = 0; i < prob_estimates.length; i++)
-            prob_estimates[i] = 1 / (1 + Math.exp(-prob_estimates[i]));
-
-        if (prob_estimates.length == 2) // for binary classification
-            prob_estimates[0] = 1. - prob_estimates[1];
-        else {
+    	
+        if (prob_estimates.length == 2) {
+        	// for binary classification
+        	if (prob_estimates[0]==0) {
+        		prob_estimates[1] = 1 / (1 + Math.exp(-prob_estimates[1]));
+        		prob_estimates[0] = 1. - prob_estimates[1];
+        	} else {
+        		prob_estimates[0] = 1 / (1 + Math.exp(-prob_estimates[0]));
+        		prob_estimates[1] = 1. - prob_estimates[0];
+        	}
+        } else {
+        	for (int i = 0; i < prob_estimates.length; i++)
+                prob_estimates[i] = 1 / (1 + Math.exp(-prob_estimates[i]));
+        	
             double sum = 0;
             for (int i = 0; i < prob_estimates.length; i++)
                 sum += prob_estimates[i];
@@ -1337,9 +1345,10 @@ public class SRLModel implements Serializable {
         
         // initialize arg label classifier
         try {
-            argLabelClassifier = (Classifier)Class.forName(prop.getProperty("classifier", "clearcommon.alg.LinearClassifier")).newInstance();
+        	Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
+            argLabelClassifier = (Classifier)Class.forName(stage1Prop.getProperty("classifier", "clearcommon.alg.LinearClassifier")).newInstance();
             argLabelClassifier.setDimension(argLabelFeatures.getDimension());
-            argLabelClassifier.initialize(argLabelStringMap, prop);
+            argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
             
             if (hasStage2Feature) {
             	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);

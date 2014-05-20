@@ -123,7 +123,7 @@ public abstract class Classifier implements Serializable {
     public boolean canPredictProb() {
         return false;
     }
-
+    
     public int predictProb(int[] x, double[] prob) {
         return predictProbNative(getNativeFormat(x), prob);
     }
@@ -142,5 +142,14 @@ public abstract class Classifier implements Serializable {
         int label = predictNative(x);
         val[label-1]=1;
         return label;
+    }
+    
+    public static int getTopLabel(double[] val) {
+    	 int highIdx = 0;
+         for (int i=0; i<val.length; ++i) {
+             if (val[i]>val[highIdx])
+                 highIdx = i;
+         }
+         return highIdx+1;
     }
 }

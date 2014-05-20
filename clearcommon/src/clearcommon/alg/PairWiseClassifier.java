@@ -12,6 +12,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import liblinearbinary.Linear;
+import liblinearbinary.SolverType;
+
 public class PairWiseClassifier extends Classifier implements Serializable {
     /**
      * 
@@ -64,9 +67,18 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         super.initialize(labelMap, prop);
 
-        
         classifiers = new Classifier[labelMap.size()][labelMap.size()];
         
+        for (int i=0; i<labelMap.size()-1; ++i)
+            for (int j=i+1; j<labelMap.size(); ++j) {
+                TObjectIntMap<String> map = new TObjectIntHashMap<String>();
+                map.put(labels[i], 1);
+                map.put(labels[j], 2);
+                
+                classifiers[i][j] = new LinearClassifier();
+                classifiers[i][j].dimension = dimension;
+                classifiers[i][j].initialize(map, prop);
+            }
         topN = ((int)Math.round(labelMap.size()*0.1))+1;
         threads = Integer.parseInt(prop.getProperty("pairwise.threads","1"));
     }
@@ -75,11 +87,40 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     public int predictNative(Object x) {
         return predictValuesNative(x, new double[labelMap.size()]);
     }
+    /*
+    @Override
+    public boolean canPredictProb() {
+        return classifiers[0][1].canPredictProb();
+    }
+    
+    @Override
+    public int predictProbNative(Object x, double[] prob) {
+    	if (!canPredictProb())
+    		return predictValuesNative(x, prob);
+    	
+    	Arrays.fill(prob, 0.);
+    	
+    	double[] probPair = new double[2];
+    	
+    	for (int i=0; i<labelMap.size()-1; ++i)
+            for (int j=i+1; j<labelMap.size(); ++j) {
+            	int label = classifiers[i][j].predictProbNative(x,probPair);
+            	prob[i]+=probPair[0];
+            	prob[j]+=probPair[1];
+            }
+    	
+    	for (int i=0; i<labelMap.size(); ++i)
+    		prob[i]/=labelMap.size()-1;
+
+        return getTopLabel(prob);
+    }
+    */
     
     @Override
     public int predictValuesNative(Object x, double[] values) {
         //double[] prob = new double[probClassifier.getClassCnt()];
         //probClassifier.predictProb(x, prob);
+    	Arrays.fill(values, 0.);
     	
     	BitSet[] valueMatrix = new BitSet[labelMap.size()];
         for (int i=0; i<valueMatrix.length;++i)
@@ -99,8 +140,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 if (label==1) {
                     values[i]++;
                     valueMatrix[i].set(j);
-                }
-                else {
+                } else {
                     values[j]++;
                     valueMatrix[j].set(i);
                 }
@@ -133,9 +173,7 @@ public class PairWiseClassifier extends Classifier implements Serializable {
             Arrays.sort(values);
             double cutoffValue = values[values.length-2];
             BitSet mask = new BitSet(labelMap.size());
-           
-            
-            
+
             for (int i=0; i<valueMatrix.length; ++i)
                 if (valueMatrix[i].cardinality()>=cutoffValue)
                     mask.set(i);
@@ -146,26 +184,18 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 values[i] = valueMatrix[i].cardinality()/(mask.cardinality()-1.0);
                 //values[i] /= 1.01;
             }
-        }
-        else
-        {
+        } else {
             for (int i=0; i<values.length; ++i)
                 values[i] /= values.length-1;
         }
     
-        int highIdx = 0;
-        for (int i=0; i<values.length; ++i)
-        {
-            if (values[i]>values[highIdx])
-                highIdx = i;
-        }
         //int cnt = 0;
         //for (int i=0; i<values.length; ++i)
         //  if (values[i]==values[highIdx])
         //      cnt++;
         //if (cnt>1) System.out.print("TIE ");
             
-        return highIdx+1;
+        return getTopLabel(values);
 
     }
     
@@ -199,14 +229,6 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                 System.out.printf("Training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length);
                 System.out.println("Pairwise:");
                 {
-                    TObjectIntMap<String> map = new TObjectIntHashMap<String>();
-                    map.put(labels[i], 1);
-                    map.put(labels[j], 2);
-                    
-                    classifiers[i][j] = new LinearClassifier();
-                    classifiers[i][j].dimension = dimension;
-                    classifiers[i][j].initialize(map, prop);
-
                     Object[] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
                     int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
                     for (int c=0; c<classLabels[i].size(); ++c) {

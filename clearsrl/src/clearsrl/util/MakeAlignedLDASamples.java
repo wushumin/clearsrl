@@ -72,6 +72,9 @@ public class MakeAlignedLDASamples {
     
     @Option(name="-prob",usage="argument probability")
 	private double prob = -1; 
+    
+    @Option(name="-eprob",usage="English argument probability")
+	private double eprob = -1; 
  
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -199,7 +202,7 @@ public class MakeAlignedLDASamples {
     	return null;
     }
     
-    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW, double prob) {
+    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW, double prob, double eprob) {
     	PBInstance chProp = a.getDstPBInstance();
     	PBArg[] chArgs = chProp.getArgs();
     	
@@ -249,7 +252,7 @@ public class MakeAlignedLDASamples {
     				weights[ap.dstArgIdx] = pmW;
     				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
     					labelMod[ap.dstArgIdx] = enArgs[ap.srcArgIdx].getLabel();
-    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM")) {
+    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=eprob) {
     				boolean hasArg0 = false; 
     				for (PBArg arg:chArgs)
     					if (arg.getLabel().equals("ARG0")) {
@@ -264,7 +267,7 @@ public class MakeAlignedLDASamples {
     		}
     	}
     	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0")) {
+    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=eprob) {
     			boolean foundArg=false;
     			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
     			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
@@ -396,7 +399,7 @@ public class MakeAlignedLDASamples {
         						logger.fine(alignment.srcPBIdx+" "+sp.src.pbInstances[alignment.srcPBIdx].toText());
         						logger.fine(alignment.toString());
         						
-        						processAlignment(alignment, argMap, chUtil, enUtil, options.fmWeight, options.pmWeight, options.prob);
+        						processAlignment(alignment, argMap, chUtil, enUtil, options.fmWeight, options.pmWeight, options.prob, options.eprob);
 
         						found = true;
         						break;
