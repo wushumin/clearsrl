@@ -250,9 +250,9 @@ public class MakeAlignedLDASamples {
     			continue;
     		
     		if (hasWA(a.sentence, Topics.getTopicHeadNode(enArgs[ap.srcArgIdx].getNode()), Topics.getTopicHeadNode(chArgs[ap.dstArgIdx].getNode()))) {
-    			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles))
-    				weights[ap.dstArgIdx] = fmW;
-    			else if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
+    			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles)) {
+    				weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=prob && enArgs[ap.srcArgIdx].getScore()>=eprob?fmW:pmW;
+    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
     				weights[ap.dstArgIdx] = pmW;
     				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
     					labelMod[ap.dstArgIdx] = enArgs[ap.srcArgIdx].getLabel();
