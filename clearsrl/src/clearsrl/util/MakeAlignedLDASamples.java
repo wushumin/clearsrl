@@ -257,7 +257,7 @@ public class MakeAlignedLDASamples {
     				//weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
     				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob)
     					weights[ap.dstArgIdx] = opt.fmWeight;
-    			} else if (opt.addRecall) {
+    			} /*else if (opt.addRecall) {
     				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
 	    				weights[ap.dstArgIdx] = opt.pmWeight;
 	    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
@@ -274,13 +274,15 @@ public class MakeAlignedLDASamples {
 	    					labelMod[ap.dstArgIdx] = "ARG0";
 	    				}
 	    			}
-    			}
+    			}*/
     		}
     	}
     	
+    	double eprobStrict = 1-(1-opt.eprob)*(1-opt.eprob);
+    	
     	if (opt.addRecall)
 	    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-	    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=opt.eprob) {
+	    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=eprobStrict) {
 	    			boolean foundArg=false;
 	    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
 	    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
