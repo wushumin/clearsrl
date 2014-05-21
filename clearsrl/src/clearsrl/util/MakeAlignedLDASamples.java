@@ -219,8 +219,8 @@ public class MakeAlignedLDASamples {
     			break;
     		}
     	if (!found) {
-    		if (chProp.getRoleset().endsWith(".XX"))
-    			return;
+    		//if (chProp.getRoleset().endsWith(".XX"))
+    		//	return;
     		updateMap(chProp, argMap, opt.prob);
     		return;
     	}
@@ -418,8 +418,8 @@ public class MakeAlignedLDASamples {
         				}
         				if (!found) {
         					logger.fine(p+" "+sp.dst.pbInstances[p].toText());
-        					if (!sp.dst.pbInstances[p].getRoleset().endsWith(".XX"))
-        						updateMap(sp.dst.pbInstances[p], argMap, options.prob);
+        					//if (!sp.dst.pbInstances[p].getRoleset().endsWith(".XX"))
+        					updateMap(sp.dst.pbInstances[p], argMap, options.prob);
         				}
         				//System.out.print('\n');
         			}
