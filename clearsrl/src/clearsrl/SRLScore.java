@@ -190,6 +190,14 @@ public class SRLScore {
         
         return builder.toString();
     }
+    
+    public String toSimpleString() {
+    	StringBuilder builder = new StringBuilder();
+    	List<Score> scores = getScores(macroCount);
+    	builder.append(scores.get(scores.size()-1));
+    	builder.append('\n');
+    	return builder.toString();
+    }
         
     
     List<Score> getScores(int[][] count) {

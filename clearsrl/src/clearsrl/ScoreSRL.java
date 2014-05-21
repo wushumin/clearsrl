@@ -294,17 +294,17 @@ public class ScoreSRL {
         */
         for (int i=0; i<scores.length; ++i)
         {
-            System.out.println(systems[i]+":");
-            System.out.println("All predicates:");
-            System.out.println(scores[i]);
+            //System.out.println(systems[i]+":");
+            //System.out.println("All predicates:");
+            //System.out.println(scores[i]);
             System.out.println("verb predicates:");
             System.out.println(vScores[i]);
-            System.out.println("nominal predicates:");
-            System.out.println(nScores[i]);
-            System.out.println("pro argument:");
-            System.out.println(proScore[i]);
-            System.out.println("no pro argument:");
-            System.out.println(noproScore[i]);
+            //System.out.println("nominal predicates:");
+            //System.out.println(nScores[i]);
+            //System.out.println("pro argument:");
+            //System.out.println(proScore[i]);
+            //System.out.println("no pro argument:");
+            //System.out.println(noproScore[i]);
         }
         
         if (scores.length>1)
