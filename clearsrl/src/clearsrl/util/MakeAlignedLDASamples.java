@@ -399,7 +399,7 @@ public class MakeAlignedLDASamples {
         	for (int i=0; i<chTrees.length; ++i) {
         		SentencePair sp = makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i]);
         		Alignment[] al = Aligner.align(sp, 0.4f);
-        		if (al!=null && al.length>0) {
+        		if (al!=null) {
         			logger.fine(String.format("************** %d/%d ********************", sp.src.pbInstances.length, sp.dst.pbInstances.length));
         			logger.fine(sp.toAlignmentString()+"\n");
         			for (int p=0; p<sp.dst.pbInstances.length; ++p) {
