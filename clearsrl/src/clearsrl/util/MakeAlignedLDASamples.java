@@ -65,7 +65,7 @@ public class MakeAlignedLDASamples {
     private int docSizeThreshold = 25;
     
     @Option(name="-recall",usage="enable certain recall features")
-    private boolean addRecall = true;
+    private boolean addRecall = false;
     
     @Option(name="-fw",usage="full match weight")
     private int fmWeight = 10;
