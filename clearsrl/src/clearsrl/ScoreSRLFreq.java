@@ -47,14 +47,16 @@ public class ScoreSRLFreq {
 		return freq;
 	}
 	
-	static SRInstance filterInstance(PBInstance gold, PBInstance system, int count, boolean isArgFreq, TObjectIntMap<String> freqMap) {
+	static SRInstance filterInstance(PBInstance gold, PBInstance system, int[] intervals, int idx, boolean isArgFreq, TObjectIntMap<String> freqMap) {
 		SRInstance filtered = new SRInstance(gold);
 		for (Iterator<SRArg> iter=filtered.args.iterator(); iter.hasNext(); ) {
 			SRArg arg = iter.next();
 			String head = Topics.getTopicHeadword(arg.node);
             String label = arg.label;
             int freq = isArgFreq?freqMap.get(head+':'+label):freqMap.get(head);
-            if (count!=freq && (count<10||freq<10))
+            if (idx!=intervals.length-1 && (freq<intervals[idx] || freq>=intervals[idx+1]) || 
+            		idx==intervals.length-1 && freq<intervals[idx])
+            //if (idx!=freq && (idx<20||freq<20))
             	iter.remove();
 		}		
 		return filtered;
@@ -76,6 +78,8 @@ public class ScoreSRLFreq {
 	
     public static void main(String[] args) throws Exception
     {   
+    	int[] intervals = {0,1,5,11,21,41,91,201};
+    	
         Properties props = new Properties();
         FileInputStream in = new FileInputStream(args[0]);
         props.load(in);
@@ -104,8 +108,8 @@ public class ScoreSRLFreq {
         for (int i=0; i< labels.length; ++i)
             labels[i] = labels[i].trim();
 
-        SRLScore[] argScores = new SRLScore[11];
-        SRLScore[] allScores = new SRLScore[11];
+        SRLScore[] argScores = new SRLScore[intervals.length];
+        SRLScore[] allScores = new SRLScore[intervals.length];
         SRLScore score = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
         
 
@@ -153,13 +157,13 @@ public class ScoreSRLFreq {
                     if (sysProp==null) continue;
                 	
                     for (int i=0; i<argScores.length; ++i) {
-                    	SRInstance goldInstance = filterInstance(goldProp, sysProp, i, true, argMap);
+                    	SRInstance goldInstance = filterInstance(goldProp, sysProp, intervals, i, true, argMap);
                     	SRInstance sysInstance = filterLabel(goldInstance, sysProp);
                     	argScores[i].addResult(sysInstance, goldInstance);
                     }
 
                     for (int i=0; i<allScores.length; ++i) {
-                    	SRInstance goldInstance = filterInstance(goldProp, sysProp, i, false, allMap);
+                    	SRInstance goldInstance = filterInstance(goldProp, sysProp, intervals, i, false, allMap);
                     	SRInstance sysInstance = filterLabel(goldInstance, sysProp);
                     	allScores[i].addResult(sysInstance, goldInstance);
                     }
@@ -171,11 +175,11 @@ public class ScoreSRLFreq {
         
         System.out.println("arg scores");
         for (int i=0; i<argScores.length; ++i)
-            System.out.printf("%d %s", i, argScores[i].toSimpleString());
+            System.out.printf("%d %s", intervals[i], argScores[i].toSimpleString());
         
         System.out.println("\nall scores");
         for (int i=0; i<allScores.length; ++i)
-            System.out.printf("%d %s", i, allScores[i].toSimpleString());
+            System.out.printf("%d %s", intervals[i], allScores[i].toSimpleString());
 
         System.out.println("\nnormal: "+score.toSimpleString());
         
