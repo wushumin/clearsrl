@@ -64,6 +64,9 @@ public class MakeAlignedLDASamples {
     @Option(name="-dt",usage="threshold")
     private int docSizeThreshold = 25;
     
+    @Option(name="-recall",usage="enable certain recall features")
+    private boolean addRecall = true;
+    
     @Option(name="-fw",usage="full match weight")
     private int fmWeight = 10;
     
@@ -202,7 +205,7 @@ public class MakeAlignedLDASamples {
     	return null;
     }
     
-    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, int fmW, int pmW, double prob, double eprob) {
+    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, MakeAlignedLDASamples opt) {
     	PBInstance chProp = a.getDstPBInstance();
     	PBArg[] chArgs = chProp.getArgs();
     	
@@ -218,7 +221,7 @@ public class MakeAlignedLDASamples {
     	if (!found) {
     		if (chProp.getRoleset().endsWith(".XX"))
     			return;
-    		updateMap(chProp, argMap, prob);
+    		updateMap(chProp, argMap, opt.prob);
     		return;
     	}
     	
@@ -232,7 +235,7 @@ public class MakeAlignedLDASamples {
     	
     	int[] weights = new int[chArgs.length];
     	for (int i=0; i<chArgs.length; ++i)
-    		if (chArgs[i].getScore()<prob)
+    		if (chArgs[i].getScore()<opt.prob)
     			weights[i]=0;
     		else
     			weights[i]=1;
@@ -246,47 +249,51 @@ public class MakeAlignedLDASamples {
     		if (enArgs[ap.srcArgIdx].getLabel().equals("rel") || chArgs[ap.dstArgIdx].getLabel().equals("rel")) 
     			continue;
     		double cProb = 1-(1-enArgs[ap.srcArgIdx].getScore())*(1-chArgs[ap.dstArgIdx].getScore());
-    		if (cProb<prob)
+    		if (cProb<opt.prob)
     			continue;
     		
     		if (hasWA(a.sentence, Topics.getTopicHeadNode(enArgs[ap.srcArgIdx].getNode()), Topics.getTopicHeadNode(chArgs[ap.dstArgIdx].getNode()))) {
     			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles)) {
-    				weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=prob && enArgs[ap.srcArgIdx].getScore()>=eprob?fmW:pmW;
-    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
-    				weights[ap.dstArgIdx] = pmW;
-    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
-    					labelMod[ap.dstArgIdx] = enArgs[ap.srcArgIdx].getLabel();
-    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=eprob) {
-    				boolean hasArg0 = false; 
-    				for (PBArg arg:chArgs)
-    					if (arg.getLabel().equals("ARG0")) {
-    						hasArg0 = true;
-    						break;
-    					}
-    				if (!hasArg0) {
-    					weights[ap.dstArgIdx] = pmW;
-    					labelMod[ap.dstArgIdx] = "ARG0";
-    				}
+    				weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
+    			} else if (opt.addRecall) {
+    				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
+	    				weights[ap.dstArgIdx] = opt.pmWeight;
+	    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
+	    					labelMod[ap.dstArgIdx] = enArgs[ap.srcArgIdx].getLabel();
+	    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=opt.eprob) {
+	    				boolean hasArg0 = false; 
+	    				for (PBArg arg:chArgs)
+	    					if (arg.getLabel().equals("ARG0")) {
+	    						hasArg0 = true;
+	    						break;
+	    					}
+	    				if (!hasArg0) {
+	    					weights[ap.dstArgIdx] = opt.pmWeight;
+	    					labelMod[ap.dstArgIdx] = "ARG0";
+	    				}
+	    			}
     			}
     		}
     	}
-    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=eprob) {
-    			boolean foundArg=false;
-    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
-    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
-    			for (PBArg arg:chArgs)
-    				if (hasRole0 && arg.getLabel().equals("ARG0") ||
-    						hasRole1 && arg.getLabel().equals("ARG1")) {
-    					foundArg=true;
-    					break;
-    				}
-    			if (foundArg) break;
-    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
-    			if (head!=null) 
-    				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, pmW));
-    		}
-    	}
+    	
+    	if (opt.addRecall)
+	    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
+	    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=opt.eprob) {
+	    			boolean foundArg=false;
+	    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
+	    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
+	    			for (PBArg arg:chArgs)
+	    				if (hasRole0 && arg.getLabel().equals("ARG0") ||
+	    						hasRole1 && arg.getLabel().equals("ARG1")) {
+	    					foundArg=true;
+	    					break;
+	    				}
+	    			if (foundArg) break;
+	    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
+	    			if (head!=null) 
+	    				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, opt.pmWeight));
+	    		}
+	    	}
 
     	for (int i=0; i<chArgs.length; ++i) {
 			if (chArgs[i].getLabel().equals("rel"))
@@ -403,7 +410,7 @@ public class MakeAlignedLDASamples {
         						logger.fine(alignment.srcPBIdx+" "+sp.src.pbInstances[alignment.srcPBIdx].toText());
         						logger.fine(alignment.toString());
         						
-        						processAlignment(alignment, argMap, chUtil, enUtil, options.fmWeight, options.pmWeight, options.prob, options.eprob);
+        						processAlignment(alignment, argMap, chUtil, enUtil, options);
 
         						found = true;
         						break;
