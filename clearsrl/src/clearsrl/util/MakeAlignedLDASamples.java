@@ -65,7 +65,10 @@ public class MakeAlignedLDASamples {
     private int docSizeThreshold = 25;
     
     @Option(name="-recall",usage="enable certain recall features")
-    private boolean addRecall = false;
+    private double recallVal = 1.1;
+    
+    @Option(name="-precision",usage="enable certain precision features")
+    private double precisionVal = 1;
     
     @Option(name="-fw",usage="full match weight")
     private int fmWeight = 10;
@@ -257,11 +260,11 @@ public class MakeAlignedLDASamples {
     				//weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
     				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob)
     					weights[ap.dstArgIdx] = opt.fmWeight;
-    			} /*else if (opt.addRecall) {
+    			} else if (enArgs[ap.srcArgIdx].getScore()-chArgs[ap.dstArgIdx].getScore()>=opt.precisionVal) {
     				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
 	    				weights[ap.dstArgIdx] = opt.pmWeight;
 	    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
-	    					labelMod[ap.dstArgIdx] = enArgs[ap.srcArgIdx].getLabel();
+	    					weights[ap.dstArgIdx] = 0;
 	    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=opt.eprob) {
 	    				boolean hasArg0 = false; 
 	    				for (PBArg arg:chArgs)
@@ -269,35 +272,30 @@ public class MakeAlignedLDASamples {
 	    						hasArg0 = true;
 	    						break;
 	    					}
-	    				if (!hasArg0) {
-	    					weights[ap.dstArgIdx] = opt.pmWeight;
-	    					labelMod[ap.dstArgIdx] = "ARG0";
-	    				}
+	    				if (!hasArg0)
+	    					weights[ap.dstArgIdx] = 0;
 	    			}
-    			}*/
+    			}
     		}
     	}
-    	
-    	double eprobStrict = 1-(1-opt.eprob)*(1-opt.eprob);
-    	
-    	if (opt.addRecall)
-	    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-	    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=eprobStrict) {
-	    			boolean foundArg=false;
-	    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
-	    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
-	    			for (PBArg arg:chArgs)
-	    				if (hasRole0 && arg.getLabel().equals("ARG0") ||
-	    						hasRole1 && arg.getLabel().equals("ARG1")) {
-	    					foundArg=true;
-	    					break;
-	    				}
-	    			if (foundArg) break;
-	    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
-	    			if (head!=null) 
-	    				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, opt.pmWeight));
-	    		}
-	    	}
+
+    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
+    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=opt.recallVal) {
+    			boolean foundArg=false;
+    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
+    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
+    			for (PBArg arg:chArgs)
+    				if (hasRole0 && arg.getLabel().equals("ARG0") ||
+    						hasRole1 && arg.getLabel().equals("ARG1")) {
+    					foundArg=true;
+    					break;
+    				}
+    			if (foundArg) break;
+    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
+    			if (head!=null) 
+    				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, opt.pmWeight));
+    		}
+    	}
 
     	for (int i=0; i<chArgs.length; ++i) {
 			if (chArgs[i].getLabel().equals("rel"))
