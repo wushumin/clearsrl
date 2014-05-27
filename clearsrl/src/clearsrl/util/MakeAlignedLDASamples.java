@@ -78,9 +78,6 @@ public class MakeAlignedLDASamples {
     
     @Option(name="-prob",usage="argument probability")
 	private double prob = -1; 
-    
-    @Option(name="-eprob",usage="English argument probability")
-	private double eprob = -1; 
  
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -258,14 +255,14 @@ public class MakeAlignedLDASamples {
     		if (hasWA(a.sentence, Topics.getTopicHeadNode(enArgs[ap.srcArgIdx].getNode()), Topics.getTopicHeadNode(chArgs[ap.dstArgIdx].getNode()))) {
     			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles)) {
     				//weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
-    				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob)
+    				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.prob)
     					weights[ap.dstArgIdx] = opt.fmWeight;
     			} else if (enArgs[ap.srcArgIdx].getScore()-chArgs[ap.dstArgIdx].getScore()>=opt.precisionVal) {
     				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
 	    				weights[ap.dstArgIdx] = opt.pmWeight;
 	    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
 	    					weights[ap.dstArgIdx] = 0;
-	    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=opt.eprob) {
+	    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=opt.prob) {
 	    				boolean hasArg0 = false; 
 	    				for (PBArg arg:chArgs)
 	    					if (arg.getLabel().equals("ARG0")) {
@@ -280,7 +277,7 @@ public class MakeAlignedLDASamples {
     	}
 
     	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-    		if (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0") && enArgs[i].getScore()>=opt.recallVal) {
+    		if (enArgs[i].getScore()>=opt.recallVal && (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0"))) {
     			boolean foundArg=false;
     			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
     			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
