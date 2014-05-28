@@ -164,16 +164,16 @@ public class MakeAlignedLDASamples {
     	return false;
     }
     
-    static boolean labelCompatible(String chLabel, String enLabel, Roleset chRoles, Roleset enRoles) {
-    	if (chLabel.equals(enLabel)) return true;
-    	if (chLabel.equals("ARGM-ADV") && enLabel.startsWith("ARGM") && !enLabel.matches("ARGM-[TMP|LOC]")) return true;
-    	if (enLabel.equals("ARGM-ADV") && chLabel.startsWith("ARGM") && !chLabel.matches("ARGM-[TMP|LOC]")) return true;
+    static int labelCompatible(String chLabel, String enLabel, Roleset chRoles, Roleset enRoles) {
+    	if (chLabel.equals(enLabel)) return 1;
+    	if (chLabel.equals("ARGM-ADV") && enLabel.startsWith("ARGM") && !enLabel.matches("ARGM-(TMP|LOC)")) return 0;
+    	if (enLabel.equals("ARGM-ADV") && chLabel.startsWith("ARGM") && !chLabel.matches("ARGM-(TMP|LOC)")) return 0;
     	if (chLabel.matches("ARG\\d") && enLabel.matches("ARG\\d") && chLabel.charAt(3)+1==enLabel.charAt(3) 
     			&& chRoles!=null && chRoles.hasRole("ARG0") && 
     			enRoles!=null && !enRoles.hasRole("ARG0"))
-    		return true;
+    		return 1;
 
-    	return false;
+    	return -1;
     }
     
     static String findAlignedHead(SentencePair sp, TBNode srcNode, LanguageUtil chUtil) {
@@ -248,16 +248,17 @@ public class MakeAlignedLDASamples {
     		enArgBitSet.set(ap.srcArgIdx);
     		if (enArgs[ap.srcArgIdx].getLabel().equals("rel") || chArgs[ap.dstArgIdx].getLabel().equals("rel")) 
     			continue;
-    		double cProb = 1-(1-enArgs[ap.srcArgIdx].getScore())*(1-chArgs[ap.dstArgIdx].getScore());
-    		if (cProb<opt.prob)
-    			continue;
+    		//double cProb = 1-(1-enArgs[ap.srcArgIdx].getScore())*(1-chArgs[ap.dstArgIdx].getScore());
+    		//if (cProb<opt.prob)
+    		//	continue;
     		
     		if (hasWA(a.sentence, Topics.getTopicHeadNode(enArgs[ap.srcArgIdx].getNode()), Topics.getTopicHeadNode(chArgs[ap.dstArgIdx].getNode()))) {
-    			if (labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles)) {
+    			int compatible = labelCompatible(chArgs[ap.dstArgIdx].getLabel(),  enArgs[ap.srcArgIdx].getLabel(), chRoles, enRoles);
+    			if (compatible>=0) {
     				//weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
     				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.prob)
     					weights[ap.dstArgIdx] = opt.fmWeight;
-    				else if (enArgs[ap.srcArgIdx].getScore()>=opt.prob+opt.precisionVal)
+    				else if (enArgs[ap.srcArgIdx].getScore()>=opt.recallVal && compatible>0)
     					weights[ap.dstArgIdx] = opt.pmWeight;
     			} else if (enArgs[ap.srcArgIdx].getScore()-chArgs[ap.dstArgIdx].getScore()>=opt.precisionVal) {
     				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
