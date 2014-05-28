@@ -257,11 +257,11 @@ public class MakeAlignedLDASamples {
     				//weights[ap.dstArgIdx] = chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.eprob?opt.fmWeight:opt.pmWeight;
     				if (chArgs[ap.dstArgIdx].getScore()>=opt.prob && enArgs[ap.srcArgIdx].getScore()>=opt.prob)
     					weights[ap.dstArgIdx] = opt.fmWeight;
+    				else if (enArgs[ap.srcArgIdx].getScore()>=opt.prob+opt.precisionVal)
+    					weights[ap.dstArgIdx] = opt.pmWeight;
     			} else if (enArgs[ap.srcArgIdx].getScore()-chArgs[ap.dstArgIdx].getScore()>=opt.precisionVal) {
     				if (enArgs[ap.srcArgIdx].getLabel().equals("ARGM-TMP")) {
-	    				weights[ap.dstArgIdx] = opt.pmWeight;
-	    				if (chArgs[ap.dstArgIdx].getLabel().matches("ARG(\\d|-TMP)"))
-	    					weights[ap.dstArgIdx] = 0;
+	    				weights[ap.dstArgIdx] = 0;
 	    			} else if (enArgs[ap.srcArgIdx].getLabel().equals("ARG0") && chArgs[ap.dstArgIdx].getLabel().startsWith("ARGM") && enArgs[ap.srcArgIdx].getScore()>=opt.prob) {
 	    				boolean hasArg0 = false; 
 	    				for (PBArg arg:chArgs)
@@ -278,19 +278,20 @@ public class MakeAlignedLDASamples {
 
     	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
     		if (enArgs[i].getScore()>=opt.recallVal && (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0"))) {
+    			boolean hasARG0 = chRoles==null?false:chRoles.hasRole("ARG0");
+    			if (!hasARG0) continue;
+    			
     			boolean foundArg=false;
-    			boolean hasRole0 = chRoles==null?false:chRoles.hasRole("ARG0");
-    			boolean hasRole1 = (!hasRole0) && (chRoles==null?false:chRoles.hasRole("ARG1"));
     			for (PBArg arg:chArgs)
-    				if (hasRole0 && arg.getLabel().equals("ARG0") ||
-    						hasRole1 && arg.getLabel().equals("ARG1")) {
+    				if (arg.getLabel().equals("ARG0")) {
     					foundArg=true;
     					break;
     				}
     			if (foundArg) break;
+    			
     			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
     			if (head!=null) 
-    				args.add(new ArgWeight(hasRole0?"ARG0":"ARG1", head, opt.pmWeight));
+    				args.add(new ArgWeight("ARG0", head, opt.pmWeight));
     		}
     	}
 
