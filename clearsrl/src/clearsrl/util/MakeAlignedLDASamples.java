@@ -165,14 +165,21 @@ public class MakeAlignedLDASamples {
     }
     
     static int labelCompatible(String chLabel, String enLabel, Roleset chRoles, Roleset enRoles) {
-    	if (chLabel.equals(enLabel)) return 1;
     	if (chLabel.equals("ARGM-ADV") && enLabel.startsWith("ARGM") && !enLabel.matches("ARGM-(TMP|LOC)")) return 0;
     	if (enLabel.equals("ARGM-ADV") && chLabel.startsWith("ARGM") && !chLabel.matches("ARGM-(TMP|LOC)")) return 0;
-    	if (chLabel.matches("ARG\\d") && enLabel.matches("ARG\\d") && chLabel.charAt(3)+1==enLabel.charAt(3) 
-    			&& chRoles!=null && chRoles.hasRole("ARG0") && 
-    			enRoles!=null && !enRoles.hasRole("ARG0"))
-    		return 1;
-
+    	if (chLabel.matches("ARG\\d") && enLabel.matches("ARG\\d")) {
+    		if (chRoles!=null && chRoles.hasRole("ARG0") && 
+    			enRoles!=null && !enRoles.hasRole("ARG0")) {
+    			if (chLabel.charAt(3)+1==enLabel.charAt(3))
+    	    		return 1;
+    			return -1;
+    		} 
+    		if (chLabel.equals(enLabel)) 
+    			return 1;
+    		return -1;
+    	}
+    	if (chLabel.equals(enLabel)) return 1;
+    	
     	return -1;
     }
     
@@ -277,24 +284,24 @@ public class MakeAlignedLDASamples {
     		}
     	}
 
-    	for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
-    		if (enArgs[i].getScore()>=opt.recallVal && (enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0"))) {
-    			boolean hasARG0 = chRoles==null?false:chRoles.hasRole("ARG0");
-    			if (!hasARG0) continue;
-    			
-    			boolean foundArg=false;
-    			for (PBArg arg:chArgs)
-    				if (arg.getLabel().equals("ARG0")) {
-    					foundArg=true;
-    					break;
-    				}
-    			if (foundArg) break;
-    			
-    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
-    			if (head!=null) 
-    				args.add(new ArgWeight("ARG0", head, opt.pmWeight));
-    		}
+    	if (chRoles!=null&&chRoles.hasRole("ARG0")) {
+    		boolean foundArg=false;
+    		for (PBArg arg:chArgs)
+				if (arg.getLabel().equals("ARG0")) {
+					foundArg=true;
+					break;
+				}
+			if (!foundArg)
+				for (int i=enArgBitSet.nextClearBit(0); i<enArgs.length; i=enArgBitSet.nextClearBit(i+1)) {
+		    		if (enArgs[i].getScore()>=opt.recallVal &&
+		    				(enArgs[i].getLabel().equals("ARG0") || enArgs[i].getLabel().equals("ARG1") && enRoles!=null && !enRoles.hasRole("ARG0"))) {	    			
+		    			String head = findAlignedHead(a.sentence, Topics.getTopicHeadNode(enArgs[i].getNode()), chUtil);
+		    			if (head!=null) 
+		    				args.add(new ArgWeight("ARG0", head, opt.pmWeight));
+		    		}
+		    	}
     	}
+    	
 
     	for (int i=0; i<chArgs.length; ++i) {
 			if (chArgs[i].getLabel().equals("rel"))
