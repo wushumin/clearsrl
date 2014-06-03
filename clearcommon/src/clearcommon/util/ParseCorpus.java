@@ -384,21 +384,24 @@ public class ParseCorpus {
         
         List<String> fileNames = null;
         
-        if (props.getProperty("tbdir")!=null)
-        {
+        if (props.getProperty("tbdir")!=null) {
             String fileList = props.getProperty("filelist");
             
-            if (fileList != null)
+            if (fileList != null) {
+            	
                 fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
-            
+                logger.info("parsing "+fileNames);
+            }
             Map<String, TBTree[]> treeBank = fileList==null?
                     TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
                     TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
             TBUtil.extractText(txtDir, treeBank, parser.isCoNLL);
         }
         
-        if (fileNames==null)
+        if (fileNames==null) {
             fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
+            logger.info("parsing "+fileNames);
+        }
         
         for (String fileName:fileNames)
         {
