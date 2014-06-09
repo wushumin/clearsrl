@@ -145,6 +145,7 @@ public class RunSRL {
             	}
             	
             }
+            writer.flush();
             logger.info("done");
         }
     }
@@ -507,7 +508,7 @@ public class RunSRL {
                     }
                     options.processInput(reader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
                     if (reader!=null) reader.close();
-                    writer.close();
+                    //writer.close();
                 }
             }
             
