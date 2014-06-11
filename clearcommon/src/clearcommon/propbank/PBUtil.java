@@ -145,8 +145,8 @@ public final class PBUtil {
     	
     	for (PBArg arg:args) {
     		String label = removeArgModifier(arg.getLabel());
-    		if (label.equals("rel"))
-                label = "V";
+    		if (label.endsWith("rel"))
+                label = label.substring(0, label.length()-3)+"V";
     		else if (label.startsWith("ARG"))
                 label = "A"+label.substring(3);
     		else if (label.matches("[CR]-ARG.*"))
