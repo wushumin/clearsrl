@@ -1,12 +1,17 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.ParseException;
+import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
+import clearcommon.treebank.TBTree;
 import clearcommon.util.FileUtil;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +19,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class PBUtil {
     
@@ -114,5 +121,79 @@ public final class PBUtil {
         logger.info(String.format("%d props read, %d format exceptions encountered\n", correctCnt, exceptionCnt));
         
         return pbMap;       
+    }
+    
+    static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
+    static String removeArgModifier(String argType) {
+        Matcher matcher = ARG_PATTERN.matcher(argType);
+        if (matcher.matches())
+            return matcher.group(1);
+        return argType;
+    }
+    
+    static String[] makeCoNLL(PBInstance instance) {
+    	String[] sList = new String[instance.getTree().getTokenCount()];
+    	Arrays.fill(sList, "*");
+    	
+    	List<PBArg> args = new ArrayList<PBArg>();
+    	for (PBArg arg: instance.getArgs()) {
+    		args.add(arg);
+    		for (PBArg nestedArg:arg.getNestedArgs())
+    			args.add(nestedArg);
+    	}
+    	Collections.sort(args);
+    	
+    	for (PBArg arg:args) {
+    		String label = removeArgModifier(arg.getLabel());
+    		if (label.equals("rel"))
+                label = "V";
+    		else if (label.startsWith("ARG"))
+                label = "A"+label.substring(3);
+    		else if (label.matches("[CR]-ARG.*"))
+                label = label.substring(0,3)+label.substring(5);
+    		BitSet tokenIdxSet = arg.getNode().getTokenSet();
+    		
+    		int start = tokenIdxSet.nextSetBit(0);
+    		if (start<0) {
+    			System.err.println("Empty arg encountered: "+arg);
+    			continue;
+    		}
+    			
+    		int end = tokenIdxSet.nextClearBit(start)-1;
+    		
+    		sList[start] = "("+label+sList[start];
+    		sList[end] += ')';
+    	}
+    	   	
+    	return sList;
+    }
+    
+    static public String toCoNLLformat(TBTree tree, List<PBInstance> instances) {
+    	StringBuilder buffer = new StringBuilder();
+    	String[][] outStr = new String[instances==null?1:instances.size()+1][tree.getTokenCount()];
+    	
+    	Arrays.fill(outStr[0], "-");
+    	
+    	for (int i=1; i<outStr.length; ++i) {
+    		outStr[i] = makeCoNLL(instances.get(i-1));
+    		outStr[0][instances.get(i-1).getPredicate().getTokenIndex()] = instances.get(i-1).getRoleset();
+    	}
+    		
+    	int[] maxlength = new int[outStr.length];
+        for (int i=0; i<outStr.length; ++i)
+            for (int j=0; j<outStr[i].length; ++j)
+                if (maxlength[i]<outStr[i][j].length())
+                    maxlength[i] = outStr[i][j].length();
+
+        for (int j=0; j<outStr[0].length; ++j) {
+            for (int i=0; i<outStr.length; ++i) {
+                buffer.append(outStr[i][j]);
+                for (int k=outStr[i][j].length(); k<=maxlength[i]; ++k)
+                    buffer.append(' ');
+            }
+            buffer.append("\n");
+        }
+    	
+    	return buffer.toString();
     }
 }

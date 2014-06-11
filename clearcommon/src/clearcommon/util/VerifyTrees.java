@@ -45,7 +45,7 @@ public class VerifyTrees {
         
         for (String fName:fileNames) {
         	System.out.println("Processing "+fName);
-        	SerialTBFileReader tReader = new SerialTBFileReader(fName);
+        	SerialTBFileReader tReader = new SerialTBFileReader(parser.treeDir, fName);
         	while (tReader.nextTree()!=null);
         	tReader.close();
         }
