@@ -172,6 +172,9 @@ public final class PBUtil {
     	StringBuilder buffer = new StringBuilder();
     	String[][] outStr = new String[instances==null?1:instances.size()+1][tree.getTokenCount()];
     	
+    	if (instances!=null)
+    		Collections.sort(instances);
+    	
     	Arrays.fill(outStr[0], "-");
     	
     	for (int i=1; i<outStr.length; ++i) {

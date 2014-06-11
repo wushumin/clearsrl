@@ -16,21 +16,27 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
 
+/**
+ * Converts PropBank to (unofficial) CoNLL format
+ * 
+ * @author shumin
+ *
+ */
 public class PBtoCoNLL {
 	
-    @Option(name="-inTB",usage="Treebank input directory")
+    @Option(name="-inTB",usage="base Treebank directory (parent of the tree file name referenced in PropBank)")
     private String inTBDir = null; 
     
-    @Option(name="-TBregex",usage="Treebank regular expression match (default=.*\\.parse)")
+    @Option(name="-TBregex",usage="regular expression filter (default=.*\\\\.parse) of Treebank file names (does not match directory structure)")
     private String tbRegex = ".*\\.parse";
 	
     @Option(name="-inPB",usage="Propbank input directory")
     private String inPBDir = null; 
     
-    @Option(name="-PBregex",usage="PropBank regular expression match (default=.*\\.prop)")
+    @Option(name="-PBregex",usage="regular expression filter (default=.*\\\\.prop) of Treebank file names (does not match directory structure)")
     private String pbRegex = ".*\\.prop"; 
     
-    @Option(name="-out",usage="CoNLL output directory")
+    @Option(name="-out",usage="CoNLL prop output directory")
     private String outDir = null;
     
     @Option(name="-h",usage="help message")
