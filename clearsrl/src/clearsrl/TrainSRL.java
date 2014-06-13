@@ -163,6 +163,10 @@ public class TrainSRL {
                 logger.info("Processing "+entry.getKey());
                 for (Sentence sent:entry.getValue()) {                        
                     logger.fine("Processing tree "+(sent.parse==null?sent.treeTB.getIndex():sent.parse.getIndex()));
+                    if (sent.parse!=null && sent.treeTB!=null && sent.parse.getTokenCount()!=sent.treeTB.getTokenCount()) {
+                    	logger.warning("tree "+entry.getKey()+":"+sent.parse.getIndex()+" inconsistent, skipping");
+                    	continue;
+                    }
                     for (int w=0; w<weight; ++w)
                         model.addTrainingSentence(sent, THRESHOLD);
                 }
