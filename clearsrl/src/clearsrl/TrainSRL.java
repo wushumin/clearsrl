@@ -1,6 +1,7 @@
 package clearsrl;
 
 import clearcommon.alg.FeatureSet;
+import clearcommon.propbank.PBInstance;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 import gnu.trove.iterator.TObjectIntIterator;
@@ -11,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -168,7 +170,16 @@ public class TrainSRL {
                     	logger.warning("tree "+entry.getKey()+":"+sent.parse.getIndex()+" inconsistent, skipping");
                     	continue;
                     }
-                    if (sent.propPB!=null) Collections.sort(sent.propPB);
+                    if (sent.propPB!=null) {
+                    	Collections.sort(sent.propPB);
+                    	BitSet predMask = new BitSet();
+                    	for (PBInstance instance:sent.propPB) {
+                    		if (predMask.get(instance.getPredicate().getTokenIndex()))
+                    			logger.warning("duplicate props: "+sent.propPB);
+                    		predMask.set(instance.getPredicate().getTokenIndex());
+                    	}
+                    	
+                    }
                     for (int w=0; w<weight; ++w)
                         model.addTrainingSentence(sent, THRESHOLD);
                 }
