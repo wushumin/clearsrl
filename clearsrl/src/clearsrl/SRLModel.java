@@ -630,8 +630,13 @@ public class SRLModel implements Serializable {
             
             if (rolesetLabels==null || !rolesetModelMap.get(key).getLabelSet().contains(goldInstance.getRolesetId()))
             	trainInstance.rolesetId = frame.getRolesets().firstKey();
-            else
-            	trainInstance.rolesetId = rolesetLabels[rolesetCntMap.adjustOrPutValue(key, 1, 0)];
+            else {
+            	int idx = rolesetCntMap.adjustOrPutValue(key, 1, 0);
+            	if (idx<rolesetLabels.length)
+            		trainInstance.rolesetId = rolesetLabels[rolesetCntMap.adjustOrPutValue(key, 1, 0)];
+            	else
+            		logger.severe("Error assigning role: "+tree.getFilename()+":"+tree.getIndex()+" "+goldInstance.getPredicateNode().getTerminalIndex()+" "+goldInstance.getRolesetId());
+            }
         }
         SRLSample[] srlSamples = new SRLSample[trainInstances.size()]; 
         int[] supportIds = SRLUtil.findSupportPredicates(goldInstances, langUtil, SRLUtil.SupportType.ALL, true);        
