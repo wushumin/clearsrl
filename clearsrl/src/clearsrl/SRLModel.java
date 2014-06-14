@@ -633,7 +633,7 @@ public class SRLModel implements Serializable {
             else {
             	int idx = rolesetCntMap.adjustOrPutValue(key, 1, 0);
             	if (idx<rolesetLabels.length)
-            		trainInstance.rolesetId = rolesetLabels[rolesetCntMap.adjustOrPutValue(key, 1, 0)];
+            		trainInstance.rolesetId = rolesetLabels[idx];
             	else
             		logger.severe("Error assigning role: "+tree.getFilename()+":"+tree.getIndex()+" "+goldInstance.getPredicateNode().getTerminalIndex()+" "+goldInstance.getRolesetId()+"\n"+
             				goldInstances);
