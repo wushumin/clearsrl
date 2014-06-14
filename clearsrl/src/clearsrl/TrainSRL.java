@@ -16,6 +16,7 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -173,12 +174,15 @@ public class TrainSRL {
                     if (sent.propPB!=null) {
                     	Collections.sort(sent.propPB);
                     	BitSet predMask = new BitSet();
-                    	for (PBInstance instance:sent.propPB) {
-                    		if (predMask.get(instance.getPredicate().getTokenIndex()))
-                    			logger.warning("duplicate props: "+sent.propPB);
+                    	for (Iterator<PBInstance> iter=sent.propPB.iterator();iter.hasNext();) {
+                    		PBInstance instance = iter.next();
+                    		if (predMask.get(instance.getPredicate().getTokenIndex())) {
+                    			logger.warning("deleting duplicate props: "+sent.propPB);
+                    			iter.remove();
+                    			continue;
+                    		}
                     		predMask.set(instance.getPredicate().getTokenIndex());
-                    	}
-                    	
+                    	}                    	
                     }
                     for (int w=0; w<weight; ++w)
                         model.addTrainingSentence(sent, THRESHOLD);
