@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Map;
@@ -167,6 +168,7 @@ public class TrainSRL {
                     	logger.warning("tree "+entry.getKey()+":"+sent.parse.getIndex()+" inconsistent, skipping");
                     	continue;
                     }
+                    if (sent.propPB!=null) Collections.sort(sent.propPB);
                     for (int w=0; w<weight; ++w)
                         model.addTrainingSentence(sent, THRESHOLD);
                 }
