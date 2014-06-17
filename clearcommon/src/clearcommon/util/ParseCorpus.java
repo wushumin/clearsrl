@@ -177,8 +177,16 @@ public class ParseCorpus {
                 e.printStackTrace();
             } finally {
                 if (parsedTree!=null&&!parsedTree.getChildren().isEmpty()) {
-                	removeUselessNodes(parsedTree.getChildren().get(0));
-                	parse = "( "+parsedTree.getChildren().get(0)+" )\n";
+                	removeUselessNodes(parsedTree);
+                	/*removeUselessNodes(parsedTree.getChildren().get(0));
+                	parse = "( "+parsedTree.getChildren().get(0)+" )\n";*/
+                	// Can't just use the first child as multiple "S" in a tree is allowed in Treebank
+                	StringBuilder builder = new StringBuilder("( ");
+                	for (Tree<String> child:parsedTree.getChildren())
+                		builder.append(child+" ");
+                	builder.append(")");
+                	parse = builder.toString();
+                	
                 }
                 else
                 	parse = makeDefaultParse(words);
