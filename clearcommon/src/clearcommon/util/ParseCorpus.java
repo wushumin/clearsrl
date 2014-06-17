@@ -184,7 +184,7 @@ public class ParseCorpus {
                 	StringBuilder builder = new StringBuilder("( ");
                 	for (Tree<String> child:parsedTree.getChildren())
                 		builder.append(child+" ");
-                	builder.append(")");
+                	builder.append(")\n");
                 	parse = builder.toString();
                 	
                 }
