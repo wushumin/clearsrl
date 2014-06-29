@@ -1774,7 +1774,7 @@ public class SRLModel implements Serializable {
                                 break;
                             }
                         if (found) continue;
-                    
+                    /*
                         System.err.println(parseTree.getFilename()+" "+parseTree.getIndex()+" "+parseTree);
                         System.err.println(arg);
                         System.err.println(instance);
@@ -1783,6 +1783,7 @@ public class SRLModel implements Serializable {
                             System.err.println(goldSRLs.get(i));
                         }
                         System.err.print("\n");
+                        */
                     }
             }
         }
