@@ -1715,10 +1715,11 @@ public class SRLModel implements Serializable {
             for (TBNode node: nodes) {
                 if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
-                
-                if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(PBFrame.makeKey(node, langUtil)))
+                logger.info(PBFrame.makeKey(node, langUtil));
+                if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(PBFrame.makeKey(node, langUtil))) {
+                	logger.info("manually adding "+PBFrame.makeKey(node, langUtil));
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
-                else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
+                } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);
                     predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), vals[1])); 
                 }
