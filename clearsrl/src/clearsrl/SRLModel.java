@@ -321,6 +321,7 @@ public class SRLModel implements Serializable {
     transient ObjectOutputStream            trainingSampleOutStream;
     
     transient int                           trainingTreeCnt;
+    transient Set<String>                   predicateOverrideKeySet;
 
     /**
      * Constructor 
@@ -374,6 +375,10 @@ public class SRLModel implements Serializable {
     
     public void setTrainGoldParse(boolean trainGoldParse) {
         this.trainGoldParse = trainGoldParse;
+    }
+    
+    public void setPredicateOverride(Set<String> keySet) {
+    	predicateOverrideKeySet = keySet;
     }
     
     public TObjectIntMap<String> getLabelValueMap() {
@@ -1710,12 +1715,13 @@ public class SRLModel implements Serializable {
             for (TBNode node: nodes) {
                 if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
-                if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
+                
+                if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(PBFrame.makeKey(node, langUtil)))
+                	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
+                else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);
                     predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), vals[1])); 
                 }
-                    //if (!langUtil.isVerb(node.getPOS()))
-                    //  System.out.println(node);
             }
         } else
             for (SRInstance goldSRL:goldSRLs) {

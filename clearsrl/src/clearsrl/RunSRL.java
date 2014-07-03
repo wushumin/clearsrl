@@ -9,13 +9,16 @@ import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.ParseCorpus;
 import clearcommon.util.PropertyUtil;
+import clearcommon.util.LanguageUtil.POS;
 import clearsrl.SRInstance.OutputFormat;
 import clearsrl.Sentence.Source;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -27,9 +30,11 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -252,9 +257,7 @@ public class RunSRL {
         runSRLProps = PropertyUtil.filterProperties(runSRLProps, "run.", true);
         
         logger.info(PropertyUtil.toString(runSRLProps));
-        
-        
-        
+         
         if (options.outFile!=null) runSRLProps.setProperty("output.dir", options.outFile.getAbsolutePath());
 
         Properties langProps = PropertyUtil.filterProperties(runSRLProps, runSRLProps.getProperty("language").trim()+'.', true);
@@ -269,8 +272,23 @@ public class RunSRL {
         ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(runSRLProps.getProperty("model_file"))));
         options.model = (SRLModel)mIn.readObject();
         mIn.close();
-        
+       
         logger.info("model loaded");
+        
+        if (runSRLProps.getProperty("predicateOverride")!=null) {
+        	Set<String> overrideSet = new HashSet<String>();
+        	try (BufferedReader reader = new BufferedReader(new FileReader(runSRLProps.getProperty("predicateOverride")))) {
+                String line;
+                while ((line=reader.readLine())!=null) {
+                	if (line.trim().isEmpty()) continue;
+                	overrideSet.add(line.trim());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        	if (!overrideSet.isEmpty())
+        		options.model.setPredicateOverride(overrideSet);
+        }
         
         BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
         BitSet mask2 = options.model.argLabelStage2Classifier==null?new BitSet():(options.model.argLabelStage2Classifier.getFeatureMask());
