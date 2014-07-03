@@ -286,8 +286,10 @@ public class RunSRL {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        	if (!overrideSet.isEmpty())
+        	if (!overrideSet.isEmpty()) {
         		options.model.setPredicateOverride(overrideSet);
+        		logger.info("using "+overrideSet.size()+" predicate classification overrides");
+        	}
         }
         
         BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
