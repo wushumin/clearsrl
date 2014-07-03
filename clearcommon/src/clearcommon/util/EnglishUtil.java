@@ -9,9 +9,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
@@ -122,7 +124,16 @@ public class EnglishUtil extends LanguageUtil {
         @Override
         public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
             if (localName.equals("roleset")) {
-                roleset = frame.new Roleset(atts.getValue("id"));
+            	Set<String> classes = null;
+            	
+            	String vncls = atts.getValue("id");
+            	if (vncls != null) {
+            		classes = new HashSet<String>();
+            		for (String clsId:vncls.trim().split("\\s+"))
+            			classes.add("vncls-"+clsId);
+            	}
+            	
+                roleset = frame.new Roleset(atts.getValue("id"), classes);
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
                 if (atts.getValue("f")==null)

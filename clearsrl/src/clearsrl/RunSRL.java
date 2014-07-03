@@ -290,7 +290,10 @@ public class RunSRL {
         		options.model.setPredicateOverride(overrideSet);
         		logger.info("using "+overrideSet.size()+" predicate classification overrides");
         	}
+        } else {
+        	
         }
+        	
         
         BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
         BitSet mask2 = options.model.argLabelStage2Classifier==null?new BitSet():(options.model.argLabelStage2Classifier.getFeatureMask());

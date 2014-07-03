@@ -92,6 +92,7 @@ public class SRLModel implements Serializable {
         RIGHTHEADWORDPOS,
         RIGHTPHASETYPE,
         ROLESET,
+        ROLESETCLASS,
         ECSET,
         
         // Constituent dependent features
@@ -313,7 +314,7 @@ public class SRLModel implements Serializable {
     transient int                           argsTrained = 0;
     transient int                           argsTotal = 0;
 
-    transient Logger                        logger;
+    transient Logger                        logger = null;
     
     transient File                          trainingSampleFile;
     transient File                          extractedSampleFile;
@@ -321,7 +322,7 @@ public class SRLModel implements Serializable {
     transient ObjectOutputStream            trainingSampleOutStream;
     
     transient int                           trainingTreeCnt;
-    transient Set<String>                   predicateOverrideKeySet;
+    transient Set<String>                   predicateOverrideKeySet = null;
 
     /**
      * Constructor 
@@ -1271,6 +1272,12 @@ public class SRLModel implements Serializable {
             	    	sampleFlat.put(feature, role.getRoles());
             	}
             	break;
+            case ROLESETCLASS:
+            	if (rolesetId!=null) {
+            		Roleset role = langUtil.getRoleSet(predicateNode, rolesetId);
+            	    if (role!=null && role.getClasses()!=null)
+            	    	sampleFlat.put(feature, role.getClasses());
+            	}
             case ECSET:
             	//TODO
             	if (depEC!=null) {

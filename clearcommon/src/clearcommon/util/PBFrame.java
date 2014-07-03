@@ -13,9 +13,16 @@ public class PBFrame {
     public class Roleset {
         String id;
         private Set<String> roles;
+        private Set<String> classes;
         
         public Roleset(String id) {
             this.id = id;
+            this.roles = new HashSet<String>();
+        }
+        
+        public Roleset(String id, Set<String> classes) {
+            this.id = id;
+            this.classes = classes;
             this.roles = new HashSet<String>();
         }
         
@@ -37,6 +44,10 @@ public class PBFrame {
             return Collections.unmodifiableSet(roles);
         }
         
+        public Set<String> getClasses() {
+        	return Collections.unmodifiableSet(classes);
+        }
+ 
         public String toString() {
             return id+' '+roles;
         }
