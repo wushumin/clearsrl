@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -194,7 +195,7 @@ public class ChineseUtil extends LanguageUtil {
         PBFrame frame = new PBFrame(predicate, LanguageUtil.POS.VERB);
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
-            parser.parse(new InputSource(new FileReader(file)));
+            parser.parse(new InputSource(new InputStreamReader(new FileInputStream(file), "UTF8")));
             frameMap.put(frame.getPredicate()+key.substring(key.length()-2), frame);
             logger.info("Added "+frame.getPredicate()+key.substring(key.length()-2)+ " "+frameMap.size());
         } catch (IOException e) {
