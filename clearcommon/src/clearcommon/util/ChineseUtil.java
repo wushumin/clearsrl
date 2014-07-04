@@ -157,6 +157,7 @@ public class ChineseUtil extends LanguageUtil {
     }
     
     void readFrameFiles(final File dir) {
+    	logger.info("Reading frame files from "+dir.getPath());
         XMLReader parser=null;
         try {
             parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
@@ -178,6 +179,7 @@ public class ChineseUtil extends LanguageUtil {
         
         for (String fileName:FileUtil.getFiles(dir, ".+-v\\.xml"))
             readFrameFile(parser, new File(dir, fileName));
+        logger.info(""+frameMap.size()+" frames read");
     }
     
     void readFrameFile(XMLReader parser, File file) {

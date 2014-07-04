@@ -1,5 +1,6 @@
 package clearcommon.util;
 
+import clearcommon.propbank.PBFileReader;
 import clearcommon.treebank.TBHeadRules;
 import clearcommon.treebank.TBNode;
 import clearcommon.util.PBFrame.Roleset;
@@ -8,8 +9,11 @@ import gnu.trove.map.TObjectIntMap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 public abstract class LanguageUtil {
+	
+	protected static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     public enum POS {
         NOUN,
