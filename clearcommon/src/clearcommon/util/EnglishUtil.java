@@ -165,7 +165,9 @@ public class EnglishUtil extends LanguageUtil {
             return;
         }
         
-        for (String fileName:FileUtil.getFiles(dir, ".+-[nvj]\\.xml"))
+        List<String> fileNames = FileUtil.getFiles(dir, ".+-v\\.xml");
+        logger.info(""+fileNames.size()+" frame files found");
+        for (String fileName:fileNames)
             readFrameFile(parser, new File(dir, fileName));
         logger.info(""+frameMap.size()+" frames read");
     }
