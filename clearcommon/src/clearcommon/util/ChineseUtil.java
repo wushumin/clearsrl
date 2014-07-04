@@ -178,13 +178,11 @@ public class ChineseUtil extends LanguageUtil {
             return;
         }
         
-        List<String> fileNames = FileUtil.getFiles(dir, ".+-v\\.xml");
+        List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
         logger.info(""+fileNames.size()+" frame files found");
-        for (String fileName:fileNames) {
+        for (String fileName:fileNames)
             readFrameFile(parser, new File(dir, fileName));
-            logger.info("Read "+fileName+" "+frameMap.size());
-        }
-        logger.info(frameMap.keySet().toString());
+        logger.info(""+frameMap.size()+" frames read");
     }
     
     void readFrameFile(XMLReader parser, File file) {
