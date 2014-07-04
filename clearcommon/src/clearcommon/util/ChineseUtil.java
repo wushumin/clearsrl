@@ -183,7 +183,6 @@ public class ChineseUtil extends LanguageUtil {
             readFrameFile(parser, new File(dir, fileName));
             logger.info("Read "+fileName+" "+frameMap.size());
         }
-        logger.info(""+frameMap.size()+" frames read");
         logger.info(frameMap.keySet().toString());
     }
     
@@ -197,6 +196,7 @@ public class ChineseUtil extends LanguageUtil {
             parser.setContentHandler(new FrameParseHandler(frame));
             parser.parse(new InputSource(new FileReader(file)));
             frameMap.put(frame.getPredicate()+key.substring(key.length()-2), frame);
+            logger.info("Added "+frame.getPredicate()+key.substring(key.length()-2)+ " "+frameMap.size());
         } catch (IOException e) {
             e.printStackTrace();
         } catch (SAXException e) {
