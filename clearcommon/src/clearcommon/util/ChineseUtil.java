@@ -194,8 +194,8 @@ public class ChineseUtil extends LanguageUtil {
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
             parser.parse(new InputSource(new InputStreamReader(new FileInputStream(file), "UTF8")));
-            frameMap.put(frame.getPredicate()+key.substring(key.length()-2), frame);
-            logger.info("Added "+frame.getPredicate()+key.substring(key.length()-2)+ " "+frameMap.size());
+            frameMap.put(frame.getPredicate(), frame);
+            //logger.info("Added "+frame.getPredicate()+key.substring(key.length()-2)+ " "+frameMap.size());
         } catch (IOException e) {
             e.printStackTrace();
         } catch (SAXException e) {
