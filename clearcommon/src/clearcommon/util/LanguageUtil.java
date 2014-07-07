@@ -66,7 +66,7 @@ public abstract class LanguageUtil {
     }
     
     public PBFrame getFrame(TBNode node) {
-        return getFrame(PBFrame.makeKey(node, this));
+        return getFrame(makePBFrameKey(node));
     }
     
     public Roleset getRoleSet(TBNode node, String roleSetId) {
@@ -82,6 +82,10 @@ public abstract class LanguageUtil {
         if (isNoun(pos)) return POS.NOUN;
         if (isVerb(pos)) return POS.VERB;
         return null;
+    }
+    
+    public String makePBFrameKey(TBNode node) {
+    	return findStems(node).get(0);
     }
     
     public abstract boolean isAdjective(String POS);

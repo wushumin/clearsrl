@@ -379,7 +379,14 @@ public class EnglishUtil extends LanguageUtil {
     public TBHeadRules getHeadRules() {
         return headRules;
     }
-
+    
+    @Override
+    public String makePBFrameKey(TBNode node) {
+    	String lemma = findStems(node).get(0);
+        String pos = isVerb(node.getPOS())?"-v":(isNoun(node.getPOS())?"-n":(isAdjective(node.getPOS())?"-j":""));
+        return lemma+pos;
+    }
+    
     @Override
     public boolean isAdjective(String POS) {
         return POS.charAt(0)=='J';

@@ -584,7 +584,7 @@ public class SRLModel implements Serializable {
             if (goldSRLs[node.getTokenIndex()]==null)
                 continue;
             
-            String key = PBFrame.makeKey(node, langUtil);
+            String key = langUtil.makePBFrameKey(node);
             PBFrame frame = langUtil.getFrame(key);
             if (frame==null)
                 continue;
@@ -625,7 +625,7 @@ public class SRLModel implements Serializable {
             if (buildDictionary) continue;
             
             // get the roleset
-            String key = PBFrame.makeKey(trainInstance.predicateNode, langUtil);
+            String key = langUtil.makePBFrameKey(trainInstance.predicateNode);
             PBFrame frame = langUtil.getFrame(key);
             if (frame==null)
             	continue;
@@ -1682,7 +1682,7 @@ public class SRLModel implements Serializable {
     }
  
     String predictRoleSet(TBNode node, EnumMap<Feature,Collection<String>> features) {
-        String key = PBFrame.makeKey(node, langUtil);
+        String key = langUtil.makePBFrameKey(node);
         PBFrame frame = langUtil.getFrame(key);
         if (frame==null)
             return langUtil.findStems(node).get(0)+".XX";
@@ -1722,8 +1722,8 @@ public class SRLModel implements Serializable {
             for (TBNode node: nodes) {
                 if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
-                if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(PBFrame.makeKey(node, langUtil))) {
-                	logger.fine("overrode classifying predicate "+PBFrame.makeKey(node, langUtil));
+                if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(langUtil.makePBFrameKey(node))) {
+                	logger.fine("overrode classifying predicate "+langUtil.makePBFrameKey(node));
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
                 } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);

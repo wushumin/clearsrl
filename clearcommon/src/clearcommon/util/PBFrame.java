@@ -79,12 +79,6 @@ public class PBFrame {
         rolesets.put(roleset.id, roleset);
     }
     
-    public static String makeKey(TBNode node, LanguageUtil langUtil) {
-        String lemma = langUtil.findStems(node).get(0);
-        String pos = langUtil.isVerb(node.getPOS())?"-v":(langUtil.isNoun(node.getPOS())?"-n":(langUtil.isAdjective(node.getPOS())?"-j":""));
-        return lemma+pos;
-    }
-    
     public String toString() {
         StringBuilder builder = new StringBuilder();
         char pos = this.pos.equals(LanguageUtil.POS.NOUN)?'n':(this.pos.equals(LanguageUtil.POS.VERB)?'v':'j');
