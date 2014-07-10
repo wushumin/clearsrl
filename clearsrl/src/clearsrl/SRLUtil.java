@@ -553,6 +553,7 @@ public class SRLUtil {
         
         if (levelUp>0) {
             TBNode parent = node.getParent();
+            if (parent==null) return;
             
             for (int i=0; i<parent.getChildren().length; ++i) {
                 if (node.getChildIndex()==i) continue;
