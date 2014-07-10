@@ -1600,6 +1600,7 @@ public class SRLModel implements Serializable {
  	        for (int i=0; i<y.length; ++i)
  	        	newLabels[i] = argLabelIndexMap.get(classifier.predictNative(X[i]));
         }
+        System.gc();
         return newLabels;
     }
 
@@ -1663,6 +1664,7 @@ public class SRLModel implements Serializable {
             if (!(e instanceof EOFException))
                 e.printStackTrace();
         }
+    	System.gc();
     }
 
     

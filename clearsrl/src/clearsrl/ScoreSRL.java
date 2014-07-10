@@ -105,6 +105,7 @@ public class ScoreSRL {
         SRLScore[] nScores = new SRLScore[systems.length];
         SRLScore[] proScore = new SRLScore[systems.length];
         SRLScore[] noproScore = new SRLScore[systems.length];
+        boolean printNScore = false;
         
         for (int i=0; i<scores.length; ++i) {
             scores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
@@ -221,9 +222,10 @@ public class ScoreSRL {
                             else
                             	noproScore[i].addResult(sysInstances.get(i), goldInstance);
                             
-                        } else
+                        } else {
                             nScores[i].addResult(sysInstances.get(i), goldInstance);
-                        
+                            printNScore = true;
+                        }
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
                     }
                     goldPropOut.println(goldInstance.toPropbankString());
@@ -295,12 +297,16 @@ public class ScoreSRL {
         for (int i=0; i<scores.length; ++i)
         {
             //System.out.println(systems[i]+":");
-            //System.out.println("All predicates:");
-            //System.out.println(scores[i]);
+        	if (printNScore) {
+        		System.out.println("All predicates:");
+        		System.out.println(scores[i]);
+        	}
             System.out.println("verb predicates:");
             System.out.println(vScores[i]);
-            //System.out.println("nominal predicates:");
-            //System.out.println(nScores[i]);
+            if (printNScore) {
+	            System.out.println("nominal predicates:");
+	            System.out.println(nScores[i]);
+            }
             //System.out.println("pro argument:");
             //System.out.println(proScore[i]);
             //System.out.println("no pro argument:");
