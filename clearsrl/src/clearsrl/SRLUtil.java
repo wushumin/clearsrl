@@ -422,7 +422,7 @@ public class SRLUtil {
     }
     
     static List<TBNode> getArgumentCandidates(TBNode predicate, SRInstance support, LanguageUtil langUtil, int levelDown, boolean allHeadPhrases) {
-        boolean toRoot = true;
+        boolean toRoot = false;
         
         boolean isVerb = langUtil.isVerb(predicate.getPOS());
         if (support != null) {
