@@ -1729,6 +1729,7 @@ public class SRLModel implements Serializable {
                 		logger.severe("null frame key encountered for "+node.toParse());
                 	else
                 		System.err.println(langUtil.makePBFrameKey(node));
+                	logger.fine(node.toParse());
                 	logger.fine("overrode classifying predicate "+langUtil.makePBFrameKey(node));
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
                 } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
