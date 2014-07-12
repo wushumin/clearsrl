@@ -338,6 +338,12 @@ public class SRLModel implements Serializable {
         argLabelFeatures = new FeatureSet<Feature>(argFeatureSet);
         predicateModel = new SimpleModel<Feature>(predicateFeatureSet);
     }
+
+    private void readObject(java.io.ObjectInputStream in)
+    	     throws IOException, ClassNotFoundException {
+    	in.defaultReadObject();
+    	logger = Logger.getLogger("clearsrl");
+    }
     
     public void initialize(Properties props) throws IOException {
     	filterArgs = !props.getProperty("filterArguments", "false").equals("false");
@@ -1725,13 +1731,7 @@ public class SRLModel implements Serializable {
                 if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
                 if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(langUtil.makePBFrameKey(node))) {
-                	if (langUtil.makePBFrameKey(node)==null)
-                		logger.severe("null frame key encountered for "+node.toParse());
-                	else
-                		System.err.println(langUtil.makePBFrameKey(node));
-                	System.err.println(node.getWord());
-                	System.err.println(node.toParse());
-                	System.err.println("overrode classifying predicate "+langUtil.makePBFrameKey(node));
+                	logger.fine("overrode classifying predicate "+langUtil.makePBFrameKey(node));
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
                 } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);
