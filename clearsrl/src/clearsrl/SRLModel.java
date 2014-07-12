@@ -1836,6 +1836,13 @@ public class SRLModel implements Serializable {
     
     int predict(SRInstance prediction, List<TBNode> argNodes, List<SRArg> goldArgs, SRInstance support, String[] namedEntities) {
         //System.out.println("Predicting "+prediction.tree.getFilename()+" "+prediction.tree.getIndex()+" "+prediction.predicateNode.getTokenIndex());
+    	
+    	for (TBNode node:argNodes)
+    		if (node.getHead()==null) {
+    			logger.severe(prediction.getTree().getFilename()+" "+prediction.getTree().getIndex()+": null head: "+node.toParse()+"\n"+prediction.getTree().toPrettyParse());
+    			break;
+    		}
+    	
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
         
         ArgSample[] fsamples = new ArgSample[featureMapList.size()];
