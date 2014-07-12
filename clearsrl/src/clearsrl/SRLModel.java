@@ -1728,7 +1728,7 @@ public class SRLModel implements Serializable {
                 	if (langUtil.makePBFrameKey(node)==null)
                 		logger.severe("null frame key encountered for "+node.toParse());
                 	else
-                		System.err.println(langUtil.makePBFrameKey(node));
+                		logger.info(langUtil.makePBFrameKey(node));
                 	logger.info(node.getWord());
                 	logger.info(node.toParse());
                 	logger.info("overrode classifying predicate "+langUtil.makePBFrameKey(node));
