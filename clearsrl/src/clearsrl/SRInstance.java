@@ -25,6 +25,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     enum OutputFormat {
         TEXT,
         PROPBANK,
+        PROPBANK_PROB,
         CONLL
     };
     
@@ -233,6 +234,10 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     }
     
     public String toPropbankString() {
+    	return toPropbankString(false);
+    }
+    
+    public String toPropbankString(boolean printProb) {
         StringBuilder buffer = new StringBuilder();
         buffer.append(tree.getFilename()); buffer.append(' ');
         buffer.append(tree.getIndex()); buffer.append(' ');
@@ -262,7 +267,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
            else {
         	   StringBuilder builder = new StringBuilder();
         	   argOut.add(builder);
-        	   if (arg.score!=1.0)
+        	   if (printProb && arg.score!=1.0)
         		   builder.append(Double.toString(arg.score)+'|');
         	   builder.append(""+id[0]+":"+id[1]);
            }
@@ -437,6 +442,8 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
             return toString();
         case PROPBANK:
             return toPropbankString();
+        case PROPBANK_PROB:
+        	return toPropbankString(true);
         case CONLL:
             return toCONLLString();
         }
