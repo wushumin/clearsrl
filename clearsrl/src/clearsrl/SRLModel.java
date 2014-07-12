@@ -1728,10 +1728,10 @@ public class SRLModel implements Serializable {
                 	if (langUtil.makePBFrameKey(node)==null)
                 		logger.severe("null frame key encountered for "+node.toParse());
                 	else
-                		logger.info(langUtil.makePBFrameKey(node));
-                	logger.info(node.getWord());
-                	logger.info(node.toParse());
-                	logger.info("overrode classifying predicate "+langUtil.makePBFrameKey(node));
+                		System.err.println(langUtil.makePBFrameKey(node));
+                	System.err.println(node.getWord());
+                	System.err.println(node.toParse());
+                	System.err.println("overrode classifying predicate "+langUtil.makePBFrameKey(node));
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
                 } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);
