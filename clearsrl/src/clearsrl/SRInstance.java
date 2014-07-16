@@ -365,7 +365,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
 
         for (int i=0; i<labels.length; ++i)
             if (labels[i]==null)
-                buffer.append("- ");
+                buffer.append("_ ");
             else
             	buffer.append(labels[i]+' ');   
         
