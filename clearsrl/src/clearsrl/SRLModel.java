@@ -1838,8 +1838,10 @@ public class SRLModel implements Serializable {
         //System.out.println("Predicting "+prediction.tree.getFilename()+" "+prediction.tree.getIndex()+" "+prediction.predicateNode.getTokenIndex());
     	
     	for (TBNode node:argNodes)
-    		if (node.getHead()==null) {
+    		if (node.getHead()==null || node.getHead().getWord()==null) {
     			logger.severe(prediction.getTree().getFilename()+" "+prediction.getTree().getIndex()+": null head: "+node.toParse()+"\n"+prediction.getTree().toPrettyParse());
+    			logger.severe(node.getHead().toParse());
+    			logger.severe(node.getHead().getParent().toParse());
     			break;
     		}
     	

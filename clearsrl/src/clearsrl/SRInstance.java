@@ -26,7 +26,8 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         TEXT,
         PROPBANK,
         PROPBANK_PROB,
-        CONLL
+        CONLL,
+        CONLL_DEP
     };
     
     TBNode predicateNode;
@@ -334,6 +335,43 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     }
 */
     
+    public String toCONLLDepString() {
+    	StringBuilder buffer = new StringBuilder();
+        
+        List<TBNode> nodes = tree.getRootNode().getTokenNodes();
+        String[] tokens = new String[nodes.size()];
+        for (int i=0; i<tokens.length; ++i)
+            tokens[i] = nodes.get(i).getWord();
+        
+        String[] labels = new String[tree.getTokenCount()];
+        
+        for (SRArg arg:args) {
+            if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+
+            labels[arg.node.getHead().getTokenIndex()] = arg.label;
+        }
+        
+        for (int i=0; i<labels.length; ++i) {
+            if (labels[i]==null) continue;
+            if (labels[i].equals("rel"))
+                labels[i] = "V";
+            else if (labels[i].startsWith("ARG"))
+                labels[i] = "A"+labels[i].substring(3);
+            else if (labels[i].startsWith("C-ARG"))
+                labels[i] = "C-A"+labels[i].substring(5);
+            else if (labels[i].startsWith("R-ARG"))
+                labels[i] = "R-A"+labels[i].substring(5);
+        }
+
+        for (int i=0; i<labels.length; ++i)
+            if (labels[i]==null)
+                buffer.append("- ");
+            else
+            	buffer.append(labels[i]+' ');   
+        
+        return buffer.toString();
+    }
+    
     public String toCONLLString()
     {
         StringBuilder buffer = new StringBuilder();
@@ -446,8 +484,9 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         	return toPropbankString(true);
         case CONLL:
             return toCONLLString();
+		default:
+			return toString();
         }
-        return toString();
     }
 
 	@Override

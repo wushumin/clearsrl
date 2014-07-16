@@ -79,6 +79,7 @@ public class SerialTBFileReader extends TBFileReader
                 logger.fine("Read "+treeCount+" trees, done.");
                 return lastTree=null;
             }
+            logger.fine("Reading tree "+treeCount);
         } while (!str.equals(TBLib.LRB));
         
         Stack<List<TBNode>> childNodeStack = new Stack<List<TBNode>>();
@@ -106,14 +107,25 @@ public class SerialTBFileReader extends TBFileReader
                 curr = childNode;                           // move to child
                 childNodeStack.push(new ArrayList<TBNode>());
             } else if (str.equals(TBLib.RRB)) {
-                if (curr.terminalIndex<0) {
-                    curr.terminalIndex = -(terminalIndex+1);
-                    curr.tokenIndex = -(tokenIndex+1);
-                }
-                
-                curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
-                curr = curr.getParent();                // move to parent
-                
+            	curr.children= childNodeStack.pop().toArray(TBNode.NO_CHILDREN);
+            	
+               	if (curr.children.length==0 && curr.getWord()==null) {
+            		curr.getParent().word = "("+curr.getPOS()+")";
+            		childNodeStack.peek().remove(childNodeStack.peek().size()-1);
+            		curr = curr.getParent();  
+            		curr.terminalIndex = terminalIndex++;
+                    if (!curr.isEC())   curr.tokenIndex = tokenIndex++;
+                    logger.info(fileName+" "+treeCount+": fixed node: "+curr.toParse());
+            	} else { 
+            		if (curr.children.length!=0 && curr.getWord()!=null)
+            			logger.severe(fileName+" "+treeCount+": encountered bad node: "+curr);
+            	
+	                if (curr.terminalIndex<0) {
+	                    curr.terminalIndex = -(terminalIndex+1);
+	                    curr.tokenIndex = -(tokenIndex+1);
+	                }
+	                curr = curr.getParent();                // move to parent
+            	}
             } else if (head==curr) {
                 head.pos = str;
             } else {

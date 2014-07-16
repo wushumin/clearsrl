@@ -24,6 +24,47 @@ public class CoNLLSentence {
     String[]     namedEntities;
     SRInstance[] srls;
     
+    
+    public static String toDepString(TBTree parse, SRInstance[] predictedSRLs)
+    {
+        StringBuilder buffer = new StringBuilder();
+        String[][] outStr = new String[parse.getTokenCount()][predictedSRLs.length+2];
+        
+        
+        TBNode[] tokens = parse.getTokenNodes(); 
+        for (int i=0; i<outStr.length; ++i)
+        	outStr[i][0] = Integer.toString(tokens[i].getHeadOfHead()==null?0:(tokens[i].getHeadOfHead().getTokenIndex()+1));
+        
+        for (int i=0; i<outStr.length; ++i)
+            outStr[i][1] = "-";
+        for (int j=0; j<predictedSRLs.length; ++j) {
+            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][0] = predictedSRLs[j].rolesetId;
+            //System.out.println(predictedSRLs[j].toCONLLString());
+            String[] vals = predictedSRLs[j].toCONLLDepString().trim().split(" ");
+            for (int i=0; i<outStr.length; ++i)
+                outStr[i][j+2] = vals[i];
+        }
+
+        int[] maxlength = new int[outStr[0].length];
+        for (int i=0; i<outStr.length; ++i)
+            for (int j=0; j<outStr[i].length; ++j)
+                if (maxlength[j]<outStr[i][j].length())
+                    maxlength[j] = outStr[i][j].length();
+
+        for (int i=0; i<outStr.length; ++i)
+        {       
+            for (int j=0; j<outStr[i].length; ++j)
+            {
+                buffer.append(outStr[i][j]);
+                for (int k=outStr[i][j].length(); k<=maxlength[j]; ++k)
+                    buffer.append(' ');
+            }
+            buffer.append("\n");
+        }
+        return buffer.toString();
+    }
+    
+    
     public static String toString(TBTree parse, SRInstance[] predictedSRLs)
     {
         StringBuilder buffer = new StringBuilder();
