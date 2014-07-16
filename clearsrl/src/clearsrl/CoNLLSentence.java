@@ -53,7 +53,7 @@ public class CoNLLSentence {
             		continue;
             	vals[i] = idStr+':'+vals[i];
             	
-            	outStr[i][2] = outStr[i][2].equals("-")?vals[i]:outStr[i][2]+','+vals[i];
+            	outStr[i][2] = outStr[i][2].equals("_")?vals[i]:outStr[i][2]+','+vals[i];
             }
             
         }
