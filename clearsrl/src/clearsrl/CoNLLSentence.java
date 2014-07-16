@@ -35,8 +35,10 @@ public class CoNLLSentence {
         for (int i=0; i<outStr.length; ++i)
         	outStr[i][0] = Integer.toString(tokens[i].getHeadOfHead()==null?0:(tokens[i].getHeadOfHead().getTokenIndex()+1));
         
-        for (int i=0; i<outStr.length; ++i)
+        for (int i=0; i<outStr.length; ++i) {
             outStr[i][1] = "-";
+            outStr[i][2] = "-";
+        }
         for (int j=0; j<predictedSRLs.length; ++j) {
             outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][1] = predictedSRLs[j].rolesetId;
             //System.out.println(predictedSRLs[j].toCONLLString());
@@ -51,8 +53,9 @@ public class CoNLLSentence {
             		continue;
             	vals[i] = idStr+':'+vals[i];
             	
-            	outStr[i][2] = outStr[i][2]==null?vals[i]:outStr[i][2]+','+vals[i];
+            	outStr[i][2] = outStr[i][2].equals("-")?vals[i]:outStr[i][2]+','+vals[i];
             }
+            
         }
 
         int[] maxlength = new int[outStr[0].length];
