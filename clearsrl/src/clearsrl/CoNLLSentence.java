@@ -38,7 +38,7 @@ public class CoNLLSentence {
         for (int i=0; i<outStr.length; ++i)
             outStr[i][1] = "-";
         for (int j=0; j<predictedSRLs.length; ++j) {
-            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][0] = predictedSRLs[j].rolesetId;
+            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][1] = predictedSRLs[j].rolesetId;
             //System.out.println(predictedSRLs[j].toCONLLString());
             String[] vals = predictedSRLs[j].toCONLLDepString().trim().split(" ");
             for (int i=0; i<outStr.length; ++i)
