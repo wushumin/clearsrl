@@ -28,7 +28,7 @@ public class CoNLLSentence {
     public static String toDepString(TBTree parse, SRInstance[] predictedSRLs)
     {
         StringBuilder buffer = new StringBuilder();
-        String[][] outStr = new String[parse.getTokenCount()][predictedSRLs.length+2];
+        String[][] outStr = new String[parse.getTokenCount()][3];
         
         
         TBNode[] tokens = parse.getTokenNodes(); 
@@ -40,9 +40,19 @@ public class CoNLLSentence {
         for (int j=0; j<predictedSRLs.length; ++j) {
             outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][1] = predictedSRLs[j].rolesetId;
             //System.out.println(predictedSRLs[j].toCONLLString());
+            
+            String idStr = Integer.toString(predictedSRLs[j].getPredicateNode().getTokenIndex()+1);
+      
             String[] vals = predictedSRLs[j].toCONLLDepString().trim().split(" ");
-            for (int i=0; i<outStr.length; ++i)
-                outStr[i][j+2] = vals[i];
+            
+            
+            for (int i=0; i<outStr.length; ++i) {
+            	if (vals[i].equals("-"))
+            		continue;
+            	vals[i] = idStr+':'+vals[i];
+            	
+            	outStr[i][2] = outStr[i][2]==null?vals[i]:outStr[i][2]+','+vals[i];
+            }
         }
 
         int[] maxlength = new int[outStr[0].length];
