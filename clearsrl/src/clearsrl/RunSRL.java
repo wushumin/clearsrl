@@ -144,6 +144,8 @@ public class RunSRL {
             	if (!srls.isEmpty()) {
 	            	if (outputFormat.equals(OutputFormat.CONLL))
 	                    writer.println(CoNLLSentence.toString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+	            	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
+	                    writer.println(CoNLLSentence.toDepString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
 	                else
 	                    for (SRInstance instance:srls)
 	                        writer.println(instance.toString(outputFormat));
