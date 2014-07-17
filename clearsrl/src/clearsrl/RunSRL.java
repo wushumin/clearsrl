@@ -120,8 +120,6 @@ public class RunSRL {
             while (true) {
             	Future<List<SRInstance>> future;
             	try {
-            		
-            		
 	                future = srlQueue.take();
                 } catch (InterruptedException e) {
 	                continue;
@@ -141,15 +139,13 @@ public class RunSRL {
 
             	if (srls==null) break;
             	
-            	if (!srls.isEmpty()) {
-	            	if (outputFormat.equals(OutputFormat.CONLL))
-	                    writer.println(CoNLLSentence.toString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
-	            	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
-	                    writer.println(CoNLLSentence.toDepString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
-	                else
-	                    for (SRInstance instance:srls)
-	                        writer.println(instance.toString(outputFormat));
-            	}
+            	if (outputFormat.equals(OutputFormat.CONLL))
+                    writer.println(CoNLLSentence.toString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+            	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
+                    writer.println(CoNLLSentence.toDepString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+                else
+                    for (SRInstance instance:srls)
+                        writer.println(instance.toString(outputFormat));
             	
             }
             writer.flush();
