@@ -242,8 +242,8 @@ public class MakeLDASamples {
         		for (Map.Entry<Integer, List<PBInstance>> e2:entry.getValue().entrySet()) {
         			TBUtil.linkHeads(e2.getValue().get(0).getTree(), langUtil.getHeadRules());
         			for (PBInstance instance:e2.getValue()) {
-        				if (!langUtil.isVerb(instance.getPredicate().getPOS())) 
-        					continue;
+        				//if (!langUtil.isVerb(instance.getPredicate().getPOS())) 
+        				//	continue;
         				String predicate = instance.getPredicate().getWord().toLowerCase();
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel"))
