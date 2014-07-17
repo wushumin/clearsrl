@@ -89,9 +89,18 @@ public class RunSRL {
     static final float THRESHOLD=0.8f;
 
     ExecutorService executor;
-    ArrayBlockingQueue<Future<List<SRInstance>>> srlQueue;
+    class Output {
+    	TBTree tree;
+    	List<SRInstance> srls;
+    	public Output(TBTree tree, List<SRInstance> srls) {
+    		this.tree = tree;
+    		this.srls = srls;
+    	}
+    }
     
-    class RunnableSentence implements Callable<List<SRInstance>>  {
+    ArrayBlockingQueue<Future<Output>> srlQueue;
+    
+    class RunnableSentence implements Callable<Output>  {
     	Sentence sent = null;
     	
     	public RunnableSentence(Sentence sent) {
@@ -99,11 +108,11 @@ public class RunSRL {
     	}
     	
 		@Override
-        public List<SRInstance> call() {
+        public Output call() {
 			if (sent==null) 
 				return null;
 			TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
-            return model.predict(tree, sent.propPB, sent.depEC, sent.namedEntities);
+            return new Output(tree, model.predict(tree, sent.propPB, sent.depEC, sent.namedEntities));
 		}
     }
     
@@ -118,17 +127,17 @@ public class RunSRL {
         
         public void run() {
             while (true) {
-            	Future<List<SRInstance>> future;
+            	Future<Output> future;
             	try {
 	                future = srlQueue.take();
                 } catch (InterruptedException e) {
 	                continue;
                 }
             	
-            	List<SRInstance> srls=null;
+            	Output output = null;
             	while (true)
 	                try {
-	                	srls = future.get();
+	                	output = future.get();
 	                	break;
 	                } catch (InterruptedException e) {
 	                	continue;
@@ -137,14 +146,14 @@ public class RunSRL {
 		                break;
 	                }
 
-            	if (srls==null) break;
+            	if (output==null) break;
             	
             	if (outputFormat.equals(OutputFormat.CONLL))
-                    writer.println(CoNLLSentence.toString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+                    writer.println(CoNLLSentence.toString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
             	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
-                    writer.println(CoNLLSentence.toDepString(srls.get(0).getTree(), srls.toArray(new SRInstance[srls.size()])));
+                    writer.println(CoNLLSentence.toDepString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
                 else
-                    for (SRInstance instance:srls)
+                    for (SRInstance instance:output.srls)
                         writer.println(instance.toString(outputFormat));
             	
             }
@@ -189,7 +198,7 @@ public class RunSRL {
 	        while ((tree=treeReader.nextTree())!=null){
 	        	TBUtil.linkHeads(tree, langUtil.getHeadRules());
 	        	
-	        	Future<List<SRInstance>> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null)));
+	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null)));
 	            while(true)
 	    	        try {
 	    	        	srlQueue.put(future);
@@ -202,7 +211,7 @@ public class RunSRL {
 	        treeReader.close();
         } else {
     		for (Sentence sentence:sentences) {
-    			Future<List<SRInstance>> future = executor.submit(new RunnableSentence(sentence));
+    			Future<Output> future = executor.submit(new RunnableSentence(sentence));
 	            while(true)
 	    	        try {
 	    	        	srlQueue.put(future);
@@ -217,7 +226,7 @@ public class RunSRL {
         if (pipedWriter!=null) pipedWriter.close();
         if (reader!=null) reader.close();
 
-        Future<List<SRInstance>> future = executor.submit(new RunnableSentence(null));
+        Future<Output> future = executor.submit(new RunnableSentence(null));
         while (true)
 		    try {
 		        srlQueue.put(future);
@@ -335,7 +344,7 @@ public class RunSRL {
         logger.info(String.format("Using %d threads\n",threads));
         
         options.executor = Executors.newFixedThreadPool(threads);
-        options.srlQueue = new ArrayBlockingQueue<Future<List<SRInstance>>>(threads*20);
+        options.srlQueue = new ArrayBlockingQueue<Future<Output>>(threads*20);
         
         int pCount = 0;
         String dataFormat = runSRLProps.getProperty("data.format", "default");
