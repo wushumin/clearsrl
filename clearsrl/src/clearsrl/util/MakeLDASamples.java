@@ -65,11 +65,14 @@ public class MakeLDASamples {
     @Option(name="-prob",usage="argument probability")
 	private double prob = -1; 
     
-    @Option(name="-wt",usage="threshold")
+    @Option(name="-wt",usage="term threshold")
     private int wCntThreshold = 10;
     
-    @Option(name="-dt",usage="threshold")
+    @Option(name="-dt",usage="document threshold")
     private int docSizeThreshold = 25;
+    
+    @Option(name="-nominal",usage="include non-verb predicates")
+    private boolean useNominal = false;
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
@@ -242,8 +245,8 @@ public class MakeLDASamples {
         		for (Map.Entry<Integer, List<PBInstance>> e2:entry.getValue().entrySet()) {
         			TBUtil.linkHeads(e2.getValue().get(0).getTree(), langUtil.getHeadRules());
         			for (PBInstance instance:e2.getValue()) {
-        				//if (!langUtil.isVerb(instance.getPredicate().getPOS())) 
-        				//	continue;
+        				if (!options.useNominal && !langUtil.isVerb(instance.getPredicate().getPOS())) 
+        					continue;
         				String predicate = instance.getPredicate().getWord().toLowerCase();
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel"))
