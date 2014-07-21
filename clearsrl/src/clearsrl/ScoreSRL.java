@@ -1,5 +1,6 @@
 package clearsrl;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -9,6 +10,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeSet;
+
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
@@ -22,6 +27,15 @@ import clearcommon.util.PropertyUtil;
 import clearsrl.util.Topics;
 
 public class ScoreSRL {
+	
+	@Option(name="-prop",usage="properties file")
+    private File propFile = null;
+	
+	@Option(name="-d",usage="directory")
+    private String dirName = null;
+	
+	@Option(name="-h",usage="help message")
+    private boolean help = false;
 	
 	static String getHeadStr(SRInstance instance) {
 		String a0="";
@@ -66,16 +80,30 @@ public class ScoreSRL {
 		System.out.print("\n");
 	}
 	
-    public static void main(String[] args) throws Exception
-    {   
+    public static void main(String[] args) throws Exception {
+    	
+    	ScoreSRL options = new ScoreSRL();
+    	CmdLineParser parser = new CmdLineParser(options);
+        try {
+            parser.parseArgument(args);
+        } catch (CmdLineException e)
+        {
+            System.err.println("invalid options:"+e);
+            parser.printUsage(System.err);
+            System.exit(0);
+        }
+        if (options.help){
+            parser.printUsage(System.err);
+            System.exit(0);
+        }
+    	
         Properties props = new Properties();
-        FileInputStream in = new FileInputStream(args[0]);
+        FileInputStream in = new FileInputStream(options.propFile);
         props.load(in);
         in.close();
         
         props = PropertyUtil.resolveEnvironmentVariables(props);
 
-        
         
         props = PropertyUtil.filterProperties(props, "srl.", true);
         props = PropertyUtil.filterProperties(props, "score.", true);
@@ -122,10 +150,9 @@ public class ScoreSRL {
         
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         
-        for (String system:systems)
-        {
-            System.out.println(system+".pbdir"+": "+props.getProperty(system+".pbdir"));
-            systemPBs.add(PBUtil.readPBDir(props.getProperty(system+".pbdir"), 
+        for (String system:systems) {
+        	String propDir = options.dirName==null?props.getProperty(system+".pb.regex").trim():options.dirName;
+            systemPBs.add(PBUtil.readPBDir(propDir, 
                              props.getProperty(system+".pb.regex").trim(), 
                              props.getProperty(system+".tbdir"),
                              new DefaultPBTokenizer()));
