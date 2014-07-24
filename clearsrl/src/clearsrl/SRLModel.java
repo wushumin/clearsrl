@@ -1201,9 +1201,13 @@ public class SRLModel implements Serializable {
             switch (feature) {
             case PREDICATE:
                 if (relatedVerb!=null)
-                    sampleFlat.put(feature, Arrays.asList(relatedVerb, predicateLemma+"-n"));
-                else
-                    sampleFlat.put(feature, predicateAlternatives);
+                    sampleFlat.put(feature, Arrays.asList(relatedVerb, predicateLemma+'-'+predicateNode.getPOS().charAt(0)));
+                else {
+                	List<String> preds = new ArrayList<String>(predicateAlternatives);
+                	for (String pred:predicateAlternatives)
+                		preds.add(pred+'-'+predicateNode.getPOS().charAt(0));
+                	sampleFlat.put(feature, preds);
+                }
                 break;
             case PREDICATEPOS:
                 sampleFlat.put(feature, trainGoldParse?predicateNode.getFunctionTaggedPOS():Arrays.asList(predicateNode.getPOS()));

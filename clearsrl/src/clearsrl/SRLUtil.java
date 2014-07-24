@@ -234,6 +234,8 @@ public class SRLUtil {
         if (allHeadPhrases) {
         	for (TBNode token:predicate.getRoot().getTokenNodes()) {
         		TBNode constituent = token.getConstituentByHead();
+        		if (constituent.isTerminal()) 
+        			continue;
         		if (constituent.getNodeByTokenIndex(predicate.getTokenIndex())==null)
         			candidates.add(constituent);
         	}
