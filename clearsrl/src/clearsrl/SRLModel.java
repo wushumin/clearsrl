@@ -78,6 +78,7 @@ public class SRLModel implements Serializable {
     public enum Feature {
         // Constituent independent features
         PREDICATE,
+        PREDICATETYPE,
         PREDICATEPOS,
         VOICE,
         SUBCATEGORIZATION,
@@ -1183,6 +1184,7 @@ public class SRLModel implements Serializable {
             List<String> stems = langUtil.findStems(predicateNode);
             if (!stems.isEmpty()) predicateLemma = stems.get(0);
         }
+        String predicateType = predicateNode.getPOS().substring(0,1);
 
         String relatedVerb = null;
         if ((langUtil instanceof EnglishUtil) && !langUtil.isVerb(predicateNode.getPOS()))
@@ -1201,14 +1203,13 @@ public class SRLModel implements Serializable {
             switch (feature) {
             case PREDICATE:
                 if (relatedVerb!=null)
-                    sampleFlat.put(feature, Arrays.asList(relatedVerb, predicateLemma+'-'+predicateNode.getPOS().charAt(0)));
-                else {
-                	List<String> preds = new ArrayList<String>(predicateAlternatives);
-                	for (String pred:predicateAlternatives)
-                		preds.add(pred+'-'+predicateNode.getPOS().charAt(0));
-                	sampleFlat.put(feature, preds);
-                }
+                    sampleFlat.put(feature, Arrays.asList(relatedVerb, predicateLemma+'-'+predicateType));
+                else
+                	sampleFlat.put(feature, predicateAlternatives);
                 break;
+            case PREDICATETYPE:
+            	sampleFlat.put(feature, Arrays.asList(predicateType));
+            	break;
             case PREDICATEPOS:
                 sampleFlat.put(feature, trainGoldParse?predicateNode.getFunctionTaggedPOS():Arrays.asList(predicateNode.getPOS()));
                 break;
