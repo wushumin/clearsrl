@@ -1539,10 +1539,13 @@ public class SRLModel implements Serializable {
             }
         }
 
-        int cvThreads = Integer.parseInt(prop.getProperty("crossvalidation.threads","1"));
-        int pwThreads = Integer.parseInt(argLabelClassifier.getProperties().getProperty("pairwise.threads","1"));
-        argLabelClassifier.getProperties().setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
-        
+        {
+	    	Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
+	    	int cvThreads = Integer.parseInt(stage1Prop.getProperty("crossvalidation.threads","1"));
+	        int pwThreads = Integer.parseInt(stage1Prop.getProperty("pairwise.threads","1"));
+	        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
+	        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
+        }
         String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, 1, threads, null, y);
         SRLScore score = new SRLScore(argLabelStringMap.keySet());
         for (int i=0; i<predictions.length; ++i)
@@ -1551,7 +1554,13 @@ public class SRLModel implements Serializable {
         System.out.println(score.toString());
         
         if (hasStage2Feature) {
-        	argLabelStage2Classifier.getProperties().setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
+        	{
+	        	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
+	        	int cvThreads = Integer.parseInt(stage2Prop.getProperty("crossvalidation.threads","1"));
+	            int pwThreads = Integer.parseInt(stage2Prop.getProperty("pairwise.threads","1"));
+	            stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
+	            argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
+        	}
         	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, 1, threads, null, y);
         	int cnt = 0;
         	SRLScore score2 = new SRLScore(argLabelStringMap.keySet());

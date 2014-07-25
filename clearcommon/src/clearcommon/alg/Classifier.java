@@ -45,10 +45,6 @@ public abstract class Classifier implements Serializable {
         this.prop = (Properties)prop.clone();
     }
     
-    public Properties getProperties() {
-    	return prop;
-    }
-    
     public int getClassCnt() {
         return labelMap.size();
     }
