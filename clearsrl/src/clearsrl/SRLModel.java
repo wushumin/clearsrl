@@ -1399,9 +1399,10 @@ public class SRLModel implements Serializable {
         }
         
         int rounds = Integer.parseInt(prop.getProperty("sequence.rounds","3"));
-        if (hasStage2Feature)
-        	rounds = hasSequenceFeature?(int)(Math.ceil(rounds/2.0)):1;
-        else if (!hasSequenceFeature)
+        //if (hasStage2Feature)
+        //	rounds = hasSequenceFeature?(int)(Math.ceil(rounds/2.0)):1;
+        //else 
+        if (!hasSequenceFeature)
         	rounds = 0;
 
         double threshold = 0.001;
@@ -1469,6 +1470,7 @@ public class SRLModel implements Serializable {
 
             logger.info(String.format("Threshold: %f, NO_ARG value: %f, %d/%d filtered, %d training arguments", stage2Threshold, argLabelStage2Threshold, pVal.length-Math.abs(Arrays.binarySearch(pVal, argLabelStage2Threshold)), pVal.length, stage2Mask.cardinality()));
             
+            /*
             if (hasSequenceFeature && hasStage2Feature) {
             	newLabels = trainArguments(argLabelStage2Classifier, newLabels, stage2Mask, folds, threads, null, y);
             	
@@ -1489,7 +1491,7 @@ public class SRLModel implements Serializable {
                 for (int i=0; i<labels.length; ++i)
                     score.addResult(labels[i], goldLabels[i]);
                 System.out.println(score.toString());
-            } else
+            } else*/
             	labels = newLabels;
         
             /*
