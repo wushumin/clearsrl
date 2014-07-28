@@ -15,17 +15,16 @@ import java.util.concurrent.TimeUnit;
 public class CrossValidator {
     
     class TrainJob implements Runnable{
-        int fold;
         Classifier cf;
         Object[] X;
         int[] y;
         int[] yValidate;
         double[][] labelValues;
         BitSet testIndices;
+        String msg;
         
-        public TrainJob(int fold, Classifier cf, Object[] X, int[] y, int[] yValidate, double[][] labelValues, BitSet validateIndices)
+        public TrainJob(Classifier cf, Object[] X, int[] y, int[] yValidate, double[][] labelValues, BitSet validateIndices, String msg)
         {
-            this.fold = fold;
             this.cf = cf;
             this.X = X;
             this.y = y;
@@ -36,7 +35,7 @@ public class CrossValidator {
         
         @Override
         public void run() {
-            System.out.printf("*********** Training fold %d ***************\n",fold+1);
+        	System.out.println(msg);
             if (testIndices==null || testIndices.isEmpty()) {
             	cf.trainNative(X, y);
             	return;
@@ -123,7 +122,8 @@ public class CrossValidator {
         if (threads>1) executor = Executors.newFixedThreadPool(threads);
           
         if (trainAll) { 
-            TrainJob job = new TrainJob(foldNum, classifier, X, y, null, null, null);
+            TrainJob job = new TrainJob(classifier, X, y, null, null, null,
+                    "*********** Training all ***************");
             if (executor!=null) executor.execute(job);
             else job.run();
         }
@@ -156,7 +156,8 @@ public class CrossValidator {
                 	validateIndices.set(i);
             
             Classifier cf = classifier.getNewInstance();
-            TrainJob job = new TrainJob(f, cf, X, y, yValidate, yValues, validateIndices);
+            TrainJob job = new TrainJob(cf, X, y, yValidate, yValues, validateIndices,
+                    String.format("*********** Training fold %d ***************\n",f+1));
             
             if (executor!=null) executor.execute(job);
             else job.run();

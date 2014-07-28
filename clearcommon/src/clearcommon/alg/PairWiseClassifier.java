@@ -32,17 +32,20 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         Object[] X;
         int[] y;
         double[] weights;
+        String msg;
         
-        public TrainJob(Classifier cf, Object[] X, int[]y, double[] weights)
+        public TrainJob(Classifier cf, Object[] X, int[]y, double[] weights, String msg)
         {
             this.cf = cf;
             this.X = X;
             this.y = y;
             this.weights = weights;
+            this.msg=msg;
         }
         
         @Override
         public void run() {
+        	System.out.println(msg);
             cf.trainNative(X, y, weights);
         }
     }
@@ -226,8 +229,6 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         
         for (int i=0; i<labelMap.size()-1; ++i) {
             for (int j=i+1; j<labelMap.size(); ++j) {
-                System.out.printf("Training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length);
-                System.out.println("Pairwise:");
                 {
                     Object[] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
                     int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
@@ -247,7 +248,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
                         System.out.println(weights[0]+" "+weights[1]);
                     }
                     
-                    TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights);
+                    TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights,
+                    		String.format("Pairwise training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length));
                     
                     if (executor !=null) executor.execute(job);
                     else job.run();
