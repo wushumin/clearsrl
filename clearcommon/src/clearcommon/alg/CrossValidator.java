@@ -31,6 +31,7 @@ public class CrossValidator {
             this.yValidate = yValidate;
             this.labelValues = labelValues;
             this.testIndices = validateIndices;
+            this.msg = msg;
         }
         
         @Override
