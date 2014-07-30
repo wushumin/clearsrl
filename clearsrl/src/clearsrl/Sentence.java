@@ -36,6 +36,7 @@ public class Sentence implements Serializable{
 		PROPBANK("pb"),
 		PARSE("parse", true),
 		PARSE_HEAD("parse.headed", true),
+		PARSE_DEP("parse.dep"),
 		SRL("prop"),
 		EC_DEP("ecdep"),
 		NAMED_ENTITY("ne");
@@ -130,6 +131,11 @@ public class Sentence implements Serializable{
 			parseMap = headSource.equals(Source.PARSE)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.PARSE.prefix+".dir"), fileList, langUtil.getHeadRules());
 		else if (sources.contains(Source.PARSE_HEAD))
 			parseMap = headSource.equals(Source.PARSE_HEAD)?sourceMap:TBUtil.readTBDir(props.getProperty(Source.PARSE_HEAD.prefix+".dir"), fileList);
+		
+		if (sources.contains(Source.PARSE_DEP))
+			TBUtil.addDependency(parseMap, new File(props.getProperty(Source.PARSE_DEP.prefix+".dir")), 
+					Integer.parseInt(props.getProperty(Source.PARSE_DEP.prefix+".idxcol", "6")), 
+					Integer.parseInt(props.getProperty(Source.PARSE_DEP.prefix+".labelcol", "7")));
 		
 		Map<String, SortedMap<Integer, List<PBInstance>>> srlMap=null;
 		if (sources.contains(Source.SRL) && parseMap!=null)

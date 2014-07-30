@@ -398,7 +398,7 @@ public class ParseCorpus {
             if (fileList != null) {
             	
                 fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
-                logger.info("parsing "+fileNames);
+                logger.info("parsing "+fileNames.size()+" files");
             }
             Map<String, TBTree[]> treeBank = fileList==null?
                     TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
