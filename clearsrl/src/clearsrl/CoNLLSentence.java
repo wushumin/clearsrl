@@ -27,20 +27,32 @@ public class CoNLLSentence {
     
     public static String toDepString(TBTree parse, SRInstance[] predictedSRLs)
     {
+    	
+    	boolean outputPOS = true;
+    	boolean outputDep = true;
+    	
+    	int depOffset = outputPOS?1:0;
+    	int srlOffset = outputDep?depOffset+1:depOffset;
+    	
         StringBuilder buffer = new StringBuilder();
-        String[][] outStr = new String[parse.getTokenCount()][3];
+        String[][] outStr = new String[parse.getTokenCount()][srlOffset+2];
         
         
         TBNode[] tokens = parse.getTokenNodes(); 
-        for (int i=0; i<outStr.length; ++i)
-        	outStr[i][0] = Integer.toString(tokens[i].getHeadOfHead()==null?0:(tokens[i].getHeadOfHead().getTokenIndex()+1));
+        
+        if (outputPOS)
+        	for (int i=0; i<outStr.length; ++i)
+            	outStr[i][0] = tokens[i].getPOS();
+        if (outputDep)
+        	for (int i=0; i<outStr.length; ++i)
+        		outStr[i][depOffset] = Integer.toString(tokens[i].getHeadOfHead()==null?0:(tokens[i].getHeadOfHead().getTokenIndex()+1));
         
         for (int i=0; i<outStr.length; ++i) {
-            outStr[i][1] = "_";
-            outStr[i][2] = "_";
+            outStr[i][srlOffset] = "_";
+            outStr[i][srlOffset+1] = "_";
         }
         for (int j=0; j<predictedSRLs.length; ++j) {
-            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][1] = predictedSRLs[j].rolesetId;
+            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][srlOffset] = predictedSRLs[j].rolesetId;
             //System.out.println(predictedSRLs[j].toCONLLString());
             
             String idStr = Integer.toString(predictedSRLs[j].getPredicateNode().getTokenIndex()+1);
@@ -53,7 +65,7 @@ public class CoNLLSentence {
             		continue;
             	vals[i] = idStr+':'+vals[i];
             	
-            	outStr[i][2] = outStr[i][2].equals("_")?vals[i]:outStr[i][2]+','+vals[i];
+            	outStr[i][srlOffset+1] = outStr[i][srlOffset+1].equals("_")?vals[i]:outStr[i][srlOffset+1]+','+vals[i];
             }
             
         }
@@ -64,10 +76,8 @@ public class CoNLLSentence {
                 if (maxlength[j]<outStr[i][j].length())
                     maxlength[j] = outStr[i][j].length();
 
-        for (int i=0; i<outStr.length; ++i)
-        {       
-            for (int j=0; j<outStr[i].length; ++j)
-            {
+        for (int i=0; i<outStr.length; ++i) {       
+            for (int j=0; j<outStr[i].length; ++j) {
                 buffer.append(outStr[i][j]);
                 for (int k=outStr[i][j].length(); k<=maxlength[j]; ++k)
                     buffer.append(' ');
