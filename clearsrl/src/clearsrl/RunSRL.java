@@ -5,6 +5,7 @@ import clearcommon.treebank.SerialTBFileReader;
 import clearcommon.treebank.TBFileReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.treebank.TBUtil;
+import clearcommon.treebank.TBUtil.Dependency;
 import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.ParseCorpus;
@@ -58,6 +59,9 @@ public class RunSRL {
     
     @Option(name="-in",usage="input file/directory")
     private File inFile = null; 
+    
+    @Option(name="-depIn",usage="dependency input file/directory")
+    private File depInFile = null; 
     
     @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
     private File inFileList = null; 
@@ -162,7 +166,7 @@ public class RunSRL {
         }
     }
     
-    void processInput(Reader reader, String inName, PrintWriter writer, String outName, ParseCorpus parser, Sentence[]  sentences, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
+    void processInput(Reader reader, BufferedReader depReader, String inName, PrintWriter writer, String outName, ParseCorpus parser, Sentence[]  sentences, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
     {
         logger.info("Processing "+(inName==null?"stdin":inName)+", outputing to "+(outName==null?"stdout":outName));
         
@@ -196,7 +200,11 @@ public class RunSRL {
 	        
 	        TBTree tree;
 	        while ((tree=treeReader.nextTree())!=null){
-	        	TBUtil.linkHeads(tree, langUtil.getHeadRules());
+	        	
+	        	if (depReader==null)
+	        		TBUtil.linkHeads(tree, langUtil.getHeadRules());
+	        	else
+	        		TBUtil.addDependency(tree, TBUtil.readCoNLLTree(depReader, 6, 7));
 	        	
 	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null)));
 	            while(true)
@@ -494,7 +502,7 @@ public class RunSRL {
                 phraseParser.initialize(PropertyUtil.filterProperties(props, "parser."));
             }   
             if (options.inFile==null && sentenceMap==null)
-                options.processInput(new InputStreamReader(System.in), null, new PrintWriter(System.out), null, phraseParser, null, options.langUtil);
+                options.processInput(new InputStreamReader(System.in), null, null, new PrintWriter(System.out), null, phraseParser, null, options.langUtil);
             else {
                 List<String> fileList = null;
                 
@@ -506,11 +514,21 @@ public class RunSRL {
                     
                 for (String fName:fileList) {
                     Reader reader = null;
+                    BufferedReader depReader = null;
                     Sentence[] sentences = null;
                     
                     if (sentenceMap==null) {
                     	File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
+                    	logger.info("Opening "+file.getPath());
                     	reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
+                    	
+                    	if (phraseParser==null && options.depInFile!=null) {
+                    		File depFile = new File(options.depInFile, fName+".dep");
+                    		if (depFile.exists()) {
+                    			logger.info("Opening "+depFile.getPath());
+                    			depReader = new BufferedReader(new InputStreamReader(new FileInputStream(depFile),"UTF-8"));
+                    		}
+                    	}	
                     } else
                     	sentences = sentenceMap.get(fName);
                     
@@ -536,7 +554,7 @@ public class RunSRL {
                         writer = new PrintWriter(new OutputStreamWriter(options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile), "UTF-8"));
                         foutName = outFile.getPath();
                     }
-                    options.processInput(reader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
+                    options.processInput(reader, depReader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
                     if (reader!=null) reader.close();
                     //writer.close();
                 }
