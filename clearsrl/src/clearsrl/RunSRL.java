@@ -556,6 +556,7 @@ public class RunSRL {
                     }
                     options.processInput(reader, depReader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
                     if (reader!=null) reader.close();
+                    if (depReader!=null) depReader.close();
                     //writer.close();
                 }
             }

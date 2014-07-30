@@ -335,6 +335,12 @@ public final class TBUtil {
 			}
 	}
 	
+	public static void addDependency(TBTree tree, Dependency[] deps)  {
+		TBNode[] terminals = tree.getTerminalNodes();
+		addDependency(0, terminals, deps);
+		addDependency(-1, terminals, deps);
+	}
+	
 	public static void addDependency(TBTree[] trees, File depFile, int idxCol, int labelCol) throws IOException {
 		try (BufferedReader reader = new BufferedReader(new FileReader(depFile))) {
 			Dependency[] deps;
