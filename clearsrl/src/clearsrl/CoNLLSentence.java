@@ -25,18 +25,15 @@ public class CoNLLSentence {
     SRInstance[] srls;
     
     
-    public static String toDepString(TBTree parse, SRInstance[] predictedSRLs)
-    {
-    	
+    public static String toDepString(TBTree parse, SRInstance[] predictedSRLs) {
     	boolean outputPOS = true;
     	boolean outputDep = true;
     	
     	int depOffset = outputPOS?1:0;
-    	int srlOffset = outputDep?depOffset+1:depOffset;
+    	int srlOffset = outputDep?depOffset+2:depOffset;
     	
         StringBuilder buffer = new StringBuilder();
         String[][] outStr = new String[parse.getTokenCount()][srlOffset+2];
-        
         
         TBNode[] tokens = parse.getTokenNodes(); 
         
@@ -44,8 +41,10 @@ public class CoNLLSentence {
         	for (int i=0; i<outStr.length; ++i)
             	outStr[i][0] = tokens[i].getPOS();
         if (outputDep)
-        	for (int i=0; i<outStr.length; ++i)
+        	for (int i=0; i<outStr.length; ++i) {
         		outStr[i][depOffset] = Integer.toString(tokens[i].getHeadOfHead()==null?0:(tokens[i].getHeadOfHead().getTokenIndex()+1));
+        		outStr[i][depOffset+1] = tokens[i].getDepLabel()==null?"_":tokens[i].getDepLabel();
+        	}
         
         for (int i=0; i<outStr.length; ++i) {
             outStr[i][srlOffset] = "_";
