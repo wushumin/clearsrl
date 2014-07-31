@@ -341,8 +341,11 @@ public final class TBUtil {
 	
 	public static void addDependency(TBTree tree, Dependency[] deps)  {
 		TBNode[] terminals = tree.getTerminalNodes();
-		if (terminals.length!=deps.length)
-			logger.severe("Mismatch: "+tree.getFilename()+":"+tree.getIndex()+"\n"+Arrays.asList(terminals)+"\n"+Arrays.asList(deps));
+		if (terminals.length!=deps.length) {
+			logger.severe("Mismatch: "+tree.getFilename()+":"+tree.getIndex()+"\n"+
+					Arrays.asList(terminals)+"\n"+Arrays.asList(deps)+"\nSkipped");
+			return;
+		}
 		addDependency(0, terminals, deps);
 		addDependency(-1, terminals, deps);
 	}
