@@ -355,20 +355,17 @@ public final class TBUtil {
 				deps = readCoNLLTree(reader, idxCol, labelCol);
 
 				// bug workaround
-				TBNode[] terminals = trees[count].getTerminalNodes();
-				if  (terminals.length==1 && (deps==null || deps.length!=1)) {
+				if  (trees[count].getTerminalCount()==1 && (deps==null || deps.length!=1)) {
 					Dependency[] dummy = {new Dependency(0, "ROOT")};
-					addDependency(0, terminals, dummy);
+					addDependency(trees[count], dummy);
 					
 					if (++count>=trees.length) break;
-					terminals = trees[count].getTerminalNodes();
 				}
 				
 				if (deps==null) break;
 				
-				addDependency(0, terminals, deps);
-				addDependency(-1, terminals, deps);
-
+				addDependency(trees[count], deps);
+				
 				if (++count>=trees.length)
 					break;
 			}
