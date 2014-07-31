@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -290,6 +291,9 @@ public final class TBUtil {
 			this.index = index;
 			this.label = label;
 		}
+		public String toString() {
+			return ""+index+"/"+label;
+		}
 	}
 	
 	public static Dependency[] readCoNLLTree(BufferedReader reader, int idxCol, int labelCol) throws IOException {
@@ -337,6 +341,8 @@ public final class TBUtil {
 	
 	public static void addDependency(TBTree tree, Dependency[] deps)  {
 		TBNode[] terminals = tree.getTerminalNodes();
+		if (terminals.length!=deps.length)
+			logger.severe("Mismatch: "+tree.getFilename()+":"+tree.getIndex()+"\n"+Arrays.asList(terminals)+"\n"+Arrays.asList(deps));
 		addDependency(0, terminals, deps);
 		addDependency(-1, terminals, deps);
 	}
