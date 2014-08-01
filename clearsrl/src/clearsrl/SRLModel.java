@@ -1428,7 +1428,7 @@ public class SRLModel implements Serializable {
         	int rTotal = 0;
         	
         	double[][] labelValues = new double[labels.length][argLabelStringMap.size()];
-            String[] newLabels = trainArguments(argLabelClassifier, r==0?null:labels, null, folds, threads, labelValues, y, false);
+            String[] newLabels = trainArguments(argLabelClassifier, r==0?null:labels, null, folds, false, threads, labelValues, y);
             
             int cnt=0;
             for (int i=0; i<labels.length; ++i) {
@@ -1547,7 +1547,7 @@ public class SRLModel implements Serializable {
 	        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
         }
-        String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, 1, threads, null, y, hasStage2Feature||!finalCrossValidation?false:true);
+        String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y);
         SRLScore score = new SRLScore(argLabelStringMap.keySet());
         for (int i=0; i<predictions.length; ++i)
             score.addResult(predictions[i], goldLabels[i]);
@@ -1562,7 +1562,7 @@ public class SRLModel implements Serializable {
 	            stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	            argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
         	}
-        	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, 1, threads, null, y, finalCrossValidation?true:false);
+        	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, finalCrossValidation?folds:1, true, threads, null, y);
         	int cnt = 0;
         	SRLScore score2 = new SRLScore(argLabelStringMap.keySet());
         	for (int i=0; i<goldLabels.length; ++i)
@@ -1584,7 +1584,7 @@ public class SRLModel implements Serializable {
      * @param labels set of predicted labels from last round of training
      * @return new set of labels
      */
-    String[] trainArguments(Classifier classifier, String[] predictedLabels, BitSet stage2Mask, int folds, int threads, double[][] values, int[] y, boolean trainAll) {             
+    String[] trainArguments(Classifier classifier, String[] predictedLabels, BitSet stage2Mask, int folds, boolean trainAll, int threads, double[][] values, int[] y) {             
         Object[] X = null;
 
         List<Object> xList = new ArrayList<Object>();
