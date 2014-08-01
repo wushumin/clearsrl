@@ -64,9 +64,10 @@ public class LinearClassifier extends Classifier implements Serializable {
         double[] values = new double[model.getNrClass()];
         int label = Linear.predictProbability(model, (int[])x, values);
         
+        Arrays.fill(prob, 0);
+        
         if (label==0) {
             label = Linear.predictValues(model, (int[])x, values);
-            Arrays.fill(prob, 0);
             prob[label-1]=1;
             return label;
         }
@@ -80,6 +81,8 @@ public class LinearClassifier extends Classifier implements Serializable {
     public int predictValuesNative(Object x, double[] val) {
     	double[] values = new double[model.getNrClass()];
         int label = Linear.predictValues(model, (int[])x, values);
+        
+        Arrays.fill(val, 0);
         for (int i=0; i<mLabelIdx.length; ++i)
             val[mLabelIdx[i]-1] = values[i];
         return label;

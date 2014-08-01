@@ -158,7 +158,7 @@ public class CrossValidator {
             
             Classifier cf = classifier.getNewInstance();
             TrainJob job = new TrainJob(cf, X, y, yValidate, yValues, validateIndices,
-                    String.format("*********** Training fold %d ***************\n",f+1));
+                    String.format("*********** Training fold %d ***************",f+1));
             
             if (executor!=null) executor.execute(job);
             else job.run();

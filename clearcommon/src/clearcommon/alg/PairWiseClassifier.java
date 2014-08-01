@@ -131,6 +131,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         
         for (int i=0; i<labelMap.size()-1; ++i)
             for (int j=i+1; j<labelMap.size(); ++j) {
+            	if (classifiers[i][j]==null) continue;
+            	
                 double[] probs = new double[classifiers[i][j].getClassCnt()];
                 int label = classifiers[i][j].predictValuesNative(x,probs);
                 //double a = 1 / (1 + Math.exp(-probs[0]));
@@ -229,31 +231,45 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         
         for (int i=0; i<labelMap.size()-1; ++i) {
             for (int j=i+1; j<labelMap.size(); ++j) {
-                {
-                    Object[] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
-                    int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
-                    for (int c=0; c<classLabels[i].size(); ++c) {
-                        XPair[c] = X[classLabels[i].get(c)];
-                        YPair[c] = 1;
-                    }
-                    for (int c=0; c<classLabels[j].size(); ++c) {
-                        XPair[c+classLabels[i].size()] = X[classLabels[j].get(c)];
-                        YPair[c+classLabels[i].size()] = 2;
-                    }
-                    double [] weights =null;
-                    if (weightY!=null) {
-                        weights = new double[2];
-                        weights[0] = weightY[i];
-                        weights[1] = weightY[j];
-                        System.out.println(weights[0]+" "+weights[1]);
-                    }
-                    
-                    TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights,
-                    		String.format("Pairwise training %s(%d) -- %s(%d) (%d)\n", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length));
-                    
-                    if (executor !=null) executor.execute(job);
-                    else job.run();
+
+            	if (classLabels[i].size()==0 || classLabels[j].size()==0) {
+            		classifiers[i][j]= null;
+            		continue;
+            	}
+                Object[] XPair = new int[classLabels[i].size()+classLabels[j].size()][];
+                int[] YPair = new int[classLabels[i].size()+classLabels[j].size()];
+                for (int c=0; c<classLabels[i].size(); ++c) {
+                    XPair[c] = X[classLabels[i].get(c)];
+                    YPair[c] = 1;
                 }
+                for (int c=0; c<classLabels[j].size(); ++c) {
+                    XPair[c+classLabels[i].size()] = X[classLabels[j].get(c)];
+                    YPair[c+classLabels[i].size()] = 2;
+                }
+                double [] weights =null;
+                if (weightY!=null) {
+                    weights = new double[2];
+                    weights[0] = weightY[i];
+                    weights[1] = weightY[j];
+                    System.out.println(weights[0]+" "+weights[1]);
+                }
+                
+                if (classifiers[i][j]==null) {
+                	TObjectIntMap<String> map = new TObjectIntHashMap<String>();
+                    map.put(labels[i], 1);
+                    map.put(labels[j], 2);
+                    
+                    classifiers[i][j] = new LinearClassifier();
+                    classifiers[i][j].dimension = dimension;
+                    classifiers[i][j].initialize(map, prop);
+                }
+                
+                TrainJob job = new TrainJob(classifiers[i][j], XPair, YPair, weights,
+                		String.format("Pairwise training %s(%d) -- %s(%d) (%d)", labels[i], classLabels[i].size(), labels[j], classLabels[j].size(), Y.length));
+                
+                if (executor !=null) executor.execute(job);
+                else job.run();
+
                 /*
                 System.out.println("2 vs rest");
                 {

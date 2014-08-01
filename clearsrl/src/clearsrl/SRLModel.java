@@ -1363,7 +1363,7 @@ public class SRLModel implements Serializable {
         
         makeTrainingArguments(Integer.parseInt(prop.getProperty("dictionary.cutoff", "2")));
         
-        
+        boolean finalCrossValidation = !prop.getProperty("crossvalidation.final","false").equals("false");
         int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));
         int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","1"));
         
@@ -1428,7 +1428,7 @@ public class SRLModel implements Serializable {
         	int rTotal = 0;
         	
         	double[][] labelValues = new double[labels.length][argLabelStringMap.size()];
-            String[] newLabels = trainArguments(argLabelClassifier, r==0?null:labels, null, folds, threads, labelValues, y);
+            String[] newLabels = trainArguments(argLabelClassifier, r==0?null:labels, null, folds, threads, labelValues, y, false);
             
             int cnt=0;
             for (int i=0; i<labels.length; ++i) {
@@ -1540,30 +1540,29 @@ public class SRLModel implements Serializable {
                 break;
             }
         }
-
-        {
+        if (hasStage2Feature||!finalCrossValidation) {
 	    	Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
 	    	int cvThreads = Integer.parseInt(stage1Prop.getProperty("crossvalidation.threads","1"));
 	        int pwThreads = Integer.parseInt(stage1Prop.getProperty("pairwise.threads","1"));
 	        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
         }
-        String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, 1, threads, null, y);
+        String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, 1, threads, null, y, hasStage2Feature||!finalCrossValidation?false:true);
         SRLScore score = new SRLScore(argLabelStringMap.keySet());
         for (int i=0; i<predictions.length; ++i)
             score.addResult(predictions[i], goldLabels[i]);
-        System.out.println("stage 1 training:");
+        System.out.println("stage 1 training"+(hasStage2Feature||!finalCrossValidation?"":"(cross validated)")+":");
         System.out.println(score.toString());
         
         if (hasStage2Feature) {
-        	{
+        	if (!finalCrossValidation) {
 	        	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
 	        	int cvThreads = Integer.parseInt(stage2Prop.getProperty("crossvalidation.threads","1"));
 	            int pwThreads = Integer.parseInt(stage2Prop.getProperty("pairwise.threads","1"));
 	            stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	            argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
         	}
-        	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, 1, threads, null, y);
+        	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, 1, threads, null, y, finalCrossValidation?true:false);
         	int cnt = 0;
         	SRLScore score2 = new SRLScore(argLabelStringMap.keySet());
         	for (int i=0; i<goldLabels.length; ++i)
@@ -1571,7 +1570,7 @@ public class SRLModel implements Serializable {
         			score2.addResult(NOT_ARG, goldLabels[i]);
         		else
         			score2.addResult(predictions[cnt++], goldLabels[i]);
-        	System.out.println("stage 2 training:");
+        	System.out.println("stage 2 training"+(finalCrossValidation?"(cross validated)":"")+":");
             System.out.println(score2.toString());
         }
     }
@@ -1585,7 +1584,7 @@ public class SRLModel implements Serializable {
      * @param labels set of predicted labels from last round of training
      * @return new set of labels
      */
-    String[] trainArguments(Classifier classifier, String[] predictedLabels, BitSet stage2Mask, int folds, int threads, double[][] values, int[] y) {             
+    String[] trainArguments(Classifier classifier, String[] predictedLabels, BitSet stage2Mask, int folds, int threads, double[][] values, int[] y, boolean trainAll) {             
         Object[] X = null;
 
         List<Object> xList = new ArrayList<Object>();
@@ -1618,7 +1617,7 @@ public class SRLModel implements Serializable {
         String[] newLabels = new String[y.length];
         if (folds>1) {
             CrossValidator validator = new CrossValidator(classifier, threads);
-            int[] yV =  validator.validate(folds, X, y, values, seedList.toArray(), false);
+            int[] yV =  validator.validate(folds, X, y, values, seedList.toArray(), trainAll);
             for (int i=0; i<yV.length; ++i)
                 newLabels[i] = argLabelIndexMap.get(yV[i]);
 
