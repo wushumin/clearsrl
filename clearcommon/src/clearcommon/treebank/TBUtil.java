@@ -339,6 +339,13 @@ public final class TBUtil {
 			}
 	}
 	
+	static void removeHead(TBNode node) {
+		node.head = null;
+		node.headConstituent = null;
+		for (TBNode child:node.children)
+			removeHead(child);
+	}
+
 	public static void addDependency(TBTree tree, Dependency[] deps)  {
 		TBNode[] terminals = tree.getTerminalNodes();
 		if (terminals.length!=deps.length) {
@@ -346,6 +353,8 @@ public final class TBUtil {
 					Arrays.asList(terminals)+"\n"+Arrays.asList(deps)+"\nSkipped");
 			return;
 		}
+		// remove previous head info first
+		removeHead(tree.getRootNode());
 		addDependency(0, terminals, deps);
 		addDependency(-1, terminals, deps);
 	}
