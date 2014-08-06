@@ -1394,11 +1394,12 @@ public class SRLModel implements Serializable {
         			verbScore.addResult(NOT_ARG, goldLabels[i]);
     		} else {
     			score.addResult(sysLabels[cnt], goldLabels[i]);
-    			if (nomScore==null) continue;
-    			if (nominalMask.get(i))
-        			nomScore.addResult(sysLabels[cnt], goldLabels[i]);
-        		else
-        			verbScore.addResult(sysLabels[cnt], goldLabels[i]);
+    			if (nomScore!=null) {
+	    			if (nominalMask.get(i))
+	        			nomScore.addResult(sysLabels[cnt], goldLabels[i]);
+	        		else
+	        			verbScore.addResult(sysLabels[cnt], goldLabels[i]);
+    			}
     			++cnt;	
     		}
         System.out.println("Overall:");
@@ -1517,8 +1518,13 @@ public class SRLModel implements Serializable {
         	double[][] labelValues = new double[labels.length][argLabelStringMap.size()];
             String[] newLabels = trainArguments(argLabelClassifier, nounArgLabelClassifier, r==0?null:labels, null, folds, false, threads, labelValues, y);
 
-            argLabelStage2Threshold = computeThreshold(nominalMask, false, goldLabels, newLabels, labelValues, stage2Threshold);
-            nounArgLabelStage2Threshold = computeThreshold(nominalMask, true, goldLabels, newLabels, labelValues, stage2Threshold);
+            if (argLabelClassifier==nounArgLabelClassifier) {
+            	argLabelStage2Threshold = computeThreshold(new BitSet(), false, goldLabels, newLabels, labelValues, stage2Threshold);
+            	nounArgLabelStage2Threshold = argLabelStage2Threshold;
+            } else {
+	            argLabelStage2Threshold = computeThreshold(nominalMask, false, goldLabels, newLabels, labelValues, stage2Threshold);
+	            nounArgLabelStage2Threshold = computeThreshold(nominalMask, true, goldLabels, newLabels, labelValues, stage2Threshold);
+            }
             stage2Mask = new BitSet();
             for (int i=0; i<newLabels.length; ++i)
             	if (!NOT_ARG.equals(newLabels[i]) || 
