@@ -1934,7 +1934,7 @@ public class SRLModel implements Serializable {
     		}
     	
     	//boolean isNominal = !langUtil.isVerb(prediction.getPredicateNode().getPOS());
-    	boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):langUtil.isVerb(gold.getPredicateNode().getPOS());
+    	boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):!langUtil.isVerb(gold.getPredicateNode().getPOS());
     	
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
         
