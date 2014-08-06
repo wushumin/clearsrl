@@ -3,8 +3,6 @@ package clearsrl;
 import clearcommon.alg.Classifier;
 import clearcommon.alg.CrossValidator;
 import clearcommon.alg.FeatureSet;
-import clearcommon.alg.LinearClassifier;
-import clearcommon.alg.PairWiseClassifier;
 import clearcommon.alg.SimpleModel;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
@@ -307,6 +305,11 @@ public class SRLModel implements Serializable {
     
     Map<String, List<String>>               argTopicMap = null;
     
+    FeatureSet<Feature>                     nounArgLabelFeatures = null;
+    Classifier                              nounArgLabelClassifier = null;
+    Classifier                              nounArgLabelStage2Classifier = null;
+    double                                  nounArgLabelStage2Threshold = 0;
+    
     transient LanguageUtil                  langUtil;
     
 //  transient ArrayList<int[]>              predicateTrainingFeatures;
@@ -343,17 +346,30 @@ public class SRLModel implements Serializable {
     private void readObject(java.io.ObjectInputStream in)
     	     throws IOException, ClassNotFoundException {
     	in.defaultReadObject();
+    	if (nounArgLabelFeatures == null) {
+    		nounArgLabelFeatures = argLabelFeatures;
+    		nounArgLabelClassifier = argLabelClassifier;
+    		nounArgLabelStage2Classifier = argLabelStage2Classifier;
+    		nounArgLabelStage2Threshold = argLabelStage2Threshold;
+    	}
     	logger = Logger.getLogger("clearsrl");
     }
     
     public void initialize(Properties props) throws IOException {
     	filterArgs = !props.getProperty("filterArguments", "false").equals("false");
     	trainNominal = !props.getProperty("trainNominal", "true").equals("false");
+    	boolean separateNominalClassifier = !props.getProperty("separateNominalClassifier", "false").equals("false");
     	
         predicateModel.initialize();
         rolesetModelMap = new HashMap<String, SimpleModel<Feature>>();
 
         argLabelFeatures.initialize(); 
+        if (trainNominal && separateNominalClassifier) {
+        	nounArgLabelFeatures = new FeatureSet<Feature>(argFeatureSet);
+        	nounArgLabelFeatures.initialize();
+        } else 
+        	nounArgLabelFeatures = argLabelFeatures;
+        
         // process name/id + object name/id means this should be unique, right?
         String uniqueExtension = ManagementFactory.getRuntimeMXBean().getName()+'.'+Integer.toHexString(System.identityHashCode(this));
 
@@ -387,10 +403,6 @@ public class SRLModel implements Serializable {
     
     public void setPredicateOverride(Set<String> keySet) {
     	predicateOverrideKeySet = keySet;
-    }
-    
-    public TObjectIntMap<String> getLabelValueMap() {
-        return argLabelStringMap;
     }
 
     protected void finalize() {
@@ -448,6 +460,8 @@ public class SRLModel implements Serializable {
             logger.info("  "+label+" "+argLabelStringMap.get(label));
         
         argLabelFeatures.rebuildMap(cutoff);
+        if (nounArgLabelFeatures!=argLabelFeatures)
+        	nounArgLabelFeatures.rebuildMap(cutoff);
         
         FeatureSet.buildMapIndex(argLabelStringMap, 0, true);
         argLabelIndexMap = new TIntObjectHashMap<String>();
@@ -706,9 +720,9 @@ public class SRLModel implements Serializable {
         List<TBNode> argNodes = new ArrayList<TBNode>(candidateMap.keySet());
         List<String> labels = new ArrayList<String>();
         
-        boolean isNominal = !langUtil.isVerb(sampleInstance.getPredicateNode().getPOS());
+        boolean isNominal = !langUtil.isVerb(goldInstance.getPredicateNode().getPOS());
         
-        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(sampleInstance.predicateNode, argNodes, sampleInstance.getRolesetId(), depEC, namedEntities);
+        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nounArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, argNodes, sampleInstance.getRolesetId(), depEC, namedEntities);
         
         for (TBNode node:argNodes) {
             if (candidateMap.get(node)==null)
@@ -754,9 +768,12 @@ public class SRLModel implements Serializable {
             
             for (int i=0; i<featureMapList.size();++i) {
                 boolean isNoArg = NOT_ARG.equals(argSamples[i].label);
-                featureMapList.get(i).putAll(extractFeatureSequence(sampleInstance.predicateNode, sampleInstance.getRolesetId(), sampleList.get(i), sampleInstance, predictedList, buildDictionary));
+                featureMapList.get(i).putAll(extractFeatureSequence(isNominal?nounArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, sampleInstance.getRolesetId(), sampleList.get(i), sampleInstance, predictedList, buildDictionary));
                 for(Map.Entry<EnumSet<Feature>,Collection<String>> entry:argLabelFeatures.convertFlatSample(featureMapList.get(i)).entrySet())
-                    argLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), (isNominal?nominalWeight:1)*(isNoArg?noArgWeight:1));
+                	if (isNominal)
+                		nounArgLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), isNoArg?noArgWeight:(nounArgLabelFeatures==argLabelFeatures?nominalWeight:1));
+                	else
+                		argLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), isNoArg?noArgWeight:1);
                 
                 //if (!NOT_ARG.equals(SRLUtil.getMaxLabel(labels.get(c))))
                 //  System.out.println(sample.get(Feature.PATH));
@@ -768,7 +785,7 @@ public class SRLModel implements Serializable {
         }
     }
 
-    public EnumMap<Feature,Collection<String>> extractFeatureArgument(TBNode predicateNode, TBNode argNode, String[] namedEntities) {
+    public EnumMap<Feature,Collection<String>> extractFeatureArgument(FeatureSet<Feature> featureSet, TBNode predicateNode, TBNode argNode, String[] namedEntities) {
         EnumMap<Feature,Collection<String>> featureMap = new EnumMap<Feature,Collection<String>>(Feature.class);
         List<TBNode> tnodes = argNode.getTokenNodes();
         
@@ -835,7 +852,7 @@ public class SRLModel implements Serializable {
         int cstDst = countConstituents(argToTopNodes.get(0).getPOS(), isBefore?argToTopNodes:predToTopNodes, isBefore?predToTopNodes:argToTopNodes, joinNode);
         //System.out.println(cstDst+" "+path);
         
-        for (Feature feature:argLabelFeatures.getFeaturesFlat()) {
+        for (Feature feature:featureSet.getFeaturesFlat()) {
             String pathStr=null;
             {
                 StringBuilder buffer = new StringBuilder();
@@ -1028,23 +1045,23 @@ public class SRLModel implements Serializable {
         return featureMap;
     }
 
-    List<EnumMap<Feature,Collection<String>>> extractFeatureSRL(TBNode predicateNode, List<TBNode> argNodes, String frame, String[] depEC, String[] namedEntities) {   
+    List<EnumMap<Feature,Collection<String>>> extractFeatureSRL(FeatureSet<Feature> featureSet, TBNode predicateNode, List<TBNode> argNodes, String frame, String[] depEC, String[] namedEntities) {   
         List<EnumMap<Feature,Collection<String>>> featureMapList = new ArrayList<EnumMap<Feature,Collection<String>>>();
         
-        EnumMap<Feature,Collection<String>> defaultMap = extractFeaturePredicate(argLabelFeatures.getFeaturesFlat(), predicateNode, frame, depEC);
+        EnumMap<Feature,Collection<String>> defaultMap = extractFeaturePredicate(featureSet.getFeaturesFlat(), predicateNode, frame, depEC);
 
         for (TBNode argNode:argNodes) {
-            EnumMap<Feature,Collection<String>> featureMap = extractFeatureArgument(predicateNode, argNode, namedEntities);
+            EnumMap<Feature,Collection<String>> featureMap = extractFeatureArgument(featureSet, predicateNode, argNode, namedEntities);
             featureMap.putAll(defaultMap);
             featureMapList.add(featureMap);
         }
         return featureMapList;
     }
     
-    EnumMap<Feature,Collection<String>> extractFeatureSequence(TBNode predicate, String rolesetId, ArgSample sample, SRInstance support, List<SRArg> predictedArgs, boolean buildDictionary) {
+    EnumMap<Feature,Collection<String>> extractFeatureSequence(FeatureSet<Feature> featureSet, TBNode predicate, String rolesetId, ArgSample sample, SRInstance support, List<SRArg> predictedArgs, boolean buildDictionary) {
         EnumMap<Feature,Collection<String>> featureMap = new EnumMap<Feature,Collection<String>>(Feature.class);
         
-        for (Feature feature:argLabelFeatures.getFeaturesFlat()) {
+        for (Feature feature:featureSet.getFeaturesFlat()) {
         switch (feature) {
             case SUPPORT:
                 if (support!=null) {
@@ -1336,6 +1353,64 @@ public class SRLModel implements Serializable {
         }
     }
     
+    double computeThreshold(BitSet mask, boolean setMask, String[] goldLabels, String[] labels, double[][] labelValues, double threshold) {
+    	TDoubleArrayList rList = new TDoubleArrayList();
+    	int rTotal = 0;
+        for (int i=0; i<goldLabels.length; ++i) {
+            if (setMask^mask.get(i)) continue;
+            makeProb(labelValues[i]);
+
+            if (NOT_ARG.equals(goldLabels[i])) continue;
+            
+            if (NOT_ARG.equals(labels[i]))
+            	rList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
+            else // !NOT_ARG.equals(newLabels[i])
+            	rTotal++;
+        }
+        
+        double[] rVal = rList.toArray();
+        Arrays.sort(rVal);
+        
+        double recall = 1.0*rTotal/(rVal.length+rTotal);
+        logger.info(String.format("IS_ARG recall %f %d/%d\n", recall, rTotal, rVal.length+rTotal));
+        if (recall<threshold)
+        	return rVal[(int)Math.floor(rVal.length-(1-threshold)*(rVal.length+rTotal))];
+        return 1;
+    }
+    
+    void printScore(String[] sysLabels, String[] goldLabels, BitSet nominalMask, BitSet stage2Mask) {
+    	SRLScore score = new SRLScore(argLabelStringMap.keySet());
+    	SRLScore nomScore = nominalMask.isEmpty()?null:new SRLScore(argLabelStringMap.keySet());
+    	SRLScore verbScore = nominalMask.isEmpty()?null:new SRLScore(argLabelStringMap.keySet());
+    	
+    	int cnt=0;
+    	for (int i=0; i<goldLabels.length; ++i)
+    		if (stage2Mask!=null && !stage2Mask.get(i)) {
+    			score.addResult(NOT_ARG, goldLabels[i]);
+    			if (nomScore==null) continue;
+    			if (nominalMask.get(i))
+        			nomScore.addResult(NOT_ARG, goldLabels[i]);
+        		else
+        			verbScore.addResult(NOT_ARG, goldLabels[i]);
+    		} else {
+    			score.addResult(sysLabels[cnt], goldLabels[i]);
+    			if (nomScore==null) continue;
+    			if (nominalMask.get(i))
+        			nomScore.addResult(sysLabels[cnt], goldLabels[i]);
+        		else
+        			verbScore.addResult(sysLabels[cnt], goldLabels[i]);
+    			++cnt;	
+    		}
+        System.out.println("Overall:");
+        System.out.println(score.toString());
+        if (nomScore!=null) {
+        	 System.out.println("Verb:");
+             System.out.println(verbScore.toString());
+             System.out.println("Nominal:");
+             System.out.println(nomScore.toString());
+        }
+    }
+    
     public void train(Properties prop) throws IOException {
     	
     	// finalize dictionary & close the training sample cache stream
@@ -1379,12 +1454,28 @@ public class SRLModel implements Serializable {
             argLabelClassifier.setDimension(argLabelFeatures.getDimension());
             argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
             
+            if (argLabelFeatures!=nounArgLabelFeatures) {
+            	Properties stage1NomProp = PropertyUtil.filterProperties(PropertyUtil.filterProperties(prop, "nominal.",true), "stage1.",true);
+            	nounArgLabelClassifier=(Classifier)Class.forName(stage1NomProp.getProperty("classifier", "clearcommon.alg.LinearClassifier")).newInstance();
+            	nounArgLabelClassifier.setDimension(nounArgLabelFeatures.getDimension());
+            	nounArgLabelClassifier.initialize(argLabelStringMap, stage1NomProp);
+            } else
+            	nounArgLabelClassifier = argLabelClassifier;
+            
             if (hasStage2Feature) {
             	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
             	stage2Threshold = Double.parseDouble(stage2Prop.getProperty("threshold","0.95"));
             	argLabelStage2Classifier = (Classifier)Class.forName(stage2Prop.getProperty("classifier", "clearcommon.alg.PairWiseClassifier")).newInstance();
             	argLabelStage2Classifier.setDimension(argLabelFeatures.getDimension());
             	argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
+            	
+            	if (argLabelFeatures!=nounArgLabelFeatures) {
+            		Properties stage2NomProp = PropertyUtil.filterProperties(PropertyUtil.filterProperties(prop, "nominal.",true), "stage2.",true);
+                	nounArgLabelStage2Classifier=(Classifier)Class.forName(stage2NomProp.getProperty("classifier", "clearcommon.alg.PairWiseClassifier")).newInstance();
+                	nounArgLabelStage2Classifier.setDimension(nounArgLabelFeatures.getDimension());
+                	nounArgLabelStage2Classifier.initialize(argLabelStringMap, stage2NomProp);
+                } else
+                	nounArgLabelStage2Classifier = argLabelStage2Classifier;
             }
             
         } catch (InstantiationException e2) {
@@ -1409,9 +1500,10 @@ public class SRLModel implements Serializable {
         
         String[] goldLabels = null;
         int[] y = null;
+        BitSet nominalMask = new BitSet();
         {
         	List<String> labelList = new ArrayList<String>();
-        	readTrainingArguments(extractedSampleFile, null, null, null, null, labelList, null);
+        	readTrainingArguments(extractedSampleFile, null, null, null, null, null, labelList, nominalMask, null);
         	goldLabels = labelList.toArray(new String[labelList.size()]);
         	y = new int[goldLabels.length];
         	for (int i=0; i<goldLabels.length; ++i)
@@ -1422,123 +1514,39 @@ public class SRLModel implements Serializable {
         
         String[] labels = Arrays.copyOf(goldLabels, goldLabels.length);
         for (int r=0; r<rounds; ++r) {
-        	stage2Mask = new BitSet();
-        	TDoubleArrayList pList = new TDoubleArrayList();
-        	TDoubleArrayList rList = new TDoubleArrayList();
-        	int rTotal = 0;
-        	
         	double[][] labelValues = new double[labels.length][argLabelStringMap.size()];
-            String[] newLabels = trainArguments(argLabelClassifier, r==0?null:labels, null, folds, false, threads, labelValues, y);
-            
-            int cnt=0;
-            for (int i=0; i<labels.length; ++i) {
-                //if (i<50) System.out.println(i+" "+labels[i]+" "+newLabels[i]);
-                if (labels[i].equals(newLabels[i])) ++cnt;
-                
-                makeProb(labelValues[i]);
-                
-                if (NOT_ARG.equals(goldLabels[i]))
-                	pList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
-                else if (NOT_ARG.equals(newLabels[i]))
-                	rList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
-                else // !NOT_ARG.equals(newLabels[i])
-                	rTotal++;
-            }
-            
-            double[] rVal = rList.toArray();
-            double[] pVal = pList.toArray();
-            Arrays.sort(rVal);
-            Arrays.sort(pVal);
-            
-            double recall = 1.0*rTotal/(rVal.length+rTotal);
-            logger.info(String.format("IS_ARG recall %f %d/%d\n", recall, rTotal, rVal.length+rTotal));
-            if (recall>stage2Threshold)
-            	argLabelStage2Threshold = 1;
-            else
-            	argLabelStage2Threshold = rVal[(int)Math.floor(rVal.length-(1-stage2Threshold)*(rVal.length+rTotal))];
-            
+            String[] newLabels = trainArguments(argLabelClassifier, nounArgLabelClassifier, r==0?null:labels, null, folds, false, threads, labelValues, y);
+
+            argLabelStage2Threshold = computeThreshold(nominalMask, false, goldLabels, newLabels, labelValues, stage2Threshold);
+            nounArgLabelStage2Threshold = computeThreshold(nominalMask, true, goldLabels, newLabels, labelValues, stage2Threshold);
+            stage2Mask = new BitSet();
             for (int i=0; i<newLabels.length; ++i)
-            	if (!NOT_ARG.equals(newLabels[i]) || labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold)
+            	if (!NOT_ARG.equals(newLabels[i]) || 
+            			!nominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
+            			nominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nounArgLabelStage2Threshold)
             		stage2Mask.set(i);
-            
+
+            int cnt=0;
+            for (int i=0; i<labels.length; ++i)
+                if (labels[i].equals(newLabels[i])) ++cnt;    
             double agreement = cnt*1.0/labels.length;
             System.out.printf("Round %d stage 1: %f\n", r, agreement);
-            SRLScore score = new SRLScore(argLabelStringMap.keySet());
-            for (int i=0; i<newLabels.length; ++i)
-                score.addResult(newLabels[i], goldLabels[i]);        
-            System.out.println(score.toString());
-
-            logger.info(String.format("Threshold: %f, NO_ARG value: %f, %d/%d filtered, %d training arguments", stage2Threshold, argLabelStage2Threshold, pVal.length-Math.abs(Arrays.binarySearch(pVal, argLabelStage2Threshold)), pVal.length, stage2Mask.cardinality()));
+            printScore(newLabels, goldLabels, nominalMask, null);
             
-            /*
-            if (hasSequenceFeature && hasStage2Feature) {
-            	newLabels = trainArguments(argLabelStage2Classifier, newLabels, stage2Mask, folds, threads, null, y);
-            	
-            	cnt=0;
-            	int nCnt=0;
-                for (int i=0; i<labels.length; ++i)
-                	if (stage2Mask.get(i)) {
-                		if (labels[i].equals(newLabels[nCnt])) ++cnt;
-                		labels[i] = newLabels[nCnt++];
-                	} else {
-                		if (labels[i].equals(NOT_ARG)) ++cnt;
-                		labels[i] = NOT_ARG;
-                	}
-                		
-                agreement = cnt*1.0/labels.length;
-                System.out.printf("Round %d stage 2: %f\n", r, agreement);
-                score = new SRLScore(argLabelStringMap.keySet());
-                for (int i=0; i<labels.length; ++i)
-                    score.addResult(labels[i], goldLabels[i]);
-                System.out.println(score.toString());
-            } else*/
-            	labels = newLabels;
-        
-            /*
-            int lcnt=0;
-            SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
-            SRLScore score3 = new SRLScore(new TreeSet<String>(Arrays.asList(labelStringMap.keys(new String[labelStringMap.size()]))));
-            for (Map.Entry<String, SortedMap<Integer, List<SRLSample>>> entry:trainingSamples.entrySet())
-                for (Map.Entry<Integer, List<SRLSample>> entry2:entry.getValue().entrySet()) {
-                    List<SRInstance> instances;
-                    SRInstance[] goldInstances = new SRInstance[entry2.getValue().size()];
-                    for (int i=0; i<entry2.getValue().size(); ++i) {
-                        SRLSample sample = entry2.getValue().get(i);
-                        goldInstances[i] = sample.gold;
-                        SRInstance instance = new SRInstance(sample.predicate, sample.tree);
-                        SRInstance goldInstance = new SRInstance(sample.predicate, sample.tree);
-                        List<TBNode> nodes = new ArrayList<TBNode>(sample.args.length);
-                        for (ArgSample argSample:sample.args) {
-                            nodes.add(argSample.node);
-                            if (!goldLabels[lcnt].equals(NOT_ARG))
-                                goldInstance.addArg(new SRArg(goldLabels[lcnt], argSample.node));
-                            ++lcnt;
-                        }
-                        predict(instance, nodes, sample.support==null?null:makeSRInstance(sample.support), null);
-                        score2.addResult(instance, sample.gold);
-                    }
-                    //if (goldInstances.length>0)
-                        //System.out.println("Predicting: "+entry2.getValue().get(0).tree.getFilename()+" "+entry2.getValue().get(0).tree.getIndex());
-                    instances = predict(entry2.getValue().get(0).tree, goldInstances, null);
-                    for (int i=0; i<instances.size(); ++i)
-                        score3.addResult(instances.get(i), goldInstances[i]);
-                }
-            System.out.println(score2.toString());
-            System.out.println(score3.toString());
-            */
-            if (1-agreement<=threshold) {
-                /*if (r>0) {
-                    // change the training sample labels back
-                    int labelCnt=0;
-                    for (Map.Entry<String, SortedMap<Integer, List<SRLSample>>> entry:trainingSamples.entrySet())
-                        for (Map.Entry<Integer, List<SRLSample>> entry2:entry.getValue().entrySet())
-                            for (SRLSample sample:entry2.getValue()) {
-                                for (ArgSample argSample:sample.args)
-                                    argSample.label=goldLabels[labelCnt++];        
-                            }
-                }*/
+            TDoubleArrayList pList = new TDoubleArrayList();
+            for (int i=0; i<labels.length; ++i)
+                if (NOT_ARG.equals(goldLabels[i]))
+                	pList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
+            double[] pVal = pList.toArray();
+            Arrays.sort(pVal);
+
+            logger.info(String.format("Threshold: %f, verb NO_ARG value: %f, nominal NO_ARG value: %f, %d/%d filtered, %d training arguments", 
+            		stage2Threshold, argLabelStage2Threshold, nounArgLabelStage2Threshold, pVal.length-Math.abs(Arrays.binarySearch(pVal, argLabelStage2Threshold)), pVal.length, stage2Mask.cardinality()));
+            
+            labels = newLabels;
+            
+            if (1-agreement<=threshold)
                 break;
-            }
         }
         if (hasStage2Feature||!finalCrossValidation) {
 	    	Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
@@ -1547,12 +1555,9 @@ public class SRLModel implements Serializable {
 	        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
         }
-        String[] predictions = trainArguments(argLabelClassifier, rounds>0?labels:null, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y);
-        SRLScore score = new SRLScore(argLabelStringMap.keySet());
-        for (int i=0; i<predictions.length; ++i)
-            score.addResult(predictions[i], goldLabels[i]);
+        String[] predictions = trainArguments(argLabelClassifier, nounArgLabelClassifier, rounds>0?labels:null, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y);
         System.out.println("stage 1 training"+(hasStage2Feature||!finalCrossValidation?"":"(cross validated)")+":");
-        System.out.println(score.toString());
+        printScore(predictions, goldLabels, nominalMask, null);
         
         if (hasStage2Feature) {
         	if (!finalCrossValidation) {
@@ -1561,17 +1566,14 @@ public class SRLModel implements Serializable {
 	            int pwThreads = Integer.parseInt(stage2Prop.getProperty("pairwise.threads","1"));
 	            stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 	            argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
+	            if (argLabelStage2Classifier!=nounArgLabelStage2Classifier) {
+	            	Properties stage2NomProp = PropertyUtil.filterProperties(PropertyUtil.filterProperties(prop, "nominal.",true), "stage2.",true);
+	            	nounArgLabelStage2Classifier.initialize(argLabelStringMap, stage2NomProp);
+	            }
         	}
-        	predictions = trainArguments(argLabelStage2Classifier, labels, stage2Mask, finalCrossValidation?folds:1, true, threads, null, y);
-        	int cnt = 0;
-        	SRLScore score2 = new SRLScore(argLabelStringMap.keySet());
-        	for (int i=0; i<goldLabels.length; ++i)
-        		if (!stage2Mask.get(i))
-        			score2.addResult(NOT_ARG, goldLabels[i]);
-        		else
-        			score2.addResult(predictions[cnt++], goldLabels[i]);
+        	predictions = trainArguments(argLabelStage2Classifier, nounArgLabelStage2Classifier, labels, stage2Mask, finalCrossValidation?folds:1, true, threads, null, y);
         	System.out.println("stage 2 training"+(finalCrossValidation?"(cross validated)":"")+":");
-            System.out.println(score2.toString());
+            printScore(predictions, goldLabels, nominalMask, stage2Mask);
         }
     }
 
@@ -1579,45 +1581,93 @@ public class SRLModel implements Serializable {
     /**
      * 
      * @param useSequence whether to use sequence features (may not be a good idea at the start)
-     * @param folds folds of x-validataion
-     * @param threads number of threads used for x-validataion
+     * @param folds folds of x-validation
+     * @param threads number of threads used for x-validation
      * @param labels set of predicted labels from last round of training
      * @return new set of labels
      */
-    String[] trainArguments(Classifier classifier, String[] predictedLabels, BitSet stage2Mask, int folds, boolean trainAll, int threads, double[][] values, int[] y) {             
+    String[] trainArguments(Classifier verbClassifier, Classifier nounClassifier, String[] predictedLabels, BitSet stage2Mask, int folds, boolean trainAll, int threads, double[][] values, int[] y) {             
         Object[] X = null;
-
-        List<Object> xList = new ArrayList<Object>();
-        TIntArrayList seedList = new TIntArrayList();
-        List<String> stage2GoldLabels = stage2Mask==null?null:new ArrayList<String>();
-
-        readTrainingArguments(extractedSampleFile, predictedLabels, stage2Mask, classifier, xList, stage2GoldLabels, folds>1?seedList:null);
-        
-        X = xList.toArray();
-
-        if (stage2GoldLabels!=null) {
-        	y= new int[stage2GoldLabels.size()];
-        	for (int i=0; i<y.length; ++i)
-        		y[i] = argLabelStringMap.get(stage2GoldLabels.get(i));
+        int[] seeds = null;
+        BitSet nominalMask = new BitSet();
+        {
+	        List<Object> xList = new ArrayList<Object>();
+	        TIntArrayList seedList = new TIntArrayList();
+	        List<String> stage2GoldLabels = stage2Mask==null?null:new ArrayList<String>();
+	
+	        readTrainingArguments(extractedSampleFile, predictedLabels, stage2Mask, verbClassifier, nounClassifier, xList, stage2GoldLabels, nominalMask, folds>1?seedList:null);
+	        
+	        X = xList.toArray();
+	
+	        if (stage2GoldLabels!=null) {
+	        	y= new int[stage2GoldLabels.size()];
+	        	for (int i=0; i<y.length; ++i)
+	        		y[i] = argLabelStringMap.get(stage2GoldLabels.get(i));
+	        }
+	        if (!seedList.isEmpty())
+	        	seeds = seedList.toArray();
         }
         
-        /*
-        double[] weights = new double[argLabelStringMap.size()];
-        String[] labelTypes = argLabelStringMap.keys(new String[argLabelStringMap.size()]);
-        Arrays.sort(labelTypes);
-        int idx=0;
-        for (String label:labelTypes) {
-            if (label.equals(NOT_ARG))
-                weights[idx] = 1;
-            else
-                weights[idx] = 1;
-            ++idx;
-        }*/
-
+        if (verbClassifier==nounClassifier)
+        	return trainClassifier(verbClassifier, X, y, values, seeds, folds, trainAll, threads);
+        
+        int nCount = nominalMask.cardinality();
+        int vCount = y.length-nCount;
+        
+        Object[] vX = new Object[vCount];
+        Object[] nX = new Object[nCount];
+        int[] vy = new int[vCount];
+        int[] ny = new int[nCount];
+        double[][] vValues = values==null?null:new double[vCount][];
+        double[][] nValues = values==null?null:new double[nCount][];
+        int[] vSeeds = seeds==null?null:new int[vCount];
+        int[] nSeeds = seeds==null?null:new int[nCount];
+        
+        vCount = 0;
+        nCount = 0;
+        for (int i=0; i<y.length; ++i) {
+        	if (nominalMask.get(i)) {
+        		nX[nCount] = X[i];
+        		ny[nCount] = y[i];
+        		if (nValues!=null) nValues[nCount] = values[i];
+        		if (nSeeds!=null) nSeeds[nCount] = seeds[i];
+        		++nCount;
+        	} else {
+        		vX[vCount] = X[i];
+        		vy[vCount] = y[i];
+        		if (vValues!=null) vValues[vCount] = values[i];
+        		if (vSeeds!=null) vSeeds[vCount] = seeds[i];
+        		++vCount;
+        	}
+        }
+        
+        String[] vLabels = trainClassifier(verbClassifier, vX, vy, vValues, vSeeds, folds, trainAll, threads);
+        String[] nLabels = trainClassifier(nounClassifier, nX, ny, nValues, nSeeds, folds, trainAll, threads);
+        
         String[] newLabels = new String[y.length];
+        
+        vCount = 0;
+        nCount = 0;
+        for (int i=0; i<y.length; ++i) {
+        	if (nominalMask.get(i)) {
+        		newLabels[i] = nLabels[nCount];
+        		if (values!=null) values[i] = nValues[nCount];
+        		++nCount;
+        	} else {
+        		newLabels[i] = vLabels[vCount];
+        		if (values!=null) values[i] = vValues[vCount];
+        		++vCount;
+        	}
+        }
+        return newLabels;
+    }
+    
+    
+    String[] trainClassifier(Classifier classifier, Object[] X, int[] y, double[][] values, int[] seeds, int folds, boolean trainAll, int threads) {
+    	String[] newLabels = new String[y.length];
         if (folds>1) {
             CrossValidator validator = new CrossValidator(classifier, threads);
-            int[] yV =  validator.validate(folds, X, y, values, seedList.toArray(), trainAll);
+            int[] yV =  validator.validate(folds, X, y, values, seeds, trainAll);
             for (int i=0; i<yV.length; ++i)
                 newLabels[i] = argLabelIndexMap.get(yV[i]);
 
@@ -1628,30 +1678,40 @@ public class SRLModel implements Serializable {
         }
         System.gc();
         return newLabels;
+    	
     }
 
-    void readTrainingArguments(File sampleFile, String[] predictedLabels, BitSet stage2Mask, Classifier classifier, List<Object> xList, List<String> labelList, TIntArrayList seedList) {
+    void readTrainingArguments(File sampleFile, String[] predictedLabels, BitSet stage2Mask, Classifier verbClassifier, Classifier nounClassifier, List<Object> xList, List<String> labelList, BitSet nominalMask, TIntArrayList seedList) {
     	
     	if (xList!=null) xList.clear();
     	if (labelList!=null) labelList.clear();
+    	if (nominalMask!=null) nominalMask.clear();
     	if (seedList!=null) seedList.clear();
     	
     	try (ObjectInputStream cachedInStream = 
     			new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(sampleFile),GZIP_BUFFER),GZIP_BUFFER*4))) {
             int predictedCnt=0;
             int stage2Cnt=0;
+            int sampleCount=0;
             Set<String> treeNameSet = new HashSet<String>();
             for (;;) {
                 TBTree tree = (TBTree)cachedInStream.readObject();
                 treeNameSet.add(tree.getFilename());
                 SRLSample[] samples = (SRLSample[]) cachedInStream.readObject();
                 // relabel everything first
-                if (labelList!=null) {
+                if (labelList!=null || nominalMask!=null) {
                 	int stage2LocalCnt = stage2Cnt;
-                	for (SRLSample srlSample:samples) 
+                	for (SRLSample srlSample:samples) {
+                		boolean isNominalPred = !langUtil.isVerb(srlSample.gold.predicateNode.getPOS());
                		 	for (ArgSample argSample:srlSample.args)
-               		 		if (stage2Mask==null || stage2Mask.get(stage2LocalCnt++))
-               		 			labelList.add(argSample.label);
+               		 		if (stage2Mask==null || stage2Mask.get(stage2LocalCnt++)) {
+               		 			if (nominalMask!=null && isNominalPred)
+               		 				nominalMask.set(sampleCount);
+               		 			sampleCount++;
+               		 			if (labelList!=null)
+               		 				labelList.add(argSample.label);
+               		 		}
+                	}
                 }
                 if (predictedLabels!=null)
                 	 for (SRLSample srlSample:samples) 
@@ -1659,6 +1719,8 @@ public class SRLModel implements Serializable {
                 			 argSample.label = predictedLabels[predictedCnt++];
 
                 for (SRLSample srlSample:samples) {
+                	boolean isNominalPred = !langUtil.isVerb(srlSample.gold.predicateNode.getPOS());
+                	
                     List<SRArg> predictedArgs = new ArrayList<SRArg>();
                     if (stage2Mask!=null)
 	                    for (ArgSample argSample:srlSample.args)
@@ -1677,8 +1739,10 @@ public class SRLModel implements Serializable {
 	                                if (!supportArg.label.equals(NOT_ARG))
 	                                    support.addArg(new SRArg(supportArg.label, supportArg.node));
 	                        }
-	                
-	                        xList.add(classifier.getNativeFormat(getFeatureVector(srlSample.predicate, srlSample.roleset, argSample, support, predictedArgs)));
+	                        if (isNominalPred)
+	                        	xList.add(nounClassifier.getNativeFormat(getFeatureVector(nounArgLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, support, predictedArgs)));
+	                        else
+	                        	xList.add(verbClassifier.getNativeFormat(getFeatureVector(argLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, support, predictedArgs)));
                     	}
                         
                         if (seedList!=null)
@@ -1703,10 +1767,10 @@ public class SRLModel implements Serializable {
     }
     
     
-    int[] getFeatureVector(TBNode predicate, String rolesetId, ArgSample sample, SRInstance support, List<SRArg> predictedArgs) {
-        EnumMap<Feature,Collection<String>> sampleFeatures = extractFeatureSequence(predicate, rolesetId, sample, support, predictedArgs, false);
+    int[] getFeatureVector(FeatureSet<Feature> featureSet, TBNode predicate, String rolesetId, ArgSample sample, SRInstance support, List<SRArg> predictedArgs) {
+        EnumMap<Feature,Collection<String>> sampleFeatures = extractFeatureSequence(featureSet, predicate, rolesetId, sample, support, predictedArgs, false);
         sampleFeatures.putAll(sample.features);
-        return argLabelFeatures.getFeatureVector(sampleFeatures);
+        return featureSet.getFeatureVector(sampleFeatures);
     }
  
     String predictRoleSet(TBNode node, EnumMap<Feature,Collection<String>> features) {
@@ -1865,7 +1929,9 @@ public class SRLModel implements Serializable {
     			break;
     		}
     	
-        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
+    	boolean isNominal = !langUtil.isVerb(prediction.getPredicateNode().getPOS());
+    	
+        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
         
         ArgSample[] fsamples = new ArgSample[featureMapList.size()];
         
@@ -1882,7 +1948,7 @@ public class SRLModel implements Serializable {
         for (int i=0; i<fsamples.length; ++i) {
             double[] labelValues = new double[argLabelIndexMap.size()];
             // TODO: needs to be changed
-            int[] x = getFeatureVector(prediction.predicateNode, prediction.rolesetId, fsamples[i], support, emptyArgs);
+            int[] x = getFeatureVector(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, emptyArgs);
             int labelIndex;
             if (argLabelClassifier.canPredictProb())
                 labelIndex = argLabelClassifier.predictProb(x, labelValues);
@@ -1934,7 +2000,7 @@ public class SRLModel implements Serializable {
         		if (!stage2Mask.get(i)) continue;
         	
                 double[] labelValues = new double[argLabelIndexMap.size()];
-                int[] x = getFeatureVector(prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
+                int[] x = getFeatureVector(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
                 int labelIndex;
                 if (argLabelStage2Classifier.canPredictProb())
                     labelIndex = argLabelStage2Classifier.predictProb(x, labelValues);

@@ -186,7 +186,7 @@ public class SRLScore {
         }
         builder.append("---------- Arg Results ------------\n");
         builder.append(toString(macroCount));
-        builder.append("************************\n\n");
+        builder.append("************************\n");
         
         return builder.toString();
     }
