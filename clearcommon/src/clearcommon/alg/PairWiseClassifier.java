@@ -306,7 +306,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     	BitSet mask = new BitSet();
     	for (int i=0; i<labelMap.size()-1; ++i)
             for (int j=i+1; j<labelMap.size(); ++j)
-            	mask.or(classifiers[i][j].getFeatureMask());
+            	if (classifiers[i][j]!=null)
+            		mask.or(classifiers[i][j].getFeatureMask());
     	return mask;
     }
     
