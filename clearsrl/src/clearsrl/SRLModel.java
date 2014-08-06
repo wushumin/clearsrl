@@ -1947,15 +1947,25 @@ public class SRLModel implements Serializable {
         List<SRArg> emptyArgs = new ArrayList<SRArg>();
         for (int i=0; i<fsamples.length; ++i) {
             double[] labelValues = new double[argLabelIndexMap.size()];
-            // TODO: needs to be changed
-            int[] x = getFeatureVector(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, emptyArgs);
             int labelIndex;
-            if (argLabelClassifier.canPredictProb())
-                labelIndex = argLabelClassifier.predictProb(x, labelValues);
-            else {
-                labelIndex = argLabelClassifier.predictValues(x, labelValues);
-                makeProb(labelValues);
+            if (isNominal) {
+            	int[] x = getFeatureVector(nounArgLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, emptyArgs);
+                if (nounArgLabelClassifier.canPredictProb())
+	                labelIndex = nounArgLabelClassifier.predictProb(x, labelValues);
+	            else {
+	                labelIndex = nounArgLabelClassifier.predictValues(x, labelValues);
+	                makeProb(labelValues);
+	            }
+            } else {
+            	int[] x = getFeatureVector(argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, emptyArgs);
+                if (argLabelClassifier.canPredictProb())
+	                labelIndex = argLabelClassifier.predictProb(x, labelValues);
+	            else {
+	                labelIndex = argLabelClassifier.predictValues(x, labelValues);
+	                makeProb(labelValues);
+	            }
             }
+           
             String goldLabel = fsamples[i].label;
             fsamples[i].label = argLabelIndexMap.get(labelIndex);
 
@@ -1963,7 +1973,8 @@ public class SRLModel implements Serializable {
                 prediction.addArg(new SRArg(fsamples[i].label, fsamples[i].node, labelValues, argLabelStringMap));
                 if (stage2Mask!=null)
                 	stage2Mask.set(i);
-            } else if (labelValues[argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold)
+            } else if (!isNominal && labelValues[argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
+            		isNominal && labelValues[argLabelStringMap.get(NOT_ARG)-1]<=nounArgLabelStage2Threshold)
             	if (stage2Mask!=null)
             		stage2Mask.set(i);    
                 
@@ -1998,15 +2009,26 @@ public class SRLModel implements Serializable {
         	prediction.args.add(rel);
         	for (int i=0; i<fsamples.length; ++i) {
         		if (!stage2Mask.get(i)) continue;
-        	
+
                 double[] labelValues = new double[argLabelIndexMap.size()];
-                int[] x = getFeatureVector(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
                 int labelIndex;
-                if (argLabelStage2Classifier.canPredictProb())
-                    labelIndex = argLabelStage2Classifier.predictProb(x, labelValues);
-                else {
-                    labelIndex = argLabelStage2Classifier.predictValues(x, labelValues);
-                    makeProb(labelValues);
+                
+                if (isNominal) {
+                	int[] x = getFeatureVector(nounArgLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
+	                if (nounArgLabelStage2Classifier.canPredictProb())
+	                    labelIndex = nounArgLabelStage2Classifier.predictProb(x, labelValues);
+	                else {
+	                    labelIndex = nounArgLabelStage2Classifier.predictValues(x, labelValues);
+	                    makeProb(labelValues);
+	                }
+                } else {
+	                int[] x = getFeatureVector(argLabelFeatures, prediction.predicateNode, prediction.rolesetId, fsamples[i], support, predictedArgs);
+	                if (argLabelStage2Classifier.canPredictProb())
+	                    labelIndex = argLabelStage2Classifier.predictProb(x, labelValues);
+	                else {
+	                    labelIndex = argLabelStage2Classifier.predictValues(x, labelValues);
+	                    makeProb(labelValues);
+	                }
                 }
                 
                 fsamples[i].label = argLabelIndexMap.get(labelIndex);
