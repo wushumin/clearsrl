@@ -771,7 +771,7 @@ public class SRLModel implements Serializable {
                 featureMapList.get(i).putAll(extractFeatureSequence(isNominal?nounArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, sampleInstance.getRolesetId(), sampleList.get(i), sampleInstance, predictedList, buildDictionary));
                 for(Map.Entry<EnumSet<Feature>,Collection<String>> entry:argLabelFeatures.convertFlatSample(featureMapList.get(i)).entrySet())
                 	if (isNominal)
-                		nounArgLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), isNoArg?noArgWeight:(nounArgLabelFeatures==argLabelFeatures?nominalWeight:1));
+                		nounArgLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), isNoArg?noArgWeight:nominalWeight);
                 	else
                 		argLabelFeatures.addToDictionary(entry.getKey(), entry.getValue(), isNoArg?noArgWeight:1);
                 
