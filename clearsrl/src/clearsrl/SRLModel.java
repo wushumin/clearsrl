@@ -1902,29 +1902,27 @@ public class SRLModel implements Serializable {
         return predictions;
     }
 
-    public int predict(SRInstance prediction, SRInstance gold, SRInstance support, String[] namedEntities) {
-        List<TBNode> candidateNodes = SRLUtil.getArgumentCandidates(prediction.predicateNode, filterArgs, support, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
-        List<SRArg> goldArgs=null;
-        if (gold!=null) {
-            Map<TBNode, SRArg> candidateMap = mapArguments(gold, prediction.getTree(), candidateNodes);
-            
-            candidateNodes = new ArrayList<TBNode>(candidateMap.size());
-            goldArgs = new ArrayList<SRArg>(candidateMap.size());
-            
-            for (Map.Entry<TBNode, SRArg> entry:candidateMap.entrySet()) {
-                candidateNodes.add(entry.getKey());
-                goldArgs.add(entry.getValue());
-            }
-        }
-        return predict(prediction, candidateNodes, goldArgs, support, namedEntities);
-    } 
-
     transient int filteredArg = 0;
     transient int totalArg = 0;
     transient int filteredNoArg = 0;
     transient int totalNoArg = 0;
     
-    int predict(SRInstance prediction, List<TBNode> argNodes, List<SRArg> goldArgs, SRInstance support, String[] namedEntities) {
+    public int predict(SRInstance prediction, SRInstance gold, SRInstance support, String[] namedEntities) {
+    	
+    	List<TBNode> argNodes = SRLUtil.getArgumentCandidates(prediction.predicateNode, filterArgs, support, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
+        List<SRArg> goldArgs=null;
+        if (gold!=null) {
+            Map<TBNode, SRArg> candidateMap = mapArguments(gold, prediction.getTree(), argNodes);
+            
+            argNodes = new ArrayList<TBNode>(candidateMap.size());
+            goldArgs = new ArrayList<SRArg>(candidateMap.size());
+            
+            for (Map.Entry<TBNode, SRArg> entry:candidateMap.entrySet()) {
+            	argNodes.add(entry.getKey());
+                goldArgs.add(entry.getValue());
+            }
+        }
+    	
         //System.out.println("Predicting "+prediction.tree.getFilename()+" "+prediction.tree.getIndex()+" "+prediction.predicateNode.getTokenIndex());
     	
     	for (TBNode node:argNodes)
@@ -1935,7 +1933,8 @@ public class SRLModel implements Serializable {
     			break;
     		}
     	
-    	boolean isNominal = !langUtil.isVerb(prediction.getPredicateNode().getPOS());
+    	//boolean isNominal = !langUtil.isVerb(prediction.getPredicateNode().getPOS());
+    	boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):langUtil.isVerb(gold.getPredicateNode().getPOS());
     	
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nounArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
         
