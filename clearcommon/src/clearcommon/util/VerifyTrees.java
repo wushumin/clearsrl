@@ -2,18 +2,14 @@ package clearcommon.util;
 
 import java.io.File;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.PBFileReader;
 import clearcommon.treebank.SerialTBFileReader;
 
 public class VerifyTrees {
-	
-    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     @Option(name="-dir",usage="input directory")
     private String treeDir = null; 

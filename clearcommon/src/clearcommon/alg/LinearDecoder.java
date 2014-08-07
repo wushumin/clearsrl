@@ -63,9 +63,7 @@ public class LinearDecoder
         System.out.print("Intiializing weights: ");
         SparseVector[] sWeight = new SparseVector[numLabels];
 
-        try
-        {
-            BufferedReader fin = new BufferedReader(new FileReader(modelFile));
+        try (BufferedReader fin = new BufferedReader(new FileReader(modelFile))) {
         //  BufferedReader fin = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(modelFile))));
             String line;   int i;
             
@@ -99,20 +97,18 @@ public class LinearDecoder
      * @param numLabels total number of labels
      * @throws FileNotFoundException 
      */
-    public double[] getPriors(String priorFile, int numLabels) throws FileNotFoundException
-    {
-        Scanner  scan   = new Scanner(new BufferedReader(new FileReader(priorFile)));
+    public double[] getPriors(String priorFile, int numLabels) throws FileNotFoundException {
+    	Scanner  scan   = new Scanner(new BufferedReader(new FileReader(priorFile)));
         double[] priors = new double[numLabels];
         
-        while (scan.hasNextLine())
-        {
+        while (scan.hasNextLine()) {
             String[]  ls = scan.nextLine().split(SuperTrainer.COL_DELIM);
             int    label = Integer.parseInt  (ls[0]);
             double prior = Double.parseDouble(ls[1]);
             
             priors[label] = prior;
         }
-        
+        scan.close();
         return priors;
     }
     

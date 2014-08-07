@@ -1,12 +1,9 @@
 package clearcommon.alg;
 
 import gnu.trove.iterator.TObjectIntIterator;
-import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Properties;
 

@@ -2,9 +2,7 @@ package clearcommon.propbank;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.List;
-import java.util.logging.Logger;
 
 import clearcommon.treebank.*;
 
@@ -14,8 +12,6 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
      * 
      */
     private static final long serialVersionUID = -1966998836839085182L;
-    
-    private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
     TBNode      predicateNode;
     TBNode      prrNode;
@@ -128,7 +124,6 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
         Arrays.fill(preMarkup, "");
         Arrays.fill(postMarkup, "");
         
-        String color;
         for (PBArg arg : (printEC?getAllArgs():getArgs()))  
             markArg(arg, preMarkup, postMarkup, "["+arg.getLabel()+" ", "]", printEC);
         
@@ -146,48 +141,7 @@ public class PBInstance implements Comparable<PBInstance>, Serializable
     {
         return toText(false);
     }
-    /*
-    public String toText(boolean includeTerminals)
-    {
-        StringBuilder buffer = new StringBuilder();
-        buffer.append(tree.getFilename()); buffer.append(" ");
-        buffer.append(tree.getIndex()); buffer.append(" ");
-        
-        List<TBNode> nodes = includeTerminals?tree.getRootNode().getTerminalNodes():tree.getRootNode().getTokenNodes();
-        String[] tokens = new String[nodes.size()];
-        for (int i=0; i<tokens.length; ++i)
-            tokens[i] = nodes.get(i).getWord();
-        
-        for (PBArg arg:includeTerminals?allArgs:args)
-        {
-            BitSet bits = includeTerminals?arg.node.getTerminalSet():arg.node.getTokenSet();//arg.getTokenSet();
-            if (bits.nextSetBit(0)<0) continue;
-            if (bits.nextSetBit(0)>= nodes.size())
-                logger.warning(nodes.toString()+"\n"+arg.label+": "+bits);
-            
-            tokens[bits.nextSetBit(0)] = '['+arg.label+' '+tokens[bits.nextSetBit(0)];
-            tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
-            
-            for (PBArg carg:arg.nestedArgs)
-            {
-                bits = includeTerminals?carg.node.getTerminalSet():carg.getTokenSet();
-                if (bits.nextSetBit(0)<0) continue;
-                if (bits.nextSetBit(0)>= nodes.size())
-                    logger.warning(nodes.toString()+"\n"+carg.label+": "+bits);
-                
-                tokens[bits.nextSetBit(0)] = '['+carg.label+' '+tokens[bits.nextSetBit(0)];
-                tokens[bits.length()-1] = tokens[bits.length()-1]+"]";
-            }
-        }
-        
-        for (String token:tokens)
-            buffer.append(token+' ');
-        
-        return buffer.toString();
-    }
 
-    */
-    
     @Override
     public String toString() {
         StringBuilder str = new StringBuilder();

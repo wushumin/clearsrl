@@ -34,29 +34,26 @@ import java.util.Scanner;
  * @author Jinho D. Choi
  * <b>Last update:</b> 9/1/2010
  */
-public class TBHeadRules
-{
+public class TBHeadRules {
     static public final String FIELD_DELIM = "\t";
     static public final String HEAD_DELIM  = ";";
     
     private HashMap<String, TBHeadRule> m_headrules;
     
-    public TBHeadRules(String inputFile) throws FileNotFoundException
-    {
+    public TBHeadRules(String inputFile) throws FileNotFoundException {
         Scanner scan = new Scanner(new BufferedReader(new FileReader(inputFile)));
         m_headrules  = new HashMap<String, TBHeadRule>();
         
-        while (scan.hasNextLine())
-        {
+        while (scan.hasNextLine()) {
             String line = scan.nextLine();
             if (line.charAt(0) == '#')  continue;
             TBHeadRule rule = new TBHeadRule(line);
             m_headrules.put(rule.ruleName, rule);
         }
+        scan.close();
     }
     
-    public TBHeadRule getHeadRule(String pos)
-    {
+    public TBHeadRule getHeadRule(String pos) {
         return m_headrules.get(pos);
     }
 }

@@ -1,6 +1,5 @@
 package clearcommon.treebank;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -9,7 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import clearcommon.propbank.PBFileReader;
-import clearcommon.util.PropertyUtil;
 
 public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     

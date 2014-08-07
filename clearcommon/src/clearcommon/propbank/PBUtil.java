@@ -1,7 +1,6 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.ParseException;
-import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.util.FileUtil;
@@ -55,7 +54,6 @@ public final class PBUtil {
         SortedMap<Integer, List<PBInstance>> instances;
         
         Set<String> predicates = new HashSet<String>();
-        int pCnt = 0;
         
         for (String annotationFile: files)
         {
@@ -93,7 +91,6 @@ public final class PBUtil {
                 ++correctCnt;
                 
                 predicates.add(instance.rolesetId);
-                ++pCnt;
                 
                 //System.out.println(instance.treeFile+" "+instance.treeIndex+" "+instance.predicateIndex);
                 instances = pbMap.get(instance.tree.getFilename());
