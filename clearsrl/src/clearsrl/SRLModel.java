@@ -1299,7 +1299,7 @@ public class SRLModel implements Serializable {
             	if (rolesetId!=null) {
             		Roleset role = langUtil.getRoleSet(predicateNode, rolesetId);
             	    if (role!=null)
-            	    	sampleFlat.put(feature, role.getRoles());
+            	    	sampleFlat.put(feature, new ArrayList<String>(role.getRoles()));
             	}
             	break;
             case ROLESETCLASS:
