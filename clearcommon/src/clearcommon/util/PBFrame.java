@@ -25,7 +25,7 @@ public class PBFrame {
         }
         
         public void addRole(String label, String auxLabel) {
-        	roleMap.put(label.toLowerCase(), auxLabel==null?null:auxLabel.toLowerCase());
+        	roleMap.put(label.toLowerCase(), auxLabel==null||auxLabel.trim().isEmpty()?null:auxLabel.trim().toLowerCase());
         }
         
         public boolean hasRole(String label) {
