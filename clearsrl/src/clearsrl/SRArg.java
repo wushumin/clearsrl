@@ -17,6 +17,7 @@ public class SRArg implements Comparable<SRArg>, Serializable{
     TBNode node;
     BitSet tokenSet;
     String label;
+    String auxLabel;
     double score;
     double[] scores; 
     
@@ -61,11 +62,15 @@ public class SRArg implements Comparable<SRArg>, Serializable{
         this.score = 0;
     }
     
-    String getLabel() {
+    public String getLabel() {
         return label;
     }
     
-    BitSet getTokenSet() {
+    public String getAuxLabel() {
+    	return auxLabel;
+    }
+    
+    public BitSet getTokenSet() {
         return (BitSet)tokenSet.clone();
     }
 

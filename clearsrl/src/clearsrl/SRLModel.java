@@ -2049,6 +2049,12 @@ public class SRLModel implements Serializable {
         }
         
         prediction.cleanUpArgs();
+        Roleset roleSet = langUtil.getRoleSet(prediction.predicateNode, prediction.rolesetId);
+        
+        if  (roleSet!=null)
+        	for (SRArg arg:prediction.getArgs())
+        		arg.auxLabel=roleSet.getAuxLabel(arg.label);
+        
         //System.out.println(prediction);
         //System.out.println(fsamples);
         

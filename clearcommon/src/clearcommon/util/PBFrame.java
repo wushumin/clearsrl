@@ -1,6 +1,7 @@
 package clearcommon.util;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -10,28 +11,25 @@ import java.util.TreeMap;
 public class PBFrame {
     public class Roleset {
         String id;
-        private Set<String> roles;
+        private Map<String, String> roleMap;
         private Set<String> classes;
         
         public Roleset(String id) {
-            this.id = id;
-            this.roles = new HashSet<String>();
+        	this(id, null);
         }
         
         public Roleset(String id, Set<String> classes) {
             this.id = id;
+            this.roleMap = new HashMap<String, String>();
             this.classes = classes;
-            this.roles = new HashSet<String>();
         }
         
-        public void addRole(String label) {
-        	roles.add(label.toLowerCase());
-        	if (label.toLowerCase().matches("arg\\d.+"))
-        		roles.add(label.toLowerCase().substring(0, 4));
+        public void addRole(String label, String auxLabel) {
+        	roleMap.put(label.toLowerCase(), auxLabel==null?null:auxLabel.toLowerCase());
         }
         
         public boolean hasRole(String label) {
-        	return roles.contains(label.toLowerCase());
+        	return roleMap.containsKey(label.toLowerCase());
         }
         
         public String getId() {
@@ -39,7 +37,15 @@ public class PBFrame {
         }
 
         public Set<String> getRoles() {
-            return Collections.unmodifiableSet(roles);
+            return Collections.unmodifiableSet(roleMap.keySet());
+        }
+        
+        public Map<String, String> getRoleMap() {
+            return Collections.unmodifiableMap(roleMap);
+        }
+        
+        public String getAuxLabel(String label) {
+        	return roleMap.get(label.toLowerCase());
         }
         
         public Set<String> getClasses() {
@@ -47,7 +53,7 @@ public class PBFrame {
         }
  
         public String toString() {
-            return id+' '+roles;
+            return id+' '+roleMap;
         }
     }
     

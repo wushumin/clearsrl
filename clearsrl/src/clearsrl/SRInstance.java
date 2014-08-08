@@ -348,7 +348,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         for (SRArg arg:args) {
             if (arg.label.equals(SRLModel.NOT_ARG)) continue;
 
-            labels[arg.node.getHead().getTokenIndex()] = arg.label;
+            labels[arg.node.getHead().getTokenIndex()] = arg.label+(arg.auxLabel==null?"":"="+arg.auxLabel.toUpperCase());
         }
         
         for (int i=0; i<labels.length; ++i) {
