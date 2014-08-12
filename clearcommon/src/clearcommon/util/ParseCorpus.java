@@ -46,10 +46,6 @@ import org.kohsuke.args4j.Option;
  * @author shumin
  *
  */
-/**
- * @author shumin
- *
- */
 public class ParseCorpus {
     
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
@@ -395,11 +391,8 @@ public class ParseCorpus {
         if (props.getProperty("tbdir")!=null) {
             String fileList = props.getProperty("filelist");
             
-            if (fileList != null) {
-            	
+            if (fileList != null)
                 fileNames = FileUtil.getFileList(new File(props.getProperty("tbdir")), new File(fileList));
-                logger.info("parsing "+fileNames.size()+" files");
-            }
             Map<String, TBTree[]> treeBank = fileList==null?
                     TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("regex")):
                     TBUtil.readTBDir(props.getProperty("tbdir"), fileNames);
@@ -408,11 +401,10 @@ public class ParseCorpus {
         
         if (fileNames==null) {
             fileNames = FileUtil.getFiles(new File(txtDir), props.getProperty("txtregex", "[^\\.].*"));
-            logger.info("parsing "+fileNames);
+            logger.info("parsing "+fileNames.size()+" files");
         }
         
-        for (String fileName:fileNames)
-        {
+        for (String fileName:fileNames) {
             File inputFile = new File(txtDir, fileName);
             if (!inputFile.exists()) {
                 logger.severe(inputFile.getAbsolutePath()+" does not exist");
