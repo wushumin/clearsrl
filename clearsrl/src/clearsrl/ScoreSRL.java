@@ -24,15 +24,27 @@ import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
+import clearsrl.SRInstance.OutputFormat;
 import clearsrl.util.Topics;
 
 public class ScoreSRL {
+	
+	enum Verbose {
+		ALL,
+		VERB,
+		NOUN,
+		EC,
+		NONE
+	}
 	
 	@Option(name="-prop",usage="properties file")
     private File propFile = null;
 	
 	@Option(name="-d",usage="directory")
     private String dirName = null;
+
+	@Option(name="-v",usage="verbosity (of output difference)")
+    private Verbose verbose = Verbose.NONE;
 	
 	@Option(name="-h",usage="help message")
     private boolean help = false;
@@ -232,10 +244,19 @@ public class ScoreSRL {
                     }
                     if (!found) continue;
                     
-                    for (int i=0; i<scores.length;++i)
-                    {
-                    	printARGDiff(sysInstances.get(i), goldInstance);
-                        scores[i].addResult(sysInstances.get(i), goldInstance);
+                    for (int i=0; i<scores.length;++i) {
+                    	if (options.verbose==Verbose.EC)
+                    		printARGDiff(sysInstances.get(i), goldInstance);
+                        boolean match = scores[i].addResult(sysInstances.get(i), goldInstance);
+                        if (!match && options.verbose!=Verbose.NONE && (options.verbose==Verbose.ALL ||
+                        			options.verbose==Verbose.VERB && goldInstance.getPredicateNode().getPOS().startsWith("V") ||
+                        			options.verbose==Verbose.NOUN && !goldInstance.getPredicateNode().getPOS().startsWith("V"))) { 
+                    		System.out.println(goldInstance.toString(OutputFormat.TEXT));
+                    		System.out.println(sysInstances.get(i).toString(OutputFormat.TEXT));
+                    		System.out.println(sysInstances.get(i).getTree().toPrettyParse());
+                    		System.out.println(goldInstance.getTree().toPrettyParse());
+                        }
+                        
                         if (goldInstance.getPredicateNode().getPOS().startsWith("V")) {
                             vScores[i].addResult(sysInstances.get(i), goldInstance);
                             boolean foundPro = false;

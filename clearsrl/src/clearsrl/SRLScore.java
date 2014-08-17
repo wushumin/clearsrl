@@ -126,11 +126,14 @@ public class SRLScore {
         return instance;
     }
     
-    public void addResult(String systemLabel, String goldLabel) {
+    public boolean addResult(String systemLabel, String goldLabel) {
         macroCount[labelMap.get(systemLabel)][labelMap.get(goldLabel)]++;
+        return labelMap.get(systemLabel)==labelMap.get(goldLabel);
     }
     
-    public void addResult(SRInstance systemSRL, SRInstance goldSRL) {
+    public boolean addResult(SRInstance systemSRL, SRInstance goldSRL) {
+    	boolean same = true;
+    	
         List<SRArg> sysArgs = systemSRL.getScoringArgs();
         List<SRArg> goldArgs = goldSRL.getScoringArgs();
         
@@ -145,11 +148,13 @@ public class SRLScore {
 
         for (int i=0, j=0; i<sysArgs.size() || j<goldArgs.size();) {
             if (i>=sysArgs.size()) {
+            	same = false;
                 macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
                 ++j;
                 continue;
             }
             if (j>=goldArgs.size()) {
+            	same = false;
                 macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
                 ++i;
                 continue;
@@ -157,21 +162,27 @@ public class SRLScore {
             
             int compare = sysArgs.get(i).compareTo(goldArgs.get(j));
             if (compare<0) {
+            	same = false;
                 macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
                 ++i;
             } else if (compare>0) {
+            	same = false;
                 macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
                 ++j;
             } else {
-                if (sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet))
-                    macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
-                else {
+                if (sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet)) {
+                	macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
+                    if (labelMap.get(sysArgs.get(i).label)!=labelMap.get(goldArgs.get(j).label))
+                    	same = false;
+                } else {
+                	same = false;
                     macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
                     macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
                 }
                 ++i; ++j;
             }   
         }
+        return same;
     }
     
     public String toString() {
