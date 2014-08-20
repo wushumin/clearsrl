@@ -39,6 +39,8 @@ public class Sentence implements Serializable{
 	 */
     private static final long serialVersionUID = 1L;
 
+    static Logger logger = Logger.getLogger("clearsrl");
+    
 	public enum Source {
 		TREEBANK("tb", true),
 		TB_HEAD("tb.headed", true),
@@ -91,17 +93,18 @@ public class Sentence implements Serializable{
 	static final Pattern nePattern = Pattern.compile("<(/??[A-Z]{3,}?)>");
 	static String[][] readNE(File file, TBTree[] trees) {
 		List<String[]> neList = new ArrayList<String[]>();
+		logger.info("Reading NE from "+file.getPath());
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
 			String line;
 			while ((line=reader.readLine())!=null) {
 				String[] tokens = line.trim().split(" +");
 				if (trees!=null) {
 					if (neList.size()>=trees.length) {
-						System.err.println("NE line length exceeded trees for "+file.getPath());
+						logger.severe("NE line length exceeded trees for "+file.getPath());
 						break;
 					}
 					if (tokens.length!=trees[neList.size()].getTokenCount()) {
-						System.err.printf("NE mismatch found for %s:%d\n", file.getPath(), neList.size());
+						logger.warning(String.format("NE mismatch found for %s:%d\n", file.getPath(), neList.size()));
 						neList.add(null);
 						break;
 					}
