@@ -1025,7 +1025,11 @@ public class SRLModel implements Serializable {
                 break;
             }
             case NAMEDENTITIES:
-            {
+            	if (head.isToken() && namedEntities[head.getTokenIndex()]!=null)
+            		featureMap.put(feature, Arrays.asList(namedEntities[head.getTokenIndex()]));
+            	break;
+            	/*
+            {            	
                 if (namedEntities==null) break;
                 Set<String> neSet = new TreeSet<String>();
                 for (TBNode node:tnodes)
@@ -1041,7 +1045,7 @@ public class SRLModel implements Serializable {
                     featureMap.put(feature, Arrays.asList(neSet.toArray(new String[neSet.size()])));
                 }
                 break;
-            }
+            }*/
             default:
                 break;
             }
