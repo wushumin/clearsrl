@@ -1,15 +1,24 @@
 package clearsrl;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import clearcommon.propbank.DefaultPBTokenizer;
 import clearcommon.propbank.OntoNotesTokenizer;
@@ -79,6 +88,64 @@ public class Sentence implements Serializable{
 		return EnumSet.copyOf(srcs);
 	}
 	
+	static final Pattern nePattern = Pattern.compile("<(/??[A-Z]{3,}?)>");
+	static String[][] readNE(File file, TBTree[] trees) {
+		List<String[]> neList = new ArrayList<String[]>();
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+			String line;
+			while ((line=reader.readLine())!=null) {
+				String[] tokens = line.trim().split(" +");
+				if (trees!=null) {
+					if (neList.size()>=trees.length) {
+						System.err.println("NE line length exceeded trees for "+file.getPath());
+						break;
+					}
+					if (tokens.length!=trees[neList.size()].getTokenCount()) {
+						System.err.printf("NE mismatch found for %s:%d\n", file.getPath(), neList.size());
+						neList.add(null);
+						break;
+					}
+				}
+				String[] nes = new String[tokens.length];
+				String currNE=null;
+				for (int i=0; i<tokens.length; ++i) {
+					Matcher matcher = nePattern.matcher(tokens[i]);
+					while (matcher.find()) {
+						String match = matcher.group(1);
+						if (match.charAt(0)=='/')
+							currNE = null;
+						else
+							nes[i] = currNE = match;
+					}
+					if (currNE!=null)
+						nes[i] = currNE;
+				}
+				
+				neList.add(nes);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return neList.toArray(new String[trees==null?neList.size():trees.length][]);
+	}
+	
+	static Map<String, String[][]> readNamedEntities(Properties props, String prefix, Map<String, TBTree[]> treeMap) {
+		Map<String, String[][]> neMap = new HashMap<String, String[][]>();
+		String neDir = props.getProperty(prefix+".dir");
+		String neRegex = props.getProperty(prefix+".regex");
+		
+		List<String> fileList = FileUtil.getFiles(new File(neDir), neRegex, false);
+		for (String fName:fileList) {
+			String key = fName.endsWith(".ner")?fName.substring(0,fName.length()-4):fName;
+			
+			if (treeMap!=null && !treeMap.containsKey(key)) continue;
+
+			neMap.put(key, readNE(new File(neDir, fName), treeMap==null?null:treeMap.get(key)));
+		}
+		return neMap;
+	}
+	
 	static Map<String, SortedMap<Integer, List<PBInstance>>> readProps(Properties props, String prefix, Map<String, TBTree[]> treeMap) {
 		String propDir = props.getProperty(prefix+".dir");
 		String filename = props.getProperty(prefix+".filelist");
@@ -145,6 +212,10 @@ public class Sentence implements Serializable{
 		if (sources.contains(Source.EC_DEP) && parseMap!=null)
 			ecDepMap = ECCommon.readDepEC(new File(props.getProperty(Source.EC_DEP.prefix+".dir")), parseMap);
 		
+		Map<String, String[][]> neMap=null;
+		if (sources.contains(Source.NAMED_ENTITY))
+			neMap = readNamedEntities(props, Source.NAMED_ENTITY.prefix, parseMap);
+		
 		for (Map.Entry<String, TBTree[]> entry:sourceMap.entrySet()) {
 			Sentence[] sentences = new Sentence[entry.getValue().length];
 			sentenceMap.put(entry.getKey(), sentences);
@@ -155,14 +226,16 @@ public class Sentence implements Serializable{
 			TBTree[] parses = parseMap==null?null:parseMap.get(entry.getKey());
 			Map<Integer, List<PBInstance>> srls = srlMap==null?null:srlMap.get(entry.getKey());
 			Map<Integer, String[][]> ecDeps = ecDepMap==null?null:ecDepMap.get(entry.getKey());
-		
+	
+			String[][] namedEntities = neMap==null?null:neMap.get(entry.getKey());
+			
 			for (int i=0; i<entry.getValue().length; ++i)
 				sentences[i] = new Sentence(trees==null?null:trees[i], 
 											!sources.contains(Source.PROPBANK)?null:(propPBs==null?new ArrayList<PBInstance>():(propPBs.get(i)==null?new ArrayList<PBInstance>():propPBs.get(i))), 
 								            parses==null?null:parses[i], 
 										    srls==null?null:srls.get(i), 
 									        ecDeps==null?null:ecDeps.get(i), 
-										    null);
+									        namedEntities==null?null:namedEntities[i]);
 		}	
 		return sentenceMap;
 	}

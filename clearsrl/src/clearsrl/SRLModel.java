@@ -312,6 +312,8 @@ public class SRLModel implements Serializable {
     Classifier                              nominalArgLabelStage2Classifier = null;
     double                                  nominalArgLabelStage2Threshold = 0;
     
+    boolean                                 trainGoldPredicateSeparation = false;
+    
     transient LanguageUtil                  langUtil;
     
 //  transient ArrayList<int[]>              predicateTrainingFeatures;
@@ -722,7 +724,7 @@ public class SRLModel implements Serializable {
         List<TBNode> argNodes = new ArrayList<TBNode>(candidateMap.keySet());
         List<String> labels = new ArrayList<String>();
         
-        boolean isNominal = !langUtil.isVerb(sampleInstance.getPredicateNode().getPOS());
+        boolean isNominal = !langUtil.isVerb(trainGoldPredicateSeparation?goldInstance.getPredicateNode().getPOS():sampleInstance.getPredicateNode().getPOS());
         
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, argNodes, sampleInstance.getRolesetId(), depEC, namedEntities);
         
@@ -1729,7 +1731,7 @@ public class SRLModel implements Serializable {
                		 		if (stage2Mask==null || stage2Mask.get(stage2LocalCnt++)) {
                		 			if (goldNominalMask!=null && srlSample.isGoldNominal)
                		 				goldNominalMask.set(sampleCount);
-	               		 		if (trainNominalMask!=null && srlSample.isTrainNominal)
+	               		 		if (trainNominalMask!=null && trainGoldPredicateSeparation?srlSample.isGoldNominal:srlSample.isTrainNominal)
 	           		 				trainNominalMask.set(sampleCount);
                		 			sampleCount++;
                		 			if (labelList!=null)
@@ -1950,7 +1952,7 @@ public class SRLModel implements Serializable {
     			break;
     		}
     	
-    	boolean isNominal = !langUtil.isVerb(prediction.getPredicateNode().getPOS());
+    	boolean isNominal = !langUtil.isVerb(gold!=null&&trainGoldPredicateSeparation?gold.getPredicateNode().getPOS():prediction.getPredicateNode().getPOS());
     	//boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):!langUtil.isVerb(gold.getPredicateNode().getPOS());
     	
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
