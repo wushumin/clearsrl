@@ -385,6 +385,11 @@ public class EnglishUtil extends LanguageUtil {
     }
     
     @Override
+    public boolean isExplicitSupport(String label) {
+    	return "ARGM-LVB".equals(label);
+    }
+    
+    @Override
     public boolean isAdjective(String POS) {
         return POS.charAt(0)=='J';
     }

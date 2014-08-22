@@ -88,6 +88,10 @@ public abstract class LanguageUtil {
     	return findStems(node).get(0);
     }
     
+    public boolean isExplicitSupport(String label) {
+    	return false;
+    }
+    
     public abstract boolean isAdjective(String POS);
     
     public abstract boolean isAdverb(String POS);

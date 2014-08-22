@@ -247,6 +247,11 @@ public class ChineseUtil extends LanguageUtil {
     }
 
     @Override
+    public boolean isExplicitSupport(String label) {
+    	return "Sup".equals(label);
+    }
+    
+    @Override
     public boolean isAdjective(String POS) {
         return POS.equals("JJ");
     }

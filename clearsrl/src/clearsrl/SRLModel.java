@@ -1069,6 +1069,13 @@ public class SRLModel implements Serializable {
     EnumMap<Feature,Collection<String>> extractFeatureSequence(FeatureSet<Feature> featureSet, TBNode predicate, String rolesetId, ArgSample sample, SRInstance support, List<SRArg> predictedArgs, boolean buildDictionary) {
         EnumMap<Feature,Collection<String>> featureMap = new EnumMap<Feature,Collection<String>>(Feature.class);
         
+        boolean hasExplicitSupport = false;
+        for (SRArg arg:predictedArgs)
+        	if (langUtil.isExplicitSupport(arg.label)) {
+        		hasExplicitSupport = true;
+        		break;
+        	}
+        
         for (Feature feature:featureSet.getFeaturesFlat()) {
         switch (feature) {
             case SUPPORT:
@@ -1076,7 +1083,8 @@ public class SRLModel implements Serializable {
                     String lemma = langUtil.findStems(support.getPredicateNode()).get(0);
                     String position = support.getPredicateNode().getTokenIndex()<predicate.getTokenIndex()?"left":"right";
                     String level = support.getPredicateNode().getLevelToRoot()<predicate.getLevelToRoot()?"above":"sibling";
-                    featureMap.put(feature, Arrays.asList(lemma, position, level, lemma+" "+level, support.getPredicateNode().getWord()));
+                    featureMap.put(feature, Arrays.asList(lemma, position, level, Boolean.toString(hasExplicitSupport),
+                    		lemma+" "+Boolean.toString(hasExplicitSupport), lemma+" "+level, support.getPredicateNode().getWord()));
                 }
                 break;
             case SUPPORTPATH:
@@ -1101,8 +1109,8 @@ public class SRLModel implements Serializable {
                         }                           
                     }
                     if (sArg!=null) {
-                    	if (sample.node==sample.node)
-                    		featureMap.put(feature, Arrays.asList("sup-"+sArg.getLabel()));
+                    	if (sample.node==sArg.node)
+                    		featureMap.put(feature, Arrays.asList((hasExplicitSupport?"sup-":"imp-")+sArg.getLabel()));
                     	else 
                     		featureMap.put(feature, Arrays.asList("nest-"+sArg.getLabel()));
                     }
