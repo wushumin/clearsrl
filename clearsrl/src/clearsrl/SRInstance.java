@@ -208,7 +208,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         cleanUpArgs();
 
         for (SRArg arg:args) {
-            if (arg.label.equals(SRLModel.NOT_ARG) || arg.label.equals("rel")) continue;
+            if (arg.label.equals(SRLModel.NOT_ARG)) /*|| arg.label.equals("rel"))*/ continue;
             String label = arg.label.startsWith("C-")?arg.label.substring(2):arg.label;
             List<SRArg> argList;
             if ((argList = argMap.get(label))==null) {
@@ -439,15 +439,17 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         for (int i=0; i<tokens.length; ++i)
             tokens[i] = nodes[i].getWord();
         
-        for (SRArg arg:args) {
-        	if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+        for (SRArg arg:getScoringArgs()) {
+
             BitSet bits = arg.getTokenSet();
             
             int start = bits.nextSetBit(0);
-            int end = bits.nextClearBit(start)-1;
-            
-            tokens[start] = "["+arg.label+" "+tokens[start];
-            tokens[end] += "]";
+            int end = -1;
+            do {
+            	tokens[start] = "["+(end<0?"":"C-")+arg.label+" "+tokens[start];
+	            end = bits.nextClearBit(start)-1;
+	            tokens[end] += "]";
+            } while ((start = bits.nextSetBit(end+1))>=0);
         }
         for (String token:tokens)
         	buffer.append(token+' ');
