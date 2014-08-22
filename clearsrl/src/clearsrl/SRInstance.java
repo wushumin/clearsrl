@@ -429,8 +429,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
 
     
     @Override
-    public String toString()
-    {
+    public String toString() {
         StringBuilder buffer = new StringBuilder();
         buffer.append(tree.getFilename()); buffer.append(" ");
         buffer.append(tree.getIndex()); buffer.append(" ");
@@ -440,10 +439,22 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         for (int i=0; i<tokens.length; ++i)
             tokens[i] = nodes[i].getWord();
         
+        for (SRArg arg:args) {
+        	if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+            BitSet bits = arg.getTokenSet();
+            
+            int start = bits.nextSetBit(0);
+            int end = bits.nextClearBit(start)-1;
+            
+            tokens[start] = "["+arg.label+" "+tokens[start];
+            tokens[end] += "]";
+        }
+        for (String token:tokens)
+        	buffer.append(token+' ');
+        /*
         String[] labels = new String[nodes.length];
         
-        for (SRArg arg:args)
-        {
+        for (SRArg arg:args) {
             if (arg.label.equals(SRLModel.NOT_ARG)) continue;
             BitSet bits = arg.getTokenSet();
             
@@ -452,13 +463,12 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         }
         
         String previousLabel = null;
-        for (int i=0; i<tokens.length; ++i)
-        {
+        for (int i=0; i<tokens.length; ++i) {
             if (labels[i]!=null && labels[i].startsWith("C-") && labels[i].substring(2).equals(previousLabel))
                     labels[i] = labels[i].substring(2);
             previousLabel = labels[i];
         }
-        
+
         for (int i=0; i<tokens.length; ++i)
         {
             if (labels[i]!=null && (i==0 || !labels[i].equals(labels[i-1])))
@@ -468,7 +478,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
                 buffer.append(']');
                     
             buffer.append(' ');      
-        }
+        } */
         
         return buffer.toString();
     }
