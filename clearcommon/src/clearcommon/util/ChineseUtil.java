@@ -245,7 +245,14 @@ public class ChineseUtil extends LanguageUtil {
     public TBHeadRules getHeadRules() {
         return headRules;
     }
-
+    
+    @Override
+    public String convertPBLabelTrain(String label) {
+    	if (label.endsWith("-PSR"))
+    		return label;
+        return super.convertPBLabelPredict(label);
+   }
+    
     @Override
     public boolean isExplicitSupport(String label) {
     	return "Sup".equals(label);

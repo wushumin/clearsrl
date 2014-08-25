@@ -225,6 +225,9 @@ public class ScoreSRL {
                 for (PBInstance goldProp:goldProps)
                 {
                     SRInstance goldInstance = new SRInstance(goldProp);
+                    for (SRArg arg:goldInstance.args)
+                    	arg.label = LanguageUtil.removePBLabelModifier(arg.label);
+                    
                     // don't evaluate the actual light verb
                     if (goldInstance.getRolesetId().endsWith(".LV")) continue;
                     List<SRInstance> sysInstances = new ArrayList<SRInstance>();
@@ -237,7 +240,10 @@ public class ScoreSRL {
                             if (goldProp.getPredicate().getTokenIndex()==sysProp.getPredicate().getTokenIndex())
                             {
                                 found = true;
-                                sysInstances.add(new SRInstance(sysProp));
+                                SRInstance sysInstance = new SRInstance(sysProp);
+                                for (SRArg arg:sysInstance.args)
+                                	arg.label = LanguageUtil.removePBLabelModifier(arg.label);
+                                sysInstances.add(sysInstance);
                                 break;
                             }
                         if (!found) break;

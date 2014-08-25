@@ -21,14 +21,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SRLUtil {
-    static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
-    
-    public static String removeArgModifier(String argType) {
-        Matcher matcher = ARG_PATTERN.matcher(argType);
-        if (matcher.matches())
-            return matcher.group(1);
-        return argType;
-    }
 
     public static float getFScore(float lhs, float rhs) {
         float denom = lhs + rhs;

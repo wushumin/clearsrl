@@ -732,7 +732,7 @@ public class SRLModel implements Serializable {
             if (candidateMap.get(node)==null)
                 labels.add(NOT_ARG);
             else
-                labels.add(SRLUtil.removeArgModifier(candidateMap.get(node).label));
+                labels.add(langUtil.convertPBLabelTrain(candidateMap.get(node).label));
             sampleInstance.addArg(new SRArg(labels.get(labels.size()-1), node));
         }
         

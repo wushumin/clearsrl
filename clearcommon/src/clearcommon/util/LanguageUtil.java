@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public abstract class LanguageUtil {
 	
@@ -86,6 +88,22 @@ public abstract class LanguageUtil {
     
     public String makePBFrameKey(TBNode node) {
     	return findStems(node).get(0);
+    }
+    
+    static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
+    public static String removePBLabelModifier(String label) {
+        Matcher matcher = ARG_PATTERN.matcher(label);
+        if (matcher.matches())
+            return matcher.group(1);
+        return label;
+    }
+    
+    public String convertPBLabelTrain(String label) {
+         return removePBLabelModifier(label);
+    }
+    
+    public String convertPBLabelPredict(String label) {
+    	return removePBLabelModifier(label);
     }
     
     public boolean isExplicitSupport(String label) {

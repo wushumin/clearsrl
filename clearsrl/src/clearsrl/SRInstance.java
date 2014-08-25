@@ -66,11 +66,11 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         for (PBArg pbArg: instance.getArgs()) {
             if (pbArg.getLabel().equals("rel")) continue;
             if (!pbArg.getTokenSet().isEmpty())
-                addArg(new SRArg(SRLUtil.removeArgModifier(pbArg.getLabel()), pbArg.getNode(), pbArg.getScore()));
+                addArg(new SRArg(pbArg.getLabel(), pbArg.getNode(), pbArg.getScore()));
 
             for (PBArg nestedArg:pbArg.getNestedArgs())
                 if (!nestedArg.getTokenSet().isEmpty())
-                    addArg(new SRArg(SRLUtil.removeArgModifier(nestedArg.getLabel()), nestedArg.getNode(), nestedArg.getScore()));
+                    addArg(new SRArg(nestedArg.getLabel(), nestedArg.getNode(), nestedArg.getScore()));
         }
         args.trimToSize();
     }
