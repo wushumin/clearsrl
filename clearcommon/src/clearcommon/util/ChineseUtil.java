@@ -246,12 +246,14 @@ public class ChineseUtil extends LanguageUtil {
         return headRules;
     }
     
+    /*
     @Override
     public String convertPBLabelTrain(String label) {
     	if (label.endsWith("-PSR"))
     		return label;
         return super.convertPBLabelPredict(label);
    }
+    */
     
     @Override
     public boolean isExplicitSupport(String label) {
