@@ -69,6 +69,9 @@ public class RunSRL {
     @Option(name="-compressOutput",usage="Compress the SRL output")
     private boolean compressOutput = false; 
     
+    @Option(name="-model",usage="model file to use")
+    private String modelFName = null; 
+    
     @Option(name="-out",usage="output file/directory")
     private File outFile = null;
     
@@ -281,6 +284,9 @@ public class RunSRL {
             logger.severe(String.format("Language utility (%s) initialization failed",runSRLProps.getProperty("language.util-class")));
             System.exit(-1);
         }
+        
+        if (options.modelFName!=null)
+        	runSRLProps.setProperty("model_file", options.modelFName);
         
         logger.info("Loading model "+runSRLProps.getProperty("model_file"));
         
