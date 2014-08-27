@@ -63,7 +63,7 @@ public class MakeLDASamples {
     private File outDir = null; 
     
     @Option(name="-prob",usage="argument probability")
-	private double prob = -1; 
+	private double prob = -0.5; 
     
     @Option(name="-wt",usage="term threshold")
     private int wCntThreshold = 10;
@@ -251,7 +251,7 @@ public class MakeLDASamples {
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel"))
         						continue;
-        					if (options.prob>=0 && options.prob >= arg.getScore())
+        					if (options.prob>=0 && options.prob>arg.getScore() || options.prob<0 && -options.prob>arg.getScore())
         						continue;
         					
         					String head = Topics.getTopicHeadword(arg.getNode());
