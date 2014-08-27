@@ -127,6 +127,7 @@ public class SRLModel implements Serializable {
 
         // stage 2 classification features
         ARGTYPE(false, true),
+        ARGREL(false, true),
         ARGTOPICTYPE(false, true),
         ARGROLEMISS(false, true),
         ARGLISTDIRECTIONAL(false, true),
@@ -314,6 +315,8 @@ public class SRLModel implements Serializable {
     
     boolean                                 trainGoldPredicateSeparation = false;
     
+    Set<String>                             argPrimaryLabelSet = null;
+    
     transient LanguageUtil                  langUtil;
     
 //  transient ArrayList<int[]>              predicateTrainingFeatures;
@@ -473,6 +476,13 @@ public class SRLModel implements Serializable {
             iter.advance();
             argLabelIndexMap.put(iter.value(),iter.key());
         }
+
+        argPrimaryLabelSet = new HashSet<String>();
+        for (String label:argLabelStringMap.keySet())
+        	if (label.startsWith("C-") && argLabelStringMap.keySet().contains(label.substring(2)))
+        		argPrimaryLabelSet.add(label.substring(2));
+        	else if (label.matches("ARG\\d-.*") && argLabelStringMap.keySet().contains(label.substring(0,4)))
+        		argPrimaryLabelSet.add(label.substring(0,4));
 
         System.err.printf("ARGS trained %d/%d\n", argsTrained, argsTotal);
         
@@ -1163,6 +1173,25 @@ public class SRLModel implements Serializable {
 	                        	featureMap.put(feature, filteredTopics);
 	            			break;	
 	            		}
+            	break;
+            case ARGREL: 
+            	if (!predictedArgs.isEmpty() && argPrimaryLabelSet!=null ) {
+            		List<String> fVals = new ArrayList<String>();
+            		for (SRArg predictedArg:predictedArgs) {
+            			if (sample.node==predictedArg.node || !argPrimaryLabelSet.contains(predictedArg.label) 
+            					|| sample.node.isDecendentOf(predictedArg.node) || predictedArg.node.isDecendentOf(sample.node))
+            				continue;
+            			
+            			boolean isLeft=sample.node.getTerminalSet().nextSetBit(0)<predictedArg.node.getTerminalSet().nextSetBit(0);
+            			
+            			if (sample.node.getParent()==predictedArg.node.getParent())
+            				fVals.add(predictedArg.label+Boolean.toString(isLeft)+"==sibling ");
+            			fVals.add(predictedArg.label+Boolean.toString(isLeft));
+            			fVals.add(predictedArg.label+Boolean.toString(isLeft)+' '+predictedArg.node.getHeadword());
+            		}
+            		if (!fVals.isEmpty())
+            			featureMap.put(feature, fVals);
+            	}
             	break;
             case ARGTYPE:
                 /*if (!predictedArgs.isEmpty() && sample.node.getTokenSet().nextSetBit(0)<predicate.getTokenIndex()==
