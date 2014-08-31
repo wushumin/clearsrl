@@ -313,7 +313,7 @@ public class SRLModel implements Serializable {
     Classifier                              nominalArgLabelStage2Classifier = null;
     double                                  nominalArgLabelStage2Threshold = 0;
     
-    boolean                                 trainGoldPredicateSeparation = false;
+    boolean                                 useGoldPredicateSeparation = false;
     
     Set<String>                             argPrimaryLabelSet = null;
     
@@ -366,6 +366,8 @@ public class SRLModel implements Serializable {
     	filterArgs = !props.getProperty("filterArguments", "false").equals("false");
     	trainNominal = !props.getProperty("trainNominal", "true").equals("false");
     	boolean separateNominalClassifier = !props.getProperty("separateNominalClassifier", "false").equals("false");
+    	
+    	useGoldPredicateSeparation = !props.getProperty("goldPredicateSeparation", "false").equals("false");
     	
         predicateModel.initialize();
         rolesetModelMap = new HashMap<String, SimpleModel<Feature>>();
@@ -734,7 +736,7 @@ public class SRLModel implements Serializable {
         List<TBNode> argNodes = new ArrayList<TBNode>(candidateMap.keySet());
         List<String> labels = new ArrayList<String>();
         
-        boolean isNominal = !langUtil.isVerb(trainGoldPredicateSeparation?goldInstance.getPredicateNode().getPOS():sampleInstance.getPredicateNode().getPOS());
+        boolean isNominal = !langUtil.isVerb(useGoldPredicateSeparation?goldInstance.getPredicateNode().getPOS():sampleInstance.getPredicateNode().getPOS());
         
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, argNodes, sampleInstance.getRolesetId(), depEC, namedEntities);
         
@@ -1772,7 +1774,7 @@ public class SRLModel implements Serializable {
                		 		if (stage2Mask==null || stage2Mask.get(stage2LocalCnt++)) {
                		 			if (goldNominalMask!=null && srlSample.isGoldNominal)
                		 				goldNominalMask.set(sampleCount);
-	               		 		if (trainNominalMask!=null && trainGoldPredicateSeparation?srlSample.isGoldNominal:srlSample.isTrainNominal)
+	               		 		if (trainNominalMask!=null && useGoldPredicateSeparation?srlSample.isGoldNominal:srlSample.isTrainNominal)
 	           		 				trainNominalMask.set(sampleCount);
                		 			sampleCount++;
                		 			if (labelList!=null)
@@ -1993,7 +1995,7 @@ public class SRLModel implements Serializable {
     			break;
     		}
     	
-    	boolean isNominal = !langUtil.isVerb(gold!=null&&trainGoldPredicateSeparation?gold.getPredicateNode().getPOS():prediction.getPredicateNode().getPOS());
+    	boolean isNominal = !langUtil.isVerb(gold!=null&&useGoldPredicateSeparation?gold.getPredicateNode().getPOS():prediction.getPredicateNode().getPOS());
     	//boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):!langUtil.isVerb(gold.getPredicateNode().getPOS());
     	
         List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
