@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeSet;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -28,6 +31,8 @@ import clearsrl.SRInstance.OutputFormat;
 import clearsrl.util.Topics;
 
 public class ScoreSRL {
+	
+	static Logger logger = Logger.getLogger("clearsrl");
 	
 	enum Verbose {
 		ALL,
@@ -116,9 +121,19 @@ public class ScoreSRL {
         
         props = PropertyUtil.resolveEnvironmentVariables(props);
 
-        
         props = PropertyUtil.filterProperties(props, "srl.", true);
         props = PropertyUtil.filterProperties(props, "score.", true);
+
+        {
+	        String logLevel = props.getProperty("logger.level");
+	        if (logLevel!=null) {
+		        ConsoleHandler ch = new ConsoleHandler();
+		        ch.setLevel(Level.parse(logLevel));
+		        logger.addHandler(ch);
+		        logger.setLevel(Level.parse(logLevel));
+	        }
+        }
+        
         PBTokenizer goldTokenizer = props.getProperty("gold.pb.tokenizer")==null?(props.getProperty("gold.data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(props.getProperty("gold.pb.tokenizer")).newInstance();
      
         

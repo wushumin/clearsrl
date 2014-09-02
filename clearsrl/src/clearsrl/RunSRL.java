@@ -43,6 +43,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -273,6 +275,16 @@ public class RunSRL {
         
         Properties runSRLProps = PropertyUtil.filterProperties(props, "srl.", true);
         runSRLProps = PropertyUtil.filterProperties(runSRLProps, "run.", true);
+        
+        {
+	        String logLevel = runSRLProps.getProperty("logger.level");
+	        if (logLevel!=null) {
+		        ConsoleHandler ch = new ConsoleHandler();
+		        ch.setLevel(Level.parse(logLevel));
+		        logger.addHandler(ch);
+		        logger.setLevel(Level.parse(logLevel));
+	        }
+        }
         
         logger.info(PropertyUtil.toString(runSRLProps));
          
