@@ -131,6 +131,8 @@ public class ScoreSRL {
 		        ch.setLevel(Level.parse(logLevel));
 		        logger.addHandler(ch);
 		        logger.setLevel(Level.parse(logLevel));
+		        Logger.getLogger("clearcommon").addHandler(ch);
+		        Logger.getLogger("clearcommon").setLevel(Level.parse(logLevel));
 	        }
         }
         
@@ -368,13 +370,13 @@ public class ScoreSRL {
             //System.out.println(systems[i]+":");
         	if (printNScore) {
         		System.out.println("All predicates:");
-        		System.out.println(scores[i].toSimpleString());
+        		System.out.println(scores[i].toMacroString());
         	}
             System.out.println("verb predicates:");
-            System.out.println(vScores[i].toSimpleString());
+            System.out.println(vScores[i].toMacroString());
             if (printNScore) {
 	            System.out.println("nominal predicates:");
-	            System.out.println(nScores[i].toSimpleString());
+	            System.out.println(nScores[i].toMacroString());
             }
             //System.out.println("pro argument:");
             //System.out.println(proScore[i]);

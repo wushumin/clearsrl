@@ -283,6 +283,8 @@ public class RunSRL {
 		        ch.setLevel(Level.parse(logLevel));
 		        logger.addHandler(ch);
 		        logger.setLevel(Level.parse(logLevel));
+		        Logger.getLogger("clearcommon").addHandler(ch);
+		        Logger.getLogger("clearcommon").setLevel(Level.parse(logLevel));
 	        }
         }
         

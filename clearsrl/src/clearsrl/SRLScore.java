@@ -202,6 +202,10 @@ public class SRLScore {
         return builder.toString();
     }
     
+    public String toMacroString() {
+    	return toString(macroCount);
+    }
+    
     public String toSimpleString() {
     	StringBuilder builder = new StringBuilder();
     	List<Score> scores = getScores(macroCount);
