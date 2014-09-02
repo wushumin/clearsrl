@@ -368,13 +368,13 @@ public class ScoreSRL {
             //System.out.println(systems[i]+":");
         	if (printNScore) {
         		System.out.println("All predicates:");
-        		System.out.println(scores[i]);
+        		System.out.println(scores[i].toSimpleString());
         	}
             System.out.println("verb predicates:");
-            System.out.println(vScores[i]);
+            System.out.println(vScores[i].toSimpleString());
             if (printNScore) {
 	            System.out.println("nominal predicates:");
-	            System.out.println(nScores[i]);
+	            System.out.println(nScores[i].toSimpleString());
             }
             //System.out.println("pro argument:");
             //System.out.println(proScore[i]);
