@@ -17,10 +17,12 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Logger;
@@ -177,6 +179,7 @@ public class MakeLDASamples {
         
         PrintWriter docWriter = new PrintWriter(new File(outDir, "ALLARG-docs.txt"));
         PrintWriter labelWriter = new PrintWriter(new File(outDir, "ALLARG-labels.txt"));
+        Set<String> keySet = new HashSet<String>();
         
         for (Map.Entry<String, TObjectDoubleMap<String>> entry:allArgMap.entrySet()) {
         	labelWriter.println(entry.getKey());
@@ -190,6 +193,7 @@ public class MakeLDASamples {
         		}
         		if (Math.round(entry.getValue().get(key))==0) continue;
         		docWriter.print(val+':'+key.substring(0,key.indexOf(':'))+" "+Math.round(entry.getValue().get(key))+" ");
+        		keySet.add(word);
         	}
         	docWriter.print("\n");
         }
@@ -197,8 +201,8 @@ public class MakeLDASamples {
         labelWriter.close();
         
         PrintWriter dictWriter = new PrintWriter(new File(outDir, "dict.txt"));
-        for (Map.Entry<String, String> entry:dict.entrySet())
-        	dictWriter.println(entry.getKey()+' '+entry.getValue());
+        for (String word:keySet)
+        	dictWriter.println(word+' '+dict.get(word));
         dictWriter.close();
 
     }

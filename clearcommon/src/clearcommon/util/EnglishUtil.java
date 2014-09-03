@@ -1,9 +1,11 @@
 package clearcommon.util;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -178,7 +180,7 @@ public class EnglishUtil extends LanguageUtil {
         PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
-            parser.parse(new InputSource(new FileReader(file)));
+            parser.parse(new InputSource(new InputStreamReader(new FileInputStream(file), "UTF8")));
             frameMap.put(key, frame);
         } catch (IOException e) {
             // TODO Auto-generated catch block

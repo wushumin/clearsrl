@@ -28,8 +28,10 @@ import clearcommon.treebank.TBReader;
 import clearcommon.treebank.ParseException;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -83,16 +85,16 @@ public class PBFileReader
      * @param treebankPath the path of the treebank.
      * @throws FileNotFoundException 
      */
-    public PBFileReader(TBReader tbReader, String annotationFile) throws FileNotFoundException
+    public PBFileReader(TBReader tbReader, String annotationFile) throws IOException
     {
         this(tbReader, annotationFile, new DefaultPBTokenizer());
     }
 
-    public PBFileReader(TBReader tbReader, String annotationFile, PBTokenizer tokenizer) throws FileNotFoundException
+    public PBFileReader(TBReader tbReader, String annotationFile, PBTokenizer tokenizer) throws IOException
     {
         this.tbReader       = tbReader;
         this.annotationFile = annotationFile;
-        scanner             = new Scanner(new BufferedReader(new FileReader(annotationFile)));
+        scanner             = new Scanner(new BufferedReader(new InputStreamReader(new FileInputStream(annotationFile),"UTF-8")));
         this.tokenizer      = tokenizer;
         lastInstance        = null;
         closed              = false;

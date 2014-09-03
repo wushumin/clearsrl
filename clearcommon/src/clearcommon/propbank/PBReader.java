@@ -1,7 +1,7 @@
 package clearcommon.propbank;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
@@ -41,7 +41,7 @@ public class PBReader {
                 return null;
             try {
                 pbReader = new PBFileReader(tbReader, fileList.remove(), tokenizer);
-            } catch (FileNotFoundException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }

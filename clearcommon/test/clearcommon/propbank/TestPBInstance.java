@@ -2,7 +2,7 @@ package clearcommon.propbank;
 
 import static org.junit.Assert.*;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,7 +13,7 @@ import clearcommon.treebank.*;
 
 public class TestPBInstance {
     @Test
-    public void testPBArg() throws FileNotFoundException {
+    public void testPBArg() throws IOException {
         System.out.println(Arrays.toString("19:1*27:0;31:4".split("(?=[\\*,;])")));
         assertTrue(PBArg.ARG_PATTERN.matcher("19:1*27:0-LINK-SLC").matches());
         assertFalse(PBArg.ARG_PATTERN.matcher("19:1*27:0LINK-SLC").matches());

@@ -6,7 +6,7 @@ import clearcommon.treebank.TBTree;
 import clearcommon.util.FileUtil;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -60,7 +60,7 @@ public final class PBUtil {
             PBFileReader pbreader=null;
             try {
                 pbreader = new PBFileReader(tbReader, annotationFile, tokenizer);
-            } catch (FileNotFoundException e1) {
+            } catch (IOException e1) {
                 e1.printStackTrace();
                 continue;
             }

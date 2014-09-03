@@ -32,23 +32,19 @@ public class SerialTBFileReader extends TBFileReader
      * @param filename name of the Treebank file
      * @throws IOException 
      */
-    public SerialTBFileReader(String fileName) throws IOException
-    {
-        this(fileName.endsWith(".gz")?new InputStreamReader(new GZIPInputStream(new FileInputStream(fileName))):new FileReader(fileName), fileName);
+    public SerialTBFileReader(String fileName) throws IOException {
+        this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(fileName)):new FileInputStream(fileName), "UTF-8"), fileName);
     }
     
-    public SerialTBFileReader(String dirName, String fileName) throws IOException
-    {
-        this(fileName.endsWith(".gz")?new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(dirName, fileName)))):new FileReader(new File(dirName, fileName)), fileName);
+    public SerialTBFileReader(String dirName, String fileName) throws IOException {
+    	this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(new File(dirName, fileName))):new FileInputStream(new File(dirName, fileName)), "UTF-8"), fileName);
     }
 
-    public SerialTBFileReader(Reader reader)
-    {
+    public SerialTBFileReader(Reader reader) {
         this(reader, null);
     }
     
-    public SerialTBFileReader(Reader reader, String fileName)
-    {
+    public SerialTBFileReader(Reader reader, String fileName) {
         super(fileName);
         scanner      = new Scanner(reader);
         scanner.useDelimiter(String.format("((?<=[\\(\\)%s])|(?=[\\(\\)%s]))",WHITESPACE, WHITESPACE));
