@@ -469,6 +469,12 @@ public class SRLModel implements Serializable {
             logger.info("  "+label+" "+argLabelStringMap.get(label));
         
         argLabelFeatures.rebuildMap(cutoff);
+        
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<EnumSet<Feature>, TObjectIntMap<String>> entry: argLabelFeatures.getFeatureStrMap().entrySet())
+        	builder.append(FeatureSet.toString(entry.getKey())+": "+entry.getValue().size()+"\n");
+        logger.info("number of verb predicate argument features \n"+builder.toString());
+        	
         if (nominalArgLabelFeatures!=argLabelFeatures)
         	nominalArgLabelFeatures.rebuildMap(cutoff);
         
@@ -486,7 +492,7 @@ public class SRLModel implements Serializable {
         	else if (label.matches("ARG\\d-.*") && argLabelStringMap.keySet().contains(label.substring(0,4)))
         		argPrimaryLabelSet.add(label.substring(0,4));
 
-        System.err.printf("ARGS trained %d/%d\n", argsTrained, argsTotal);
+        logger.info(String.format("ARGS trained %d/%d", argsTrained, argsTotal));
         
         logger.info("Second pass processing of training samples.");
         TObjectIntMap<String> rolesetCntMap = new TObjectIntHashMap<String>();
@@ -516,7 +522,8 @@ public class SRLModel implements Serializable {
             e.printStackTrace();
         }
         for (Map.Entry<String, String[]> entry:rolesetValidatedLabelMap.entrySet())
-        	System.out.printf("%s: %d/%d\n",entry.getKey(), entry.getValue().length, rolesetCntMap.get(entry.getKey()));
+        	if (entry.getValue().length!=rolesetCntMap.get(entry.getKey())+1)
+        		logger.warning(String.format("roleset count mismatch: %s: %d/%d\n",entry.getKey(), entry.getValue().length, rolesetCntMap.get(entry.getKey())+1));
         trainingSampleFile.delete();
         logger.info("Second pass argument processing completed.");
     }
