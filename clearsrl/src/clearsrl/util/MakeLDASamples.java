@@ -67,6 +67,9 @@ public class MakeLDASamples {
     @Option(name="-prob",usage="argument probability")
 	private double prob = -0.5; 
     
+    @Option(name="-matchFrame",usage="use only predicates found in frame files")
+    private boolean matchFrame = false;
+    
     @Option(name="-wt",usage="term threshold")
     private int wCntThreshold = 10;
     
@@ -163,19 +166,32 @@ public class MakeLDASamples {
 	        labelWriter.close();
 	        */
         }
+        TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
+        for (Map.Entry<String, TObjectDoubleMap<String>> entry:allArgMap.entrySet())
+        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();)
+        		wCntMap.adjustOrPutValue(tIter.key(), tIter.value(), tIter.value());
         
-        logger.info("all arg pre-trim size: "+allArgMap.size());
+        logger.info("all arg pre-trim entry size: "+wCntMap.size());
+        for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
+        	tIter.advance();
+        	if (tIter.value()<wCntThreshold)
+        		tIter.remove();
+        }
+        logger.info("all arg post-trim entry size: "+wCntMap.size());
+        
+        logger.info("all arg pre-trim doc size: "+allArgMap.size());
         for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= allArgMap.entrySet().iterator(); iter.hasNext();) {
         	int wCnt = 0;
         	Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
         	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
         		tIter.advance();
-        		wCnt+=tIter.value();
+        		if (wCntMap.containsKey(tIter.key()))
+        			wCnt+=tIter.value();
         	}
         	if (wCnt<docSizeThreshold)
         		iter.remove();
         }
-        logger.info("all arg post-trim size: "+allArgMap.size());
+        logger.info("all arg post-trim doc size: "+allArgMap.size());
         
         PrintWriter docWriter = new PrintWriter(new File(outDir, "ALLARG-docs.txt"));
         PrintWriter labelWriter = new PrintWriter(new File(outDir, "ALLARG-labels.txt"));
@@ -250,6 +266,8 @@ public class MakeLDASamples {
         			TBUtil.linkHeads(e2.getValue().get(0).getTree(), langUtil.getHeadRules());
         			for (PBInstance instance:e2.getValue()) {
         				if (!options.useNominal && !langUtil.isVerb(instance.getPredicate().getPOS())) 
+        					continue;
+        				if (options.matchFrame && langUtil.getFrame(instance.getPredicate())==null)
         					continue;
         				String predicate = instance.getPredicate().getWord().toLowerCase();
         				for (PBArg arg:instance.getArgs()) {
