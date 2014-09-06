@@ -189,6 +189,8 @@ public class MakeLDASamples {
         		tIter.advance();
         		if (wCntMap.containsKey(tIter.key()))
         			wCnt+=tIter.value();
+        		else
+        			tIter.remove();
         	}
         	if (wCnt<docSizeThreshold)
         		iter.remove();
