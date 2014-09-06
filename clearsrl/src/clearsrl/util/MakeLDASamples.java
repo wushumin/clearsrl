@@ -168,9 +168,11 @@ public class MakeLDASamples {
         }
         TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
         for (Map.Entry<String, TObjectDoubleMap<String>> entry:allArgMap.entrySet())
-        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();)
+        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+        		tIter.advance();
         		wCntMap.adjustOrPutValue(tIter.key(), tIter.value(), tIter.value());
-        
+        	}
+
         logger.info("all arg pre-trim entry size: "+wCntMap.size());
         for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
         	tIter.advance();
