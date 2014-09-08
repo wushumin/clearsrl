@@ -690,7 +690,7 @@ public class SRLModel implements Serializable {
             }
         }
         SRLSample[] srlSamples = new SRLSample[trainInstances.size()]; 
-        int[] supportIds = SRLUtil.findSupportPredicates(goldInstances, langUtil, SRLUtil.SupportType.ALL, true);        
+        int[] supportIds = SRLUtil.findSupportPredicates(trainInstances, useGoldPredicateSeparation?goldInstances:null, langUtil, SRLUtil.SupportType.ALL, true);        
         BitSet processedSet = new BitSet(supportIds.length);
         // classify verb predicates first
         int cardinality = 0;        
@@ -1903,7 +1903,7 @@ public class SRLModel implements Serializable {
                 TBNode node = parseTree.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex());
                 predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()])), 1.0));
             }
-        int[] supportIds = SRLUtil.findSupportPredicates(predictions, langUtil, SRLUtil.SupportType.VERB, false);
+        int[] supportIds = SRLUtil.findSupportPredicates(predictions, useGoldPredicateSeparation?goldSRLs:null, langUtil, SRLUtil.SupportType.VERB, false);
         
         BitSet predicted = new BitSet(supportIds.length);
         
@@ -1921,7 +1921,7 @@ public class SRLModel implements Serializable {
         } while (predicted.cardinality()>cardinality);
         
         // then classify nominal predicates, by now we'll have the verb arguments to help find support verbs
-        supportIds = SRLUtil.findSupportPredicates(predictions, langUtil, SRLUtil.SupportType.NOMINAL, false);
+        supportIds = SRLUtil.findSupportPredicates(predictions, useGoldPredicateSeparation?goldSRLs:null, langUtil, SRLUtil.SupportType.NOMINAL, false);
         do {
             cardinality = predicted.cardinality();
             for (int i=predicted.nextClearBit(0); i<supportIds.length; i=predicted.nextClearBit(i+1))

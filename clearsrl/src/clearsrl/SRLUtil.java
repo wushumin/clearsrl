@@ -33,7 +33,7 @@ public class SRLUtil {
         ALL
     }
     
-    public static int[] findSupportPredicates(List<SRInstance> instances, LanguageUtil langUtil, SupportType type, boolean training) {
+    public static int[] findSupportPredicates(List<SRInstance> instances, List<SRInstance> goldInstances, LanguageUtil langUtil, SupportType type, boolean training) {
         int[] supports = new int[instances.size()];
         if (supports.length==0) return supports;
         Arrays.fill(supports, -1);
@@ -44,7 +44,7 @@ public class SRLUtil {
 
         for (int i=0; i<instances.size();++i) {
             SRInstance instance = instances.get(i);         
-            boolean isVerb = langUtil.isVerb(instance.getPredicateNode().getPOS());
+            boolean isVerb = langUtil.isVerb(goldInstances!=null?goldInstances.get(i).getPredicateNode().getPOS():instance.getPredicateNode().getPOS());
             if (isVerb && type.equals(SupportType.NOMINAL) || !isVerb && type.equals(SupportType.VERB))
                 continue;
             
