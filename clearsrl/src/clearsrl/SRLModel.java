@@ -1550,7 +1550,7 @@ public class SRLModel implements Serializable {
         //	rounds = hasSequenceFeature?(int)(Math.ceil(rounds/2.0)):1;
         //else 
         if (!hasSequenceFeature)
-        	rounds = 0;
+        	rounds = hasStage2Feature?1:0;
 
         double threshold = 0.001;
         
@@ -1578,21 +1578,21 @@ public class SRLModel implements Serializable {
         		trainFinalClassifier = false;
         	
             String[] newLabels = trainArguments(argLabelClassifier, nominalArgLabelClassifier, r==0?null:labels, null, folds, !trainFinalClassifier, threads, labelValues, y);
-
-            if (argLabelClassifier==nominalArgLabelClassifier) {
-            	argLabelStage2Threshold = computeThreshold(new BitSet(), false, goldLabels, newLabels, labelValues, stage2Threshold);
-            	nominalArgLabelStage2Threshold = argLabelStage2Threshold;
-            } else {
-	            argLabelStage2Threshold = computeThreshold(trainNominalMask, false, goldLabels, newLabels, labelValues, stage2Threshold);
-	            nominalArgLabelStage2Threshold = computeThreshold(trainNominalMask, true, goldLabels, newLabels, labelValues, stage2Threshold);
+            if (hasStage2Feature) {
+	            if (argLabelClassifier==nominalArgLabelClassifier) {
+	            	argLabelStage2Threshold = computeThreshold(new BitSet(), false, goldLabels, newLabels, labelValues, stage2Threshold);
+	            	nominalArgLabelStage2Threshold = argLabelStage2Threshold;
+	            } else {
+		            argLabelStage2Threshold = computeThreshold(trainNominalMask, false, goldLabels, newLabels, labelValues, stage2Threshold);
+		            nominalArgLabelStage2Threshold = computeThreshold(trainNominalMask, true, goldLabels, newLabels, labelValues, stage2Threshold);
+	            }
+	            stage2Mask = new BitSet();
+	            for (int i=0; i<newLabels.length; ++i)
+	            	if (!NOT_ARG.equals(newLabels[i]) || 
+	            			!trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
+	            					trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nominalArgLabelStage2Threshold)
+	            		stage2Mask.set(i);
             }
-            stage2Mask = new BitSet();
-            for (int i=0; i<newLabels.length; ++i)
-            	if (!NOT_ARG.equals(newLabels[i]) || 
-            			!trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
-            					trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nominalArgLabelStage2Threshold)
-            		stage2Mask.set(i);
-
             int cnt=0;
             for (int i=0; i<labels.length; ++i)
                 if (labels[i].equals(newLabels[i])) ++cnt;    
