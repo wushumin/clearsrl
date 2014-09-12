@@ -1592,23 +1592,24 @@ public class SRLModel implements Serializable {
 	            			!trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
 	            					trainNominalMask.get(i) &&  labelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nominalArgLabelStage2Threshold)
 	            		stage2Mask.set(i);
+	            
+	            TDoubleArrayList pList = new TDoubleArrayList();
+	            for (int i=0; i<labels.length; ++i)
+	                if (NOT_ARG.equals(goldLabels[i]))
+	                	pList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
+	            double[] pVal = pList.toArray();
+	            Arrays.sort(pVal);
+
+	            logger.info(String.format("Threshold: %f, verb NO_ARG value: %f, nominal NO_ARG value: %f, %d/%d filtered, %d training arguments", 
+	            		stage2Threshold, argLabelStage2Threshold, nominalArgLabelStage2Threshold, pVal.length-Math.abs(Arrays.binarySearch(pVal, argLabelStage2Threshold)), pVal.length, stage2Mask.cardinality()));	            
             }
+            
             int cnt=0;
             for (int i=0; i<labels.length; ++i)
                 if (labels[i].equals(newLabels[i])) ++cnt;    
             double agreement = cnt*1.0/labels.length;
             System.out.printf("Round %d stage 1: %f\n", r, agreement);
             printScore(newLabels, goldLabels, goldNominalMask, null);
-            
-            TDoubleArrayList pList = new TDoubleArrayList();
-            for (int i=0; i<labels.length; ++i)
-                if (NOT_ARG.equals(goldLabels[i]))
-                	pList.add(labelValues[i][argLabelStringMap.get(NOT_ARG)-1]);
-            double[] pVal = pList.toArray();
-            Arrays.sort(pVal);
-
-            logger.info(String.format("Threshold: %f, verb NO_ARG value: %f, nominal NO_ARG value: %f, %d/%d filtered, %d training arguments", 
-            		stage2Threshold, argLabelStage2Threshold, nominalArgLabelStage2Threshold, pVal.length-Math.abs(Arrays.binarySearch(pVal, argLabelStage2Threshold)), pVal.length, stage2Mask.cardinality()));
             
             labels = newLabels;
             
