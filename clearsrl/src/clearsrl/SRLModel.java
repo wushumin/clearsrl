@@ -1128,9 +1128,12 @@ public class SRLModel implements Serializable {
                         }                           
                     }
                     if (sArg!=null) {
-                    	if (sample.node==sArg.node)
-                    		featureMap.put(feature, Arrays.asList((hasExplicitSupport?"sup-":"imp-")+sArg.getLabel()));
-                    	else 
+                    	if (sample.node==sArg.node) {
+                    		if (hasExplicitSupport)
+                    			featureMap.put(feature, Arrays.asList(sArg.getLabel(),"sup-"+sArg.getLabel()));
+                    		else 
+                    			featureMap.put(feature, Arrays.asList(sArg.getLabel()));
+                    	} else 
                     		featureMap.put(feature, Arrays.asList("nest-"+sArg.getLabel()));
                     }
                 }
