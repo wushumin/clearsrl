@@ -1563,7 +1563,7 @@ public class SRLModel implements Serializable {
         BitSet trainNominalMask = new BitSet();
         {
         	List<String> labelList = new ArrayList<String>();
-        	readTrainingArguments(extractedSampleFile, null, null, null, null, null, labelList, goldNominalMask, trainNominalMask, null);
+        	readTrainingArguments(extractedSampleFile, null, null, null, null, null, labelList, goldNominalMask, trainNominalMask, null, true, true);
         	goldLabels = labelList.toArray(new String[labelList.size()]);
         	y = new int[goldLabels.length];
         	for (int i=0; i<goldLabels.length; ++i)
@@ -1580,7 +1580,7 @@ public class SRLModel implements Serializable {
         	if (r+1==rounds)
         		trainFinalClassifier = false;
         	
-            String[] newLabels = trainArguments(argLabelClassifier, nominalArgLabelClassifier, r==0?null:labels, null, folds, !trainFinalClassifier, threads, labelValues, y);
+            String[] newLabels = trainArguments(argLabelClassifier, nominalArgLabelClassifier, r==0?null:labels, null, folds, !trainFinalClassifier, threads, labelValues, y, r>0, false);
             if (hasStage2Feature) {
 	            if (argLabelClassifier==nominalArgLabelClassifier) {
 	            	argLabelStage2Threshold = computeThreshold(new BitSet(), false, goldLabels, newLabels, labelValues, stage2Threshold);
@@ -1629,7 +1629,7 @@ public class SRLModel implements Serializable {
 		        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
 		        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
 	        }
-	        String[] predictions = trainArguments(argLabelClassifier, nominalArgLabelClassifier, rounds>0?labels:null, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y);
+	        String[] predictions = trainArguments(argLabelClassifier, nominalArgLabelClassifier, rounds>0?labels:null, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y, true, false);
 	        System.out.println("stage 1 training"+(hasStage2Feature||!finalCrossValidation?"":"(cross validated)")+":");
 	        printScore(predictions, goldLabels, goldNominalMask, null);
         }
@@ -1647,7 +1647,7 @@ public class SRLModel implements Serializable {
 	            	nominalArgLabelStage2Classifier.initialize(argLabelStringMap, stage2NomProp);
 	            }
         	}
-        	String[] predictions = trainArguments(argLabelStage2Classifier, nominalArgLabelStage2Classifier, labels, stage2Mask, finalCrossValidation?folds:1, true, threads, null, y);
+        	String[] predictions = trainArguments(argLabelStage2Classifier, nominalArgLabelStage2Classifier, labels, stage2Mask, finalCrossValidation?folds:1, true, threads, null, y, true, true);
         	System.out.println("stage 2 training"+(finalCrossValidation?"(cross validated)":"")+":");
             printScore(predictions, goldLabels, goldNominalMask, stage2Mask);
         }
@@ -1662,7 +1662,7 @@ public class SRLModel implements Serializable {
      * @param labels set of predicted labels from last round of training
      * @return new set of labels
      */
-    String[] trainArguments(Classifier verbClassifier, Classifier nounClassifier, String[] predictedLabels, BitSet stage2Mask, int folds, boolean trainAll, int threads, double[][] values, int[] y) {             
+    String[] trainArguments(Classifier verbClassifier, Classifier nounClassifier, String[] predictedLabels, BitSet stage2Mask, int folds, boolean trainAll, int threads, double[][] values, int[] y, boolean useSequence, boolean usePrediction) {             
         Object[] X = null;
         int[] seeds = null;
         BitSet nominalMask = new BitSet();
@@ -1671,7 +1671,7 @@ public class SRLModel implements Serializable {
 	        TIntArrayList seedList = new TIntArrayList();
 	        List<String> stage2GoldLabels = stage2Mask==null?null:new ArrayList<String>();
 	
-	        readTrainingArguments(extractedSampleFile, predictedLabels, stage2Mask, verbClassifier, nounClassifier, xList, stage2GoldLabels, null, nominalMask, folds>1?seedList:null);
+	        readTrainingArguments(extractedSampleFile, predictedLabels, stage2Mask, verbClassifier, nounClassifier, xList, stage2GoldLabels, null, nominalMask, folds>1?seedList:null, useSequence, usePrediction);
 	        
 	        X = xList.toArray();
 	
@@ -1759,7 +1759,7 @@ public class SRLModel implements Serializable {
 
     void readTrainingArguments(File sampleFile, String[] predictedLabels, BitSet stage2Mask, 
     		Classifier verbClassifier, Classifier nounClassifier, 
-    		List<Object> xList, List<String> labelList, BitSet goldNominalMask, BitSet trainNominalMask, TIntArrayList seedList) {
+    		List<Object> xList, List<String> labelList, BitSet goldNominalMask, BitSet trainNominalMask, TIntArrayList seedList, boolean useSequence, boolean usePrediction) {
     	
     	if (xList!=null) xList.clear();
     	if (labelList!=null) labelList.clear();
@@ -1819,9 +1819,9 @@ public class SRLModel implements Serializable {
 	                                    support.addArg(new SRArg(supportArg.label, supportArg.node));
 	                        }
 	                        if (srlSample.isTrainNominal)
-	                        	xList.add(nounClassifier.getNativeFormat(getFeatureVector(nominalArgLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, support, predictedArgs)));
+	                        	xList.add(nounClassifier.getNativeFormat(getFeatureVector(nominalArgLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, useSequence?support:null, usePrediction?predictedArgs:new ArrayList<SRArg>())));
 	                        else
-	                        	xList.add(verbClassifier.getNativeFormat(getFeatureVector(argLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, support, predictedArgs)));
+	                        	xList.add(verbClassifier.getNativeFormat(getFeatureVector(argLabelFeatures, srlSample.predicate, srlSample.roleset, argSample, useSequence?support:null, usePrediction?predictedArgs:new ArrayList<SRArg>())));
                     	}
                         
                         if (seedList!=null)
