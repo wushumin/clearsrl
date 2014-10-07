@@ -44,9 +44,9 @@ public class AnnotationOutput {
             iReader.close();
             in.close();
         }
-        
-        Aligner aligner = RunTrainer.gatherSentences(props, "ldcgold.");
-        SentencePairReader goldReader = aligner.reader;
+
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("ldcgold.align.threshold", "0.7")));
+        SentencePairReader goldReader = RunTrainer.gatherSentences(aligner, props, "ldcgold.");
         
         goldReader.initialize();
         

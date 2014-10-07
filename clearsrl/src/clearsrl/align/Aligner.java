@@ -35,10 +35,13 @@ public class Aligner {
     public static final float MAX_SIMILARITY = 3.0f;
 
     private static final float BETA_SQR = 1.0f;
+    
+    static final float PROB_WEIGHT = 0.5f;
 
     float alignThreshold;
     
-    SentencePairReader reader;
+    AlignmentProb probMap;
+    float         probWeight;
     
     public enum Method {
         DEFAULT,
@@ -46,13 +49,22 @@ public class Aligner {
         ARGUMENTS
     };
     
-    public Aligner(SentencePairReader reader){
-        this(reader, 0.05f);
+    public Aligner(){
+        this(0.05f);
     }
     
-    public Aligner(SentencePairReader reader, float threshold){
-        this.reader = reader;
+    public Aligner(AlignmentProb probMap, float probWeight){
+        this(0.05f, probMap, probWeight);
+    }
+    
+    public Aligner(float threshold){
+        this(0.05f, null, 0);
+    }
+    
+    public Aligner(float threshold, AlignmentProb probMap, float probWeight){
+        this.probMap = probMap;
         this.alignThreshold = threshold;
+        this.probWeight = probWeight;
     }
     
     /**
@@ -61,21 +73,16 @@ public class Aligner {
      * @return alignments
      */
     public Alignment[] align(SentencePair sentence) {
-    	return align(sentence, alignThreshold);
-    }
-    
-    public static Alignment[] align(SentencePair sentence, float alignThreshold)
-    {
         Alignment[][] alignMatrix = new Alignment[sentence.src.pbInstances.length][sentence.dst.pbInstances.length];
             
         for (int i=0; i<alignMatrix.length; ++i)
             for (int j=0; j<alignMatrix[i].length; ++j)
             {
-                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR);
+                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR, probMap, probWeight);
                 alignMatrix[i][j].computeSymmetricAlignment();
             }
         
-        return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix, alignThreshold);
+        return align(sentence.id, sentence.src.pbInstances, sentence.dst.pbInstances, alignMatrix);
     }
     
     /**
@@ -86,8 +93,7 @@ public class Aligner {
      * @param simMatrix computed similarity measure
      * @return the alignment array
      */
-    public static Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix, float alignThreshold)
-    {       
+    public Alignment[] align(int id, PBInstance[] srcInstances, PBInstance[] dstInstances, Alignment[][] alignMatrix) {       
         if (alignMatrix.length==0)
             return new Alignment[0];
         
@@ -144,7 +150,7 @@ public class Aligner {
                 if (Arrays.binarySearch(indices, dstIdx)>=0)
                 {
                     //System.out.printf("%s => %s\n", srcInstance.predicateNode.word, dstInstance.predicateNode.word);
-                    alignment.add(new Alignment(sentence, i, j, BETA_SQR));
+                    alignment.add(new Alignment(sentence, i, j, BETA_SQR, probMap, probWeight));
                     break;
                 }
             }
@@ -847,13 +853,7 @@ public class Aligner {
     }
     */
     
-    public void collectStats()
-    {
-        try {
-            reader.initialize();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public void collectStats(SentencePairReader reader) {
         int srcCoverageCnt = 0;
         int dstCoverageCnt = 0;
         

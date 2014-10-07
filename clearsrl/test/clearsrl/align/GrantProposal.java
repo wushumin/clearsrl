@@ -133,7 +133,7 @@ public class GrantProposal {
         
         boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
         
-        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold", "0.5")));
         
         //Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
         //int lineIdx = linesIdx.nextInt();
@@ -368,7 +368,8 @@ public class GrantProposal {
         
         System.out.printf("lines: %d, src tokens: %d, dst tokens: %d\n",lines, srcTokenCnt, dstTokenCnt);
         stat.printStats(System.out);
-        aligner.collectStats();
+        sentencePairReader.initialize();
+        aligner.collectStats(sentencePairReader);
         
         // Get rid of singleton mapping and light verbs
         Set<String> srcLightVerbs = new HashSet<String>();

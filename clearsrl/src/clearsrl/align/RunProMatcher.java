@@ -571,7 +571,7 @@ public class RunProMatcher {
         
         boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
         
-        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold", "0.5")));
         
         //Scanner linesIdx = new Scanner(new BufferedReader(new FileReader(props.getProperty("train.all.lnum"))));
         //int lineIdx = linesIdx.nextInt();

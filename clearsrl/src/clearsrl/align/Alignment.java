@@ -35,13 +35,18 @@ public class Alignment implements Comparable<Alignment>{
     public ArgAlignment[] srcDstAlignment;
     public ArgAlignment[] dstSrcAlignment;
     
-    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr) 
+    AlignmentProb       probMap;
+    float               probWeight;
+    
+    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float probWeight) 
     {
         this.sentence = sentence;
         this.srcPBIdx = srcPBIdx;
         this.dstPBIdx = dstPBIdx;
         //this.beta_sqr = beta_sqr;
         this.beta_sqr = (float)sentence.src.indices.length/sentence.dst.indices.length;
+        this.probMap = probMap;
+        this.probWeight = probWeight;
     }
     
     static float getFScore(float lhs, float rhs, float bias)

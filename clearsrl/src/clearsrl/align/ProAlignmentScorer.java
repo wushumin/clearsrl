@@ -147,7 +147,7 @@ public class ProAlignmentScorer {
         sentencePairReader.initialize();
         Map<Integer, SentencePair> sentenceMap = new TreeMap<Integer, SentencePair>();
         
-        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty("threshold", "0.5")));
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold", "0.5")));
         
         SentencePair s;
         while ((s= sentencePairReader.nextPair())!=null)

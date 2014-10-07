@@ -99,7 +99,7 @@ public class MakeAlignedLDASamples {
     	int weight;
     }
     
-    static String[] readAlignment(File file) {
+    public static String[] readAlignment(File file) {
     	List<String> lines = new ArrayList<String>();
     	try (BufferedReader reader = new BufferedReader(new FileReader(file));) {
     		String line=null;
@@ -111,7 +111,7 @@ public class MakeAlignedLDASamples {
     	return lines.toArray(new String[lines.size()]);
     }
     
-    static SentencePair makeSentencePair(int id, TBTree chTree, List<PBInstance> chProp, TBTree enTree, List<PBInstance> enProp, String wa) throws BadInstanceException {
+    public static SentencePair makeSentencePair(int id, TBTree chTree, List<PBInstance> chProp, TBTree enTree, List<PBInstance> enProp, String wa) throws BadInstanceException {
     	SentencePair sp = new SentencePair(id);
     	sp.dst = Sentence.parseSentence(chTree, chProp);
     	sp.src = Sentence.parseSentence(enTree, enProp);
@@ -382,6 +382,8 @@ public class MakeAlignedLDASamples {
         
         int cnt = 0;
         
+        Aligner aligner = new Aligner(0.4f);
+        
         BufferedReader idReader = new BufferedReader(new FileReader(options.inFileList));        
         String id = null;
         while ((id = idReader.readLine())!=null) {
@@ -406,7 +408,7 @@ public class MakeAlignedLDASamples {
         	
         	for (int i=0; i<chTrees.length; ++i) {
         		SentencePair sp = makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i]);
-        		Alignment[] al = Aligner.align(sp, 0.4f);
+        		Alignment[] al = aligner.align(sp);
         		if (al!=null) {
         			logger.fine(String.format("************** %d/%d ********************", sp.src.pbInstances.length, sp.dst.pbInstances.length));
         			logger.fine(sp.toAlignmentString()+"\n");

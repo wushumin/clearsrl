@@ -21,8 +21,8 @@ import clearcommon.util.PropertyUtil;
 
 public class RunTrainer {
     
-    static Aligner gatherSentences(Properties props, String prefix) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
-    {   
+    static SentencePairReader gatherSentences(Aligner aligner , Properties props, String prefix) 
+    		throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException  {   
         Map<String, TObjectIntMap<String>> srcDstMapping = new TreeMap<String, TObjectIntMap<String>>();
         Map<String, TObjectIntMap<String>> dstSrcMapping = new TreeMap<String, TObjectIntMap<String>>();
 
@@ -44,8 +44,6 @@ public class RunTrainer {
         SentencePairReader sentencePairReader = prefix.startsWith("LDC")
             ? new LDCSentencePairReader(PropertyUtil.filterProperties(props, prefix+"align.")) 
             : new DefaultSentencePairReader(PropertyUtil.filterProperties(props, prefix+"align."));
-        
-        Aligner aligner = new Aligner(sentencePairReader, Float.parseFloat(props.getProperty(prefix+"align.threshold", "0.7")));
         
         sentencePairReader.initialize();
         Aligner.initAlignmentOutput(htmlStream);
@@ -174,7 +172,7 @@ public class RunTrainer {
 
 //        aligner.collectStats();
         
-        return aligner;
+        return sentencePairReader;
     }
     
     
@@ -188,7 +186,9 @@ public class RunTrainer {
             iReader.close();
             in.close();
         }
-        gatherSentences(props, args.length==1?"":args[1]);
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty((args.length==1?"":args[1])+"align.threshold", "0.7")));
+        
+        gatherSentences(aligner, props, args.length==1?"":args[1]);
         /*
         SentencePairReader goldReader = gatherSentences(props, "ldcgold.").reader;
         SentencePairReader sysReader = gatherSentences(props, "ldcsys.").reader;

@@ -18,9 +18,9 @@ public class ConstrainWordAlignment {
             in.close();
         }
         
-        Aligner aligner = RunTrainer.gatherSentences(props, "ldcgold.");
-        SentencePairReader goldReader = aligner.reader;
-        SentencePairReader sysReader = RunTrainer.gatherSentences(props, "ldcsys.").reader;
+        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("ldcgold.align.threshold", "0.7")));
+        SentencePairReader goldReader = RunTrainer.gatherSentences(aligner, props, "ldcgold.");
+        SentencePairReader sysReader = RunTrainer.gatherSentences(aligner, props, "ldcsys.");
         
         goldReader.initialize();
         sysReader.initialize();
