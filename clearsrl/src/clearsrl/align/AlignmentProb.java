@@ -101,7 +101,7 @@ public class AlignmentProb implements Serializable{
     }
     
     String makeKey(PBInstance pred) {
-    	return pred.getRoleset();
+    	return pred.getRoleset().substring(0,pred.getRoleset().lastIndexOf('.'));
     	//return pred.getRoleset().substring(0, pred.getRoleset().indexOf('.'));
     }
     

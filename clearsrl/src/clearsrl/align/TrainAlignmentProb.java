@@ -20,6 +20,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -135,10 +136,19 @@ public class TrainAlignmentProb {
         			break;
         	}
         	out.print("\n");
-		}
-			
+		}		
 	}
 	
+	void filterProps(Sentence sentence) {
+		if (sentence.pbInstances==null) return;
+		List<PBInstance> propList = new ArrayList<PBInstance>(sentence.pbInstances.length);
+		for (PBInstance inst:sentence.pbInstances)
+			if (!inst.getRoleset().endsWith(".XX"))
+				propList.add(inst);
+		if (propList.size()!=sentence.pbInstances.length)
+			sentence.pbInstances = propList.toArray(new PBInstance[propList.size()]);
+	}
+
 	AlignmentProb readCorpus(File fileList, File objFile, Properties props, LanguageUtil chUtil, LanguageUtil enUtil, Aligner aligner) throws IOException, BadInstanceException {
         
 		int cnt=0;
@@ -182,15 +192,15 @@ public class TrainAlignmentProb {
         	
         	for (int i=0; i<chTrees.length; ++i) {
         		SentencePair sp = MakeAlignedLDASamples.makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i]);
-        		Alignment[] al = aligner.align(sp);
-        		probMap.addSentence(sp, al);
-
             	if (objStream != null) {
             		objStream.writeObject(sp);
                     if (sp.id%1000==999)
                         objStream.reset();
             	}
-        		
+            	filterProps(sp.src);
+            	filterProps(sp.dst);
+        		Alignment[] al = aligner.align(sp);
+        		probMap.addSentence(sp, al);
         	}
         }
         idReader.close();
@@ -210,6 +220,8 @@ public class TrainAlignmentProb {
 		while (true)
 			try {
 				SentencePair sp = (SentencePair) inStream.readObject();
+            	filterProps(sp.src);
+            	filterProps(sp.dst);
 				Alignment[] al = aligner.align(sp);
         		probMap.addSentence(sp, al);
 			} catch (Exception e) {
