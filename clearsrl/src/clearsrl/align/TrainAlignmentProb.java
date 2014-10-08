@@ -217,6 +217,7 @@ public class TrainAlignmentProb {
 		
 		ObjectInputStream inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(objFile),GZIP_BUFFER),GZIP_BUFFER*4));
 
+		int cnt = 0;
 		while (true)
 			try {
 				SentencePair sp = (SentencePair) inStream.readObject();
@@ -224,6 +225,8 @@ public class TrainAlignmentProb {
             	filterProps(sp.dst);
 				Alignment[] al = aligner.align(sp);
         		probMap.addSentence(sp, al);
+        		if (++cnt%10000==0)
+        			logger.info(String.format("read %d sentences", cnt));
 			} catch (Exception e) {
 				if (!(e instanceof EOFException))
 					e.printStackTrace();
