@@ -1,16 +1,11 @@
 package clearsrl.align;
 
-import gnu.trove.iterator.TObjectIntIterator;
-import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,21 +13,15 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.StringTokenizer;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -66,6 +55,9 @@ public class TrainAlignmentProb {
     
     @Option(name="-objFile",usage="object stream file to read from/write to")
     private File objFile = null; 
+
+    @Option(name="-model",usage="output probability model")
+    private File modelFile = null; 
     
     @Option(name="-overWrite",usage="overwrite object stream file if it exists")
     private boolean overWrite = false;
@@ -96,7 +88,6 @@ public class TrainAlignmentProb {
         
         return probMap;
     }
-    
     
 	class KeyDoublePair<T extends Comparable<T>> implements Comparable<KeyDoublePair<T>>{
 		T key;
@@ -285,6 +276,12 @@ public class TrainAlignmentProb {
         	probMap = options.processCorpus(options.objFile, aligner);
         else
         	probMap = options.readCorpus(options.inFileList, options.objFile, props, chUtil, enUtil, aligner);
+        
+        if (options.modelFile!=null) {
+        	ObjectOutputStream objStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(options.modelFile),GZIP_BUFFER),GZIP_BUFFER*4));
+        	objStream.writeObject(probMap);
+        	objStream.close();
+        }
         
         
         options.printMap(probMap.srcArgDstArgProb, System.out, "P(ch_arg|en_%s):", 30);

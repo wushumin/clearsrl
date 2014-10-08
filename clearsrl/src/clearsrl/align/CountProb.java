@@ -1,5 +1,6 @@
 package clearsrl.align;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,9 +19,14 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectDoubleHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
-public class CountProb<T> {
-	TObjectIntMap<T> cntMap;
-	TObjectIntMap<T> unseenCntMap;
+public class CountProb<T> implements Serializable {
+	/**
+	 * 
+	 */
+    private static final long serialVersionUID = 1L;
+    
+	transient TObjectIntMap<T> cntMap;
+	transient TObjectIntMap<T> unseenCntMap;
 	
 	TObjectDoubleMap<T> probMap;
 	TObjectDoubleMap<T> unseenProbMap;
