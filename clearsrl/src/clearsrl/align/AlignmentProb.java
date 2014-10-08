@@ -11,6 +11,7 @@ import gnu.trove.map.hash.TObjectDoubleHashMap;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import clearcommon.propbank.PBArg;
@@ -23,14 +24,14 @@ public class AlignmentProb implements Serializable{
 	 */
     private static final long serialVersionUID = 1L;
     
-	Map<String, CountProb<String>> srcPredDstPredProb;
-    Map<String, CountProb<String>> dstPredSrcPredProb;
+	SortedMap<String, CountProb<String>> srcPredDstPredProb;
+	SortedMap<String, CountProb<String>> dstPredSrcPredProb;
     
-    Map<String, CountProb<String>> srcArgDstArgProb;
-    Map<String, CountProb<String>> dstArgSrcArgProb;
+	SortedMap<String, CountProb<String>> srcArgDstArgProb;
+	SortedMap<String, CountProb<String>> dstArgSrcArgProb;
     
-    Map<String, CountProb<String>> srcPredArgDstPredArgProb;
-    Map<String, CountProb<String>> dstPredArgSrcPredArgProb;
+	SortedMap<String, CountProb<String>> srcPredArgDstPredArgProb;
+	SortedMap<String, CountProb<String>> dstPredArgSrcPredArgProb;
 
     CountProb<String> srcPredProb;
     CountProb<String> dstPredProb;
@@ -223,7 +224,4 @@ public class AlignmentProb implements Serializable{
     	
     	return argProbs;
     }
-
-    
-    
 }
