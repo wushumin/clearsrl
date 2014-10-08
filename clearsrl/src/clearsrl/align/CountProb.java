@@ -2,6 +2,7 @@ package clearsrl.align;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +28,8 @@ public class CountProb<T> implements Serializable {
     
 	transient TObjectIntMap<T> cntMap;
 	transient TObjectIntMap<T> unseenCntMap;
-	
+	transient long totalCnt = 0;
+
 	TObjectDoubleMap<T> probMap;
 	TObjectDoubleMap<T> unseenProbMap;
 	
@@ -35,9 +37,6 @@ public class CountProb<T> implements Serializable {
 	
 	double weightFactor = 0;
 	double unseenFactor = 0;
-
-	boolean dirty = false;
-	boolean unseenDirty = false;
 	
 	public CountProb() {
 		this(null);
@@ -45,6 +44,7 @@ public class CountProb<T> implements Serializable {
 	
 	public CountProb(TObjectDoubleMap<T> unseenProbMap) {
 		cntMap = new TObjectIntHashMap<T>();
+		totalCnt = 0;
 		unseenCntMap = new TObjectIntHashMap<T>();
 		this.unseenProbMap = unseenProbMap;
 	}
@@ -56,10 +56,20 @@ public class CountProb<T> implements Serializable {
 	public void addCount(T dstKey, boolean unseen) {
 		if (unseen) {
 			unseenCntMap.adjustOrPutValue(dstKey, 1, 1);
-			unseenDirty = true;
 		} else {
 			cntMap.adjustOrPutValue(dstKey, 1, 1);
-			dirty = true;
+			totalCnt++;
+		}
+	}
+	
+	public void addCount(Collection<T> dstKeys, boolean unseen) {
+		if (unseen) {
+			for (T dstKey:dstKeys)
+				unseenCntMap.adjustOrPutValue(dstKey, 1, 1);
+		} else {
+			for (T dstKey:dstKeys)
+				cntMap.adjustOrPutValue(dstKey, 1, 1);
+			totalCnt++;
 		}
 	}
 	
@@ -86,8 +96,6 @@ public class CountProb<T> implements Serializable {
 	}
 	
 	public Set<T> getKeySet() {
-		if (dirty || unseenDirty)
-			makeSGTProb();
 		if (wholeProbMap!=null)
 			return wholeProbMap.keySet();
 		if (unseenFactor==0)
@@ -98,8 +106,6 @@ public class CountProb<T> implements Serializable {
 	}
 	
 	public double getProb(T key, boolean weighted) {
-		if (dirty || unseenDirty)
-			makeSGTProb();
 		double prob = 0;
 		if (wholeProbMap!=null)
 			prob = wholeProbMap.get(key);
@@ -114,7 +120,6 @@ public class CountProb<T> implements Serializable {
 	}
 	
 	public void makeMKYProb(Map<String, CountProb<String>> extMap) {
-		if (!dirty) return;
 		TObjectIntMap<T> cntofCntMap = new TObjectIntHashMap<T>();
 
 		int unseenCnt = 0;
@@ -140,18 +145,15 @@ public class CountProb<T> implements Serializable {
 				iter.advance();
 				total += iter.value();
 			}
-			if (total>1+0.0001 || total<1-0.0001)
+			if (total>1+1e-8 || total<1e-8)
 				System.err.println(total);
 		}
-		dirty = false;
 	}
 	
 	public void makeSGTProb() {
-		if (unseenDirty) {
+
+		if (unseenCntMap!=null && !unseenCntMap.isEmpty())
 			smoothSGT(unseenCntMap, unseenProbMap=new TObjectDoubleHashMap<T>(), 0);
-			unseenDirty = false;
-		}
-		if (!dirty) return;
 
 		double unseenProbSum = 0;
 		int unseenCnt = 0;
@@ -163,14 +165,14 @@ public class CountProb<T> implements Serializable {
 					unseenCnt++;
 				}
 			}
-		
+
 		unseenFactor = smoothSGT(cntMap, probMap=new TObjectDoubleHashMap<T>(), unseenCnt);
     	if (unseenProbSum!=0)
     		unseenFactor /= unseenProbSum;
     	
     	if (unseenFactor==0 && !unseenCntMap.isEmpty())
     		unseenProbMap = null;
-    		
+
     	weightFactor = 0;
     	for (TObjectDoubleIterator<T> iter=probMap.iterator(); iter.hasNext(); ) {
 			iter.advance();
@@ -183,10 +185,23 @@ public class CountProb<T> implements Serializable {
 					weightFactor += Math.pow(unseenFactor*iter.value(), 2);
 			}
     	weightFactor = weightFactor==0?0:1/weightFactor;
-
-    	wholeProbMap = null;
-
-    	dirty = false;
+    	
+		long totalInstances = 0;
+		for (TObjectIntIterator<T> iter=cntMap.iterator(); iter.hasNext();) {
+			iter.advance();
+			totalInstances+=iter.value();
+		}
+		if (totalInstances!=totalCnt) {
+			double factor = 1.0*totalInstances/totalCnt;
+			for (TObjectDoubleIterator<T> iter=probMap.iterator(); iter.hasNext(); ) {
+				iter.advance();
+				iter.setValue(iter.value()*factor);
+	    	}
+			unseenFactor *= factor;
+			weightFactor *= factor;
+		}
+		
+		wholeProbMap = null;
 	}
 	
 	public static <T> double smoothAddN(TObjectIntMap<T> keyedCntMap, TObjectDoubleMap<T> keyedProbMap, int unseenCnt, double N) {
@@ -257,8 +272,6 @@ public class CountProb<T> implements Serializable {
     	if (unseenCnt==0 && unseenProb>0) {
     		// if we are not computing unseen probability, add it back
     		factor = 1/(1-unseenProb);
-    		for (int i=0; i<probs.length; ++i)
-    			probs[i] *= factor;
     	} else if (unseenCnt>0) {
     		// the unseen probability estimate of SGT is probably bad, adjust
     		if (unseenProb==0) {

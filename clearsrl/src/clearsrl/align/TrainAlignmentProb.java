@@ -185,7 +185,7 @@ public class TrainAlignmentProb {
         		SentencePair sp = MakeAlignedLDASamples.makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i]);
             	if (objStream != null) {
             		objStream.writeObject(sp);
-                    if (sp.id%1000==999)
+                    if (sp.id%5000==999)
                         objStream.reset();
             	}
             	filterProps(sp.src);
@@ -284,9 +284,9 @@ public class TrainAlignmentProb {
         }
         
         
-        options.printMap(probMap.srcArgDstArgProb, System.out, "P(ch_arg|en_%s):", 30);
+        options.printMap(probMap.srcArgDstArgProb, System.out, "P(ch_arg|en_%s):", 50);
         System.out.println("\n");
-        options.printMap(probMap.dstArgSrcArgProb, System.out, "P(en_arg|ch_%s):", 30);
+        options.printMap(probMap.dstArgSrcArgProb, System.out, "P(en_arg|ch_%s):", 50);
         System.out.println("\n");
         
         options.printMap(probMap.srcPredDstPredProb, System.out, "P(ch_pred|en_%s):", 30);

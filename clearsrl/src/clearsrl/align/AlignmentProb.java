@@ -9,7 +9,10 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectDoubleHashMap;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -97,7 +100,16 @@ public class AlignmentProb implements Serializable{
         	cntProb = new CountProb<String>();
             map.put(key, cntProb);
         }
-        cntProb.addCount(innerKey);
+        cntProb.addCount(innerKey, false);
+    }
+
+    static void updateCnt(Map<String, CountProb<String>> map, String key, Collection<String> innerKeys) {
+    	CountProb<String> cntProb = map.get(key);
+        if (cntProb==null) {
+        	cntProb = new CountProb<String>();
+            map.put(key, cntProb);
+        }
+        cntProb.addCount(innerKeys, false);
     }
     
     String makeKey(PBInstance pred) {
@@ -121,6 +133,33 @@ public class AlignmentProb implements Serializable{
             updateCnt(srcPredDstPredProb, srcPredKey, dstPredKey);
             updateCnt(dstPredSrcPredProb, dstPredKey, srcPredKey);
 
+            @SuppressWarnings("unchecked")
+            List<String>[] dstArgAlignment = new List[alignment.getSrcPBInstance().getArgs().length];
+            @SuppressWarnings("unchecked")
+            List<String>[] srcArgAlignment = new List[alignment.getDstPBInstance().getArgs().length];
+            
+            for (ArgAlignmentPair argPair: alignment.getArgAlignmentPairs()) {
+            	if (dstArgAlignment[argPair.srcArgIdx]==null)
+            		dstArgAlignment[argPair.srcArgIdx]=new ArrayList<String>();
+            	dstArgAlignment[argPair.srcArgIdx].add(AlignmentStat.convertLabel(alignment.getDstPBArg(argPair.dstArgIdx).getLabel()));
+            	if (srcArgAlignment[argPair.dstArgIdx]==null)
+            		srcArgAlignment[argPair.dstArgIdx]=new ArrayList<String>();
+            	srcArgAlignment[argPair.dstArgIdx].add(AlignmentStat.convertLabel(alignment.getSrcPBArg(argPair.srcArgIdx).getLabel()));
+            }
+            for (int i=0; i<dstArgAlignment.length;++i)
+            	if (dstArgAlignment[i]!=null) {
+            		String srcArgKey = AlignmentStat.convertLabel(alignment.getSrcPBArg(i).getLabel());
+            		updateCnt(srcArgDstArgProb, srcArgKey, dstArgAlignment[i]);
+            		updateCnt(srcPredArgDstPredArgProb, makeKey(srcPredKey, dstPredKey, srcArgKey), dstArgAlignment[i]);
+            	}
+            for (int i=0; i<srcArgAlignment.length;++i)
+            	if (srcArgAlignment[i]!=null) {
+            		String dstArgKey = AlignmentStat.convertLabel(alignment.getDstPBArg(i).getLabel());
+            		updateCnt(dstArgSrcArgProb, dstArgKey, srcArgAlignment[i]);
+            		updateCnt(dstPredArgSrcPredArgProb, makeKey(dstPredKey, srcPredKey, dstArgKey), srcArgAlignment[i]);
+            	}
+            
+            /*
             for (ArgAlignmentPair argPair: alignment.getArgAlignmentPairs()) {
                 String srcArgKey = AlignmentStat.convertLabel(alignment.getSrcPBArg(argPair.srcArgIdx).getLabel());
                 String dstArgKey = AlignmentStat.convertLabel(alignment.getDstPBArg(argPair.dstArgIdx).getLabel());
@@ -130,7 +169,7 @@ public class AlignmentProb implements Serializable{
                 
                 updateCnt(srcPredArgDstPredArgProb, makeKey(srcPredKey, dstPredKey, srcArgKey), dstArgKey);
                 updateCnt(dstPredArgSrcPredArgProb, makeKey(dstPredKey, srcPredKey, dstArgKey), srcArgKey);
-            }
+            }*/
     	}
     	
     	for (PBInstance pbInst:sentPair.src.pbInstances) {
