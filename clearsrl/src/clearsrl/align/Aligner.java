@@ -107,7 +107,7 @@ public class Aligner {
                 costMatrix[i][j] = alignMatrix[i][j].getCompositeScore();
                 
                 // don't align predicate only prop unless it's to another predicate only prop
-                if (srcInstances[i].getAllArgs().length==1 ^ dstInstances[j].getAllArgs().length==1)
+                if (srcInstances[i].getArgs().length==1 ^ dstInstances[j].getArgs().length==1)
                     costMatrix[i][j] = 0;
                 
                 if (costMatrix[i][j]>maxScore)

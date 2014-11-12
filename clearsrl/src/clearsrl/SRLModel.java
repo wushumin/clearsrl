@@ -408,15 +408,26 @@ public class SRLModel implements Serializable {
         	Map<String, int[]> topicMap = topicModel.getWordTopics();
         	argTopicMap = new HashMap<String, List<String>>();
         	for (Map.Entry<String, int[]> entry:topicMap.entrySet()) {
-        		List<String> topics = new ArrayList<String>(entry.getValue().length);
         		String word = entry.getKey().substring(0,entry.getKey().lastIndexOf(':'));
         		String label = entry.getKey().substring(word.length()+1); 
+        		
+        		List<String> topics = argTopicMap.get(word);
+        		if (topics==null)
+        			argTopicMap.put(word, topics=new ArrayList<String>());
+        		
         		for (int topicId:entry.getValue())
         			topics.add(label+':'+topicId);
-        		argTopicMap.put(word,topics);
         	}
         } else
         	argTopicMap = Topics.readAllTopics(props);
+       
+        if (argTopicMap!=null) {
+        	int sum=0;
+        	for (Map.Entry<String, List<String>> entry:argTopicMap.entrySet())
+        		sum += entry.getValue().size();
+        	logger.info(String.format("topic words: %d, total topic count: %d", argTopicMap.size(), sum));
+        }
+    
     }
     
     /**
