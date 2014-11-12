@@ -31,8 +31,6 @@ import java.util.regex.Pattern;
  *
  */
 public class Aligner {
-    
-    public static final float MAX_SIMILARITY = 3.0f;
 
     private static final float BETA_SQR = 1.0f;
     
@@ -41,7 +39,8 @@ public class Aligner {
     float alignThreshold;
     
     AlignmentProb probMap;
-    float         probWeight;
+    float         predProbWeight;
+    float         argProbWeight;
     
     public enum Method {
         DEFAULT,
@@ -53,18 +52,19 @@ public class Aligner {
         this(0.05f);
     }
     
-    public Aligner(AlignmentProb probMap, float probWeight){
-        this(0.05f, probMap, probWeight);
+    public Aligner(AlignmentProb probMap, float predProbWeight, float argProbWeight){
+        this(0.05f, probMap, predProbWeight, argProbWeight);
     }
     
     public Aligner(float threshold){
-        this(0.05f, null, 0);
+        this(threshold, null, 0, 0);
     }
     
-    public Aligner(float threshold, AlignmentProb probMap, float probWeight){
+    public Aligner(float threshold, AlignmentProb probMap, float predProbWeight, float argProbWeight){
         this.probMap = probMap;
         this.alignThreshold = threshold;
-        this.probWeight = probWeight;
+        this.predProbWeight = predProbWeight;
+        this.argProbWeight = argProbWeight;
     }
     
     /**
@@ -78,7 +78,7 @@ public class Aligner {
         for (int i=0; i<alignMatrix.length; ++i)
             for (int j=0; j<alignMatrix[i].length; ++j)
             {
-                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR, probMap, probWeight);
+                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight);
                 alignMatrix[i][j].computeSymmetricAlignment();
             }
         
@@ -101,15 +101,23 @@ public class Aligner {
         for (int i=0; i<costMatrix.length; ++i)
             costMatrix[i] = new float[costMatrix.length];
             
+        float maxScore = 0;
         for (int i=0; i<alignMatrix.length; ++i)
-            for (int j=0; j<alignMatrix[i].length; ++j)
-            {
-                costMatrix[i][j] = MAX_SIMILARITY-alignMatrix[i][j].getCompositeScore();
+            for (int j=0; j<alignMatrix[i].length; ++j) {
+                costMatrix[i][j] = alignMatrix[i][j].getCompositeScore();
                 
                 // don't align predicate only prop unless it's to another predicate only prop
                 if (srcInstances[i].getAllArgs().length==1 ^ dstInstances[j].getAllArgs().length==1)
-                    costMatrix[i][j] = MAX_SIMILARITY;
+                    costMatrix[i][j] = 0;
+                
+                if (costMatrix[i][j]>maxScore)
+                	maxScore = costMatrix[i][j];
             }
+        
+        for (int i=0; i<alignMatrix.length; ++i)
+            for (int j=0; j<alignMatrix[i].length; ++j)
+                costMatrix[i][j] = maxScore-alignMatrix[i][j].getCompositeScore();
+
         int[][] alignIdx = HungarianAlgorithm.computeAssignments(costMatrix);
         
         int i=0;
@@ -150,7 +158,7 @@ public class Aligner {
                 if (Arrays.binarySearch(indices, dstIdx)>=0)
                 {
                     //System.out.printf("%s => %s\n", srcInstance.predicateNode.word, dstInstance.predicateNode.word);
-                    alignment.add(new Alignment(sentence, i, j, BETA_SQR, probMap, probWeight));
+                    alignment.add(new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight));
                     break;
                 }
             }
@@ -491,7 +499,7 @@ public class Aligner {
     
     public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments, boolean printEC, long[] proAlignments)
     {
-        stream.printf("<h3>%d</h3>\n", sentencePair.id);
+        stream.printf("<h3>%d</h3>\n", sentencePair.id+1);
         
         BitSet srcHighLight = new BitSet();
         BitSet dstHighLight = new BitSet();
@@ -754,6 +762,7 @@ public class Aligner {
     static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String color, boolean printEC)
     {
         List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();
+        if (nodes.isEmpty()) return;
         preMarkup[nodes.get(0).getTerminalIndex()] = "<font style=\"BACKGROUND:"+color+"\">";
         postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = "</font>";       
     }

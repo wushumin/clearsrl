@@ -265,8 +265,8 @@ public class Sentence implements Serializable{
             builder.append(" "+token.getWord());
         }
         builder.append("\n");
-        for (PBInstance instance:pbInstances)
-            builder.append(instance.toText(true)+"\n");
+        for (int i=0; i<pbInstances.length; ++i)
+        	builder.append(""+(i+1)+" "+pbInstances[i].toText(true)+"\n");
         return builder.toString();
     }
 

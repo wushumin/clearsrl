@@ -82,20 +82,19 @@ public class Scorer {
             Set<String> lhsArgSet = iter.value();
             Set<String> rhsArgSet = null;
             
+            for (String s:lhsArgSet)
+                if (s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*")) 
+                	cntCoreArg++;
+            
             if ((rhsArgSet=rhs.get(iter.key()))!=null)
             {
                 score++;
                 for (String s:lhsArgSet)
-                {
-                    boolean isCoreArg = s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*");
-                    if (isCoreArg) cntCoreArg++;
                     if (rhsArgSet.contains(s))
                     {
-                        if (isCoreArg) scoreCoreArg++;
+                        if (s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*")) scoreCoreArg++;
                         scoreArg++;
                     }
-                }
-                
             }
             cntArg+=lhsArgSet.size();
             cnt++;

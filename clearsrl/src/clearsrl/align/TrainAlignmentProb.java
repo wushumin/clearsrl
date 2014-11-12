@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -47,6 +48,8 @@ public class TrainAlignmentProb {
 	
 	private static Logger logger = Logger.getLogger("clearsrl");
 	
+	static final float ARG_INCREMENT = 0.2f;
+	
 	@Option(name="-prop",usage="properties file")
 	private File propFile = null; 
     
@@ -64,6 +67,37 @@ public class TrainAlignmentProb {
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
+    
+    
+    static List<SentencePair> readSentencePairs(Properties props, String filter1, String filter2, LanguageUtil chUtil, LanguageUtil enUtil) throws Exception {
+    	
+		props = PropertyUtil.filterProperties(props, filter1, true);
+		props = PropertyUtil.filterProperties(props, filter2, true);
+		
+		List<SentencePair> sentList = new ArrayList<SentencePair>();
+		
+		SentencePairReader reader = new DefaultSentencePairReader(props);
+		reader.initialize();
+		SentencePair s = null;
+		while ((s = reader.nextPair())!=null) {
+			sentList.add(s);
+		}
+		reader.close();
+		return sentList;
+	}
+    
+    static void writeAlignments(Properties props, String filter1, String filter2, List<SentencePair> sentList, Aligner aligner, int round) throws Exception {
+    	props = PropertyUtil.filterProperties(props, filter1, true);
+		props = PropertyUtil.filterProperties(props, filter2, true);
+    	PrintStream out = new PrintStream(props.getProperty("output.txt")+".r"+round);
+		
+    	for (SentencePair s:sentList) {
+			Alignment[] alignments = aligner.align(s);
+			for (Alignment alignment:alignments)
+				out.printf("%d,%s;[%s,%s]\n",s.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+		}
+    	out.close();
+    }
     
 	
 	static AlignmentProb computeProb(Aligner aligner , SentencePairReader sentencePairReader) 
@@ -142,6 +176,9 @@ public class TrainAlignmentProb {
 
 	AlignmentProb readCorpus(File fileList, File objFile, Properties props, LanguageUtil chUtil, LanguageUtil enUtil, Aligner aligner) throws IOException, BadInstanceException {
         
+		double tScore = 0;
+		int aCnt = 0;
+		
 		int cnt=0;
 		
         String chParseDir = props.getProperty("chinese.parseDir");
@@ -182,7 +219,7 @@ public class TrainAlignmentProb {
         	String[] wa = MakeAlignedLDASamples.readAlignment(new File(alignDir, alignName));
         	
         	for (int i=0; i<chTrees.length; ++i) {
-        		SentencePair sp = MakeAlignedLDASamples.makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i]);
+        		SentencePair sp = MakeAlignedLDASamples.makeSentencePair(cnt++, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i], true);
             	if (objStream != null) {
             		objStream.writeObject(sp);
                     if (sp.id%5000==999)
@@ -192,18 +229,36 @@ public class TrainAlignmentProb {
             	filterProps(sp.dst);
         		Alignment[] al = aligner.align(sp);
         		probMap.addSentence(sp, al);
+        	
+				for (Alignment alignment:al) 
+					tScore+=alignment.getCompositeScore();
+				aCnt+=al.length;	
+        		
         	}
         }
         idReader.close();
         if (objStream != null)
         	objStream.close();
 
-        probMap.makeProb();
+        System.out.printf("alignments: %d, total score: %f\n", aCnt, tScore);
 		
 		return probMap;
 	}
 	
-	AlignmentProb processCorpus(File objFile, Aligner aligner) throws IOException {
+	void processSentences(AlignmentProb probMap, Aligner aligner, List<SentencePair> sentences) {
+		for (SentencePair sp:sentences) {
+			Alignment[] al = aligner.align(sp);
+			probMap.addSentence(sp, al);
+		}
+	}
+	
+	
+	
+	
+	AlignmentProb processCorpus(File objFile, Aligner aligner, Aligner oldAligner) throws IOException {
+		double tScore = 0;
+		int aCnt = 0;
+		
 		AlignmentProb probMap = new AlignmentProb();
 		
 		ObjectInputStream inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(objFile),GZIP_BUFFER),GZIP_BUFFER*4));
@@ -215,6 +270,30 @@ public class TrainAlignmentProb {
             	filterProps(sp.src);
             	filterProps(sp.dst);
 				Alignment[] al = aligner.align(sp);
+				for (Alignment alignment:al) 
+					tScore+=alignment.getCompositeScore();
+				
+				if (oldAligner!=null) {
+					Alignment[] oldAl = oldAligner.align(sp);
+					boolean same = al.length==oldAl.length;
+					
+					if (same)
+						for (int i=0; i<al.length; ++i)
+							if (al[i].srcPBIdx!=oldAl[i].srcPBIdx || al[i].dstPBIdx!=oldAl[i].dstPBIdx) {
+								same = false;
+								break;
+							}
+					
+					/*if (!same) {
+						System.out.println(sp);
+						System.out.println(Arrays.toString(al));
+						System.out.println(Arrays.toString(oldAl));
+						System.out.print("\n");
+					}*/
+				}
+				
+				aCnt+=al.length;
+				
         		probMap.addSentence(sp, al);
         		if (++cnt%10000==0)
         			logger.info(String.format("read %d sentences", cnt));
@@ -225,7 +304,11 @@ public class TrainAlignmentProb {
 			}
 		inStream.close();
 		
-		probMap.makeProb();
+		
+		
+        System.out.printf("alignments: %d, total score: %f\n\n", aCnt, tScore);
+		
+		//probMap.makeProb();
 		return probMap;
 	}
 	
@@ -257,7 +340,7 @@ public class TrainAlignmentProb {
         }
         props = PropertyUtil.resolveEnvironmentVariables(props);
         
-        Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("align.threshold", "0.1")));
+        Aligner aligner = new Aligner(0.05f, null, 0, 0);
         
         LanguageUtil chUtil = (LanguageUtil) Class.forName(props.getProperty("chinese.util-class")).newInstance();
         if (!chUtil.init(PropertyUtil.filterProperties(props,"chinese."))) {
@@ -271,19 +354,62 @@ public class TrainAlignmentProb {
             System.exit(-1);
         }
        
+        List<SentencePair> bcSentences = readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
+        List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil); 
+        List<SentencePair> nwpartSentences = readSentencePairs(props, "nwpart.", "auto.", chUtil, enUtil); 
+        List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil); 
+        
         AlignmentProb probMap = null;
         if (options.objFile!=null && options.objFile.exists() && ! options.overWrite)
-        	probMap = options.processCorpus(options.objFile, aligner);
+        	probMap = options.processCorpus(options.objFile, aligner, null);
         else
         	probMap = options.readCorpus(options.inFileList, options.objFile, props, chUtil, enUtil, aligner);
+        
+        options.processSentences(probMap, aligner, bcSentences);
+        options.processSentences(probMap, aligner, nwSentences);
+        
+        probMap.makeProb();
         
         if (options.modelFile!=null) {
         	ObjectOutputStream objStream = new ObjectOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(options.modelFile),GZIP_BUFFER),GZIP_BUFFER*4));
         	objStream.writeObject(probMap);
         	objStream.close();
         }
+
+        float increment = ARG_INCREMENT;
+        int rounds = 5;
         
+        for (int r=0; r<rounds; ++r) {
         
+        	AlignmentProb oldProbMap = probMap;
+ 	        Aligner oldAligner = aligner;
+ 	        aligner = new Aligner(0.05f, oldProbMap, increment, increment);
+        	
+        	writeAlignments(props, "bc.", "auto.", bcSentences, aligner, r);
+        	writeAlignments(props, "nw.", "auto.", nwSentences, aligner, r);
+        	writeAlignments(props, "nwpart.", "auto.", nwpartSentences, aligner, r);
+        	writeAlignments(props, "nwtest.", "auto.", nwtestSentences, aligner, r);
+        	
+        	if (r+1==rounds) break;
+ 	        
+        	aligner.alignThreshold = 0.05f;
+        	
+	        if (options.objFile!=null && options.objFile.exists())
+	        	probMap = options.processCorpus(options.objFile, aligner, oldAligner);
+	        else
+	        	probMap = options.readCorpus(options.inFileList, options.objFile, props, chUtil, enUtil, aligner);
+	        
+	        aligner.alignThreshold = 0.05f;
+	        
+	        options.processSentences(probMap, aligner, bcSentences);
+	        options.processSentences(probMap, aligner, nwSentences);
+	        probMap.makeProb();
+	        
+	        increment = 1-(1-ARG_INCREMENT)*(1-increment);
+	        
+        }
+        
+        /*
         options.printMap(probMap.srcArgDstArgProb, System.out, "P(ch_arg|en_%s):", 50);
         System.out.println("\n");
         options.printMap(probMap.dstArgSrcArgProb, System.out, "P(en_arg|ch_%s):", 50);
@@ -293,7 +419,7 @@ public class TrainAlignmentProb {
         System.out.println("\n");
         options.printMap(probMap.dstPredSrcPredProb, System.out, "P(en_pred|ch_%s):", 30);
         System.out.println("\n");
-        
+        */
         //SentencePairReader sentencePairReader = new DefaultSentencePairReader(PropertyUtil.filterProperties(props, "align."));
            
         //AlignmentProb probMap = computeProb(aligner, sentencePairReader);

@@ -88,7 +88,7 @@ public  class SentencePair implements Serializable {
         parseAlign(line, dstAlignment, src.indices.length);
     }
     
-    public void parseAlign(String line, boolean zeroIndexed) throws BadInstanceException
+    public void parseAlign(String line, boolean zeroIndexed, boolean reverse) throws BadInstanceException
     {
         String[] alignmentStrs = line.trim().isEmpty()?new String[0]:line.trim().split("[ \t]+");
             
@@ -97,8 +97,10 @@ public  class SentencePair implements Serializable {
         
         for (int i=0; i<alignmentStrs.length; ++i)
         {
-            srcAlignmentIdx[i] = Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')));
-            dstAlignmentIdx[i] = Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1));
+        	int lhs = Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')));
+        	int rhs = Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1));
+            srcAlignmentIdx[i] = reverse?rhs:lhs;
+            dstAlignmentIdx[i] = reverse?lhs:rhs;
             
             if (!zeroIndexed)
             {

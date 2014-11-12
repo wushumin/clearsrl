@@ -12,6 +12,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -27,14 +28,23 @@ public class AlignmentProb implements Serializable{
 	 */
     private static final long serialVersionUID = 1L;
     
-	SortedMap<String, CountProb<String>> srcPredDstPredProb;
-	SortedMap<String, CountProb<String>> dstPredSrcPredProb;
+    private static final int COUNT_THRESHOLD=5;
+    private static final int COUNT_THRESHOLD_2=25;
     
-	SortedMap<String, CountProb<String>> srcArgDstArgProb;
-	SortedMap<String, CountProb<String>> dstArgSrcArgProb;
+	SortedMap<String, CountProb<String>> srcPredDstPredProbMap;
+	SortedMap<String, CountProb<String>> dstPredSrcPredProbMap;
     
-	SortedMap<String, CountProb<String>> srcPredArgDstPredArgProb;
-	SortedMap<String, CountProb<String>> dstPredArgSrcPredArgProb;
+	SortedMap<String, CountProb<String>> srcArgDstArgProbMap;
+	SortedMap<String, CountProb<String>> dstArgSrcArgProbMap;
+    
+	SortedMap<String, CountProb<String>> srcPredArgDstPredArgProbMap;
+	SortedMap<String, CountProb<String>> dstPredArgSrcPredArgProbMap;
+
+	SortedMap<String, CountProb<String>> srcPredArgDstArgProbMap;
+	SortedMap<String, CountProb<String>> dstPredSrcArgDstArgProbMap;
+	
+	SortedMap<String, CountProb<String>> dstPredArgSrcArgProbMap;
+	SortedMap<String, CountProb<String>> srcPredDstArgSrcArgProbMap;
 
     CountProb<String> srcPredProb;
     CountProb<String> dstPredProb;
@@ -44,14 +54,20 @@ public class AlignmentProb implements Serializable{
     
     public AlignmentProb() {
 
-    	srcPredDstPredProb = new TreeMap<String, CountProb<String>>();
-        dstPredSrcPredProb = new TreeMap<String, CountProb<String>>();
+    	srcPredDstPredProbMap = new TreeMap<String, CountProb<String>>();
+        dstPredSrcPredProbMap = new TreeMap<String, CountProb<String>>();
         
-        srcArgDstArgProb = new TreeMap<String, CountProb<String>>();
-        dstArgSrcArgProb = new TreeMap<String, CountProb<String>>();
+        srcArgDstArgProbMap = new TreeMap<String, CountProb<String>>();
+        dstArgSrcArgProbMap = new TreeMap<String, CountProb<String>>();
         
-        srcPredArgDstPredArgProb = new TreeMap<String, CountProb<String>>();
-        dstPredArgSrcPredArgProb = new TreeMap<String, CountProb<String>>();
+        srcPredArgDstPredArgProbMap = new TreeMap<String, CountProb<String>>();
+        dstPredArgSrcPredArgProbMap = new TreeMap<String, CountProb<String>>();
+        
+        srcPredArgDstArgProbMap = new TreeMap<String, CountProb<String>>();
+    	dstPredSrcArgDstArgProbMap = new TreeMap<String, CountProb<String>>();
+
+        dstPredArgSrcArgProbMap = new TreeMap<String, CountProb<String>>();
+        srcPredDstArgSrcArgProbMap = new TreeMap<String, CountProb<String>>();
         
         srcPredProb = new CountProb<String>();
         dstPredProb = new CountProb<String>();
@@ -94,13 +110,19 @@ public class AlignmentProb implements Serializable{
     	return retMap;
     }
     
+    static void trimMap(Map<String, CountProb<String>> cntMap, int cnt) {
+    	for (Iterator<Map.Entry<String, CountProb<String>>> iter=cntMap.entrySet().iterator(); iter.hasNext(); )
+    		if (iter.next().getValue().getTotalCnt()<cnt)
+    			iter.remove();
+    }
+    
     static void updateCnt(Map<String, CountProb<String>> map, String key, String innerKey) {
     	CountProb<String> cntProb = map.get(key);
         if (cntProb==null) {
         	cntProb = new CountProb<String>();
             map.put(key, cntProb);
         }
-        cntProb.addCount(innerKey, false);
+        cntProb.addCount(innerKey);
     }
 
     static void updateCnt(Map<String, CountProb<String>> map, String key, Collection<String> innerKeys) {
@@ -109,7 +131,7 @@ public class AlignmentProb implements Serializable{
         	cntProb = new CountProb<String>();
             map.put(key, cntProb);
         }
-        cntProb.addCount(innerKeys, false);
+        cntProb.addCount(innerKeys);
     }
     
     String makeKey(PBInstance pred) {
@@ -121,17 +143,31 @@ public class AlignmentProb implements Serializable{
     	return AlignmentStat.convertLabel(arg.getLabel());
     }
     
-    String makeKey(String pred1, String pred2, String arg) {
-    	return pred1+'_'+pred2+'_'+arg;
+    String makeKey(String... args) {
+    	String retStr = null;
+    	for (String arg:args)
+    		if (retStr==null)
+    			retStr = arg;
+    		else
+    			retStr = retStr+'_'+arg;
+    	return retStr;
     }
+    
+    String[] splitKeys(String key) {
+    	return key.split("_");
+    }
+    
+    //String makeKey(String pred1, String pred2, String arg) {
+    //	return pred1+'_'+pred2+'_'+arg;
+    //}
     
     public void addSentence(SentencePair sentPair, Alignment[] alignments) {
     	for (Alignment alignment:alignments) {
             String srcPredKey = makeKey(alignment.getSrcPBInstance());
             String dstPredKey = makeKey(alignment.getDstPBInstance());
             
-            updateCnt(srcPredDstPredProb, srcPredKey, dstPredKey);
-            updateCnt(dstPredSrcPredProb, dstPredKey, srcPredKey);
+            updateCnt(srcPredDstPredProbMap, srcPredKey, dstPredKey);
+            updateCnt(dstPredSrcPredProbMap, dstPredKey, srcPredKey);
 
             @SuppressWarnings("unchecked")
             List<String>[] dstArgAlignment = new List[alignment.getSrcPBInstance().getArgs().length];
@@ -149,14 +185,18 @@ public class AlignmentProb implements Serializable{
             for (int i=0; i<dstArgAlignment.length;++i)
             	if (dstArgAlignment[i]!=null) {
             		String srcArgKey = AlignmentStat.convertLabel(alignment.getSrcPBArg(i).getLabel());
-            		updateCnt(srcArgDstArgProb, srcArgKey, dstArgAlignment[i]);
-            		updateCnt(srcPredArgDstPredArgProb, makeKey(srcPredKey, dstPredKey, srcArgKey), dstArgAlignment[i]);
+            		updateCnt(srcArgDstArgProbMap, srcArgKey, dstArgAlignment[i]);
+            		updateCnt(srcPredArgDstPredArgProbMap, makeKey(srcPredKey, srcArgKey, dstPredKey), dstArgAlignment[i]);
+            		updateCnt(srcPredArgDstArgProbMap, makeKey(srcPredKey, srcArgKey), dstArgAlignment[i]);
+            		updateCnt(dstPredSrcArgDstArgProbMap, makeKey(dstPredKey, srcArgKey), dstArgAlignment[i]);
             	}
             for (int i=0; i<srcArgAlignment.length;++i)
             	if (srcArgAlignment[i]!=null) {
             		String dstArgKey = AlignmentStat.convertLabel(alignment.getDstPBArg(i).getLabel());
-            		updateCnt(dstArgSrcArgProb, dstArgKey, srcArgAlignment[i]);
-            		updateCnt(dstPredArgSrcPredArgProb, makeKey(dstPredKey, srcPredKey, dstArgKey), srcArgAlignment[i]);
+            		updateCnt(dstArgSrcArgProbMap, dstArgKey, srcArgAlignment[i]);
+            		updateCnt(dstPredArgSrcPredArgProbMap, makeKey(dstPredKey, dstArgKey, srcPredKey), srcArgAlignment[i]);
+            		updateCnt(dstPredArgSrcArgProbMap, makeKey(dstPredKey, dstArgKey), srcArgAlignment[i]);
+            		updateCnt(srcPredDstArgSrcArgProbMap, makeKey(srcPredKey, dstArgKey), srcArgAlignment[i]);
             	}
             
             /*
@@ -184,49 +224,89 @@ public class AlignmentProb implements Serializable{
     			dstArgProb.addCount(makeKey(arg));
     	}
     }
-
+    
+    CountProb<String> chooseBackoff(CountProb<String> prob1, CountProb<String> prob2, CountProb<String> backoff) {
+    	if (prob1.getTotalCnt()<COUNT_THRESHOLD_2 && prob2.getTotalCnt()<COUNT_THRESHOLD_2)
+    		return prob1.getTotalCnt()>prob2.getTotalCnt()?prob1:prob2;
+    	if (prob1.getTotalCnt()<COUNT_THRESHOLD_2 && prob1.getTotalCnt()*2<=prob2.getTotalCnt())
+    		return prob2;
+    	if (prob2.getTotalCnt()<COUNT_THRESHOLD_2 && prob2.getTotalCnt()*2<=prob1.getTotalCnt())
+    		return prob1;
+    	
+    	double prob1Dist = prob1.getDistance(backoff);
+    	double prob2Dist = prob2.getDistance(backoff);
+    	
+    	return prob1Dist>prob2Dist?prob1:prob2;
+    }
+    
     public void makeProb() {
 
-    	srcPredProb.makeMKYProb(srcPredDstPredProb);
-    	dstPredProb.makeMKYProb(dstPredSrcPredProb);
+    	srcPredProb.makeMKYProb(srcPredDstPredProbMap);
+    	dstPredProb.makeMKYProb(dstPredSrcPredProbMap);
     	
-    	srcArgProb.makeMKYProb(srcArgDstArgProb);
-    	dstArgProb.makeMKYProb(dstArgSrcArgProb);
+    	srcArgProb.makeMKYProb(srcArgDstArgProbMap);
+    	dstArgProb.makeMKYProb(dstArgSrcArgProbMap);
     	
-    	for (Map.Entry<String, CountProb<String>> entry:srcPredDstPredProb.entrySet()) {
-    		entry.getValue().setUnseenProbMap(dstPredProb.getWholeProbMap());
-    		entry.getValue().makeSGTProb();
-    	}
-    	for (Map.Entry<String, CountProb<String>> entry:dstPredSrcPredProb.entrySet()) {
-    		entry.getValue().setUnseenProbMap(srcPredProb.getWholeProbMap());
-    		entry.getValue().makeSGTProb();
-    	}
+    	for (Map.Entry<String, CountProb<String>> entry:srcPredDstPredProbMap.entrySet())
+    		entry.getValue().makeSGTProb(dstPredProb.getProbMap(), true);
 
-    	for (Map.Entry<String, CountProb<String>> entry:srcArgDstArgProb.entrySet()) {
-    		entry.getValue().setUnseenProbMap(dstArgProb.getWholeProbMap());
-    		entry.getValue().makeSGTProb();
-    	}
-    	for (String key:srcArgProb.getKeySet())
-			if (!srcArgDstArgProb.containsKey(key))
-				srcArgDstArgProb.put(key, dstArgProb);
+    	for (Map.Entry<String, CountProb<String>> entry:dstPredSrcPredProbMap.entrySet())
+    		entry.getValue().makeSGTProb(srcPredProb.getProbMap(), true);
+
+    	for (Map.Entry<String, CountProb<String>> entry:srcArgDstArgProbMap.entrySet())
+    		entry.getValue().makeSGTProb(dstArgProb.getProbMap(), false);
     	
-    	for (Map.Entry<String, CountProb<String>> entry:dstArgSrcArgProb.entrySet()) {
-    		entry.getValue().setUnseenProbMap(srcArgProb.getWholeProbMap());
-    		entry.getValue().makeSGTProb();
-    	}
+    	for (String key:srcArgProb.getKeySet())
+			if (!srcArgDstArgProbMap.containsKey(key))
+				srcArgDstArgProbMap.put(key, dstArgProb);
+    	
+    	for (Map.Entry<String, CountProb<String>> entry:dstArgSrcArgProbMap.entrySet())
+    		entry.getValue().makeSGTProb(srcArgProb.getProbMap(), false);
+
     	for (String key:dstArgProb.getKeySet())
-			if (!dstArgSrcArgProb.containsKey(key))
-				dstArgSrcArgProb.put(key, srcArgProb);
-	
-    	for (Map.Entry<String, CountProb<String>> entry:srcPredArgDstPredArgProb.entrySet()) {
-    		String srcArg = entry.getKey().substring(entry.getKey().lastIndexOf('_')+1);
-    		entry.getValue().setUnseenProbMap(srcArgDstArgProb.get(srcArg).getWholeProbMap());
-    		entry.getValue().makeSGTProb();
+			if (!dstArgSrcArgProbMap.containsKey(key))
+				dstArgSrcArgProbMap.put(key, srcArgProb);
+    	
+    	// these all have reasonable back-offs, so just use those if we have very few counts
+    	trimMap(srcPredArgDstArgProbMap, COUNT_THRESHOLD);
+    	trimMap(dstPredSrcArgDstArgProbMap, COUNT_THRESHOLD);
+    	trimMap(dstPredArgSrcArgProbMap, COUNT_THRESHOLD);
+    	trimMap(srcPredDstArgSrcArgProbMap, COUNT_THRESHOLD);
+    	
+    	trimMap(srcPredArgDstPredArgProbMap, COUNT_THRESHOLD);
+    	trimMap(dstPredArgSrcPredArgProbMap, COUNT_THRESHOLD);
+    	
+    	for (Map.Entry<String, CountProb<String>> entry:srcPredArgDstArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		entry.getValue().makeBackoffMixProb(srcArgDstArgProbMap.get(keys[1]).getProbMap());
     	}
-    	for (Map.Entry<String, CountProb<String>> entry:dstPredArgSrcPredArgProb.entrySet()) {
-    		String dstArg = entry.getKey().substring(entry.getKey().lastIndexOf('_')+1);    		
-    		entry.getValue().setUnseenProbMap(dstArgSrcArgProb.get(dstArg).getWholeProbMap());
-    		entry.getValue().makeSGTProb();
+    	for (Map.Entry<String, CountProb<String>> entry:dstPredSrcArgDstArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		entry.getValue().makeBackoffMixProb(srcArgDstArgProbMap.get(keys[1]).getProbMap());
+    	}
+    	
+    	for (Map.Entry<String, CountProb<String>> entry:dstPredArgSrcArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		entry.getValue().makeBackoffMixProb(dstArgSrcArgProbMap.get(keys[1]).getProbMap());
+    	}
+    	for (Map.Entry<String, CountProb<String>> entry:srcPredDstArgSrcArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		entry.getValue().makeBackoffMixProb(dstArgSrcArgProbMap.get(keys[1]).getProbMap());
+    	}
+    	
+    	for (Map.Entry<String, CountProb<String>> entry:srcPredArgDstPredArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		CountProb<String> backoff = chooseBackoff(srcPredArgDstArgProbMap.get(makeKey(keys[0], keys[1])), 
+    				dstPredSrcArgDstArgProbMap.get(makeKey(keys[2],keys[1])), 
+    				srcArgDstArgProbMap.get(keys[1]));
+    		entry.getValue().makeBackoffMixProb(backoff.getProbMap());
+    	}
+    	for (Map.Entry<String, CountProb<String>> entry:dstPredArgSrcPredArgProbMap.entrySet()) {
+    		String[] keys = splitKeys(entry.getKey());
+    		CountProb<String> backoff = chooseBackoff(dstPredArgSrcArgProbMap.get(makeKey(keys[0], keys[1])), 
+    				srcPredDstArgSrcArgProbMap.get(makeKey(keys[2],keys[1])), 
+    				dstArgSrcArgProbMap.get(keys[1]));
+    		entry.getValue().makeBackoffMixProb(backoff.getProbMap());
     	}
 
     }
@@ -235,7 +315,7 @@ public class AlignmentProb implements Serializable{
     public double getPredProb(boolean isSrc, PBInstance inst1, PBInstance inst2, boolean weighted) {
     	String outerKey = makeKey(inst1);
     	String innerKey = makeKey(inst2);
-    	CountProb<String> probs = isSrc?srcPredDstPredProb.get(outerKey):dstPredSrcPredProb.get(outerKey);
+    	CountProb<String> probs = isSrc?srcPredDstPredProbMap.get(outerKey):dstPredSrcPredProbMap.get(outerKey);
     	if (probs==null) 
     		probs = isSrc?dstPredProb:srcPredProb;
     	
@@ -252,12 +332,32 @@ public class AlignmentProb implements Serializable{
     	
     	for (int i=0; i<inst1.getArgs().length; ++i) {
     		String arg1Key = makeKey(inst1.getArgs()[i]);
-    		String outerKey = makeKey(pred1Key, pred2Key, arg1Key);
-    		CountProb<String> probs = isSrc?srcPredArgDstPredArgProb.get(outerKey):dstPredArgSrcPredArgProb.get(outerKey);
-    		if (probs==null)
-    			probs = isSrc?srcArgDstArgProb.get(arg1Key):dstArgSrcArgProb.get(arg1Key);
+    		String outerKey = makeKey(pred1Key, arg1Key, pred2Key);
+    		CountProb<String> probs = isSrc?srcPredArgDstPredArgProbMap.get(outerKey):dstPredArgSrcPredArgProbMap.get(outerKey);
+    		if (probs==null) {
+    			CountProb<String> prob1 = isSrc?srcPredArgDstArgProbMap.get(makeKey(pred1Key, arg1Key)):dstPredArgSrcArgProbMap.get(makeKey(pred1Key, arg1Key));
+    			CountProb<String> prob2 = isSrc?dstPredSrcArgDstArgProbMap.get(makeKey(pred2Key, arg1Key)):srcPredDstArgSrcArgProbMap.get(makeKey(pred2Key, arg1Key));
+    			CountProb<String> backoff = isSrc?srcArgDstArgProbMap.get(arg1Key):dstArgSrcArgProbMap.get(arg1Key);
+    			
+    			if (backoff==null)
+    				probs = isSrc?dstArgProb:srcArgProb;
+    			else if (prob1==null && prob2==null)
+    				probs = backoff;
+    			else if (prob1==null && prob2!=null)
+    				probs = prob2;   			
+        		else if (prob1!=null && prob2==null)
+        			probs = prob1;
+        		else {
+        			probs = chooseBackoff(prob1, prob2, backoff);
+    				// cache the choice
+        			if (isSrc)
+    					srcPredArgDstPredArgProbMap.put(outerKey,probs);
+    				else
+    					dstPredArgSrcPredArgProbMap.put(outerKey,probs);
+    			}
+    		}
     		
-    		for (int j=0; i<inst2.getArgs().length; ++j)
+    		for (int j=0; j<argProbs[i].length; ++j)
     			argProbs[i][j] = probs.getProb(makeKey(inst2.getArgs()[j]), weighted);
     	}
     	

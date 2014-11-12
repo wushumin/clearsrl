@@ -36,9 +36,10 @@ public class Alignment implements Comparable<Alignment>{
     public ArgAlignment[] dstSrcAlignment;
     
     AlignmentProb       probMap;
-    float               probWeight;
+    float               predProbWeight;
+    float               argProbWeight;
     
-    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float probWeight) 
+    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float predProbWeight, float argProbWeight) 
     {
         this.sentence = sentence;
         this.srcPBIdx = srcPBIdx;
@@ -46,7 +47,8 @@ public class Alignment implements Comparable<Alignment>{
         //this.beta_sqr = beta_sqr;
         this.beta_sqr = (float)sentence.src.indices.length/sentence.dst.indices.length;
         this.probMap = probMap;
-        this.probWeight = probWeight;
+        this.predProbWeight = predProbWeight;
+        this.argProbWeight = argProbWeight;
     }
     
     static float getFScore(float lhs, float rhs, float bias)
@@ -95,8 +97,7 @@ public class Alignment implements Comparable<Alignment>{
         return argScore;
     }
 
-    public float getCompositeScore()
-    {
+    public float getCompositeScore() {
         return getFScore(srcScore, dstScore, beta_sqr);
     }
 
@@ -235,9 +236,11 @@ public class Alignment implements Comparable<Alignment>{
         srcDstScore = new float[srcArgs.length][dstArgs.length];
         dstSrcScore = new float[dstArgs.length][srcArgs.length];
         
+        double[][] srcDstProb = probMap==null?null:probMap.getArgProbs(true, getSrcPBInstance(), getDstPBInstance(), true);
+        double[][] dstSrcProb = probMap==null?null:probMap.getArgProbs(false, getDstPBInstance(), getSrcPBInstance(), true);
+        
         for (int i=0; i<srcDstScore.length; ++i)
-            for (int j=0; j<srcDstScore[i].length;++j)
-            {
+            for (int j=0; j<srcDstScore[i].length;++j) {
                 srcDstScore[i][j] = measureArgAlignment(srcArgs[i], dstArgs[j],
                         srcTerminalWeights, dstTerminalWeights, 
                         getSrcPBInstance().getTree().getIndex(), 
@@ -250,6 +253,11 @@ public class Alignment implements Comparable<Alignment>{
                         getSrcPBInstance().getTree().getIndex(), 
                         sentence.dstAlignment, sentence.src);
                 dstSrcScore[j][i] /= dstSrcAlignment[j].weight;
+                
+                if (argProbWeight!=0 && srcDstProb!=null && dstSrcProb!=null) {
+                	srcDstScore[i][j] *= (float)(1-argProbWeight+argProbWeight*srcDstProb[i][j]);
+                	dstSrcScore[j][i] *= (float)(1-argProbWeight+argProbWeight*dstSrcProb[j][i]);
+                }
             }
         
         computeAlignment(srcDstScore, dstSrcScore, srcDstAlignment, dstSrcAlignment, beta_sqr);
@@ -257,35 +265,42 @@ public class Alignment implements Comparable<Alignment>{
         
         srcScore = 0.0f;
         for (ArgAlignment argAlign: srcDstAlignment)
-            srcScore += argAlign.score*argAlign.getFactoredWeight();
+            srcScore += argAlign.score*argAlign.getFactoredWeight();        
         
         dstScore = 0.0f;
         for (ArgAlignment argAlign: dstSrcAlignment)
             dstScore += argAlign.score*argAlign.getFactoredWeight();
+        
+        if (probMap!=null && predProbWeight != 0) {
+        	float predScore = probMap==null?1:(float)probMap.getPredProb(true, getSrcPBInstance(), getDstPBInstance(), true);
+        	srcScore *= (1-predProbWeight)+predProbWeight*predScore;
+        	
+        	if (srcScore>1) srcScore = 1;
+        	
+        	predScore = probMap==null?1:(float)probMap.getPredProb(false, getDstPBInstance(), getSrcPBInstance(), true);
+        	dstScore *= (1-predProbWeight)+predProbWeight*predScore;
+        	
+        	if (dstScore>1) dstScore = 1;
+        }
     }
     
-    public ArgAlignmentPair[] getArgAlignmentPairs()
-    {
+    public ArgAlignmentPair[] getArgAlignmentPairs() {
         Map<Long, ArgAlignmentPair> argPairMap = new TreeMap<Long, ArgAlignmentPair>();
         
         for (ArgAlignment argAlignment:srcDstAlignment)
-            for (int id:argAlignment.dstArgList.toArray())
-            {
+            for (int id:argAlignment.dstArgList.toArray()) {
                 long idx = (((long)argAlignment.srcArgIdx)<<32)|id;
                 ArgAlignmentPair alignmentPair = argPairMap.get(idx);
-                if (alignmentPair==null)
-                {
+                if (alignmentPair==null) {
                     alignmentPair = new ArgAlignmentPair(argAlignment.srcArgIdx, id, argAlignment.score);
                     argPairMap.put(idx, alignmentPair);
                 }
             }
         for (ArgAlignment argAlignment:dstSrcAlignment)
-            for (int id:argAlignment.dstArgList.toArray())
-            {
+            for (int id:argAlignment.dstArgList.toArray()) {
                 long idx = (((long)id)<<32)|argAlignment.srcArgIdx;
                 ArgAlignmentPair alignmentPair = argPairMap.get(idx);
-                if (alignmentPair==null)
-                {
+                if (alignmentPair==null) {
                     alignmentPair = new ArgAlignmentPair(id, argAlignment.srcArgIdx, argAlignment.score);
                     argPairMap.put(idx, alignmentPair);
                 }
@@ -413,8 +428,10 @@ public class Alignment implements Comparable<Alignment>{
 
     @Override
     public int compareTo(Alignment rhs) {
-        float scoreDiff = getCompositeScore()-rhs.getCompositeScore();
-        return scoreDiff>0?-1:(scoreDiff==0?0:1);
+    	return srcPBIdx - rhs.srcPBIdx;
+    	
+        //float scoreDiff = getCompositeScore()-rhs.getCompositeScore();
+        //return scoreDiff>0?-1:(scoreDiff==0?0:1);
     }
     
 }
