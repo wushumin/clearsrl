@@ -87,7 +87,7 @@ public class TBNode implements Serializable {
 
     public TBNode(TBNode parent, String pos, short childIndex) {
         this.parent = parent;
-        this.pos = pos;
+        this.pos = pos.intern();
         this.childIndex = childIndex;
         terminalIndex = -1;
         tokenIndex = -1;
@@ -103,7 +103,7 @@ public class TBNode implements Serializable {
         if (fTags.length > 1) {
             functionTags = new TreeSet<String>();
             for (int i = 1; i < fTags.length; ++i)
-                functionTags.add(fTags[i]);
+                functionTags.add(fTags[i].intern());
         }
         if (children == null)
             return;

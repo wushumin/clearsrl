@@ -1,6 +1,7 @@
 package clearcommon.propbank;
 
 import clearcommon.treebank.ParseException;
+import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBReader;
 import clearcommon.treebank.TBTree;
 import clearcommon.util.FileUtil;
@@ -167,16 +168,20 @@ public final class PBUtil {
     
     static public String toCoNLLformat(TBTree tree, List<PBInstance> instances) {
     	StringBuilder buffer = new StringBuilder();
-    	String[][] outStr = new String[instances==null?1:instances.size()+1][tree.getTokenCount()];
+    	String[][] outStr = new String[instances==null?2:instances.size()+2][tree.getTokenCount()];
     	
     	if (instances!=null)
     		Collections.sort(instances);
     	
-    	Arrays.fill(outStr[0], "-");
+    	TBNode[] nodes = tree.getTokenNodes();
+    	for (int i=0; i<outStr[0].length; ++i)
+    		outStr[0][i] = nodes[i].getWord(); 
     	
-    	for (int i=1; i<outStr.length; ++i) {
-    		outStr[i] = makeCoNLL(instances.get(i-1));
-    		outStr[0][instances.get(i-1).getPredicate().getTokenIndex()] = instances.get(i-1).getRoleset();
+    	Arrays.fill(outStr[1], "-");
+    	
+    	for (int i=2; i<outStr.length; ++i) {
+    		outStr[i] = makeCoNLL(instances.get(i-2));
+    		outStr[1][instances.get(i-2).getPredicate().getTokenIndex()] = instances.get(i-2).getRoleset();
     	}
     		
     	int[] maxlength = new int[outStr.length];

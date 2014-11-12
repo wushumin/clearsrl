@@ -322,7 +322,7 @@ public final class TBUtil {
 		for (int i=0; i<deps.length; ++i)
 			if (deps[i].index==index) {
 				TBNode node = terminals[i];
-				node.depLabel = deps[i].label;
+				node.depLabel = deps[i].label==null?null:deps[i].label.intern();
 				node.head = node;
 				TBNode ancestor = node;
 				while (ancestor.getParent()!=null && ancestor.getParent().head==null) {

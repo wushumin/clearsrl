@@ -43,7 +43,7 @@ public class PBArg implements Comparable<PBArg>, Serializable {
     }
     
     public PBArg(String label, double score) {
-        this.label = label;
+        this.label = label.intern();
         this.score = score;
         node       = null;
         linkingArg = null;
