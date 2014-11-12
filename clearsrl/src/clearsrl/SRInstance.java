@@ -223,9 +223,11 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         for (Map.Entry<String, List<SRArg>> entry:argMap.entrySet()) {
             boolean isFirst = true;
             for (SRArg arg: entry.getValue()) {
-                if (isFirst || !arg.label.startsWith("C-"))
-                    retArgs.add(new SRArg(entry.getKey(), arg.tokenSet));
-                else
+                if (isFirst || !arg.label.startsWith("C-")) {
+                	SRArg retArg = new SRArg(entry.getKey(), arg.tokenSet);
+                	retArg.node = arg.node;
+                    retArgs.add(retArg);
+                } else
                     retArgs.getLast().tokenSet.or(arg.tokenSet);
                 isFirst = false;
             }

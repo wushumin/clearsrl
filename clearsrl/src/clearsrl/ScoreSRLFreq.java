@@ -29,6 +29,7 @@ import clearcommon.propbank.PBUtil;
 import clearcommon.treebank.TBUtil;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
+import clearsrl.SRLScore.Type;
 import clearsrl.util.Topics;
 
 public class ScoreSRLFreq {
@@ -159,16 +160,16 @@ public class ScoreSRLFreq {
                     for (int i=0; i<argScores.length; ++i) {
                     	SRInstance goldInstance = filterInstance(goldProp, sysProp, intervals, i, true, argMap);
                     	SRInstance sysInstance = filterLabel(goldInstance, sysProp);
-                    	argScores[i].addResult(sysInstance, goldInstance);
+                    	argScores[i].addResult(sysInstance, goldInstance, Type.ALL);
                     }
 
                     for (int i=0; i<allScores.length; ++i) {
                     	SRInstance goldInstance = filterInstance(goldProp, sysProp, intervals, i, false, allMap);
                     	SRInstance sysInstance = filterLabel(goldInstance, sysProp);
-                    	allScores[i].addResult(sysInstance, goldInstance);
+                    	allScores[i].addResult(sysInstance, goldInstance, Type.ALL);
                     }
                     
-                    score.addResult(new SRInstance(sysProp), new SRInstance(goldProp));
+                    score.addResult(new SRInstance(sysProp), new SRInstance(goldProp), Type.ALL);
                 }
             }
         }

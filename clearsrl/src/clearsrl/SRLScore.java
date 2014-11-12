@@ -6,12 +6,24 @@ import gnu.trove.map.hash.TObjectIntHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import clearcommon.treebank.TBNode;
+
 public class SRLScore {
     
+	enum Type {
+		ALL,
+		HEAD,
+		DEP,
+		NODEP,
+		DEPHEAD,
+		NODEPHEAD
+	}
+	
     SortedSet<String> labelSet;
     TObjectIntMap<String> labelMap;
     int[][] microCount;
@@ -131,11 +143,16 @@ public class SRLScore {
         return labelMap.get(systemLabel)==labelMap.get(goldLabel);
     }
     
-    public boolean addResult(SRInstance systemSRL, SRInstance goldSRL) {
+    public boolean addResult(SRInstance systemSRL, SRInstance goldSRL, Type type) {
     	boolean same = true;
+    	
+    	boolean headOnly = type.equals(Type.HEAD) || type.equals(Type.DEPHEAD) || type.equals(Type.NODEPHEAD);
     	
         List<SRArg> sysArgs = systemSRL.getScoringArgs();
         List<SRArg> goldArgs = goldSRL.getScoringArgs();
+        
+        filter(systemSRL, sysArgs, type);
+        filter(goldSRL, goldArgs, type);
         
         String[] sysStr = getLabels(sysArgs, systemSRL.tree.getTokenCount());       
         String[] goldStr = getLabels(goldArgs, goldSRL.tree.getTokenCount());
@@ -160,7 +177,7 @@ public class SRLScore {
                 continue;
             }
             
-            int compare = sysArgs.get(i).compareTo(goldArgs.get(j));
+            int compare = compare(sysArgs.get(i), goldArgs.get(j), headOnly);
             if (compare<0) {
             	same = false;
                 macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
@@ -170,7 +187,7 @@ public class SRLScore {
                 macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
                 ++j;
             } else {
-                if (sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet)) {
+                if (headOnly || sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet)) {
                 	macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
                     if (labelMap.get(sysArgs.get(i).label)!=labelMap.get(goldArgs.get(j).label))
                     	same = false;
@@ -183,6 +200,31 @@ public class SRLScore {
             }   
         }
         return same;
+    }
+    
+    void filter(SRInstance instance, List<SRArg> args,  Type type) {
+    	if (type.equals(Type.ALL)|| type.equals(Type.HEAD))
+    		return;
+    	boolean filterDep = type.equals(Type.DEP) || type.equals(Type.DEPHEAD);
+    	for (Iterator<SRArg> iter= args.iterator();iter.hasNext();) {
+    		TBNode head = iter.next().node.getHead().getHeadOfHead();
+    		if (head==instance.getPredicateNode() ^ filterDep)
+    			iter.remove();
+    	}
+    }
+    
+    int compare(SRArg lhs, SRArg rhs, boolean headOnly) {
+    	if (headOnly) {
+    		//if (lhs.node.getHead().getTokenIndex()!=rhs.node.getHead().getTokenIndex() && lhs.getTokenSet().equals(rhs.getTokenSet())) {
+    		//	System.err.println(lhs.node.toParse());
+    		//	System.err.println(rhs.node.toParse());
+    		//}
+    		//if (lhs.getTokenSet().equals(rhs.getTokenSet()))
+    		//	return 0;
+    		
+    		return lhs.node.getHead().getTokenIndex()-rhs.node.getHead().getTokenIndex();
+    	}	
+    	return lhs.compareTo(rhs);
     }
     
     public String toString() {

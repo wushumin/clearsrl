@@ -51,6 +51,9 @@ public class ScoreSRL {
 	@Option(name="-v",usage="verbosity (of output difference)")
     private Verbose verbose = Verbose.NONE;
 	
+	@Option(name="-t",usage="types of scoring")
+    private SRLScore.Type type = SRLScore.Type.ALL;
+	
 	@Option(name="-h",usage="help message")
     private boolean help = false;
 	
@@ -160,16 +163,12 @@ public class ScoreSRL {
         SRLScore[] scores = new SRLScore[systems.length];
         SRLScore[] vScores = new SRLScore[systems.length];
         SRLScore[] nScores = new SRLScore[systems.length];
-        SRLScore[] proScore = new SRLScore[systems.length];
-        SRLScore[] noproScore = new SRLScore[systems.length];
         boolean printNScore = false;
         
         for (int i=0; i<scores.length; ++i) {
             scores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
             vScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
             nScores[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
-            proScore[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
-            noproScore[i] = new SRLScore(new TreeSet<String>(Arrays.asList(labels)));
         }
         Map<String, SortedMap<Integer, List<PBInstance>>>  goldPB = 
             PBUtil.readPBDir(props.getProperty("gold.pbdir"), 
@@ -270,7 +269,7 @@ public class ScoreSRL {
                     for (int i=0; i<scores.length;++i) {
                     	if (options.verbose==Verbose.EC)
                     		printARGDiff(sysInstances.get(i), goldInstance);
-                        boolean match = scores[i].addResult(sysInstances.get(i), goldInstance);
+                        boolean match = scores[i].addResult(sysInstances.get(i), goldInstance, options.type);
                         if (!match && options.verbose!=Verbose.NONE && (options.verbose==Verbose.ALL ||
                         			options.verbose==Verbose.VERB && goldInstance.getPredicateNode().getPOS().startsWith("V") ||
                         			options.verbose==Verbose.NOUN && !goldInstance.getPredicateNode().getPOS().startsWith("V"))) { 
@@ -280,21 +279,12 @@ public class ScoreSRL {
                     		System.out.println(goldInstance.getTree().toPrettyParse());
                         }
                         
+                        
+                        
                         if (goldInstance.getPredicateNode().getPOS().startsWith("V")) {
-                            vScores[i].addResult(sysInstances.get(i), goldInstance);
-                            boolean foundPro = false;
-                            for (PBArg arg:goldProp.getAllArgs())
-                            	//if (arg.getLabel().matches("ARG\\d") && 
-                            	if(arg.getAllNodes().length>1)
-                            		//&&arg.getNode().getTerminalNodes().size()==1 && arg.getNode().getTerminalNodes().get(0).getECType().equals("*pro*"))
-                            		foundPro = true;
-                            if (foundPro)
-                            	proScore[i].addResult(sysInstances.get(i), goldInstance);
-                            else
-                            	noproScore[i].addResult(sysInstances.get(i), goldInstance);
-                            
+                            vScores[i].addResult(sysInstances.get(i), goldInstance, options.type);
                         } else {
-                            nScores[i].addResult(sysInstances.get(i), goldInstance);
+                            nScores[i].addResult(sysInstances.get(i), goldInstance, options.type);
                             printNScore = true;
                         }
                         sysPropOuts.get(i).println(sysInstances.get(i).toPropbankString());
@@ -309,7 +299,7 @@ public class ScoreSRL {
                     for (int i=1; i<sysInstances.size(); ++i)
                         interInstance = SRLScore.getIntersection(interInstance, sysInstances.get(i));
                     
-                    iScore.addResult(interInstance, goldInstance);
+                    iScore.addResult(interInstance, goldInstance, options.type);
                     interInstance.cleanUpArgs();
                     interPropOut.println(interInstance.toPropbankString());
                     
@@ -317,7 +307,7 @@ public class ScoreSRL {
                     for (int i=1; i<sysInstances.size(); ++i)
                         unionInstance = SRLScore.getUnion(unionInstance, sysInstances.get(i));
                     
-                    uScore.addResult(unionInstance, goldInstance);
+                    uScore.addResult(unionInstance, goldInstance, options.type);
                     unionInstance.cleanUpArgs();
                     unionPropOut.println(unionInstance.toPropbankString());
                 }
