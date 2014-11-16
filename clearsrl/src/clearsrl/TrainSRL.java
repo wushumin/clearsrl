@@ -101,9 +101,11 @@ public class TrainSRL {
                     System.err.println(e);
                 }  
         }
-        Source srcTreeType = Source.valueOf(props.getProperty("corpus.tree", "PARSE"));
+        
         EnumSet<Source> srcSet = Sentence.readSources(props.getProperty("corpus.source"));
-
+        Source srcTreeType = srcSet.contains(Source.PARSE)?Source.PARSE:Source.TREEBANK;
+        srcTreeType = Source.valueOf(props.getProperty("corpus.tree", srcTreeType.toString()));
+        
         SRLModel model = new SRLModel(features, predicateFeatures.isEmpty()?null:predicateFeatures);
         
         System.out.println("Argument Features:");

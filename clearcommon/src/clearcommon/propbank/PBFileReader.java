@@ -141,7 +141,7 @@ public class PBFileReader
         else
             instance.rolesetId = tokens[t];
         
-        ++t;              // skip "-----"
+        ++t;  // skip inflection, should be 5 characters, "-----" if not annotated
         
         List<PBArg> argList = new LinkedList<PBArg>();
 
@@ -260,9 +260,14 @@ public class PBFileReader
         }
         }
         try {
+        	List<PBArg> extraArgs = new LinkedList<PBArg>();
+        	PBArg extraArg = null;
             // process all the main args before the reference args
             for (PBArg arg:argList)
-                if (arg.linkingArg==null) arg.processNodes();
+            	if (arg.linkingArg==null && (extraArg = arg.processNodes())!=null)
+            		extraArgs.add(extraArg);
+            argList.addAll(extraArgs);
+
             for (PBArg arg:argList)
                 if (arg.linkingArg!=null) arg.processNodes();
         } catch (PBFormatException e) {

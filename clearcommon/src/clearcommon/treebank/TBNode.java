@@ -520,6 +520,12 @@ public class TBNode implements Serializable {
             return children[0].getTrace();
         return TBLib.POS_EC.equals(pos) ? indexingNode : null;
     }
+    
+    public boolean traceTo(TBNode node) {
+    	if (children.length == 1)
+            return children[0].traceTo(node);
+    	return indexingNode==node?true:(isTrace()?indexingNode.traceTo(node):false);
+    }
 
     public String getWord() {
         return word;

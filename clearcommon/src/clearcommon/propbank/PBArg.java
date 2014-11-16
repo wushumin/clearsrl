@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -50,13 +51,63 @@ public class PBArg implements Comparable<PBArg>, Serializable {
         nestedArgs = NO_ARGS;
     }
     
-    void processNodes() throws PBFormatException {       
+    PBArg processNodes() throws PBFormatException {       
         //System.out.print(label+":");
         //for (TBNode node:tokenNodes)
         //    System.out.print(" "+node.toParse());
         //System.out.print("\n");
         
-        // link traces
+    	PBArg extraArg = null;
+
+    	// check for reference args
+    	if (!label.startsWith("R-")) {
+    		boolean hasNoneWHNode = false;
+    		TBNode rNode = null;
+    		for (TBNode node:allNodes) {
+    			if (!node.isEC() && !node.getTokenSet().isEmpty()) {
+    				if (node.getPOS().startsWith("WH"))
+    					rNode = node;
+    				else
+    					hasNoneWHNode = true;
+    			}
+    		}
+    		if (rNode!=null && hasNoneWHNode) {
+    			extraArg = new PBArg("R-"+label);
+    			extraArg.linkingArg = this;
+    			
+    			List<TBNode> extraNodes = new ArrayList<TBNode>();
+    			extraNodes.add(rNode);
+
+    			TBNode[] tmp = new TBNode[allNodes.length-1];
+    			int cnt = 0;
+    			
+    			List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(allNodes));
+    			
+    			boolean removed = false;
+    			do {
+    				removed = false;
+	    			for (Iterator<TBNode> iter=mainNodes.iterator(); iter.hasNext();) {
+	    				TBNode node = iter.next();
+	    				for (TBNode eNode:extraNodes)
+		    				if (node==eNode || node.traceTo(eNode)) {
+		    					iter.remove();
+		    					removed = true;
+		    					if (node!=eNode)
+		    						extraNodes.add(node);
+		    					break;
+		    				}
+	    				if (removed)
+	    					break;
+	    			}
+    			} while(removed);
+    			
+    			extraArg.allNodes = extraNodes.toArray(new TBNode[extraNodes.size()]);
+    			allNodes = mainNodes.toArray(new TBNode[mainNodes.size()]);
+    		}
+    	}
+    	
+    	
+    	// link traces
         List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(allNodes));
 
         TBNode traceNode;
@@ -88,6 +139,17 @@ public class PBArg implements Comparable<PBArg>, Serializable {
                 if (mainNodes.get(i)==mainNodes.get(j)) {
                     mainNodes.remove(j);
                     continue;
+                }
+        
+        for (int i=0; i<mainNodes.size(); ++i)
+            for (int j=i+1; j<mainNodes.size(); ++j)
+                if (mainNodes.get(j).isDecendentOf(mainNodes.get(i))) {
+                    mainNodes.remove(j);
+                    continue;
+                } else if (mainNodes.get(i).isDecendentOf(mainNodes.get(j))) {
+                	mainNodes.set(i, mainNodes.get(j));
+                	mainNodes.remove(j);
+                	continue;
                 }
         
         allNodes = mainNodes.toArray(new TBNode[mainNodes.size()]);
@@ -134,6 +196,9 @@ public class PBArg implements Comparable<PBArg>, Serializable {
             nestedArg.processNodes();
         
         List<PBArg> nestedArgList = new ArrayList<PBArg>(Arrays.asList(nestedArgs));
+        for (Iterator<PBArg> iter=nestedArgList.iterator(); iter.hasNext();)
+        	if (iter.next().node==node)
+        		iter.remove();
         for (int i=0; i<nestedArgList.size()-1; ++i)
             for (int j=i+1; j<nestedArgList.size();) {
                 if (nestedArgList.get(i).node==nestedArgList.get(j).node)
@@ -141,6 +206,8 @@ public class PBArg implements Comparable<PBArg>, Serializable {
                 else
                     ++j;
             }
+
+        
         
         nestedArgs = nestedArgList.toArray(NO_ARGS);
         
@@ -163,6 +230,8 @@ public class PBArg implements Comparable<PBArg>, Serializable {
             tNodes.addAll(Arrays.asList(nestedArg.tokenNodes));
         
         tokenNodes = tNodes.toArray(new TBNode[tNodes.size()]);
+        
+        return extraArg;
     }
 
     public boolean isLabel(String label) {
