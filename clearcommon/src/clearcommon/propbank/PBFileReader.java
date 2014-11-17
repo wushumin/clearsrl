@@ -254,11 +254,39 @@ public class PBFileReader
                 if (found) break;
             }
             if (!found || !isSLC) {
-            if (isSLC) logger.warning(linkArg.label+" not resolved "+linkArg.allNodes+"\n"+Arrays.toString(tokens));
-            iter.remove();
+	            if (isSLC) 
+	            	logger.warning(linkArg.label+" not resolved "+linkArg.allNodes+"\n"+Arrays.toString(tokens));
+	            iter.remove();
+            }
+        }
+        
+        
+    	List<PBArg> extraArgs = new LinkedList<PBArg>();
+    	PBArg extraArg = null;
+        // process all the main args before the reference args
+    	for (Iterator<PBArg> iter = argList.iterator(); iter.hasNext(); )
+    		try {
+    			PBArg arg = iter.next();
+    			if (arg.linkingArg==null && (extraArg = arg.processNodes())!=null)
+            		extraArgs.add(extraArg);
+    		} catch (PBFormatException e) {
+                System.err.println(e.getMessage()+"\n"+Arrays.toString(tokens));
+                iter.remove();
+            }
+        argList.addAll(extraArgs);
 
-        }
-        }
+        for (Iterator<PBArg> iter = argList.iterator(); iter.hasNext(); )
+    		try {
+    			PBArg arg = iter.next();
+    			if (arg.linkingArg!=null) 
+    				arg.processNodes();
+    		} catch (PBFormatException e) {
+                System.err.println(e.getMessage()+"\n"+Arrays.toString(tokens));
+                iter.remove();
+            }
+       
+        
+        /*
         try {
         	List<PBArg> extraArgs = new LinkedList<PBArg>();
         	PBArg extraArg = null;
@@ -272,7 +300,7 @@ public class PBFileReader
                 if (arg.linkingArg!=null) arg.processNodes();
         } catch (PBFormatException e) {
             throw new PBFormatException(e.getMessage()+"\n"+Arrays.toString(tokens));
-        }
+        }*/
         
         instance.allArgs = argList.toArray(new PBArg[argList.size()]);
         

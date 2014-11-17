@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +49,6 @@ public final class PBUtil {
     
     public static Map<String, SortedMap<Integer, List<PBInstance>>> readPBDir(List<String> files, TBReader tbReader, PBTokenizer tokenizer)
     {   
-        int correctCnt=0;
         int exceptionCnt=0;
         
         Map<String, SortedMap<Integer, List<PBInstance>>> pbMap = new TreeMap<String, SortedMap<Integer, List<PBInstance>>>();
@@ -89,7 +89,6 @@ public final class PBUtil {
                 }
                 
                 if (instance==null) break;
-                ++correctCnt;
                 
                 predicates.add(instance.rolesetId);
                 
@@ -116,7 +115,27 @@ public final class PBUtil {
                 //System.out.print("\n");   
             }
         }
-        logger.info(String.format("%d props read, %d format exceptions encountered\n", correctCnt, exceptionCnt));
+        
+        int count = 0;
+        int dupCnt = 0;
+        for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:pbMap.entrySet())
+        	for (Map.Entry<Integer, List<PBInstance>>e2:entry.getValue().entrySet()) {
+		    	Collections.sort(e2.getValue());
+		    	BitSet predMask = new BitSet();
+		    	for (Iterator<PBInstance> iter=e2.getValue().iterator();iter.hasNext();) {
+		    		PBInstance instance = iter.next();
+		    		if (predMask.get(instance.getPredicate().getTokenIndex())) {
+		    			logger.warning("deleting duplicate props: "+e2.getValue());
+		    			iter.remove();
+		    			dupCnt++;
+		    			continue;
+		    		}
+		    		predMask.set(instance.getPredicate().getTokenIndex());
+		    	}
+		    	count+=e2.getValue().size();
+        	}
+        
+        logger.info(String.format("%d props read, %d props skipped due to format exceptions, %d duplicated props removed\n", count, exceptionCnt, dupCnt));
         
         return pbMap;       
     }

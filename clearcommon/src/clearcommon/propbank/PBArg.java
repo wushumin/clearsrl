@@ -57,55 +57,7 @@ public class PBArg implements Comparable<PBArg>, Serializable {
         //    System.out.print(" "+node.toParse());
         //System.out.print("\n");
         
-    	PBArg extraArg = null;
-
-    	// check for reference args
-    	if (!label.startsWith("R-")) {
-    		boolean hasNoneWHNode = false;
-    		TBNode rNode = null;
-    		for (TBNode node:allNodes) {
-    			if (!node.isEC() && !node.getTokenSet().isEmpty()) {
-    				if (node.getPOS().startsWith("WH"))
-    					rNode = node;
-    				else
-    					hasNoneWHNode = true;
-    			}
-    		}
-    		if (rNode!=null && hasNoneWHNode) {
-    			extraArg = new PBArg("R-"+label);
-    			extraArg.linkingArg = this;
-    			
-    			List<TBNode> extraNodes = new ArrayList<TBNode>();
-    			extraNodes.add(rNode);
-
-    			TBNode[] tmp = new TBNode[allNodes.length-1];
-    			int cnt = 0;
-    			
-    			List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(allNodes));
-    			
-    			boolean removed = false;
-    			do {
-    				removed = false;
-	    			for (Iterator<TBNode> iter=mainNodes.iterator(); iter.hasNext();) {
-	    				TBNode node = iter.next();
-	    				for (TBNode eNode:extraNodes)
-		    				if (node==eNode || node.traceTo(eNode)) {
-		    					iter.remove();
-		    					removed = true;
-		    					if (node!=eNode)
-		    						extraNodes.add(node);
-		    					break;
-		    				}
-	    				if (removed)
-	    					break;
-	    			}
-    			} while(removed);
-    			
-    			extraArg.allNodes = extraNodes.toArray(new TBNode[extraNodes.size()]);
-    			allNodes = mainNodes.toArray(new TBNode[mainNodes.size()]);
-    		}
-    	}
-    	
+    	PBArg extraArg = null;    	
     	
     	// link traces
         List<TBNode> mainNodes = new ArrayList<TBNode>(Arrays.asList(allNodes));
@@ -151,6 +103,50 @@ public class PBArg implements Comparable<PBArg>, Serializable {
                 	mainNodes.remove(j);
                 	continue;
                 }
+        
+    	// check for reference args
+    	if (!label.startsWith("R-")) {
+    		boolean hasNoneWHNode = false;
+    		TBNode rNode = null;
+    		for (TBNode node:mainNodes) {
+    			if (!node.isEC() && !node.getTokenSet().isEmpty()) {
+    				if (node.getPOS().startsWith("WH"))
+    					rNode = node;
+    				else
+    					hasNoneWHNode = true;
+    			}
+    		}
+    		if (rNode!=null && hasNoneWHNode) {
+    			extraArg = new PBArg("R-"+label);
+    			extraArg.linkingArg = this;
+    			
+    			List<TBNode> extraNodes = new ArrayList<TBNode>();
+    			extraNodes.add(rNode);
+
+    			TBNode[] tmp = new TBNode[allNodes.length-1];
+    			int cnt = 0;
+    			
+    			boolean removed = false;
+    			do {
+    				removed = false;
+	    			for (Iterator<TBNode> iter=mainNodes.iterator(); iter.hasNext();) {
+	    				TBNode node = iter.next();
+	    				for (TBNode eNode:extraNodes)
+		    				if (node==eNode || node.traceTo(eNode)) {
+		    					iter.remove();
+		    					removed = true;
+		    					if (node!=eNode)
+		    						extraNodes.add(node);
+		    					break;
+		    				}
+	    				if (removed)
+	    					break;
+	    			}
+    			} while(removed);
+    			
+    			extraArg.allNodes = extraNodes.toArray(new TBNode[extraNodes.size()]);
+    		}
+    	}
         
         allNodes = mainNodes.toArray(new TBNode[mainNodes.size()]);
 
