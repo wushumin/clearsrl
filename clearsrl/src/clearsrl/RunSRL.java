@@ -77,8 +77,8 @@ public class RunSRL {
     @Option(name="-out",usage="output file/directory")
     private File outFile = null;
     
-    @Option(name="-usePropBank",usage="use PropBank to find predicates")
-    private boolean usePropBank = false; 
+    @Option(name="-usePBCorpus",usage="use specified PropBank corpus to find predicates")
+    private String usePBCorpus = null; 
     
     @Option(name="-parsed",usage="input is parse trees")
     private boolean parsed = false;
@@ -496,10 +496,9 @@ public class RunSRL {
         //SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         if (!dataFormat.equals("conll")) {   
             Map<String, Sentence[]>  sentenceMap = null;
-            if (options.usePropBank)
+            if (options.usePBCorpus!=null)
             {
-            	String source = runSRLProps.getProperty("corpus","");
-            	Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
+            	Properties srcProps = PropertyUtil.filterProperties(props, options.usePBCorpus+".", true);
             	
             	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources(runSRLProps.getProperty("corpus.source")), options.langUtil);            	
             	/*
