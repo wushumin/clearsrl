@@ -174,8 +174,14 @@ public class EnglishUtil extends LanguageUtil {
     void readFrameFile(XMLReader parser, File file) {
         String key = file.getName();
         key = key.substring(0, key.length()-4);
-        String predicate = key.substring(0, key.length()-2);
-        char type = key.charAt(key.length()-1);
+       
+        String predicate = key;
+        char type = 'v';
+        if (key.matches(".+-[jnv]")) {
+        	predicate = key.substring(0, key.length()-2);
+        	type = key.charAt(key.length()-1);
+        }
+        key = predicate+'-'+type;
         
         PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
         try {

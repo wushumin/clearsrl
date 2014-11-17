@@ -125,7 +125,8 @@ public final class PBUtil {
 		    	for (Iterator<PBInstance> iter=e2.getValue().iterator();iter.hasNext();) {
 		    		PBInstance instance = iter.next();
 		    		if (predMask.get(instance.getPredicate().getTokenIndex())) {
-		    			logger.warning("deleting duplicate props: "+e2.getValue());
+		    			logger.warning(String.format("%s %d %d: deleting duplicate props: \n%s",
+		    					entry.getKey(), e2.getKey(), instance.getPredicate().getTerminalIndex(), e2.getValue().toString()));
 		    			iter.remove();
 		    			dupCnt++;
 		    			continue;
