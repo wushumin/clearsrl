@@ -84,6 +84,11 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     }
     
     @Override
+    public int setThreads(int threads) {
+    	return this.threads = threads;
+    }
+    
+    @Override
     public int predictNative(Object x) {
         return predictValuesNative(x, new double[labelMap.size()]);
     }

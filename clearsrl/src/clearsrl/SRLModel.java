@@ -1589,7 +1589,7 @@ public class SRLModel implements Serializable {
         
         boolean finalCrossValidation = !prop.getProperty("crossvalidation.final","false").equals("false");
         int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));
-        int threads = Integer.parseInt(prop.getProperty("crossvalidation.threads","1"));
+        int threads = Integer.parseInt(prop.getProperty("threads","1"));
         
         double stage2Threshold = 1.0;
         
@@ -1713,11 +1713,11 @@ public class SRLModel implements Serializable {
         if (trainFinalClassifier) {
 	        if (hasStage2Feature||!finalCrossValidation) {
 	        	// reset the threads allowed depending on whether cross-validation is required
-		    	Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
-		    	int cvThreads = Integer.parseInt(stage1Prop.getProperty("crossvalidation.threads","1"));
-		        int pwThreads = Integer.parseInt(stage1Prop.getProperty("pairwise.threads","1"));
-		        stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
-		        argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
+		    	//Properties stage1Prop = PropertyUtil.filterProperties(prop, "stage1.",true);
+		    	//int cvThreads = Integer.parseInt(stage1Prop.getProperty("crossvalidation.threads","1"));
+		        //int pwThreads = Integer.parseInt(stage1Prop.getProperty("pairwise.threads","1"));
+		        //stage1Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
+		        //argLabelClassifier.initialize(argLabelStringMap, stage1Prop);
 	        }
 	        String[] predictions = trainArguments(argLabelClassifier, nominalArgLabelClassifier, rounds>0?labels:null, labelValues, null, hasStage2Feature||!finalCrossValidation?1:folds, true, threads, null, y, true, false);
 	        System.out.println("stage 1 training"+(hasStage2Feature||!finalCrossValidation?"":"(cross validated)")+":");
@@ -1727,11 +1727,11 @@ public class SRLModel implements Serializable {
         if (hasStage2Feature) {
         	if (!finalCrossValidation) {
         		// reset the threads allowed depending on whether cross-validation is required
-	        	Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
-	        	int cvThreads = Integer.parseInt(stage2Prop.getProperty("crossvalidation.threads","1"));
-	            int pwThreads = Integer.parseInt(stage2Prop.getProperty("pairwise.threads","1"));
-	            stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
-	            argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
+	        	//Properties stage2Prop = PropertyUtil.filterProperties(prop, "stage2.",true);
+	        	//int cvThreads = Integer.parseInt(stage2Prop.getProperty("crossvalidation.threads","1"));
+	            //int pwThreads = Integer.parseInt(stage2Prop.getProperty("pairwise.threads","1"));
+	            //stage2Prop.setProperty("pairwise.threads", Integer.toString(cvThreads*pwThreads));
+	            //argLabelStage2Classifier.initialize(argLabelStringMap, stage2Prop);
 	            if (argLabelStage2Classifier!=nominalArgLabelStage2Classifier) {
 	            	Properties stage2NomProp = PropertyUtil.filterProperties(PropertyUtil.filterProperties(prop, "nominal.",true), "stage2.",true);
 	            	nominalArgLabelStage2Classifier.initialize(argLabelStringMap, stage2NomProp);
@@ -1832,12 +1832,12 @@ public class SRLModel implements Serializable {
     String[] trainClassifier(Classifier classifier, Object[] X, int[] y, double[][] values, int[] seeds, int folds, boolean trainAll, int threads) {
     	String[] newLabels = new String[y.length];
         if (folds>1) {
-            CrossValidator validator = new CrossValidator(classifier, threads);
+            CrossValidator validator = new CrossValidator(classifier, threads/classifier.setThreads(threads));
             int[] yV =  validator.validate(folds, X, y, values, seeds, trainAll);
             for (int i=0; i<yV.length; ++i)
                 newLabels[i] = argLabelIndexMap.get(yV[i]);
-
         } else {
+        	classifier.setThreads(threads);
         	classifier.trainNative(X, y);
  	        for (int i=0; i<y.length; ++i)
  	        	newLabels[i] = argLabelIndexMap.get(classifier.predictNative(X[i]));
