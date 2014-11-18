@@ -74,6 +74,10 @@ public abstract class Classifier implements Serializable {
 
     public abstract void trainNative(Object[] X, int[] Y, double[] weightY);
     
+    public int getThreads() {
+    	return 1;
+    }
+    
     public int setThreads(int threads) {
     	return 1;
     }
