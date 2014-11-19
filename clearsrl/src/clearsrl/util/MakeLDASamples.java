@@ -89,13 +89,20 @@ public class MakeLDASamples {
         
     	Map<String, TObjectDoubleMap<String>> allArgMap = new HashMap<String, TObjectDoubleMap<String>>();
     	
-        for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> aEntry:argMap.entrySet()) {
-
-        	Map<String, TObjectDoubleMap<String>> wordMap = aEntry.getValue();
+        for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> predEntry:argMap.entrySet()) {
+        	TObjectDoubleMap<String> allArgCntMap = allArgMap.get(predEntry.getKey());
+        	if (allArgCntMap==null)
+        		allArgMap.put(predEntry.getKey(), allArgCntMap=new TObjectDoubleHashMap<String>());
         	
+        	for (Map.Entry<String, TObjectDoubleMap<String>> argEntry:predEntry.getValue().entrySet())
+        		for (TObjectDoubleIterator<String> tIter=argEntry.getValue().iterator(); tIter.hasNext();) {
+	        		tIter.advance();
+	        		allArgCntMap.adjustOrPutValue(argEntry.getKey()+':'+tIter.key(), tIter.value(), tIter.value());
+	        	}
+        	/*
         	for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
-        		Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
-        		TObjectDoubleMap<String> allArgCntMap = allArgMap.get(entry.getKey());
+        		Map.Entry<String, TObjectDoubleMap<String>> argEntry=iter.next();
+        		TObjectDoubleMap<String> allArgCntMap = allArgMap.get(argEntry.getKey());
 	        	if (allArgCntMap==null){
 	        		allArgCntMap = new TObjectDoubleHashMap<String>();
 	        		allArgMap.put(entry.getKey(), allArgCntMap);
@@ -229,7 +236,7 @@ public class MakeLDASamples {
     
     public static void main(String[] args) throws Exception {
 
-    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new TreeMap<String, Map<String, TObjectDoubleMap<String>>>();
+    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
     	
     	MakeLDASamples options = new MakeLDASamples();
     	CmdLineParser parser = new CmdLineParser(options);
@@ -273,7 +280,12 @@ public class MakeLDASamples {
         					continue;
         				if (options.matchFrame && langUtil.getFrame(instance.getPredicate())==null)
         					continue;
-        				String predicate = instance.getPredicate().getWord().toLowerCase();
+        				
+        				String predicate = instance.getRoleset().substring(0,instance.getRoleset().lastIndexOf('.'));
+        				Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predicate);
+    					if (wordMap==null)
+    						argMap.put(predicate, wordMap=new HashMap<String, TObjectDoubleMap<String>>());
+        				
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel"))
         						continue;
@@ -283,17 +295,10 @@ public class MakeLDASamples {
         					String head = Topics.getTopicHeadword(arg.getNode());
         					if (head==null)
         						continue;
-        					Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(arg.getLabel());
-        					if (wordMap==null) {
-        						wordMap = new TreeMap<String, TObjectDoubleMap<String>>();
-        						argMap.put(arg.getLabel(), wordMap);
-        					}
         					
-        					TObjectDoubleMap<String> innerMap = wordMap.get(predicate);
-        					if (innerMap==null) {
-        						innerMap = new TObjectDoubleHashMap<String>();
-        						wordMap.put(predicate, innerMap);
-        					}
+        					TObjectDoubleMap<String> innerMap = wordMap.get(arg.getLabel());
+        					if (innerMap==null)
+        						wordMap.put(arg.getLabel(), innerMap=new TObjectDoubleHashMap<String>());
         					innerMap.adjustOrPutValue(head, options.prob>=0?1:arg.getScore(), options.prob>=0?1:arg.getScore());
         				}
         			}

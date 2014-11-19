@@ -1,15 +1,19 @@
 package clearcommon.treebank;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
+//import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
-import java.util.Scanner;
+//import java.util.Scanner;
 import java.util.Stack;
+import java.util.StringTokenizer;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
@@ -21,8 +25,9 @@ public class SerialTBFileReader extends TBFileReader
 
     private static String WHITESPACE = " \t\n\r\f";
     
-    
-    Scanner       scanner;
+    BufferedReader reader;
+    Deque<String>  tokenQueue;
+    //Scanner       scanner;
     int           treeCount;
     TBTree        lastTree;
     StringBuilder inputStr;
@@ -46,8 +51,11 @@ public class SerialTBFileReader extends TBFileReader
     
     public SerialTBFileReader(Reader reader, String fileName) {
         super(fileName);
-        scanner      = new Scanner(reader);
-        scanner.useDelimiter(String.format("((?<=[\\(\\)%s])|(?=[\\(\\)%s]))",WHITESPACE, WHITESPACE));
+        
+        this.reader = new BufferedReader(reader);
+        tokenQueue = new ArrayDeque<String>();
+        //scanner      = new Scanner(reader);
+        //scanner.useDelimiter(String.format("((?<=[\\(\\)%s])|(?=[\\(\\)%s]))",WHITESPACE, WHITESPACE));
         
         treeCount     = 0;
         lastTree      = null;
@@ -109,7 +117,7 @@ public class SerialTBFileReader extends TBFileReader
             		curr = curr.getParent();  
             		curr.terminalIndex = terminalIndex++;
                     if (!curr.isEC())   curr.tokenIndex = tokenIndex++;
-                    logger.info(fileName+" "+treeCount+": fixed node: "+curr.toParse());
+                    logger.fine(fileName+" "+treeCount+": fixed node: "+curr.toParse());
             	} else { 
             		if (curr.children.length!=0 && curr.getWord()!=null)
             			logger.severe(fileName+" "+treeCount+": encountered bad node: "+curr);
@@ -136,7 +144,7 @@ public class SerialTBFileReader extends TBFileReader
                     curr = childNode;                           // move to child
                     childNodeStack.push(new ArrayList<TBNode>());
                     curr.pos = pNode.pos;
-                    logger.warning(fileName+", "+treeCount+": multi-word token: "+pNode.word+" "+str+"("+pNode.pos+")");
+                    logger.fine(fileName+", "+treeCount+": multi-word token: "+pNode.word+" "+str+"("+pNode.pos+")");
                 }
                 curr.word = str;                        // str = word
                 curr.terminalIndex = terminalIndex++;
@@ -182,7 +190,12 @@ public class SerialTBFileReader extends TBFileReader
     {
         if (!closed)
         {
-            scanner.close();
+            try {
+	            reader.close();
+            } catch (IOException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+            }
             closed = true;
         }
     }
@@ -195,17 +208,34 @@ public class SerialTBFileReader extends TBFileReader
     
     private String nextToken()
     {
-        while (scanner.hasNext())
-        {
-            String str = scanner.next();
+    	if (tokenQueue.isEmpty() && isOpen()) {
+    		String line = null;
+    		try {
+    			line = reader.readLine();
+            } catch (IOException e) {
+            	e.printStackTrace();
+            }
+
+            if (line == null) {
+            	close();
+                return null;
+            }
             
-            inputStr.append(str);
+            line = line.trim();
+            if (line.isEmpty())
+            	return nextToken();
             
-            if (WHITESPACE.indexOf(str) == -1)
-                return str;
-        }
-        close();
-        return null;
+            StringTokenizer tok = new StringTokenizer(line, "() \t\n\r\f", true);
+            String str;
+            
+            while (tok.hasMoreTokens()) {
+            	str = tok.nextToken().trim();
+            	if (!str.isEmpty()) 
+            		tokenQueue.add(str);
+            }
+    	}
+    	
+        return tokenQueue.pop();
     }
 
 }

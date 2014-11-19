@@ -13,6 +13,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -119,23 +120,21 @@ public class MakeAlignedLDASamples {
     	return sp;
     }
     
-    static void updateMap(TBNode predicate, List<ArgWeight> args, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
-    	String predWord = predicate.getWord().toLowerCase();
+    static void updateMap(String roleset, List<ArgWeight> args, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
+    	String predWord = roleset.substring(0,roleset.lastIndexOf('.'));
     	logger.fine(predWord+": "+args);
+    	
+    	Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predWord);
+    	if (wordMap==null)
+    		argMap.put(predWord, wordMap = new HashMap<String, TObjectDoubleMap<String>>());
+    	
     	for (ArgWeight arg:args) {
     		if (arg.label.equals("rel"))
 				continue;
-			Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(arg.label);
-			if (wordMap==null) {
-				wordMap = new TreeMap<String, TObjectDoubleMap<String>>();
-				argMap.put(arg.label, wordMap);
-			}
 			
-			TObjectDoubleMap<String> innerMap = wordMap.get(predWord);
-			if (innerMap==null) {
-				innerMap = new TObjectDoubleHashMap<String>();
-				wordMap.put(predWord, innerMap);
-			}
+			TObjectDoubleMap<String> innerMap = wordMap.get(arg.label);
+			if (innerMap==null)
+				wordMap.put(arg.label, innerMap=new TObjectDoubleHashMap<String>());
 			innerMap.adjustOrPutValue(arg.head, arg.weight, arg.weight);
     	}
     }
@@ -152,7 +151,7 @@ public class MakeAlignedLDASamples {
 				continue;
 			args.add(new ArgWeight(arg.getLabel(), head, 1));
 		}
-    	updateMap(instance.getPredicate(), args, argMap);
+    	updateMap(instance.getRoleset(), args, argMap);
     }
     
     static boolean hasWA(SentencePair sp, TBNode srcNode, TBNode dstNode) {
@@ -312,7 +311,7 @@ public class MakeAlignedLDASamples {
 			if (weights[i]!=0)
 				args.add(new ArgWeight(labelMod[i]==null?chArgs[i].getLabel():labelMod[i], head, weights[i]));
 		}
-    	updateMap(chProp.getPredicate(), args, argMap);
+    	updateMap(chProp.getRoleset(), args, argMap);
     	StringBuilder builder = new StringBuilder(enProp.getPredicate()+": [");
 		for (PBArg arg:enArgs) {
 			if (arg.getLabel().equals("rel")) continue;
@@ -326,7 +325,7 @@ public class MakeAlignedLDASamples {
     
     public static void main(String[] args) throws Exception {
 
-    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new TreeMap<String, Map<String, TObjectDoubleMap<String>>>();
+    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
     	
     	MakeAlignedLDASamples options = new MakeAlignedLDASamples();
     	CmdLineParser parser = new CmdLineParser(options);
