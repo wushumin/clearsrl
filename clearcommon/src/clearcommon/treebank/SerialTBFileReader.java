@@ -81,7 +81,7 @@ public class SerialTBFileReader extends TBFileReader
         
         int terminalIndex = 0;
         int tokenIndex    = 0;
-        TBNode head       = new TBNode(null, "FRAG");       // dummy-head
+        TBNode head       = new TBNode(null, "");       // dummy-head
         TBNode curr       = head;                       // pointer to the current node
         
         do {
@@ -120,8 +120,8 @@ public class SerialTBFileReader extends TBFileReader
 	                }
 	                curr = curr.getParent();                // move to parent
             	}
-            } else if (head==curr) {
-                head.pos = str;
+            } else if (curr.pos.isEmpty()) {
+                curr.pos = str;
             } else {
                 if (curr.terminalIndex >= 0)
                 {
@@ -147,6 +147,9 @@ public class SerialTBFileReader extends TBFileReader
         
         // omit the dummy head
         TBNode tmp = head.children.length==1?head.children[0]:head;
+        
+        if (tmp.pos.isEmpty())
+        	tmp.pos = "FRAG";
         
         tmp.parent=null;
         inputStr = new StringBuilder();

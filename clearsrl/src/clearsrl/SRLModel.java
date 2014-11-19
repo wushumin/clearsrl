@@ -1502,6 +1502,7 @@ public class SRLModel implements Serializable {
     }
     
     double computeThreshold(BitSet mask, boolean setMask, String[] goldLabels, String[] labels, double[][] labelValues, double threshold) {
+    	if (threshold>=1) return 0;
     	TDoubleArrayList rList = new TDoubleArrayList();
     	int rTotal = 0;
         for (int i=0; i<goldLabels.length; ++i) {
@@ -1681,8 +1682,8 @@ public class SRLModel implements Serializable {
 	            stage2Mask = new BitSet();
 	            for (int i=0; i<newLabels.length; ++i)
 	            	if (!NOT_ARG.equals(newLabels[i]) || 
-	            			!trainNominalMask.get(i) &&  newLabelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold ||
-	            					trainNominalMask.get(i) &&  newLabelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nominalArgLabelStage2Threshold)
+	            			!trainNominalMask.get(i) && (argLabelStage2Threshold==0 || newLabelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=argLabelStage2Threshold) ||
+	            					trainNominalMask.get(i) && (nominalArgLabelStage2Threshold==0 || newLabelValues[i][argLabelStringMap.get(NOT_ARG)-1]<=nominalArgLabelStage2Threshold))
 	            		stage2Mask.set(i);
 	            
 	            TDoubleArrayList pList = new TDoubleArrayList();

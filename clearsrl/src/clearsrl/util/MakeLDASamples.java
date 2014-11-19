@@ -252,10 +252,10 @@ public class MakeLDASamples {
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);
         
-        
-        LanguageUtil langUtil = (LanguageUtil) Class.forName(props.getProperty("chinese.util-class")).newInstance();
-        if (!langUtil.init(PropertyUtil.filterProperties(props,"chinese."))) {
-            logger.severe(String.format("Language utility (%s) initialization failed",props.getProperty("language.util-class")));
+        Properties langProps = PropertyUtil.filterProperties(props, props.getProperty("language","chinese").trim()+'.', true);
+        LanguageUtil langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
+        if (!langUtil.init(langProps)) {
+            logger.severe(String.format("Language utility (%s) initialization failed",langProps.getProperty("util-class")));
             System.exit(-1);
         }
         
