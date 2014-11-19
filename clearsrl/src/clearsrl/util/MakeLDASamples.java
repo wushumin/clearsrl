@@ -25,6 +25,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import org.kohsuke.args4j.CmdLineException;
@@ -81,6 +85,87 @@ public class MakeLDASamples {
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
+    
+    static class PropFile implements Runnable  {
+
+    	String fName;
+    	MakeLDASamples options;
+    	LanguageUtil langUtil;
+    	Map<String, Map<String, TObjectDoubleMap<String>>> globalMap;
+    	
+    	public PropFile(String fName, MakeLDASamples options, LanguageUtil langUtil, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
+    		this.fName = fName;
+    		this.options = options;
+    		this.langUtil = langUtil;
+    		this.globalMap = argMap;
+    	}
+    	
+		@Override
+        public void run() {
+	        // TODO Auto-generated method stub
+			
+			logger.info("processsing "+fName);
+			
+			Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
+			
+        	Map<String, SortedMap<Integer, List<PBInstance>>> pb = 
+        			PBUtil.readPBDir(Arrays.asList(fName), new TBReader(options.inParseDir, true),  new DefaultPBTokenizer());
+
+        	for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:pb.entrySet())
+        		for (Map.Entry<Integer, List<PBInstance>> e2:entry.getValue().entrySet()) {
+        			TBUtil.linkHeads(e2.getValue().get(0).getTree(), langUtil.getHeadRules());
+        			for (PBInstance instance:e2.getValue()) {
+        				if (!options.useNominal && !langUtil.isVerb(instance.getPredicate().getPOS())) 
+        					continue;
+        				if (options.matchFrame && langUtil.getFrame(instance.getPredicate())==null)
+        					continue;
+        				
+        				String predicate = instance.getRoleset().substring(0,instance.getRoleset().lastIndexOf('.'));
+        				Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predicate);
+    					if (wordMap==null)
+    						argMap.put(predicate, wordMap=new HashMap<String, TObjectDoubleMap<String>>());
+        				
+        				for (PBArg arg:instance.getArgs()) {
+        					if (arg.getLabel().equals("rel"))
+        						continue;
+        					if (options.prob>=0 && options.prob>arg.getScore() || options.prob<0 && -options.prob>arg.getScore())
+        						continue;
+        					
+        					String head = Topics.getTopicHeadword(arg.getNode());
+        					if (head==null)
+        						continue;
+        					
+        					TObjectDoubleMap<String> innerMap = wordMap.get(arg.getLabel());
+        					if (innerMap==null)
+        						wordMap.put(arg.getLabel(), innerMap=new TObjectDoubleHashMap<String>());
+        					innerMap.adjustOrPutValue(head, options.prob>=0?1:arg.getScore(), options.prob>=0?1:arg.getScore());
+        				}
+        			}
+        		}
+        	synchronized (globalMap) {
+        		for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> entry:argMap.entrySet()) {
+        			Map<String, TObjectDoubleMap<String>> gMap = globalMap.get(entry.getKey());
+        			if (gMap==null) {
+        				globalMap.put(entry.getKey(), entry.getValue());
+        				break;
+        			}
+        			for (Map.Entry<String, TObjectDoubleMap<String>> e2:entry.getValue().entrySet()) {
+        				TObjectDoubleMap<String> g2Map = gMap.get(e2.getKey());
+        				if (g2Map==null) {
+        					gMap.put(e2.getKey(),e2.getValue());
+        					break;
+        				}
+        				for (TObjectDoubleIterator<String> iter = e2.getValue().iterator(); iter.hasNext();) {
+        					iter.advance();
+        					g2Map.adjustOrPutValue(iter.key(), iter.value(), iter.value());
+        				}
+        			}
+        		}
+        	}
+        	
+        	logger.info("done "+fName);
+        }
+    }
     
     public static void makeArgOutput(Map<String, Map<String, TObjectDoubleMap<String>>> argMap, File outDir, int wCntThreshold, int docSizeThreshold) throws IOException {
     	if (!outDir.exists()) outDir.mkdirs();
@@ -270,41 +355,31 @@ public class MakeLDASamples {
         	options.outDir.mkdirs();
         
         List<String> fileList = FileUtil.getFileList(new File(options.inPropDir), options.inFileList, true);
+        
+        ExecutorService executor = null;
+        int threads = Integer.parseInt(props.getProperty("threads", "2"));
+        if (threads>1) 
+        	executor = Executors.newFixedThreadPool(threads);
+        
         for (String fName:fileList) {
-        	Map<String, SortedMap<Integer, List<PBInstance>>> pb = PBUtil.readPBDir(Arrays.asList(fName), new TBReader(options.inParseDir, true),  new DefaultPBTokenizer());
-        	for (Map.Entry<String, SortedMap<Integer, List<PBInstance>>> entry:pb.entrySet())
-        		for (Map.Entry<Integer, List<PBInstance>> e2:entry.getValue().entrySet()) {
-        			TBUtil.linkHeads(e2.getValue().get(0).getTree(), langUtil.getHeadRules());
-        			for (PBInstance instance:e2.getValue()) {
-        				if (!options.useNominal && !langUtil.isVerb(instance.getPredicate().getPOS())) 
-        					continue;
-        				if (options.matchFrame && langUtil.getFrame(instance.getPredicate())==null)
-        					continue;
-        				
-        				String predicate = instance.getRoleset().substring(0,instance.getRoleset().lastIndexOf('.'));
-        				Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predicate);
-    					if (wordMap==null)
-    						argMap.put(predicate, wordMap=new HashMap<String, TObjectDoubleMap<String>>());
-        				
-        				for (PBArg arg:instance.getArgs()) {
-        					if (arg.getLabel().equals("rel"))
-        						continue;
-        					if (options.prob>=0 && options.prob>arg.getScore() || options.prob<0 && -options.prob>arg.getScore())
-        						continue;
-        					
-        					String head = Topics.getTopicHeadword(arg.getNode());
-        					if (head==null)
-        						continue;
-        					
-        					TObjectDoubleMap<String> innerMap = wordMap.get(arg.getLabel());
-        					if (innerMap==null)
-        						wordMap.put(arg.getLabel(), innerMap=new TObjectDoubleHashMap<String>());
-        					innerMap.adjustOrPutValue(head, options.prob>=0?1:arg.getScore(), options.prob>=0?1:arg.getScore());
-        				}
-        			}
-        		}
+        	PropFile pf = new PropFile(fName, options, langUtil, argMap);
+        	if (executor!=null)
+	        	executor.execute(pf);
+        	else
+        		pf.run();
         }
         
+        if (executor!=null) {
+            executor.shutdown();
+            while (true) {
+                try {
+                    if (executor.awaitTermination(5, TimeUnit.MINUTES)) break;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         makeArgOutput(argMap, options.outDir, options.wCntThreshold, options.docSizeThreshold);
 	}
 }
