@@ -1,7 +1,7 @@
 package clearsrl.util;
 
-import gnu.trove.map.TObjectDoubleMap;
-import gnu.trove.map.hash.TObjectDoubleHashMap;
+import gnu.trove.map.TObjectFloatMap;
+import gnu.trove.map.hash.TObjectFloatHashMap;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -120,26 +120,26 @@ public class MakeAlignedLDASamples {
     	return sp;
     }
     
-    static void updateMap(String roleset, List<ArgWeight> args, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
+    static void updateMap(String roleset, List<ArgWeight> args, Map<String, Map<String, TObjectFloatMap<String>>> argMap) {
     	String predWord = roleset.substring(0,roleset.lastIndexOf('.'));
     	logger.fine(predWord+": "+args);
     	
-    	Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predWord);
+    	Map<String, TObjectFloatMap<String>> wordMap = argMap.get(predWord);
     	if (wordMap==null)
-    		argMap.put(predWord, wordMap = new HashMap<String, TObjectDoubleMap<String>>());
+    		argMap.put(predWord, wordMap = new HashMap<String, TObjectFloatMap<String>>());
     	
     	for (ArgWeight arg:args) {
     		if (arg.label.equals("rel"))
 				continue;
 			
-			TObjectDoubleMap<String> innerMap = wordMap.get(arg.label);
+			TObjectFloatMap<String> innerMap = wordMap.get(arg.label);
 			if (innerMap==null)
-				wordMap.put(arg.label, innerMap=new TObjectDoubleHashMap<String>());
+				wordMap.put(arg.label, innerMap=new TObjectFloatHashMap<String>());
 			innerMap.adjustOrPutValue(arg.head, arg.weight, arg.weight);
     	}
     }
     
-    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, double prob) {
+    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectFloatMap<String>>> argMap, double prob) {
     	List<ArgWeight> args = new ArrayList<ArgWeight>();
     	for (PBArg arg:instance.getArgs()) {
 			if (arg.getLabel().equals("rel"))
@@ -211,7 +211,7 @@ public class MakeAlignedLDASamples {
     	return null;
     }
     
-    static void processAlignment(Alignment a, Map<String, Map<String, TObjectDoubleMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, MakeAlignedLDASamples opt) {
+    static void processAlignment(Alignment a, Map<String, Map<String, TObjectFloatMap<String>>> argMap, LanguageUtil chUtil, LanguageUtil enUtil, MakeAlignedLDASamples opt) {
     	PBInstance chProp = a.getDstPBInstance();
     	PBArg[] chArgs = chProp.getArgs();
     	
@@ -325,7 +325,7 @@ public class MakeAlignedLDASamples {
     
     public static void main(String[] args) throws Exception {
 
-    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
+    	Map<String, Map<String, TObjectFloatMap<String>>> argMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
     	
     	MakeAlignedLDASamples options = new MakeAlignedLDASamples();
     	CmdLineParser parser = new CmdLineParser(options);

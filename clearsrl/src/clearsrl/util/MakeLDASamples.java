@@ -1,10 +1,10 @@
 package clearsrl.util;
 
-import gnu.trove.iterator.TObjectDoubleIterator;
+import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.iterator.TObjectIntIterator;
-import gnu.trove.map.TObjectDoubleMap;
+import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TObjectDoubleHashMap;
+import gnu.trove.map.hash.TObjectFloatHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.File;
@@ -91,9 +91,9 @@ public class MakeLDASamples {
     	String fName;
     	MakeLDASamples options;
     	LanguageUtil langUtil;
-    	Map<String, Map<String, TObjectDoubleMap<String>>> globalMap;
+    	Map<String, Map<String, TObjectFloatMap<String>>> globalMap;
     	
-    	public PropFile(String fName, MakeLDASamples options, LanguageUtil langUtil, Map<String, Map<String, TObjectDoubleMap<String>>> argMap) {
+    	public PropFile(String fName, MakeLDASamples options, LanguageUtil langUtil, Map<String, Map<String, TObjectFloatMap<String>>> argMap) {
     		this.fName = fName;
     		this.options = options;
     		this.langUtil = langUtil;
@@ -106,7 +106,7 @@ public class MakeLDASamples {
 			
 			logger.info("Processsing "+fName);
 			
-			Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
+			Map<String, Map<String, TObjectFloatMap<String>>> argMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
 			
         	Map<String, SortedMap<Integer, List<PBInstance>>> pb = 
         			PBUtil.readPBDir(Arrays.asList(fName), new TBReader(options.inParseDir, true),  new DefaultPBTokenizer());
@@ -121,9 +121,9 @@ public class MakeLDASamples {
         					continue;
         				
         				String predicate = instance.getRoleset().substring(0,instance.getRoleset().lastIndexOf('.'));
-        				Map<String, TObjectDoubleMap<String>> wordMap = argMap.get(predicate);
+        				Map<String, TObjectFloatMap<String>> wordMap = argMap.get(predicate);
     					if (wordMap==null)
-    						argMap.put(predicate, wordMap=new HashMap<String, TObjectDoubleMap<String>>());
+    						argMap.put(predicate, wordMap=new HashMap<String, TObjectFloatMap<String>>());
         				
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel"))
@@ -135,27 +135,27 @@ public class MakeLDASamples {
         					if (head==null)
         						continue;
         					
-        					TObjectDoubleMap<String> innerMap = wordMap.get(arg.getLabel());
+        					TObjectFloatMap<String> innerMap = wordMap.get(arg.getLabel());
         					if (innerMap==null)
-        						wordMap.put(arg.getLabel(), innerMap=new TObjectDoubleHashMap<String>());
-        					innerMap.adjustOrPutValue(head, options.prob>=0?1:arg.getScore(), options.prob>=0?1:arg.getScore());
+        						wordMap.put(arg.getLabel(), innerMap=new TObjectFloatHashMap<String>());
+        					innerMap.adjustOrPutValue(head, (float)(options.prob>=0?1:arg.getScore()), (float)(options.prob>=0?1:arg.getScore()));
         				}
         			}
         		}
         	synchronized (globalMap) {
-        		for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> entry:argMap.entrySet()) {
-        			Map<String, TObjectDoubleMap<String>> gMap = globalMap.get(entry.getKey());
+        		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> entry:argMap.entrySet()) {
+        			Map<String, TObjectFloatMap<String>> gMap = globalMap.get(entry.getKey());
         			if (gMap==null) {
         				globalMap.put(entry.getKey(), entry.getValue());
         				continue;
         			}
-        			for (Map.Entry<String, TObjectDoubleMap<String>> e2:entry.getValue().entrySet()) {
-        				TObjectDoubleMap<String> g2Map = gMap.get(e2.getKey());
+        			for (Map.Entry<String, TObjectFloatMap<String>> e2:entry.getValue().entrySet()) {
+        				TObjectFloatMap<String> g2Map = gMap.get(e2.getKey());
         				if (g2Map==null) {
         					gMap.put(e2.getKey(),e2.getValue());
         					continue;
         				}
-        				for (TObjectDoubleIterator<String> iter = e2.getValue().iterator(); iter.hasNext();) {
+        				for (TObjectFloatIterator<String> iter = e2.getValue().iterator(); iter.hasNext();) {
         					iter.advance();
         					g2Map.adjustOrPutValue(iter.key(), iter.value(), iter.value());
         				}
@@ -167,50 +167,50 @@ public class MakeLDASamples {
         }
     }
     
-    public static void makeArgOutput(Map<String, Map<String, TObjectDoubleMap<String>>> argMap, File outDir, double wCntThreshold, double docSizeThreshold) throws IOException {
+    public static void makeArgOutput(Map<String, Map<String, TObjectFloatMap<String>>> argMap, File outDir, double wCntThreshold, double docSizeThreshold) throws IOException {
     	if (!outDir.exists()) outDir.mkdirs();
     	
     	Map<String, String> dict = new HashMap<String, String>();
         
-    	Map<String, TObjectDoubleMap<String>> allArgMap = new HashMap<String, TObjectDoubleMap<String>>();
+    	Map<String, TObjectFloatMap<String>> allArgMap = new HashMap<String, TObjectFloatMap<String>>();
     	
-        for (Map.Entry<String, Map<String, TObjectDoubleMap<String>>> predEntry:argMap.entrySet()) {
-        	TObjectDoubleMap<String> allArgCntMap = allArgMap.get(predEntry.getKey());
+        for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> predEntry:argMap.entrySet()) {
+        	TObjectFloatMap<String> allArgCntMap = allArgMap.get(predEntry.getKey());
         	if (allArgCntMap==null)
-        		allArgMap.put(predEntry.getKey(), allArgCntMap=new TObjectDoubleHashMap<String>());
+        		allArgMap.put(predEntry.getKey(), allArgCntMap=new TObjectFloatHashMap<String>());
         	
-        	for (Map.Entry<String, TObjectDoubleMap<String>> argEntry:predEntry.getValue().entrySet())
-        		for (TObjectDoubleIterator<String> tIter=argEntry.getValue().iterator(); tIter.hasNext();) {
+        	for (Map.Entry<String, TObjectFloatMap<String>> argEntry:predEntry.getValue().entrySet())
+        		for (TObjectFloatIterator<String> tIter=argEntry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
 	        		allArgCntMap.adjustOrPutValue(argEntry.getKey()+':'+tIter.key(), tIter.value(), tIter.value());
 	        	}
         	/*
-        	for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
-        		Map.Entry<String, TObjectDoubleMap<String>> argEntry=iter.next();
-        		TObjectDoubleMap<String> allArgCntMap = allArgMap.get(argEntry.getKey());
+        	for (Iterator<Map.Entry<String, TObjectFloatMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
+        		Map.Entry<String, TObjectFloatMap<String>> argEntry=iter.next();
+        		TObjectFloatMap<String> allArgCntMap = allArgMap.get(argEntry.getKey());
 	        	if (allArgCntMap==null){
-	        		allArgCntMap = new TObjectDoubleHashMap<String>();
+	        		allArgCntMap = new TObjectFloatHashMap<String>();
 	        		allArgMap.put(entry.getKey(), allArgCntMap);
 	        	}
-	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+	        	for (TObjectFloatIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
 	        		allArgCntMap.adjustOrPutValue(aEntry.getKey()+':'+tIter.key(), tIter.value(), tIter.value());
 	        	}
         	}
         		
-/*        	TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
+/*        	TObjectFloatMap<String> wCntMap = new TObjectFloatHashMap<String>();
         	
 	        logger.info(aEntry.getKey()+" pre-trim size: "+wordMap.size());
 	        
-	        for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
-	        	Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
-	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+	        for (Iterator<Map.Entry<String, TObjectFloatMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
+	        	Map.Entry<String, TObjectFloatMap<String>> entry=iter.next();
+	        	for (TObjectFloatIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
 	        		wCntMap.adjustOrPutValue(tIter.key(), tIter.value(), tIter.value());
 	        	}
 	        }
 	        PrintWriter wordWriter = new PrintWriter(new File(outDir, aEntry.getKey()+"-words.txt"));
-	        for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
+	        for (TObjectFloatIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
 	        	tIter.advance();
 	        	wordWriter.printf("%s %f\n", tIter.key(), tIter.value());
 	        	if (tIter.value()<wCntThreshold)
@@ -218,11 +218,11 @@ public class MakeLDASamples {
 	        }
 	        wordWriter.close();
 	       
-	        for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
+	        for (Iterator<Map.Entry<String, TObjectFloatMap<String>>>iter= wordMap.entrySet().iterator(); iter.hasNext();) {
 	        	int wCnt = 0;
-	        	Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
+	        	Map.Entry<String, TObjectFloatMap<String>> entry=iter.next();
 	        	
-	        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+	        	for (TObjectFloatIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
 	        		tIter.advance();
 	        		
 	        		if (wCntMap.containsKey(tIter.key()))
@@ -241,7 +241,7 @@ public class MakeLDASamples {
 	        PrintWriter docWriter = new PrintWriter(new File(outDir, aEntry.getKey()+"-docs.txt"));
             PrintWriter labelWriter = new PrintWriter(new File(outDir, aEntry.getKey()+"-labels.txt"));
 	        
-	        for (Map.Entry<String, TObjectDoubleMap<String>> entry:wordMap.entrySet()) {
+	        for (Map.Entry<String, TObjectFloatMap<String>> entry:wordMap.entrySet()) {
 	        	labelWriter.println(entry.getKey());
 	        	String[] keys = entry.getValue().keys(new String[entry.getValue().size()]);
 	        	for (String key:keys) {
@@ -258,15 +258,15 @@ public class MakeLDASamples {
 	        labelWriter.close();
 	        */
         }
-        TObjectDoubleMap<String> wCntMap = new TObjectDoubleHashMap<String>();
-        for (Map.Entry<String, TObjectDoubleMap<String>> entry:allArgMap.entrySet())
-        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+        TObjectFloatMap<String> wCntMap = new TObjectFloatHashMap<String>();
+        for (Map.Entry<String, TObjectFloatMap<String>> entry:allArgMap.entrySet())
+        	for (TObjectFloatIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
         		tIter.advance();
         		wCntMap.adjustOrPutValue(tIter.key(), tIter.value(), tIter.value());
         	}
 
         logger.info("all arg pre-trim entry size: "+wCntMap.size());
-        for (TObjectDoubleIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
+        for (TObjectFloatIterator<String> tIter=wCntMap.iterator(); tIter.hasNext();) {
         	tIter.advance();
         	if (tIter.value()<wCntThreshold)
         		tIter.remove();
@@ -274,10 +274,10 @@ public class MakeLDASamples {
         logger.info("all arg post-trim entry size: "+wCntMap.size());
         
         logger.info("all arg pre-trim doc size: "+allArgMap.size());
-        for (Iterator<Map.Entry<String, TObjectDoubleMap<String>>>iter= allArgMap.entrySet().iterator(); iter.hasNext();) {
+        for (Iterator<Map.Entry<String, TObjectFloatMap<String>>>iter= allArgMap.entrySet().iterator(); iter.hasNext();) {
         	int wCnt = 0;
-        	Map.Entry<String, TObjectDoubleMap<String>> entry=iter.next();
-        	for (TObjectDoubleIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
+        	Map.Entry<String, TObjectFloatMap<String>> entry=iter.next();
+        	for (TObjectFloatIterator<String> tIter=entry.getValue().iterator(); tIter.hasNext();) {
         		tIter.advance();
         		if (wCntMap.containsKey(tIter.key()))
         			wCnt+=tIter.value();
@@ -293,7 +293,7 @@ public class MakeLDASamples {
         PrintWriter labelWriter = new PrintWriter(new File(outDir, "ALLARG-labels.txt"));
         Set<String> keySet = new HashSet<String>();
         
-        for (Map.Entry<String, TObjectDoubleMap<String>> entry:allArgMap.entrySet()) {
+        for (Map.Entry<String, TObjectFloatMap<String>> entry:allArgMap.entrySet()) {
         	labelWriter.println(entry.getKey());
         	String[] keys = entry.getValue().keys(new String[entry.getValue().size()]);
         	for (String key:keys) {
@@ -321,7 +321,7 @@ public class MakeLDASamples {
     
     public static void main(String[] args) throws Exception {
 
-    	Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
+    	Map<String, Map<String, TObjectFloatMap<String>>> argMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
     	
     	MakeLDASamples options = new MakeLDASamples();
     	CmdLineParser parser = new CmdLineParser(options);
