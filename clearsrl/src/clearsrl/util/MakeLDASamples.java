@@ -75,10 +75,10 @@ public class MakeLDASamples {
     private boolean matchFrame = false;
     
     @Option(name="-wt",usage="term threshold")
-    private int wCntThreshold = 10;
+    private double wCntThreshold = 10;
     
     @Option(name="-dt",usage="document threshold")
-    private int docSizeThreshold = 25;
+    private double docSizeThreshold = 25;
     
     @Option(name="-nominal",usage="include non-verb predicates")
     private boolean useNominal = false;
@@ -104,7 +104,7 @@ public class MakeLDASamples {
         public void run() {
 	        // TODO Auto-generated method stub
 			
-			logger.info("processsing "+fName);
+			logger.info("Processsing "+fName);
 			
 			Map<String, Map<String, TObjectDoubleMap<String>>> argMap = new HashMap<String, Map<String, TObjectDoubleMap<String>>>();
 			
@@ -147,13 +147,13 @@ public class MakeLDASamples {
         			Map<String, TObjectDoubleMap<String>> gMap = globalMap.get(entry.getKey());
         			if (gMap==null) {
         				globalMap.put(entry.getKey(), entry.getValue());
-        				break;
+        				continue;
         			}
         			for (Map.Entry<String, TObjectDoubleMap<String>> e2:entry.getValue().entrySet()) {
         				TObjectDoubleMap<String> g2Map = gMap.get(e2.getKey());
         				if (g2Map==null) {
         					gMap.put(e2.getKey(),e2.getValue());
-        					break;
+        					continue;
         				}
         				for (TObjectDoubleIterator<String> iter = e2.getValue().iterator(); iter.hasNext();) {
         					iter.advance();
@@ -163,11 +163,11 @@ public class MakeLDASamples {
         		}
         	}
         	
-        	logger.info("done "+fName);
+        	logger.info("Finished processing "+fName+"\n");
         }
     }
     
-    public static void makeArgOutput(Map<String, Map<String, TObjectDoubleMap<String>>> argMap, File outDir, int wCntThreshold, int docSizeThreshold) throws IOException {
+    public static void makeArgOutput(Map<String, Map<String, TObjectDoubleMap<String>>> argMap, File outDir, double wCntThreshold, double docSizeThreshold) throws IOException {
     	if (!outDir.exists()) outDir.mkdirs();
     	
     	Map<String, String> dict = new HashMap<String, String>();
