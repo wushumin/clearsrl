@@ -233,7 +233,7 @@ public class ParseCorpus {
         }
     }
 
-    CoarseToFineMaxRuleParser getParser() {
+     CoarseToFineMaxRuleParser getParser() {
         CoarseToFineMaxRuleParser parser;
         if ((parser=parserMap.get(Thread.currentThread().getId()))==null) {
             double threshold = 1.0;
@@ -252,7 +252,9 @@ public class ParseCorpus {
             }
             parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
             parser.binarization = pData.getBinarization();
-            parserMap.put(Thread.currentThread().getId(), parser);
+            synchronized (parserMap) {
+            	parserMap.put(Thread.currentThread().getId(), parser);
+            }
         }
         return parser;
     }

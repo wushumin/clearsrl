@@ -88,29 +88,46 @@ public class MakeLDASamples {
     
     @Option(name="-h",usage="help message")
     private boolean help = false;
+
+    static Map<Long, LanguageUtil> langUtilMap; 
     
-    
+    static Properties langProps;
     
     static class PropFile implements Runnable  {
 
     	String fName;
     	MakeLDASamples options;
-    	LanguageUtil langUtil;
     	Map<String, Map<String, TObjectFloatMap<String>>> globalMap;
     	
-    	public PropFile(String fName, MakeLDASamples options, LanguageUtil langUtil, Map<String, Map<String, TObjectFloatMap<String>>> argMap) {
+    	public PropFile(String fName, MakeLDASamples options, Map<String, Map<String, TObjectFloatMap<String>>> argMap) {
     		this.fName = fName;
     		this.options = options;
-    		this.langUtil = langUtil;
     		this.globalMap = argMap;
     	}
     	
 		@Override
         public void run() {
-	        // TODO Auto-generated method stub
-			
 			logger.info("Processsing "+fName);
+
+			LanguageUtil langUtil = null;
 			
+			if ((langUtil=langUtilMap.get(Thread.currentThread().getId()))==null) {
+				try {
+                    langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
+                } catch (InstantiationException | IllegalAccessException
+                        | ClassNotFoundException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+		        if (!langUtil.init(langProps)) {
+		            logger.severe(String.format("Language utility (%s) initialization failed",langProps.getProperty("util-class")));
+		            System.exit(-1);
+		        }
+		        synchronized (langUtilMap) { 
+		        	langUtilMap.put(Thread.currentThread().getId(), langUtil);
+		        }
+			}
+
 			Map<String, Map<String, TObjectFloatMap<String>>> argMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
 			
         	Map<String, SortedMap<Integer, List<PBInstance>>> pb = 
@@ -137,6 +154,7 @@ public class MakeLDASamples {
         						continue;
         					
         					String head = Topics.getTopicHeadword(arg.getNode(), options.lemmetize?langUtil:null);
+
         					if (head==null)
         						continue;
         					
@@ -343,6 +361,8 @@ public class MakeLDASamples {
             System.exit(0);
         }
     	
+        options.langUtilMap = new HashMap<Long, LanguageUtil>();
+
         Properties props = new Properties();
         Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
         props.load(in);
@@ -356,6 +376,8 @@ public class MakeLDASamples {
             System.exit(-1);
         }
         
+        options.langProps = langProps;
+        
         if (!options.outDir.exists())
         	options.outDir.mkdirs();
         
@@ -367,7 +389,7 @@ public class MakeLDASamples {
         	executor = Executors.newFixedThreadPool(threads);
         
         for (String fName:fileList) {
-        	PropFile pf = new PropFile(fName, options, langUtil, argMap);
+        	PropFile pf = new PropFile(fName, options, argMap);
         	if (executor!=null)
 	        	executor.execute(pf);
         	else
