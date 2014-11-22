@@ -14,11 +14,15 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import clearcommon.treebank.TBNode;
+import clearcommon.util.LanguageUtil;
 
 public class Topics {
-    public static String getTopicHeadword(TBNode node) {
+    public static String getTopicHeadword(TBNode node, LanguageUtil langUtil) {
     	TBNode head = getTopicHeadNode(node);
-		return head==null?null:head.getHeadword().toLowerCase();
+    	if (head==null)
+    		return null;
+    	
+		return langUtil==null?head.getHeadword().toLowerCase():langUtil.findStems(node).get(0).toLowerCase();
     }
     
     public static TBNode getTopicHeadNode(TBNode node) {

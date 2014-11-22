@@ -62,12 +62,12 @@ public class ScoreSRL {
 		String a1="";
 		for (SRArg arg:instance.args)
 			if (arg.getLabel().equals("ARG0")) {
-				a0 = Topics.getTopicHeadword(arg.node);
+				a0 = Topics.getTopicHeadword(arg.node, null);
 				break;
 			}
 		for (SRArg arg:instance.args)
 			if (arg.getLabel().equals("ARG1")) {
-				a1 = Topics.getTopicHeadword(arg.node);
+				a1 = Topics.getTopicHeadword(arg.node, null);
 				break;
 			}
 		return a0+'-'+instance.getPredicateNode().getWord()+'-'+a1;		

@@ -213,9 +213,11 @@ public class Sentence implements Serializable{
         
         for (int i=0; i<terminals.length; ++i)
         {
-            terminalToTokenMap[i] = count;
-            if (terminals[i].isToken())
+            if (terminals[i].isToken()) {
+            	terminalToTokenMap[i] = count;
                 tokenToTerminalMap[count++] = i;
+            } else
+            	terminalToTokenMap[i] = -1;
         }
     }
     

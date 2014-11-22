@@ -324,6 +324,8 @@ public class SRLModel implements Serializable {
     
     LDAModel                                topicModel = null;
     
+    boolean                                 lemmatizeTopicWord = false;
+    
     transient LanguageUtil                  langUtil;
     
 //  transient ArrayList<int[]>              predicateTrainingFeatures;
@@ -405,6 +407,8 @@ public class SRLModel implements Serializable {
         String topicModelFile = props.getProperty("topic.model");
         if (topicModelFile!=null) {
         	topicModel = LDAModel.readLDAModel(new File(topicModelFile));
+        	
+        	lemmatizeTopicWord = topicModel.getLemmatize();
         	Map<String, int[]> topicMap = topicModel.getWordTopics();
         	argTopicMap = new HashMap<String, List<String>>();
         	for (Map.Entry<String, int[]> entry:topicMap.entrySet()) {
@@ -492,7 +496,7 @@ public class SRLModel implements Serializable {
     	
     	TObjectDoubleMap<String> wordMap = new TObjectDoubleHashMap<String>();
     	for (ArgSample sample:samples) {
-    		String topicWord = Topics.getTopicHeadword(sample.node);
+    		String topicWord = Topics.getTopicHeadword(sample.node, lemmatizeTopicWord?langUtil:null);
     		if (topicWord==null)
     			continue;
     		topicWord+=':';
@@ -1082,14 +1086,14 @@ public class SRLModel implements Serializable {
                 break;
             case HEADWORDTOPICS:
             	if (argTopicMap!=null) {
-            		List<String> topics = argTopicMap.get(Topics.getTopicHeadword(argNode));
+            		List<String> topics = argTopicMap.get(Topics.getTopicHeadword(argNode, lemmatizeTopicWord?langUtil:null));
             		if (topics!=null)
             			featureMap.put(feature, topics);
             	}
             	break;
             case HEADWORDTOPICNUM:
             	if (argTopicMap!=null) {
-            		List<String> topics = argTopicMap.get(Topics.getTopicHeadword(argNode));
+            		List<String> topics = argTopicMap.get(Topics.getTopicHeadword(argNode, lemmatizeTopicWord?langUtil:null));
             		if (topics!=null) {
             			Set<String> topicNum = new HashSet<String>();
             			for (String topic:topics)
@@ -1255,7 +1259,7 @@ public class SRLModel implements Serializable {
             	break;
             case ARGTOPICTYPE:
             	if (topicMap!=null) {
-            		List<String> topics = topicMap.get(Topics.getTopicHeadword(sample.node));
+            		List<String> topics = topicMap.get(Topics.getTopicHeadword(sample.node, lemmatizeTopicWord?langUtil:null));
             		if (topics!=null)
             			featureMap.put(feature, topics);
             	}

@@ -4,7 +4,7 @@ import clearcommon.alg.HungarianAlgorithm;
 import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
-
+import clearcommon.treebank.TBTree;
 import gnu.trove.map.TIntDoubleMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntDoubleHashMap;
@@ -535,6 +535,15 @@ public class Aligner {
                 stream.print(" <font style=\"BACKGROUND:FF0000\">"+nodes[i].getWord()+"</font>");
             else
                 stream.print(" "+nodes[i].getWord());
+
+        stream.println(" <input type=\"button\" value=\"parse\" onclick=\"toggleDiv("+(sentencePair.id*3+3)+")\">\n"+
+                "<div id="+(sentencePair.id*3+3)+" style=\"display:none;\">\n");
+        stream.println("<font size=\"3\"><pre><code>");
+        for (Map.Entry<Integer, TBTree> entry:sentencePair.src.treeMap.entrySet())
+        	stream.println(entry.getValue().toPrettyParse());
+        stream.println("</code></pre></font>");
+        stream.println("</div>\n");
+        
         stream.println("<br>");
         
         nodes = printEC?sentencePair.dst.terminals:sentencePair.dst.tokens;
@@ -543,7 +552,17 @@ public class Aligner {
                 stream.print(" <font style=\"BACKGROUND:FFFF00\">"+nodes[i].getWord()+"</font>");
             else
                 stream.print(" "+nodes[i].getWord());
+        
+        stream.println(" <input type=\"button\" value=\"parse\" onclick=\"toggleDiv("+(sentencePair.id*3+4)+")\">\n"+
+                "<div id="+(sentencePair.id*3+4)+" style=\"display:none;\">\n");
+        stream.println("<font size=\"3\"><pre><code>");
+        for (Map.Entry<Integer, TBTree> entry:sentencePair.dst.treeMap.entrySet())
+        	stream.println(entry.getValue().toPrettyParse());
+        stream.println("</code></pre></font>");
+        stream.println("</div>\n");
+        
         stream.println("<br>");
+
         
         stream.printf("<!-- %s -->\n", sentencePair.getSrcAlignmentIndex());
         stream.printf("<!-- %s -->\n", sentencePair.getDstAlignmentIndex());
@@ -566,8 +585,8 @@ public class Aligner {
         }
         stream.println("</ol></font>");
         
-        stream.println("<input type=\"button\" value=\"system\" onclick=\"toggleDiv("+(sentencePair.id+1)+")\">\n"+
-                "<div id="+(sentencePair.id+1)+" style=\"display:block;\">\n"+
+        stream.println("<input type=\"button\" value=\"alignment\" onclick=\"toggleDiv("+(sentencePair.id*3+5)+")\">\n"+
+                "<div id="+(sentencePair.id*3+5)+" style=\"display:block;\">\n"+
                 "<HR>");
         
         for (int i=0; i<alignments.length; ++i)

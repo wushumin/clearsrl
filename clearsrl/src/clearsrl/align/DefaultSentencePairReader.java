@@ -101,7 +101,7 @@ public class DefaultSentencePairReader extends SentencePairReader{
             if (bidirectionalWA)
             {
                 srcLine = srcAlignmentScanner.next();
-                sentencePair.parseAlign(srcLine, zeroWAIndexed, false);
+                sentencePair.parseAlign(srcLine, zeroWAIndexed, false, false);
             }
             else
             {   // GIZA++ format

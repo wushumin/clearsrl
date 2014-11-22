@@ -112,7 +112,7 @@ public class CountHeadWord {
         					continue;
         				for (PBArg arg:instance.getArgs()) {
         					if (arg.getLabel().equals("rel")) continue;
-        					String head = Topics.getTopicHeadword(arg.getNode());
+        					String head = Topics.getTopicHeadword(arg.getNode(), langUtil);
         					if (head==null)
         						continue;
         					argMap.adjustOrPutValue(head+':'+arg.getLabel(), 1, 1);

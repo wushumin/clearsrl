@@ -1,6 +1,8 @@
 package clearsrl.align;
 
 import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -88,27 +90,61 @@ public  class SentencePair implements Serializable {
         parseAlign(line, dstAlignment, src.indices.length);
     }
     
-    public void parseAlign(String line, boolean zeroIndexed, boolean reverse) throws BadInstanceException
-    {
+    static Pattern pattern = Pattern.compile("(\\d+).*");
+    TIntList getIntList(String str) {
+    	TIntList retList = new TIntArrayList();
+    	for (String tok:str.trim().split(",")) {
+    		if (tok.trim().isEmpty())
+    			continue;
+    		Matcher matcher = pattern.matcher(tok);
+    		if (matcher.matches())
+    			retList.add(Integer.parseInt(matcher.group(1)));
+    	}
+    	return retList;
+    }
+    
+    public void parseAlign(String line, boolean zeroIndexed, boolean terminalIndexed, boolean reverse) throws BadInstanceException {
+    	if (line.trim().equals("rejected")) {
+    		setAlignment(new int[0], new int[0]);
+    		return;
+    	}
+    	
         String[] alignmentStrs = line.trim().isEmpty()?new String[0]:line.trim().split("[ \t]+");
             
-        int[] srcAlignmentIdx = new int[alignmentStrs.length];
-        int[] dstAlignmentIdx = new int[alignmentStrs.length];
+        TIntList srcAlignmentIdx = new TIntArrayList();
+        TIntList dstAlignmentIdx = new TIntArrayList();
         
-        for (int i=0; i<alignmentStrs.length; ++i)
-        {
-        	int lhs = Integer.parseInt(alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-')));
-        	int rhs = Integer.parseInt(alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1));
-            srcAlignmentIdx[i] = reverse?rhs:lhs;
-            dstAlignmentIdx[i] = reverse?lhs:rhs;
-            
-            if (!zeroIndexed)
-            {
-                srcAlignmentIdx[i]--;
-                dstAlignmentIdx[i]--;
-            }
+        for (int i=0; i<alignmentStrs.length; ++i) {
+        	String lhs =alignmentStrs[i].substring(0, alignmentStrs[i].indexOf('-'));
+        	String rhs =alignmentStrs[i].substring(alignmentStrs[i].indexOf('-')+1);
+        	if (lhs.isEmpty() || rhs.isEmpty())
+        		continue;
+        	
+        	TIntList lhsIntList = getIntList(lhs);
+        	TIntList rhsIntList = getIntList(rhs);
+        	
+        	for (int l:lhsIntList.toArray()) {
+        		if (!zeroIndexed)
+        			l--;
+        		for (int r:rhsIntList.toArray()) {
+        			if (!zeroIndexed)
+        				r--;
+        
+        			if (terminalIndexed) {
+        				if (src.terminalToTokenMap[reverse?r:l]<0 ||
+        						dst.terminalToTokenMap[reverse?l:r]<0)
+        					continue;
+        				srcAlignmentIdx.add(src.terminalToTokenMap[reverse?r:l]);
+            			dstAlignmentIdx.add(dst.terminalToTokenMap[reverse?l:r]);
+        			} else {
+        				srcAlignmentIdx.add(reverse?r:l);
+        				dstAlignmentIdx.add(reverse?l:r);
+        			}
+        			
+        		}
+        	}
         }
-        setAlignment(srcAlignmentIdx, dstAlignmentIdx);
+        setAlignment(srcAlignmentIdx.toArray(), dstAlignmentIdx.toArray());
     }
     
     public String getSrcAlignmentString()

@@ -116,11 +116,11 @@ public class MakeAlignedLDASamples {
     	SentencePair sp = new SentencePair(id);
     	sp.src = Sentence.parseSentence(srcTree, srcProp);
     	sp.dst = Sentence.parseSentence(dstTree, dstProp);
-    	sp.parseAlign(wa, true, reverse);
+    	sp.parseAlign(wa, true, false, reverse);
     	return sp;
     }
     
-    static void updateMap(String roleset, List<ArgWeight> args, Map<String, Map<String, TObjectFloatMap<String>>> argMap) {
+    static void updateMap(String roleset, List<ArgWeight> args, Map<String, Map<String, TObjectFloatMap<String>>> argMap, LanguageUtil langUtil) {
     	String predWord = roleset.substring(0,roleset.lastIndexOf('.'));
     	logger.fine(predWord+": "+args);
     	
@@ -139,19 +139,19 @@ public class MakeAlignedLDASamples {
     	}
     }
     
-    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectFloatMap<String>>> argMap, double prob) {
+    static void updateMap(PBInstance instance, Map<String, Map<String, TObjectFloatMap<String>>> argMap, LanguageUtil langUtil, double prob) {
     	List<ArgWeight> args = new ArrayList<ArgWeight>();
     	for (PBArg arg:instance.getArgs()) {
 			if (arg.getLabel().equals("rel"))
 				continue;
 			if (arg.getScore()<prob)
 				continue;
-			String head = Topics.getTopicHeadword(arg.getNode());
+			String head = Topics.getTopicHeadword(arg.getNode(), langUtil);
 			if (head==null)
 				continue;
 			args.add(new ArgWeight(arg.getLabel(), head, 1));
 		}
-    	updateMap(instance.getRoleset(), args, argMap);
+    	updateMap(instance.getRoleset(), args, argMap, langUtil);
     }
     
     static boolean hasWA(SentencePair sp, TBNode srcNode, TBNode dstNode) {
@@ -227,7 +227,7 @@ public class MakeAlignedLDASamples {
     	if (!found) {
     		//if (chProp.getRoleset().endsWith(".XX"))
     		//	return;
-    		updateMap(chProp, argMap, opt.prob);
+    		updateMap(chProp, argMap, chUtil, opt.prob);
     		return;
     	}
     	
@@ -305,17 +305,17 @@ public class MakeAlignedLDASamples {
     	for (int i=0; i<chArgs.length; ++i) {
 			if (chArgs[i].getLabel().equals("rel"))
 				continue;
-			String head = Topics.getTopicHeadword(chArgs[i].getNode());
+			String head = Topics.getTopicHeadword(chArgs[i].getNode(), chUtil);
 			if (head==null)
 				continue;
 			if (weights[i]!=0)
 				args.add(new ArgWeight(labelMod[i]==null?chArgs[i].getLabel():labelMod[i], head, weights[i]));
 		}
-    	updateMap(chProp.getRoleset(), args, argMap);
+    	updateMap(chProp.getRoleset(), args, argMap, chUtil);
     	StringBuilder builder = new StringBuilder(enProp.getPredicate()+": [");
 		for (PBArg arg:enArgs) {
 			if (arg.getLabel().equals("rel")) continue;
-			String head = Topics.getTopicHeadword(arg.getNode());
+			String head = Topics.getTopicHeadword(arg.getNode(), enUtil);
 			if (head==null) continue;
 			builder.append(arg.getLabel()+' '+head+',');
 		}
@@ -428,7 +428,7 @@ public class MakeAlignedLDASamples {
         				if (!found) {
         					logger.fine(p+" "+sp.dst.pbInstances[p].toText());
         					//if (!sp.dst.pbInstances[p].getRoleset().endsWith(".XX"))
-        					updateMap(sp.dst.pbInstances[p], argMap, options.prob);
+        					updateMap(sp.dst.pbInstances[p], argMap, chUtil, options.prob);
         				}
         				//System.out.print('\n');
         			}

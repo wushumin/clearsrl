@@ -139,6 +139,7 @@ public class LDAModel implements Serializable {
 	long[] globalCounts;
 	double alpha;
 	double beta;
+	boolean lemmatize = false;
 	
 	transient Random rand;
 	
@@ -146,6 +147,10 @@ public class LDAModel implements Serializable {
 		rand = new Random(System.currentTimeMillis());
 	}
 
+	public boolean getLemmatize() {
+		return lemmatize;
+	}
+	
 	static SparseCount getSparse(double[] dist) {
 		TIntList indices = new TIntArrayList();
 		TDoubleList values = new TDoubleArrayList();
@@ -275,10 +280,12 @@ public class LDAModel implements Serializable {
 			while ((line=reader.readLine())!=null) {
 				String[] tokens = line.split("\\s+");
 				if (lineNum==0) {
-					if (tokens.length!=3) return null;
+					if (tokens.length<3) return null;
 					model.numTopics = Integer.parseInt(tokens[0]);
 					model.alpha = Double.parseDouble(tokens[1]);
 					model.beta = Double.parseDouble(tokens[2]);
+					if (tokens.length==4)
+						model.lemmatize = Boolean.parseBoolean(tokens[3]);
 					lineNum++;
 					continue;
 				}

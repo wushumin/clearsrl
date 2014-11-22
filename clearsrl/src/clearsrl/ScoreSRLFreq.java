@@ -52,7 +52,7 @@ public class ScoreSRLFreq {
 		SRInstance filtered = new SRInstance(gold);
 		for (Iterator<SRArg> iter=filtered.args.iterator(); iter.hasNext(); ) {
 			SRArg arg = iter.next();
-			String head = Topics.getTopicHeadword(arg.node);
+			String head = Topics.getTopicHeadword(arg.node, null);
             String label = arg.label;
             int freq = isArgFreq?freqMap.get(head+':'+label):freqMap.get(head);
             if (idx!=intervals.length-1 && (freq<intervals[idx] || freq>=intervals[idx+1]) || 

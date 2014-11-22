@@ -83,8 +83,13 @@ public class MakeLDASamples {
     @Option(name="-nominal",usage="include non-verb predicates")
     private boolean useNominal = false;
     
+    @Option(name="-lemmatize",usage="lemmatize headwords")
+    private boolean lemmetize = false;
+    
     @Option(name="-h",usage="help message")
     private boolean help = false;
+    
+    
     
     static class PropFile implements Runnable  {
 
@@ -131,7 +136,7 @@ public class MakeLDASamples {
         					if (options.prob>=0 && options.prob>arg.getScore() || options.prob<0 && -options.prob>arg.getScore())
         						continue;
         					
-        					String head = Topics.getTopicHeadword(arg.getNode());
+        					String head = Topics.getTopicHeadword(arg.getNode(), options.lemmetize?langUtil:null);
         					if (head==null)
         						continue;
         					
