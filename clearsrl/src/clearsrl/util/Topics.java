@@ -19,10 +19,10 @@ import clearcommon.util.LanguageUtil;
 public class Topics {
     public static String getTopicHeadword(TBNode node, LanguageUtil langUtil) {
     	TBNode head = getTopicHeadNode(node);
-    	if (head==null)
+    	if (head==null || head.getWord()==null)
     		return null;
     	
-		return langUtil==null?head.getHeadword().toLowerCase():langUtil.findStems(head.getHead()).get(0).toLowerCase();
+		return langUtil==null?head.getWord().toLowerCase():langUtil.findStems(head).get(0).toLowerCase();
     }
     
     public static TBNode getTopicHeadNode(TBNode node) {
