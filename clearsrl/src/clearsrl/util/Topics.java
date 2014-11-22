@@ -22,7 +22,7 @@ public class Topics {
     	if (head==null)
     		return null;
     	
-		return langUtil==null?head.getHeadword().toLowerCase():langUtil.findStems(node).get(0).toLowerCase();
+		return langUtil==null?head.getHeadword().toLowerCase():langUtil.findStems(head).get(0).toLowerCase();
     }
     
     public static TBNode getTopicHeadNode(TBNode node) {
