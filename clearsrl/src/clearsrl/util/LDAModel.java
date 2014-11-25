@@ -202,12 +202,12 @@ public class LDAModel implements Serializable {
 			if (topSum*2<=sum)
 				return null;
 			j=maxTopics-1;
-			if (j+1<valCopy.length)
+			/*if (j+1<valCopy.length)
 				// make sure to never exceed maxTopics in case of ties
 				while (valCopy[j]==valCopy[j+1]) {
 					j--;
 					if (j<0) return null;
-				}
+				}*/
 		}
 		TIntList valList = new TIntArrayList();
 		for (int i=0; i<cnts.values.length; ++i)
