@@ -570,7 +570,9 @@ public class Aligner {
         stream.println("<br><font size=\"-1\">Source:\n<ol>");
         for (int i=0; i<sentencePair.src.pbInstances.length; ++i)
         {
-            stream.println("<li> "+toHTMLPB(sentencePair.src.pbInstances[i], sentencePair.src, printEC));
+            stream.printf("<li value=\"%d\"> %s\n", 
+            		Arrays.binarySearch(sentencePair.src.indices, Sentence.makeIndex(sentencePair.src.pbInstances[i].getTree().getIndex(), sentencePair.src.pbInstances[i].getPredicate().getTerminalIndex())), 
+            		toHTMLPB(sentencePair.src.pbInstances[i], sentencePair.src, printEC));
             stream.printf("<!-- %s: %d,%d -->\n", sentencePair.src.pbInstances[i].getTree().getFilename(), sentencePair.src.pbInstances[i].getTree().getIndex(), sentencePair.src.pbInstances[i].getPredicate().getTerminalIndex());
             stream.printf("<!-- %s -->\n", sentencePair.src.pbInstances[i].toText(true));        
         }
@@ -579,7 +581,9 @@ public class Aligner {
         stream.println("Dest:\n<ol>");
         for (int i=0; i<sentencePair.dst.pbInstances.length; ++i)
         {
-            stream.println("<li> "+toHTMLPB(sentencePair.dst.pbInstances[i], sentencePair.dst, printEC));
+        	stream.printf("<li value=\"%d\"> %s\n", 
+            		Arrays.binarySearch(sentencePair.dst.indices, Sentence.makeIndex(sentencePair.dst.pbInstances[i].getTree().getIndex(), sentencePair.dst.pbInstances[i].getPredicate().getTerminalIndex())),         			
+        			toHTMLPB(sentencePair.dst.pbInstances[i], sentencePair.dst, printEC));
             stream.printf("<!-- %s: %d,%d -->\n", sentencePair.dst.pbInstances[i].getTree().getFilename(), sentencePair.dst.pbInstances[i].getTree().getIndex(), sentencePair.dst.pbInstances[i].getPredicate().getTerminalIndex());
             stream.printf("<!-- %s -->\n", sentencePair.dst.pbInstances[i].toText(true));        
         }
@@ -590,7 +594,7 @@ public class Aligner {
                 "<HR>");
         
         for (int i=0; i<alignments.length; ++i)
-            stream.printf("<p> %s </p>\n", alignments[i].toString());
+            stream.printf("<p> %s </p>\n", alignments[i].toString(true));
 
         stream.println("<HR></div>\n");
     }

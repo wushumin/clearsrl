@@ -3,6 +3,7 @@ package clearsrl.align;
 import gnu.trove.set.hash.TIntHashSet;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Map;
 import java.util.SortedMap;
@@ -358,6 +359,10 @@ public class Alignment implements Comparable<Alignment>{
     }
     
     public String toString() {
+    	return toString(false);
+    }
+    
+    public String toString(boolean indexed) {
         /*
         boolean foundm = false;
         for (ArgAlignment argAlignment:dstSrcAlignment)
@@ -368,7 +373,10 @@ public class Alignment implements Comparable<Alignment>{
                 foundm = true;
         if (!foundm) return "";*/
         StringBuilder builder = new StringBuilder();
-        builder.append(String.format("%d,%d,%.3f;",srcPBIdx+1,dstPBIdx+1,getCompositeScore()));
+        builder.append(String.format("%d,%d,%.3f;",
+        		indexed?Arrays.binarySearch(sentence.src.indices, Sentence.makeIndex(getSrcPBInstance().getTree().getIndex(), getSrcPBInstance().getPredicate().getTerminalIndex())):srcPBIdx+1,
+        		indexed?Arrays.binarySearch(sentence.dst.indices, Sentence.makeIndex(getDstPBInstance().getTree().getIndex(), getDstPBInstance().getPredicate().getTerminalIndex())):dstPBIdx+1,
+        		getCompositeScore()));
 
         BitSet srcArgBitSet=new BitSet();
         BitSet dstArgBitSet=new BitSet();
