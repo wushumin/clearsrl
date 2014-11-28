@@ -17,7 +17,6 @@ import java.util.zip.GZIPInputStream;
 
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
-
 import gnu.trove.map.TObjectDoubleMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -251,14 +250,22 @@ public class VerbNetSP extends SelectionalPreference {
 		return vnRoleMap;
 	}
 	
+
+	Map<String, double[]> readRoleMatrix(File topDir,
+            TObjectIntMap<String> roleIdxMap) {
+	    // TODO Auto-generated method stub
+	    return null;
+    }
+	
 	Map<String, Map<String, double[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
 		Map<String, Map<String, double[]>> spMap = new HashMap<String, Map<String, double[]>>();
 		
 		String[] colIds = null;
 		SparseVec rowVals = null;
 		
-		
-		for (File roleDir:dir.listFiles()) {
+		File[] files = dir.listFiles();
+		Arrays.sort(files);
+		for (File roleDir:files) {
 			int roleIdx = roleIdxMap.get(roleDir.getName());
 			if (roleIdx<0) 
 				continue;
@@ -362,7 +369,9 @@ public class VerbNetSP extends SelectionalPreference {
 		return spMap;
 	}
 	
-	public static VerbNetSP readSP(File topDir) throws IOException {
+	
+	
+	public static VerbNetSP readSP(File topDir, boolean useVNSP, boolean useLemmaSP) throws IOException {
 		VerbNetSP sp = new VerbNetSP();		
 		
 		TObjectIntMap<String> roleIdxMap = sp.getAllRoles(topDir);
@@ -380,16 +389,24 @@ public class VerbNetSP extends SelectionalPreference {
 		
 		System.out.println("vocabulary: "+fillerCnt);
 		
-		System.out.println("Reading VN classes");
+		Map<String, double[]> roleSP = sp.readRoleMatrix(topDir, roleIdxMap);
+		Map<String, Map<String, double[]>> classSP = null;
+		Map<String, Map<String, double[]>> lemmaSP = null;
 		
-		Map<String, Map<String, double[]>> classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
+		if (useVNSP) {
+			System.out.println("Reading VN classes");	
+			classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
+		}
 		
-		
-		//Map<String, Map<String, double[]>> lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
-		
+		if (useLemmaSP) {
+			System.out.println("Reading lemmas");
+			lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
+		}
 		
 		return sp;
 	}
+
+
 
 	@Override
 	TObjectDoubleMap<String> getSP(Map<String, TObjectDoubleMap<String>> argSPDB, TBNode node,  LanguageUtil langUtil) {
@@ -417,7 +434,21 @@ public class VerbNetSP extends SelectionalPreference {
 	}
 	
 	public static void main(String[] args) throws Exception {  
-		VerbNetSP sp = VerbNetSP.readSP(new File(args[0]));
+		
+		boolean readLemma = false;
+		boolean readVN = false;
+		
+		if (args.length>1)
+			if (args[1].equals("lemma"))
+				readLemma = true;
+			else if (args[1].equals("VN"))
+				readVN = true;
+			else if (args[1].equals("all")) {
+				readLemma = true;
+				readVN = true;
+			}
+		
+		VerbNetSP sp = VerbNetSP.readSP(new File(args[0]), readVN, readLemma);
 	}
 	
 }
