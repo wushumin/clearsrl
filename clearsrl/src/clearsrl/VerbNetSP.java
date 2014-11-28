@@ -3,35 +3,25 @@ package clearsrl;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TDoubleList;
-import gnu.trove.list.TFloatList;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntIntMap;
+
 import gnu.trove.map.TObjectDoubleMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import clearcommon.treebank.TBNode;
-import clearcommon.util.FileUtil;
 import clearcommon.util.LanguageUtil;
 
 public class VerbNetSP extends SelectionalPreference {
@@ -95,12 +85,17 @@ public class VerbNetSP extends SelectionalPreference {
 		 */
         private static final long serialVersionUID = 1L;
         
-		TIntList indices;
-		TFloatList values;
+        TIntArrayList indices;
+        TFloatArrayList values;
 		
 		public SparseVec() {
 			this.indices = new TIntArrayList();
 			this.values = new TFloatArrayList();
+		}
+		
+		public SparseVec(int capacity) {
+			this.indices = new TIntArrayList(capacity);
+			this.values = new TFloatArrayList(capacity);
 		}
 		
 		public void add(int index, float value) {
@@ -115,6 +110,17 @@ public class VerbNetSP extends SelectionalPreference {
 			return dense;
 		}
 		
+		public void clear() {
+			indices.clear();
+			values.clear();
+		}
+		
+		public void clear(int capacity) {
+			indices.clear(capacity);
+			values.clear(capacity);
+		}
+		
+		
 		public String toString() {
 			StringBuilder builder = new StringBuilder();
 			builder.append('[');
@@ -127,19 +133,56 @@ public class VerbNetSP extends SelectionalPreference {
 			return builder.toString();
 		}
 
+		public boolean isEmpty() {
+	        return indices.isEmpty();
+        }
+
 	}
+	
+	boolean readRow(BufferedReader reader, SparseVec rowVec, int rowDim) throws IOException {
+		String line=reader.readLine();
+		if (line==null)
+			return false;
+		
+		rowVec.clear(rowDim);
+
+		StringTokenizer tok = new StringTokenizer(line.trim(), " \t\n\r\f"); 
+		int cnt = -1;
+		while (tok.hasMoreTokens()) {
+			String token = tok.nextToken();
+			++cnt;
+			if (token.equals("0.0"))
+				continue;
+			rowVec.add(cnt, Float.parseFloat(token));
+		}
+		return true;
+	}
+	
 	
 	SparseVec[] readMatrix(File dir, int rowDim, int colDim, boolean transpose) throws IOException {
 		SparseVec[] retMatrix = new SparseVec[transpose?colDim:rowDim];
 	
-		BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(dir, "vspace.txt.gz")))));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(dir, "vspace.txt.gz")))), 0x10000);
 		
 		String line = null;
 		int rCnt=0;
 		while ((line=reader.readLine())!=null) {
-			StringTokenizer tok = new StringTokenizer(line.trim(), " \t\n\r\f"); 
 			int cCnt = -1;
+/*
+			Scanner scanner = new Scanner(line);
+			float val;
+			while (scanner.hasNext()) {
+				++cCnt;
+				val = scanner.nextFloat();
+				if (val==0f) continue;
+				
+				if (retMatrix[transpose?cCnt:rCnt]==null)
+					retMatrix[transpose?cCnt:rCnt] = new SparseVec();
+				retMatrix[transpose?cCnt:rCnt].add(transpose?rCnt:cCnt, val);
+			}
+			scanner.close();*/
 			
+			StringTokenizer tok = new StringTokenizer(line.trim(), " \t\n\r\f"); 
 			while (tok.hasMoreTokens()) {
 				String token = tok.nextToken();
 				++cCnt;
@@ -211,15 +254,63 @@ public class VerbNetSP extends SelectionalPreference {
 	Map<String, Map<String, double[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
 		Map<String, Map<String, double[]>> spMap = new HashMap<String, Map<String, double[]>>();
 		
+		String[] colIds = null;
+		SparseVec rowVals = null;
+		
+		
 		for (File roleDir:dir.listFiles()) {
 			int roleIdx = roleIdxMap.get(roleDir.getName());
 			if (roleIdx<0) 
 				continue;
 			
-			System.out.println("Reading "+roleDir.getName());
+			System.out.println("Processing "+roleDir.getName());
 			
 			String[] rowIds = readLines(new File(roleDir, "row_no.txt.gz"));
-			String[] colIds = readLines(new File(roleDir, "col_no.txt.gz"));			
+			
+			if (colIds==null) {
+				colIds = readLines(new File(roleDir, "col_no.txt.gz"));
+				rowVals = new SparseVec(colIds.length);
+			}
+			
+			int i=0;
+			
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(roleDir, "vspace.txt.gz")))),0x10000);
+
+			while (readRow(reader, rowVals, rowIds.length)) {
+				System.out.println("Processing row "+i);
+				
+				if (rowVals.isEmpty()) continue;
+				
+				String vnClassId = rowIds[i];
+				if (isLemma)
+					vnClassId = vnClassId.substring(vnClassId.indexOf('-')+1);
+				
+				IndexedMap roleMap = vnRoleMap.get(vnClassId);
+				
+				if (roleMap==null) {
+					System.err.println("Didn't find class "+vnClassId);
+					continue;
+				}
+
+				Map<String, double[]> fillerMap = spMap.get(rowIds[i]);
+				if (fillerMap==null)
+					spMap.put(rowIds[i].intern(), fillerMap=new HashMap<String, double[]>());
+
+				for (int j=0; j<rowVals.indices.size(); ++j) {
+					String filler = colIds[rowVals.indices.get(j)];
+					filler = filler.substring(0, filler.length()-2);
+					double[] vals = fillerMap.get(filler);
+					if (vals==null)
+						fillerMap.put(filler.intern(), vals=new double[roleMap.size()]);
+					vals[roleMap.get(roleIdx)] = rowVals.values.get(j);
+				}
+				
+				++i;
+				
+			}
+			reader.close();
+			
+			/*
 			SparseVec[] matrix = readMatrix(roleDir,rowIds.length, colIds.length, false);
 			
 			System.out.println("Processing "+roleDir.getName());
@@ -252,7 +343,7 @@ public class VerbNetSP extends SelectionalPreference {
 				}
 				// let garbage collection start early
 				matrix[i] = null;
-			}
+			}*/
 			int fillerCnt = 0;
 			for (Map.Entry<String, Map<String, double[]>> entry:spMap.entrySet()) {
 				fillerCnt+=entry.getValue().size();
@@ -291,10 +382,10 @@ public class VerbNetSP extends SelectionalPreference {
 		
 		System.out.println("Reading VN classes");
 		
-		//Map<String, Map<String, double[]>> classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
+		Map<String, Map<String, double[]>> classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
 		
 		
-		Map<String, Map<String, double[]>> lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
+		//Map<String, Map<String, double[]>> lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
 		
 		
 		return sp;
