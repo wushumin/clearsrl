@@ -782,24 +782,24 @@ public class Aligner {
     }
     
     
-    static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String color, boolean printEC)
+    static void markNode(TBNode node, String[] preMarkup, String[] postMarkup, String color, String text, boolean printEC)
     {
         List<TBNode> nodes = printEC?node.getTerminalNodes():node.getTokenNodes();
         if (nodes.isEmpty()) return;
-        preMarkup[nodes.get(0).getTerminalIndex()] = "<font style=\"BACKGROUND:"+color+"\">";
-        postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = "</font>";       
+        preMarkup[nodes.get(0).getTerminalIndex()] = "<span title=\""+text+"\"><font style=\"BACKGROUND:"+color+"\">";
+        postMarkup[nodes.get(nodes.size()-1).getTerminalIndex()] = "</font></span>";       
     }
     
-    static void markArg(PBArg arg, String[] preMarkup, String[] postMarkup, String color, boolean printEC)
+    static void markArg(PBArg arg, String[] preMarkup, String[] postMarkup, String color, String text, boolean printEC)
     {
         if (printEC)
             for (TBNode node:arg.getAllNodes())
-                markNode(node, preMarkup, postMarkup, color, printEC);
+                markNode(node, preMarkup, postMarkup, color, text, printEC);
         else
-            markNode(arg.getNode(), preMarkup, postMarkup, color, printEC);
+            markNode(arg.getNode(), preMarkup, postMarkup, color, text, printEC);
         
         for (PBArg narg:arg.getNestedArgs())
-            markArg(narg, preMarkup, postMarkup, color, printEC);
+            markArg(narg, preMarkup, postMarkup, color, text, printEC);
     }
     
     public static String toHTMLPB(PBInstance instance, Sentence sentence, boolean printEC)
@@ -818,7 +818,7 @@ public class Aligner {
             if ((color=argColorMap.get(arg.getBaseLabel()))==null)
                 color=argColorMap.get("ARGM");
             
-            markArg(arg, preMarkup, postMarkup, color, printEC);
+            markArg(arg, preMarkup, postMarkup, color, arg.getBaseLabel().equals("rel")?instance.getRoleset():arg.getLabel(), printEC);
 
         }
         
