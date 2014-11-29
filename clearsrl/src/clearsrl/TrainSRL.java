@@ -8,18 +8,25 @@ import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -123,6 +130,17 @@ public class TrainSRL {
         
         String dataFormat = props.getProperty("data.format", "default");
         
+        Map<String, Map<String, TObjectIntMap<String>>> trainHeadWordDB = null;
+        File headwordOutFile = null;
+        {
+        	String fName = props.getProperty("headwordDB");
+        	if (fName!=null)
+        		headwordOutFile = new File("fName");
+        }
+        if (headwordOutFile!=null && !headwordOutFile.exists()) {
+        	trainHeadWordDB = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
+        }
+
         int tCount = 0;
         int gCount = 0;
 
@@ -186,8 +204,24 @@ public class TrainSRL {
                     		predMask.set(instance.getPredicate().getTokenIndex());
                     	}                    	
                     }
-                    for (int w=0; w<weight; ++w)
+                    for (int w=0; w<weight; ++w) {
                         model.addTrainingSentence(sent, THRESHOLD);
+                        if (trainHeadWordDB!=null)
+                        	for (PBInstance pb:sent.propPB) {
+                        		SRInstance instance = new SRInstance(pb);
+                        		Map<String, TObjectIntMap<String>> argMap = trainHeadWordDB.get(instance.getRolesetId());
+                        		if (argMap==null)
+                        			trainHeadWordDB.put(instance.getRolesetId(), argMap=new TreeMap<String, TObjectIntMap<String>>());
+                        		for (SRArg arg:instance.getArgs()) {
+                        			String headword = VerbNetSP.getArgHeadword(arg.node, langUtil);
+                        			if (headword==null) continue;
+                        			TObjectIntMap<String> wordMap = argMap.get(langUtil.convertPBLabelTrain(arg.label));
+                        			if (wordMap==null)
+                        				argMap.put(langUtil.convertPBLabelTrain(arg.label), wordMap=new TObjectIntHashMap<String>());
+                        			wordMap.adjustOrPutValue(headword, 1, 1);
+                        		}
+                        	}
+                    }
                 }
             }
             System.out.println("***************************************************");
@@ -212,6 +246,19 @@ public class TrainSRL {
         System.out.println("Reference arg instance count: "+gCount);
         System.out.println("Training arg instance count: "+tCount);
         System.out.printf("head word unique: %d/%d\n", hCnt, tCnt);
+        if (trainHeadWordDB!=null)
+	        try (PrintStream writer = new PrintStream(new FileOutputStream(headwordOutFile), false, "UTF-8")){
+	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainHeadWordDB.entrySet())
+	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
+	        			String[] headwords = e2.getValue().keys(new String[e2.getValue().size()]);
+	        			for (String headword:headwords)
+	        				writer.printf("%s %s %s %d\n", e1.getKey(), e2.getKey(), headword, e2.getValue().get(headword));
+	        		}
+	        } catch (IOException e ) {
+	        	e.printStackTrace();
+	        	headwordOutFile.delete();
+	        }
+        
         System.gc();
         model.train(props);
         

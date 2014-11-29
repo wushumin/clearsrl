@@ -515,8 +515,7 @@ public class VerbNetSP extends SelectionalPreference {
 		return null;
 	}
 
-	@Override
-	public String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
+	public static String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
 		TBNode head = getHeadNode(node);
     	if (head==null || head.getWord()==null)
     		return null;

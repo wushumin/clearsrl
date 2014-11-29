@@ -37,7 +37,7 @@ public abstract class SelectionalPreference {
 		return langUtil.findStems(predNode).get(0);
 	}
 
-	TBNode getHeadNode(TBNode node) {
+	static TBNode getHeadNode(TBNode node) {
 		TBNode head = node.getHead();
 		if (head.getPOS().equals("PU"))
 			return null;
@@ -58,7 +58,7 @@ public abstract class SelectionalPreference {
 		return head;
 	}
 	
-	public String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
+	public static String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
 		TBNode head = getHeadNode(node);
     	if (head==null || head.getWord()==null)
     		return null;
