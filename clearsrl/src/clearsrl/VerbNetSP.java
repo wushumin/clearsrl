@@ -36,11 +36,13 @@ public class VerbNetSP extends SelectionalPreference {
         private static final long serialVersionUID = 1L;
 	
         int[] indexArray;
+        int[] reverseIndexArray;
         int size;
         
         public IndexedMap(int capacity) {
         	indexArray = new int[capacity];
         	Arrays.fill(indexArray, -1);
+        	reverseIndexArray = null;
         }
         
         public void put(int idx, int val) {
@@ -54,6 +56,21 @@ public class VerbNetSP extends SelectionalPreference {
         
         public int get(int idx) {
         	return indexArray[idx];
+        }
+        
+        public int getR(int rIdx) {
+        	if (reverseIndexArray==null) {
+        		int max = -1;
+        		for (int val:indexArray)
+        			if (val>max)
+        				max = val;
+        		reverseIndexArray = new int[max+1];
+        		Arrays.fill(reverseIndexArray, -1);
+        		for (int i=0; i<indexArray.length; ++i)
+        			if (indexArray[i]>=0)
+        				reverseIndexArray[indexArray[i]]=i;
+        	}
+        	return reverseIndexArray[rIdx];
         }
         
         public int size() {
@@ -211,7 +228,16 @@ public class VerbNetSP extends SelectionalPreference {
          return lineList.toArray(new String[lineList.size()]);
 	}
 	
-	TObjectIntMap<String> getAllRoles(File topDir) {
+	TObjectIntMap<String> getAllRoles(File topDir) throws IOException {
+		
+		String[] lines = readLines(new File(topDir, "role_matrix/row_no.txt.gz"));
+		
+		TObjectIntMap<String> roleIdxMap = new TObjectIntHashMap<String>(lines.length, 0.5f, -1);
+		
+		for (String line:lines)
+			roleIdxMap.put(line.trim().intern(), roleIdxMap.size());
+		
+		/*
 		File[] files = new File(topDir, "VN_class_matrices").listFiles();
 		Arrays.sort(files);
 		
@@ -221,7 +247,7 @@ public class VerbNetSP extends SelectionalPreference {
 			if (!Pattern.matches("[A-Z].+", roleDir.getName()))
 				continue;
 			roleIdxMap.put(roleDir.getName().intern(), roleIdxMap.size());
-		}
+		}*/
 		
 		return roleIdxMap;
 	}
@@ -253,12 +279,14 @@ public class VerbNetSP extends SelectionalPreference {
 
 	Map<String, double[]> readRoleMatrix(File topDir,
             TObjectIntMap<String> roleIdxMap) {
+		
+		
 	    // TODO Auto-generated method stub
 	    return null;
     }
 	
-	Map<String, Map<String, double[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
-		Map<String, Map<String, double[]>> spMap = new HashMap<String, Map<String, double[]>>();
+	Map<String, Map<String, float[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
+		Map<String, Map<String, float[]>> spMap = new HashMap<String, Map<String, float[]>>();
 		
 		String[] colIds = null;
 		SparseVec rowVals = null;
@@ -284,7 +312,7 @@ public class VerbNetSP extends SelectionalPreference {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(roleDir, "vspace.txt.gz")))),0x10000);
 
 			while (readRow(reader, rowVals, rowIds.length)) {
-				System.out.println("Processing row "+i);
+				System.out.print('.');
 				
 				if (rowVals.isEmpty()) continue;
 				
@@ -299,16 +327,16 @@ public class VerbNetSP extends SelectionalPreference {
 					continue;
 				}
 
-				Map<String, double[]> fillerMap = spMap.get(rowIds[i]);
+				Map<String, float[]> fillerMap = spMap.get(rowIds[i]);
 				if (fillerMap==null)
-					spMap.put(rowIds[i].intern(), fillerMap=new HashMap<String, double[]>());
+					spMap.put(rowIds[i].intern(), fillerMap=new HashMap<String, float[]>());
 
 				for (int j=0; j<rowVals.indices.size(); ++j) {
 					String filler = colIds[rowVals.indices.get(j)];
 					filler = filler.substring(0, filler.length()-2);
-					double[] vals = fillerMap.get(filler);
+					float[] vals = fillerMap.get(filler);
 					if (vals==null)
-						fillerMap.put(filler.intern(), vals=new double[roleMap.size()]);
+						fillerMap.put(filler.intern(), vals=new float[roleMap.size()]);
 					vals[roleMap.get(roleIdx)] = rowVals.values.get(j);
 				}
 				
@@ -352,19 +380,19 @@ public class VerbNetSP extends SelectionalPreference {
 				matrix[i] = null;
 			}*/
 			int fillerCnt = 0;
-			for (Map.Entry<String, Map<String, double[]>> entry:spMap.entrySet()) {
+			for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet()) {
 				fillerCnt+=entry.getValue().size();
 			}
 			
-			System.out.printf("total classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
+			System.out.printf("\ntotal classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
 		}
 
 		int fillerCnt = 0;
-		for (Map.Entry<String, Map<String, double[]>> entry:spMap.entrySet()) {
+		for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet()) {
 			fillerCnt+=entry.getValue().size();
 		}
 		
-		System.out.printf("total classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
+		System.out.printf("\ntotal classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
 		
 		return spMap;
 	}
@@ -375,34 +403,73 @@ public class VerbNetSP extends SelectionalPreference {
 		VerbNetSP sp = new VerbNetSP();		
 		
 		TObjectIntMap<String> roleIdxMap = sp.getAllRoles(topDir);
-		
 		Map<String, IndexedMap> vnRoleMap = sp.getVNRoles(topDir, roleIdxMap);
 		
-		String[] rowIds = sp.readLines(new File(topDir, "role_matrix/row_no.txt.gz"));
-		String[] colIds = sp.readLines(new File(topDir, "role_matrix/col_no.txt.gz"));
+		Map<String, float[]> roleSP = new HashMap<String, float[]>();
+		{
+			String[] fillerIds = sp.readLines(new File(topDir, "role_matrix/col_no.txt.gz"));
+			SparseVec[] matrix = sp.readMatrix(new File(topDir, "role_matrix"), roleIdxMap.size(), fillerIds.length,  true);
+			for (int i=0; i<matrix.length;++i)
+				if (matrix[i]!=null)
+					roleSP.put(fillerIds[i].substring(0, fillerIds[i].length()-2).intern(), matrix[i].getDense(roleIdxMap.size()));
+
+			System.out.println("vocabulary: "+roleSP.size());
+		}
 		
-		SparseVec[] matrix = sp.readMatrix(new File(topDir, "role_matrix"), rowIds.length, colIds.length, true);
-		int fillerCnt = 0;
-		for (SparseVec vec:matrix)
-			if (vec!=null)
-				fillerCnt++;
-		
-		System.out.println("vocabulary: "+fillerCnt);
-		
-		Map<String, double[]> roleSP = sp.readRoleMatrix(topDir, roleIdxMap);
-		Map<String, Map<String, double[]>> classSP = null;
-		Map<String, Map<String, double[]>> lemmaSP = null;
+		Map<String, Map<String, float[]>> classSP = null;
+		Map<String, Map<String, float[]>> lemmaSP = null;
 		
 		if (useVNSP) {
 			System.out.println("Reading VN classes");	
 			classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
+			
+			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet()) {
+				IndexedMap indexedRoleMap = vnRoleMap.get(ec.getKey());
+				
+				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet()) {
+					float[] roleSPVals = roleSP.get(ef.getKey());
+					
+					if (roleSPVals==null) {
+						System.out.println("Huh? "+ec.getKey()+" "+ef.getKey());
+						continue;
+					}
+					
+					for (int i=0; i<ef.getValue().length; ++i)
+						if (ef.getValue()[i]==0f && roleSPVals[indexedRoleMap.getR(i)]!=0f) {
+							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[indexedRoleMap.getR(i)]);
+							ef.getValue()[i] = roleSPVals[indexedRoleMap.getR(i)];
+						}
+				}
+			}
 		}
 		
 		if (useLemmaSP) {
 			System.out.println("Reading lemmas");
 			lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
+			
+			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet()) {
+				String vnId=ec.getKey().substring(ec.getKey().indexOf('-')+1);
+				Map<String, float[]> vnMap = classSP==null?null:classSP.get(ec.getKey());
+				IndexedMap indexedRoleMap = vnRoleMap.get(ec.getKey());
+				
+				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet()) {
+					float[] roleSPVals = vnMap==null?roleSP.get(ef.getKey()):vnMap.get(ef.getKey());
+					
+					if (roleSPVals==null) {
+						System.out.println("Huh? "+ec.getKey()+" "+ef.getKey());
+						continue;
+					}
+					
+					for (int i=0; i<ef.getValue().length; ++i)
+						if (ef.getValue()[i]==0f && roleSPVals[indexedRoleMap.getR(i)]!=0f) {
+							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[indexedRoleMap.getR(i)]);
+							ef.getValue()[i] = roleSPVals[indexedRoleMap.getR(i)];
+						}
+				}
+			}
+			
 		}
-		
+
 		return sp;
 	}
 
