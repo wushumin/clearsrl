@@ -449,11 +449,12 @@ public class VerbNetSP extends SelectionalPreference {
 			
 			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet()) {
 				String vnId=ec.getKey().substring(ec.getKey().indexOf('-')+1);
-				Map<String, float[]> vnMap = classSP==null?null:classSP.get(ec.getKey());
+				Map<String, float[]> vnMap = classSP==null?null:classSP.get(vnId);
 				IndexedMap indexedRoleMap = vnRoleMap.get(ec.getKey());
 				
 				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet()) {
 					float[] roleSPVals = vnMap==null?roleSP.get(ef.getKey()):vnMap.get(ef.getKey());
+					boolean useVNVal = vnMap!=null;
 					
 					if (roleSPVals==null) {
 						System.out.println("Huh? "+ec.getKey()+" "+ef.getKey());
@@ -461,9 +462,9 @@ public class VerbNetSP extends SelectionalPreference {
 					}
 					
 					for (int i=0; i<ef.getValue().length; ++i)
-						if (ef.getValue()[i]==0f && roleSPVals[indexedRoleMap.getR(i)]!=0f) {
-							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[indexedRoleMap.getR(i)]);
-							ef.getValue()[i] = roleSPVals[indexedRoleMap.getR(i)];
+						if (ef.getValue()[i]==0f && roleSPVals[useVNVal?i:indexedRoleMap.getR(i)]!=0f) {
+							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[useVNVal?i:indexedRoleMap.getR(i)]);
+							ef.getValue()[i] = roleSPVals[useVNVal?i:indexedRoleMap.getR(i)];
 						}
 				}
 			}
