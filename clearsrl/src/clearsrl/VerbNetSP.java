@@ -276,15 +276,6 @@ public class VerbNetSP extends SelectionalPreference {
 		return vnRoleMap;
 	}
 	
-
-	Map<String, double[]> readRoleMatrix(File topDir,
-            TObjectIntMap<String> roleIdxMap) {
-		
-		
-	    // TODO Auto-generated method stub
-	    return null;
-    }
-	
 	Map<String, Map<String, float[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
 		Map<String, Map<String, float[]>> spMap = new HashMap<String, Map<String, float[]>>();
 		
@@ -336,7 +327,7 @@ public class VerbNetSP extends SelectionalPreference {
 					filler = filler.substring(0, filler.length()-2);
 					float[] vals = fillerMap.get(filler);
 					if (vals==null)
-						fillerMap.put(filler.intern(), vals=new float[roleMap.size()]);
+						fillerMap.put(filler.intern(), vals=new float[roleMap.size()+1]);
 					vals[roleMap.get(roleIdx)] = rowVals.values.get(j);
 				}
 				
@@ -411,7 +402,7 @@ public class VerbNetSP extends SelectionalPreference {
 			SparseVec[] matrix = sp.readMatrix(new File(topDir, "role_matrix"), roleIdxMap.size(), fillerIds.length,  true);
 			for (int i=0; i<matrix.length;++i)
 				if (matrix[i]!=null)
-					roleSP.put(fillerIds[i].substring(0, fillerIds[i].length()-2).intern(), matrix[i].getDense(roleIdxMap.size()));
+					roleSP.put(fillerIds[i].substring(0, fillerIds[i].length()-2).intern(), matrix[i].getDense(roleIdxMap.size()+1));
 
 			System.out.println("vocabulary: "+roleSP.size());
 		}
@@ -434,7 +425,7 @@ public class VerbNetSP extends SelectionalPreference {
 						continue;
 					}
 					
-					for (int i=0; i<ef.getValue().length; ++i)
+					for (int i=0; i<ef.getValue().length-1; ++i)
 						if (ef.getValue()[i]==0f && roleSPVals[indexedRoleMap.getR(i)]!=0f) {
 							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[indexedRoleMap.getR(i)]);
 							ef.getValue()[i] = roleSPVals[indexedRoleMap.getR(i)];
@@ -461,7 +452,7 @@ public class VerbNetSP extends SelectionalPreference {
 						continue;
 					}
 					
-					for (int i=0; i<ef.getValue().length; ++i)
+					for (int i=0; i<ef.getValue().length-1; ++i)
 						if (ef.getValue()[i]==0f && roleSPVals[useVNVal?i:indexedRoleMap.getR(i)]!=0f) {
 							System.out.println("Ha! "+ec.getKey()+" "+ef.getKey()+" "+indexedRoleMap.getR(i)+" "+roleSPVals[useVNVal?i:indexedRoleMap.getR(i)]);
 							ef.getValue()[i] = roleSPVals[useVNVal?i:indexedRoleMap.getR(i)];
@@ -470,12 +461,44 @@ public class VerbNetSP extends SelectionalPreference {
 			}
 			
 		}
+		
+		for (Map.Entry<String, float[]> entry:roleSP.entrySet()) 
+			normalize(entry.getValue());
+		
+		if (classSP!=null)
+			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet())
+				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet())
+					normalize(ef.getValue());
+		
+		if (lemmaSP!=null)
+			for (Map.Entry<String, Map<String, float[]>> ec:lemmaSP.entrySet())
+				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet())
+					normalize(ef.getValue());
 
 		return sp;
 	}
 
+	static void normalize(float[] vals) {
+	    double norm = 0;
+	    for (int i=0; i<vals.length-1; ++i)
+	    	norm += vals[i]*vals[i];
+	    if (norm==0)
+	    	return;
+	    norm = Math.sqrt(norm);
+	    
+	    for (int i=0; i<vals.length-1; ++i)
+	    	vals[i] /= norm;
+	    
+	    vals[vals.length-1] = (float)norm;
+    }
 
-
+	static double dotProduct(float [] vals1, float[] vals2) {
+		double ret = 0;	
+		for (int i=0; i<vals1.length-1; ++i)
+			 ret += vals1[i]*vals2[i];
+		return ret;
+	}
+	
 	@Override
 	TObjectDoubleMap<String> getSP(Map<String, TObjectDoubleMap<String>> argSPDB, TBNode node,  LanguageUtil langUtil) {
 		if (argSPDB!=null) {
