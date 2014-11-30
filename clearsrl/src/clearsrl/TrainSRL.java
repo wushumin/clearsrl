@@ -2,6 +2,7 @@ package clearsrl;
 
 import clearcommon.alg.FeatureSet;
 import clearcommon.propbank.PBInstance;
+import clearcommon.treebank.TBNode;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 import gnu.trove.iterator.TObjectIntIterator;
@@ -17,6 +18,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -135,7 +137,7 @@ public class TrainSRL {
         {
         	String fName = props.getProperty("headwordDB");
         	if (fName!=null)
-        		headwordOutFile = new File("fName");
+        		headwordOutFile = new File(fName);
         }
         if (headwordOutFile!=null && !headwordOutFile.exists()) {
         	trainHeadWordDB = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
@@ -208,17 +210,28 @@ public class TrainSRL {
                         model.addTrainingSentence(sent, THRESHOLD);
                         if (trainHeadWordDB!=null)
                         	for (PBInstance pb:sent.propPB) {
-                        		SRInstance instance = new SRInstance(pb);
-                        		Map<String, TObjectIntMap<String>> argMap = trainHeadWordDB.get(instance.getRolesetId());
-                        		if (argMap==null)
-                        			trainHeadWordDB.put(instance.getRolesetId(), argMap=new TreeMap<String, TObjectIntMap<String>>());
+                        		SRInstance instance = new SRInstance(pb);                        		
+                        		String predKey = instance.getRolesetId();
+                        		if (langUtil.isVerb(instance.getPredicateNode().getPOS()))
+                        			predKey+="-v";
+                        		else if (langUtil.isNoun(instance.getPredicateNode().getPOS()))
+                        			predKey+="-n";
+                        		else if (langUtil.isAdjective(instance.getPredicateNode().getPOS()))
+                        			predKey+="-j";
+                        		Map<String, TObjectIntMap<String>> wordMap = trainHeadWordDB.get(predKey);
+                        		if (wordMap==null)
+                        			trainHeadWordDB.put(predKey, wordMap=new TreeMap<String, TObjectIntMap<String>>());
                         		for (SRArg arg:instance.getArgs()) {
-                        			String headword = VerbNetSP.getArgHeadword(arg.node, langUtil);
-                        			if (headword==null) continue;
-                        			TObjectIntMap<String> wordMap = argMap.get(langUtil.convertPBLabelTrain(arg.label));
-                        			if (wordMap==null)
-                        				argMap.put(langUtil.convertPBLabelTrain(arg.label), wordMap=new TObjectIntHashMap<String>());
-                        			wordMap.adjustOrPutValue(headword, 1, 1);
+                        			if (arg.getLabel().equals("rel"))
+                        				continue;
+                        			TBNode headNode = SRLSelPref.getHeadNode(arg.node);
+                        			if (!langUtil.isNoun(headNode.getPOS()))
+                        				continue;
+                        			String headword = SRLVerbNetSP.getArgHeadword(headNode, langUtil);
+                        			TObjectIntMap<String> argMap = wordMap.get(headword);
+                        			if (argMap==null)
+                        				wordMap.put(headword, argMap=new TObjectIntHashMap<String>());
+                        			argMap.adjustOrPutValue(langUtil.convertPBLabelTrain(arg.label), 1, 1);
                         		}
                         	}
                     }
@@ -250,10 +263,14 @@ public class TrainSRL {
 	        try (PrintStream writer = new PrintStream(new FileOutputStream(headwordOutFile), false, "UTF-8")){
 	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainHeadWordDB.entrySet())
 	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
-	        			String[] headwords = e2.getValue().keys(new String[e2.getValue().size()]);
-	        			for (String headword:headwords)
-	        				writer.printf("%s %s %s %d\n", e1.getKey(), e2.getKey(), headword, e2.getValue().get(headword));
+	        			writer.printf("%s %s", e1.getKey(), e2.getKey());
+	        			String[] argLabels = e2.getValue().keys(new String[e2.getValue().size()]);
+	        			Arrays.sort(argLabels);
+	        			for (String label:argLabels)
+	        				writer.printf(" %s:%d", label, e2.getValue().get(label));
+	        			writer.print('\n');
 	        		}
+	        	System.out.println("wrote headword db to "+headwordOutFile.getPath());
 	        } catch (IOException e ) {
 	        	e.printStackTrace();
 	        	headwordOutFile.delete();

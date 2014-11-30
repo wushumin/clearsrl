@@ -23,10 +23,18 @@ import gnu.trove.map.hash.TObjectIntHashMap;
 import clearcommon.treebank.TBNode;
 import clearcommon.util.LanguageUtil;
 
-public class VerbNetSP extends SelectionalPreference {
+public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 
-	VerbNetSP() {
-	}
+	/**
+	 * 
+	 */
+    private static final long serialVersionUID = 1L;
+
+    transient TObjectIntMap<String> roleIdxMap;
+    transient Map<String, IndexedMap> vnRoleMap;
+    transient Map<String, float[]> roleSP = null;
+    transient Map<String, Map<String, float[]>> vnclsSP = null;
+    transient Map<String, Map<String, float[]>> lemmaSP = null;
 
 	static class IndexedMap implements Serializable{
 
@@ -154,8 +162,12 @@ public class VerbNetSP extends SelectionalPreference {
         }
 
 	}
+
+	public SRLVerbNetSP() {
+		super();
+	}
 	
-	boolean readRow(BufferedReader reader, SparseVec rowVec, int rowDim) throws IOException {
+	static boolean readRow(BufferedReader reader, SparseVec rowVec, int rowDim) throws IOException {
 		String line=reader.readLine();
 		if (line==null)
 			return false;
@@ -173,9 +185,8 @@ public class VerbNetSP extends SelectionalPreference {
 		}
 		return true;
 	}
-	
-	
-	SparseVec[] readMatrix(File dir, int rowDim, int colDim, boolean transpose) throws IOException {
+
+	static SparseVec[] readMatrix(File dir, int rowDim, int colDim, boolean transpose) throws IOException {
 		SparseVec[] retMatrix = new SparseVec[transpose?colDim:rowDim];
 	
 		BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(new File(dir, "vspace.txt.gz")))), 0x10000);
@@ -217,7 +228,7 @@ public class VerbNetSP extends SelectionalPreference {
 		return retMatrix;
 	}
 	
-	String[] readLines(File file) throws IOException {
+	static String[] readLines(File file) throws IOException {
 		List<String> lineList = new ArrayList<String>();
 		
 		 BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))));
@@ -228,7 +239,7 @@ public class VerbNetSP extends SelectionalPreference {
          return lineList.toArray(new String[lineList.size()]);
 	}
 	
-	TObjectIntMap<String> getAllRoles(File topDir) throws IOException {
+	static TObjectIntMap<String> getAllRoles(File topDir) throws IOException {
 		
 		String[] lines = readLines(new File(topDir, "role_matrix/row_no.txt.gz"));
 		
@@ -252,7 +263,7 @@ public class VerbNetSP extends SelectionalPreference {
 		return roleIdxMap;
 	}
 	
-	Map<String, IndexedMap> getVNRoles(File topDir, TObjectIntMap<String> roleIdxMap) throws IOException {
+	static Map<String, IndexedMap> getVNRoles(File topDir, TObjectIntMap<String> roleIdxMap) throws IOException {
 		
 		Map<String, IndexedMap> vnRoleMap = new HashMap<String, IndexedMap>();
 		
@@ -276,7 +287,7 @@ public class VerbNetSP extends SelectionalPreference {
 		return vnRoleMap;
 	}
 	
-	Map<String, Map<String, float[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
+	static Map<String, Map<String, float[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
 		Map<String, Map<String, float[]>> spMap = new HashMap<String, Map<String, float[]>>();
 		
 		String[] colIds = null;
@@ -336,40 +347,6 @@ public class VerbNetSP extends SelectionalPreference {
 			}
 			reader.close();
 			
-			/*
-			SparseVec[] matrix = readMatrix(roleDir,rowIds.length, colIds.length, false);
-			
-			System.out.println("Processing "+roleDir.getName());
-			
-			for (int i=0; i<matrix.length; ++i) {
-				if (matrix[i]==null) continue;
-				System.out.println("Processing row "+i);
-				String vnClassId = rowIds[i];
-				if (isLemma)
-					vnClassId = vnClassId.substring(vnClassId.indexOf('-')+1);
-				
-				IndexedMap roleMap = vnRoleMap.get(vnClassId);
-				
-				if (roleMap==null) {
-					System.err.println("Didn't find class "+vnClassId);
-					continue;
-				}
-
-				Map<String, double[]> fillerMap = spMap.get(rowIds[i]);
-				if (fillerMap==null)
-					spMap.put(rowIds[i].intern(), fillerMap=new HashMap<String, double[]>());
-
-				for (int j=0; j<matrix[i].indices.size(); ++j) {
-					String filler = colIds[matrix[i].indices.get(j)];
-					filler = filler.substring(0, filler.length()-2);
-					double[] vals = fillerMap.get(filler);
-					if (vals==null)
-						fillerMap.put(filler.intern(), vals=new double[roleMap.size()]);
-					vals[roleMap.get(roleIdx)] = matrix[i].values.get(j);
-				}
-				// let garbage collection start early
-				matrix[i] = null;
-			}*/
 			int fillerCnt = 0;
 			for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet()) {
 				fillerCnt+=entry.getValue().size();
@@ -387,19 +364,16 @@ public class VerbNetSP extends SelectionalPreference {
 		
 		return spMap;
 	}
-	
-	
-	
-	public static VerbNetSP readSP(File topDir, boolean useVNSP, boolean useLemmaSP) throws IOException {
-		VerbNetSP sp = new VerbNetSP();		
-		
-		TObjectIntMap<String> roleIdxMap = sp.getAllRoles(topDir);
-		Map<String, IndexedMap> vnRoleMap = sp.getVNRoles(topDir, roleIdxMap);
+
+	public void readSP(File topDir, boolean useVNSP, boolean useLemmaSP) throws IOException {
+
+		roleIdxMap = getAllRoles(topDir);
+		vnRoleMap = getVNRoles(topDir, roleIdxMap);
 		
 		Map<String, float[]> roleSP = new HashMap<String, float[]>();
 		{
-			String[] fillerIds = sp.readLines(new File(topDir, "role_matrix/col_no.txt.gz"));
-			SparseVec[] matrix = sp.readMatrix(new File(topDir, "role_matrix"), roleIdxMap.size(), fillerIds.length,  true);
+			String[] fillerIds = readLines(new File(topDir, "role_matrix/col_no.txt.gz"));
+			SparseVec[] matrix = readMatrix(new File(topDir, "role_matrix"), roleIdxMap.size(), fillerIds.length,  true);
 			for (int i=0; i<matrix.length;++i)
 				if (matrix[i]!=null)
 					roleSP.put(fillerIds[i].substring(0, fillerIds[i].length()-2).intern(), matrix[i].getDense(roleIdxMap.size()+1));
@@ -407,14 +381,14 @@ public class VerbNetSP extends SelectionalPreference {
 			System.out.println("vocabulary: "+roleSP.size());
 		}
 		
-		Map<String, Map<String, float[]>> classSP = null;
+		Map<String, Map<String, float[]>> vnclsSP = null;
 		Map<String, Map<String, float[]>> lemmaSP = null;
 		
 		if (useVNSP) {
 			System.out.println("Reading VN classes");	
-			classSP  = sp.readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
+			vnclsSP  = readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
 			
-			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet()) {
+			for (Map.Entry<String, Map<String, float[]>> ec:vnclsSP.entrySet()) {
 				IndexedMap indexedRoleMap = vnRoleMap.get(ec.getKey());
 				
 				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet()) {
@@ -436,11 +410,11 @@ public class VerbNetSP extends SelectionalPreference {
 		
 		if (useLemmaSP) {
 			System.out.println("Reading lemmas");
-			lemmaSP = sp.readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
+			lemmaSP = readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
 			
-			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet()) {
+			for (Map.Entry<String, Map<String, float[]>> ec:vnclsSP.entrySet()) {
 				String vnId=ec.getKey().substring(ec.getKey().indexOf('-')+1);
-				Map<String, float[]> vnMap = classSP==null?null:classSP.get(vnId);
+				Map<String, float[]> vnMap = vnclsSP==null?null:vnclsSP.get(vnId);
 				IndexedMap indexedRoleMap = vnRoleMap.get(ec.getKey());
 				
 				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet()) {
@@ -465,8 +439,8 @@ public class VerbNetSP extends SelectionalPreference {
 		for (Map.Entry<String, float[]> entry:roleSP.entrySet()) 
 			normalize(entry.getValue());
 		
-		if (classSP!=null)
-			for (Map.Entry<String, Map<String, float[]>> ec:classSP.entrySet())
+		if (vnclsSP!=null)
+			for (Map.Entry<String, Map<String, float[]>> ec:vnclsSP.entrySet())
 				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet())
 					normalize(ef.getValue());
 		
@@ -474,8 +448,6 @@ public class VerbNetSP extends SelectionalPreference {
 			for (Map.Entry<String, Map<String, float[]>> ec:lemmaSP.entrySet())
 				for (Map.Entry<String, float[]> ef:ec.getValue().entrySet())
 					normalize(ef.getValue());
-
-		return sp;
 	}
 
 	static void normalize(float[] vals) {
@@ -499,20 +471,8 @@ public class VerbNetSP extends SelectionalPreference {
 		return ret;
 	}
 	
-	@Override
-	TObjectDoubleMap<String> getSP(Map<String, TObjectDoubleMap<String>> argSPDB, TBNode node,  LanguageUtil langUtil) {
-		if (argSPDB!=null) {
-			String headword = getArgHeadword(node, langUtil);
-			if (headword==null)
-				return null;
-			
-			TObjectDoubleMap<String> sp = argSPDB.get(headword);
-			if (sp!=null)
-				return sp;
-			
-			return argSPDB.get(headword.toLowerCase());
-		}
-		return null;
+	public void makeSP(Map<String, Map<String, TObjectIntMap<String>>> db, boolean leaveOneOut) {
+		
 	}
 
 	public static String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
@@ -524,7 +484,6 @@ public class VerbNetSP extends SelectionalPreference {
 	}
 	
 	public static void main(String[] args) throws Exception {  
-		
 		boolean readLemma = false;
 		boolean readVN = false;
 		
@@ -538,7 +497,8 @@ public class VerbNetSP extends SelectionalPreference {
 				readVN = true;
 			}
 		
-		VerbNetSP sp = VerbNetSP.readSP(new File(args[0]), readVN, readLemma);
+		SRLVerbNetSP sp = new SRLVerbNetSP();	
+		sp.readSP(new File(args[0]), readVN, readLemma);
 	}
 	
 }
