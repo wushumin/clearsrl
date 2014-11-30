@@ -218,20 +218,19 @@ public class TrainSRL {
                         			predKey+="-n";
                         		else if (langUtil.isAdjective(instance.getPredicateNode().getPOS()))
                         			predKey+="-j";
-                        		Map<String, TObjectIntMap<String>> wordMap = trainHeadWordDB.get(predKey);
-                        		if (wordMap==null)
-                        			trainHeadWordDB.put(predKey, wordMap=new TreeMap<String, TObjectIntMap<String>>());
+                        		Map<String, TObjectIntMap<String>> labelMap = trainHeadWordDB.get(predKey);
+                        		if (labelMap==null)
+                        			trainHeadWordDB.put(predKey, labelMap=new TreeMap<String, TObjectIntMap<String>>());
                         		for (SRArg arg:instance.getArgs()) {
                         			if (arg.getLabel().equals("rel"))
                         				continue;
                         			TBNode headNode = SRLSelPref.getHeadNode(arg.node);
                         			if (!langUtil.isNoun(headNode.getPOS()))
                         				continue;
-                        			String headword = SRLVerbNetSP.getArgHeadword(headNode, langUtil);
-                        			TObjectIntMap<String> argMap = wordMap.get(headword);
-                        			if (argMap==null)
-                        				wordMap.put(headword, argMap=new TObjectIntHashMap<String>());
-                        			argMap.adjustOrPutValue(langUtil.convertPBLabelTrain(arg.label), 1, 1);
+                        			TObjectIntMap<String> wordMap = labelMap.get(langUtil.convertPBLabelTrain(arg.label));
+                        			if (wordMap==null)
+                        				labelMap.put(langUtil.convertPBLabelTrain(arg.label), wordMap=new TObjectIntHashMap<String>());
+                        			wordMap.adjustOrPutValue(SRLVerbNetSP.getArgHeadword(headNode, langUtil), 1, 1);
                         		}
                         	}
                     }
@@ -264,9 +263,9 @@ public class TrainSRL {
 	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainHeadWordDB.entrySet())
 	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
 	        			writer.printf("%s %s", e1.getKey(), e2.getKey());
-	        			String[] argLabels = e2.getValue().keys(new String[e2.getValue().size()]);
-	        			Arrays.sort(argLabels);
-	        			for (String label:argLabels)
+	        			String[] headwords = e2.getValue().keys(new String[e2.getValue().size()]);
+	        			Arrays.sort(headwords);
+	        			for (String label:headwords)
 	        				writer.printf(" %s:%d", label, e2.getValue().get(label));
 	        			writer.print('\n');
 	        		}
