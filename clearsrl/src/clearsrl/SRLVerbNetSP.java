@@ -9,19 +9,27 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.regex.Pattern;
+import java.util.TreeSet;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
+import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TObjectDoubleMap;
+import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectFloatHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import clearcommon.treebank.TBNode;
 import clearcommon.util.LanguageUtil;
+import clearcommon.util.PBFrame.Roleset;
+import clearcommon.util.LanguageUtil.POS;
 
 public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 
@@ -30,12 +38,23 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 	 */
     private static final long serialVersionUID = 1L;
 
-    transient TObjectIntMap<String> roleIdxMap;
-    transient Map<String, IndexedMap> vnRoleMap;
-    transient Map<String, float[]> roleSP = null;
-    transient Map<String, Map<String, float[]>> vnclsSP = null;
-    transient Map<String, Map<String, float[]>> lemmaSP = null;
+    enum Type {
+    	ROLE,
+    	VN,
+    	LEMMA,
+    	ALL
+    };
+    
+    private static Logger logger = Logger.getLogger("clearsrl");
 
+    protected TObjectIntMap<String> roleIdxMap;
+    protected Map<String, IndexedMap> vnRoleMap;
+    protected Map<String, float[]> roleSP = null;
+    protected Map<String, Map<String, float[]>> vnclsSP = null;
+    protected Map<String, Map<String, float[]>> lemmaSP = null;
+
+    protected boolean useRoleBackoff = false;
+    
 	static class IndexedMap implements Serializable{
 
 		/**
@@ -163,9 +182,18 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 
 	}
 
-	public SRLVerbNetSP() {
+	protected SRLVerbNetSP() {
 		super();
 	}
+
+	public void initialize(Properties props) throws IOException {
+		String topDir = props.getProperty("indir");
+		Type type = Type.valueOf(props.getProperty("type", Type.ROLE.toString()));
+		
+    	readSP(new File(topDir), 
+    			type.equals(Type.VN)||type.equals(Type.ALL), 
+    			type.equals(Type.LEMMA)||type.equals(Type.ALL));
+    }
 	
 	static boolean readRow(BufferedReader reader, SparseVec rowVec, int rowDim) throws IOException {
 		String line=reader.readLine();
@@ -286,7 +314,7 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		
 		return vnRoleMap;
 	}
-	
+
 	static Map<String, Map<String, float[]>> readSP(File dir, TObjectIntMap<String> roleIdxMap, Map<String, IndexedMap> vnRoleMap, boolean isLemma) throws IOException {
 		Map<String, Map<String, float[]>> spMap = new HashMap<String, Map<String, float[]>>();
 		
@@ -303,6 +331,12 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 			System.out.println("Processing "+roleDir.getName());
 			
 			String[] rowIds = readLines(new File(roleDir, "row_no.txt.gz"));
+			/*
+			if (readIndexOnly) {
+				for (String rowId:rowIds)
+					spMap.put(rowId, null);
+				continue;
+			}*/
 			
 			if (colIds==null) {
 				colIds = readLines(new File(roleDir, "col_no.txt.gz"));
@@ -348,29 +382,28 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 			reader.close();
 			
 			int fillerCnt = 0;
-			for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet()) {
+			for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet())
 				fillerCnt+=entry.getValue().size();
-			}
 			
 			System.out.printf("\ntotal classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
 		}
 
 		int fillerCnt = 0;
-		for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet()) {
+		for (Map.Entry<String, Map<String, float[]>> entry:spMap.entrySet())
+			//if (!readIndexOnly)
 			fillerCnt+=entry.getValue().size();
-		}
 		
 		System.out.printf("\ntotal classes: %d, total fillers %d\n", spMap.size(), fillerCnt);
 		
 		return spMap;
 	}
 
-	public void readSP(File topDir, boolean useVNSP, boolean useLemmaSP) throws IOException {
+	void readSP(File topDir, boolean readVN, boolean readLeamma) throws IOException {
 
 		roleIdxMap = getAllRoles(topDir);
 		vnRoleMap = getVNRoles(topDir, roleIdxMap);
 		
-		Map<String, float[]> roleSP = new HashMap<String, float[]>();
+		roleSP = new HashMap<String, float[]>();
 		{
 			String[] fillerIds = readLines(new File(topDir, "role_matrix/col_no.txt.gz"));
 			SparseVec[] matrix = readMatrix(new File(topDir, "role_matrix"), roleIdxMap.size(), fillerIds.length,  true);
@@ -380,11 +413,8 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 
 			System.out.println("vocabulary: "+roleSP.size());
 		}
-		
-		Map<String, Map<String, float[]>> vnclsSP = null;
-		Map<String, Map<String, float[]>> lemmaSP = null;
-		
-		if (useVNSP) {
+
+		if (readVN) {
 			System.out.println("Reading VN classes");	
 			vnclsSP  = readSP(new File(topDir, "VN_class_matrices"), roleIdxMap, vnRoleMap, false);
 			
@@ -407,8 +437,8 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 				}
 			}
 		}
-		
-		if (useLemmaSP) {
+			
+		if (readLeamma) {
 			System.out.println("Reading lemmas");
 			lemmaSP = readSP(new File(topDir, "lemma_sense_matrices"), roleIdxMap, vnRoleMap, true);
 			
@@ -471,8 +501,55 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		return ret;
 	}
 	
-	public void makeSP(Map<String, Map<String, TObjectIntMap<String>>> db, boolean leaveOneOut) {
+	String makeClassSetKey(TreeSet<String> vnClasses) {
+		if (vnClasses.size()==1)
+			return vnClasses.first();
+		StringBuilder builder = new StringBuilder();
+		for (String clsName:vnClasses) {
+			if (builder.length()>0)
+				builder.append(' ');
+			builder.append(clsName);
+		}
+		return 	builder.toString();	
+	}
+	
+	
+	<T> void merge(TObjectFloatMap<T> mergedMap, TObjectFloatMap<T> rhs, float factor) {
+		for (TObjectFloatIterator<T> iter=rhs.iterator(); iter.hasNext(); ) {
+			iter.advance();
+			mergedMap.adjustOrPutValue(iter.key(), iter.value()*factor, iter.value()*factor);
+		}
+	}
+	
+	<T> void merge(Map<T, TObjectFloatMap<T>> mergedMap, Map<T, TObjectFloatMap<T>> rhs, float factor) {
+		for (Map.Entry<T, TObjectFloatMap<T>> entry:rhs.entrySet()) {
+			TObjectFloatMap<T> lhs = mergedMap.get(entry.getKey());
+			if (lhs==null)
+				mergedMap.put(entry.getKey(), lhs=new TObjectFloatHashMap<T>());
+			merge(lhs, entry.getValue(), factor);
+		}
+	}
+	
+	protected Set<String> getVNClasses(String predKey, Set<String> vnclsSet) {
+		if (vnclsSet==null)
+			return null;
 		
+		String rolesetId = predKey;
+		POS pos = rolesetId.endsWith("-v")?POS.VERB:(rolesetId.endsWith("-n")?POS.NOUN:(rolesetId.endsWith("-j")?POS.ADJECTIVE:null));
+		rolesetId = rolesetId.substring(0,rolesetId.length()-2);
+
+		Roleset roleset = langUtil.getRoleSet(rolesetId, pos);
+		if (roleset==null || roleset.getClasses()==null)
+			return null;
+		
+		Set<String> foundClasses = new HashSet<String>();
+		
+		for (String vncls:roleset.getClasses()) {
+			String key = vncls.substring(6);
+			if (vnclsSet.contains(key))
+				foundClasses.add(key.intern());
+		}
+		return foundClasses.isEmpty()?null:foundClasses;
 	}
 
 	public static String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
@@ -481,24 +558,134 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
     		return null;
     	
 		return langUtil==null?head.getWord():langUtil.findStems(head).get(0);
+	
+	}
+
+	@Override
+	public String getPredicateKey(TBNode predNode, String roleset) {
+		POS pos = langUtil.getPOS(predNode.getPOS());
+		String key = roleset==null?langUtil.findStems(predNode).get(0):roleset.substring(0, roleset.lastIndexOf('.'));
+		
+		if (pos.equals(POS.VERB))
+			key+="-v";
+		else if (pos.equals(POS.NOUN))
+			key+="-n";
+		else if (pos.equals(POS.ADJECTIVE))
+			key+="-j";
+		
+		return key;
 	}
 	
-	public static void main(String[] args) throws Exception {  
-		boolean readLemma = false;
-		boolean readVN = false;
+	public static SRLVerbNetSP makeSP(File topDir, boolean readVN, boolean readLemma) throws IOException {
+		SRLVerbNetSP sp = new SRLVerbNetSP();
+		sp.readSP(topDir, readVN, readLemma);
+		return sp;
+	}
+
+	@Override
+	public TObjectFloatMap<String> getSP(String headword, boolean discount) {
+		if (roleSP==null || roleCntMap==null)
+			return null;
+		return getSP(headword, roleSP, roleCntMap, discount);
+	}
+
+	List<TObjectFloatMap<String>> getSP(List<String> headwords, Map<String, float[]> spModelMap, Map<String, TObjectFloatMap<String>> cntMap, boolean discount) {
+		List<TObjectFloatMap<String>> retList = new ArrayList<TObjectFloatMap<String>>();
+		for (String headword:headwords)
+			retList.add(getSP(headword, spModelMap, cntMap, discount));
+		return retList;
+	}
+	
+	<T> void scale(TObjectFloatMap<T> map, float factor) {
+		for (TObjectFloatIterator<T> iter=map.iterator(); iter.hasNext(); ) {
+			iter.advance();
+			iter.setValue(iter.value()*factor);
+		}
+	}
+
+	List<TObjectFloatMap<String>> makeDummySP(int length) {
+		List<TObjectFloatMap<String>> retList = new ArrayList<TObjectFloatMap<String>>(length);
+		for (int i=0; i<length; ++i)
+			retList.add(null);
+		return retList;
+	}
+	
+	public List<TObjectFloatMap<String>> getSP(String predKey, List<String> headwords, boolean discount) {
 		
-		if (args.length>1)
-			if (args[1].equals("lemma"))
-				readLemma = true;
-			else if (args[1].equals("VN"))
-				readVN = true;
-			else if (args[1].equals("all")) {
-				readLemma = true;
-				readVN = true;
+		Map<String, TObjectFloatMap<String>> localRoleCntMap = predCntMap.get(predKey);
+		if (localRoleCntMap==null) {
+			if (useRoleBackoff)
+				return getSP(headwords, roleSP, roleCntMap, discount);
+			return makeDummySP(headwords.size());
+		}
+
+		Set<String> foundClasses = getVNClasses(predKey, vnclsSP==null?null:vnclsSP.keySet());
+		if (foundClasses==null) {
+			if (vnclsSP==null || useRoleBackoff)
+				return getSP(headwords, roleSP, localRoleCntMap, discount);
+			return makeDummySP(headwords.size());
+		}
+		
+		List<TObjectFloatMap<String>> retList = null;
+		for (String vncls:foundClasses) {
+			List<TObjectFloatMap<String>> clsSP = getSP(headwords, vnclsSP.get(vncls), localRoleCntMap, discount);
+			if (retList==null) {
+				retList=clsSP;
+				continue;
 			}
+			for (int i=0; i<retList.size();++i)					
+				if (retList.get(i)==null)
+					retList.set(i, clsSP.get(i));
+				else if (clsSP.get(i)!=null)
+					merge(retList.get(i), clsSP.get(i), 1f);
+		}
+		if (foundClasses.size()>1)
+			for (TObjectFloatMap<String> map:retList)
+				if (map!=null)
+					scale(map, 1f/foundClasses.size());
 		
-		SRLVerbNetSP sp = new SRLVerbNetSP();	
-		sp.readSP(new File(args[0]), readVN, readLemma);
+		return retList;
 	}
 	
+	
+	public void makeSP(Map<String, Map<String, TObjectFloatMap<String>>> inputCntMap) {
+		
+		predCntMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
+		roleCntMap = new HashMap<String, TObjectFloatMap<String>>();
+
+		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> ec:inputCntMap.entrySet()) {
+			merge(roleCntMap, ec.getValue(), 1f);
+			
+			Map<String, TObjectFloatMap<String>> newMap = new HashMap<String, TObjectFloatMap<String>>();
+			merge(newMap, ec.getValue(), 1f);
+			predCntMap.put(ec.getKey(), newMap);
+			
+			/*
+			Set<String> foundClasses = getVNClasses(ec.getKey(), vnclsSP.keySet());
+			if (foundClasses==null)
+				continue;
+			
+			for (String vncls:foundClasses) {
+				Map<String, TObjectFloatMap<String>> cntMap = predCntMap.get(vncls);
+				if (cntMap==null)
+					predCntMap.put(vncls, cntMap = new HashMap<String, TObjectFloatMap<String>>());
+				merge(cntMap, ec.getValue(), 1f/foundClasses.size());
+			}*/
+		}
+		
+		//if (predCntMap!=null)
+		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> entry:predCntMap.entrySet()) {
+			TObjectFloatMap<String> tCntMap = new TObjectFloatHashMap<String>();
+			for (Map.Entry<String, TObjectFloatMap<String>> e2:entry.getValue().entrySet())
+				merge(tCntMap, e2.getValue(), 1f);
+			entry.getValue().put(null, tCntMap);
+		}
+		
+		TObjectFloatMap<String> tCntMap = new TObjectFloatHashMap<String>();
+		for (Map.Entry<String, TObjectFloatMap<String>> entry:roleCntMap.entrySet())
+			merge(tCntMap, entry.getValue(), 1f);
+		roleCntMap.put(null, tCntMap);
+		
+	}
+
 }

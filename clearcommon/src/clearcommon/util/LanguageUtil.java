@@ -77,6 +77,13 @@ public abstract class LanguageUtil {
     		return null;
     	return frame.getRolesets().get(roleSetId);
     }
+    
+    public Roleset getRoleSet(String roleSetId, POS pos) {
+    	PBFrame frame = getFrame(makePBFrameKey(roleSetId.substring(0, roleSetId.lastIndexOf('.')), pos));
+    	if (frame==null)
+    		return null;
+    	return frame.getRolesets().get(roleSetId);
+    }
 
     public POS getPOS(String pos) {
         if (isAdjective(pos)) return POS.ADJECTIVE;
@@ -87,8 +94,13 @@ public abstract class LanguageUtil {
     }
     
     public String makePBFrameKey(TBNode node) {
-    	return findStems(node).get(0);
+    	return makePBFrameKey(findStems(node).get(0), getPOS(node.getPOS()));
     }
+    
+    public String makePBFrameKey(String roleSetId, POS pos) {
+    	return roleSetId.substring(0, roleSetId.lastIndexOf('.'));
+    }
+    
     
     static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
     public static String removePBLabelModifier(String label) {

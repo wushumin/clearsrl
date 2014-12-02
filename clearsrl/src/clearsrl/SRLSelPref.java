@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import clearcommon.treebank.TBNode;
 import clearcommon.util.LanguageUtil;
+import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.hash.TObjectFloatHashMap;
 
@@ -23,39 +25,54 @@ public abstract class SRLSelPref implements Serializable{
 	 */
     private static final long serialVersionUID = 1L;
     
-	Map<String, Map<String, TObjectFloatMap<String>>> predSPDB;
-	Map<String, TObjectFloatMap<String>> argSPDB;
-
-	SRLSelPref() {
-		predSPDB = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
-		argSPDB = new HashMap<String, TObjectFloatMap<String>>();
+    transient Map<String, Map<String, TObjectFloatMap<String>>> predCntMap;
+    transient Map<String, TObjectFloatMap<String>> roleCntMap;
+    transient LanguageUtil langUtil;
+    
+	protected SRLSelPref() {
 	}
 	
-	public TObjectFloatMap<String> getSP(TBNode node, LanguageUtil langUtil) {
-		String headword = getArgHeadword(node, langUtil);
-		return headword==null?null:argSPDB.get(headword);
+	public abstract void initialize(Properties props) throws IOException; 
+	
+	public void setLangUtil(LanguageUtil langUtil) {
+		this.langUtil = langUtil;
 	}
 	
-	public List<TObjectFloatMap<String>> getSP(TBNode predNode, String roleset, List<TBNode> nodeList, LanguageUtil langUtil) {
-		Map<String, TObjectFloatMap<String>> argDB = predSPDB.get(getPredicateKey(predNode, roleset, langUtil));
+	public abstract TObjectFloatMap<String> getSP(String headword, boolean discount);
+	
+	public List<TObjectFloatMap<String>> getSP(List<String> headwords, boolean discount) {
+		List<TObjectFloatMap<String>> ret = new ArrayList<TObjectFloatMap<String>>();
+		for (String headword:headwords)
+			ret.add(getSP(headword, discount));
+		return ret;
+	}
+	
+	public TObjectFloatMap<String> getSP(TBNode node, boolean discount) {
+		String headword = getArgHeadword(node);
+		if (headword==null)
+			return null;
+		return getSP(headword, discount);
+	}
+	
+	public abstract List<TObjectFloatMap<String>> getSP(String predKey, List<String> headWords, boolean discount);
+
+	public List<TObjectFloatMap<String>> getSP(TBNode predNode, String roleset, List<TBNode> nodeList, boolean discount) {
+		List<String> headwords = new ArrayList<String>();
+		for (TBNode node:nodeList)
+			headwords.add(getArgHeadword(node));
 		
-		List<TObjectFloatMap<String>> retList = new ArrayList<TObjectFloatMap<String>>(nodeList.size());
-		for (TBNode node:nodeList) {
-			String headword = getArgHeadword(node, langUtil);
-			if (headword==null)
-				retList.add(null);
-			TObjectFloatMap<String> sp = null;
-			if (argDB != null)
-				sp = argDB.get(headword);
-			if (sp==null)
-				sp = argSPDB.get(headword);
-			retList.add(sp);
-		}
-		
-		return retList;
+		return getSP(getPredicateKey(predNode, roleset), headwords, discount);
 	}
 
-	public String getPredicateKey(TBNode predNode, String roleset, LanguageUtil langUtil) {
+	public String getArgHeadword(TBNode node) {	
+		TBNode head = getHeadNode(node);
+    	if (head==null || head.getWord()==null)
+    		return null;
+    	
+		return head.getWord();
+	}
+
+	public String getPredicateKey(TBNode predNode, String roleset) {
 		if (roleset!=null)
 			return roleset.substring(0, roleset.lastIndexOf('.'));
 		return langUtil.findStems(predNode).get(0);
@@ -81,16 +98,9 @@ public abstract class SRLSelPref implements Serializable{
 		}
 		return head;
 	}
+
 	
-	public static String getArgHeadword(TBNode node, LanguageUtil langUtil) {	
-		TBNode head = getHeadNode(node);
-    	if (head==null || head.getWord()==null)
-    		return null;
-    	
-		return head.getWord().toLowerCase();
-	}
-	
-	public Map<String, Map<String, TObjectFloatMap<String>>> readTrainingDB(File file) {
+	public static Map<String, Map<String, TObjectFloatMap<String>>> readTrainingCount(File file) {
 		Map<String, Map<String, TObjectFloatMap<String>>> db = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))){
 			String line = null;
@@ -107,9 +117,9 @@ public abstract class SRLSelPref implements Serializable{
 				}
 				TObjectFloatMap<String> cntMap = innerMap.get(tokens[1]);
 				if (cntMap==null)
-					innerMap.put(tokens[1],cntMap=new TObjectFloatHashMap<String>());
+					innerMap.put(tokens[1].intern(),cntMap=new TObjectFloatHashMap<String>());
 				for (int i=2; i<tokens.length; ++i) {
-					int splitter = tokens[2].indexOf(':');
+					int splitter = tokens[i].indexOf(':');
 					float cnt = Float.parseFloat(tokens[i].substring(splitter+1));
 					cntMap.adjustOrPutValue(tokens[i].substring(0,splitter), cnt, cnt);
 				}	
@@ -118,6 +128,134 @@ public abstract class SRLSelPref implements Serializable{
 			e.printStackTrace();
 		}
 		return db;
+	}
+	
+	public void setCountMap(Map<String, Map<String, TObjectFloatMap<String>>> countMap, LanguageUtil langUtil) {
+		this.predCntMap = countMap;
+		this.langUtil = langUtil;
+	}
+	
+	static float computeCosine(float[] lhs, float[] rhs) {
+		if (lhs.length!=rhs.length || lhs[lhs.length-1]==0 || rhs[rhs.length-1]==0)
+			return 0f;
+		double val = 0;
+		
+		
+		for (int i=0; i<lhs.length-1; ++i)
+			val+=lhs[i]*rhs[i];
+		val = Math.pow(val, 200);
+		/*
+		for (int i=0; i<lhs.length-1; ++i) {
+			float tmp=lhs[i]-rhs[i];
+			val+=tmp*tmp;
+		}
+		val = Math.exp(1000*(val-1));*/
+		
+		
+		return (float)val;
+	}
+
+	/*
+	protected TObjectFloatMap<String> getSP(String headword, Map<String, float[]> spModelMap, Map<String, TObjectFloatMap<String>> cntMap, boolean discount) {
+		TObjectFloatMap<String> sp = new TObjectFloatHashMap<String>();
+		float[] headwordSP = spModelMap.get(headword);
+		
+		TObjectFloatMap<String> tCntMap = cntMap.get(null);
+		
+		for (Map.Entry<String, TObjectFloatMap<String>> entry:cntMap.entrySet()) {
+			if (entry.getKey()==null)
+				continue;
+			
+			float factor = 1;
+			float highSPVal = Float.NEGATIVE_INFINITY;
+			for (TObjectFloatIterator<String> iter=entry.getValue().iterator(); iter.hasNext(); ) {
+				iter.advance();
+				if (headword.equals(iter.key())) {
+					if (discount) {
+						if (iter.value()<=1)
+							continue;
+						factor=(iter.value()-1)/(tCntMap.get(iter.key())-1);
+					} else
+						factor=iter.value()/tCntMap.get(iter.key());
+					highSPVal = 1f;
+					break;
+				}
+				if (headwordSP==null)
+					continue;
+				float[] cntwordSP = spModelMap.get(iter.key());
+				if (cntwordSP==null)
+					continue;
+				float spVal = computeCosine(headwordSP, cntwordSP);
+				if (spVal>highSPVal) {
+					highSPVal = spVal;
+					factor = iter.value()/tCntMap.get(iter.key());
+				}
+			}
+			if (highSPVal>0)
+				sp.put(entry.getKey(), highSPVal*factor);
+		}
+			
+		return sp.isEmpty()?null:sp;
+	}
+	*/
+	
+	protected TObjectFloatMap<String> getSP(String headword, Map<String, float[]> spModelMap, Map<String, TObjectFloatMap<String>> cntMap, boolean discount) {
+		TObjectFloatMap<String> sp = new TObjectFloatHashMap<String>();
+		float[] headwordSP = spModelMap.get(headword);
+		
+		TObjectFloatMap<String> tCntMap = cntMap.get(null);
+		
+		for (Map.Entry<String, TObjectFloatMap<String>> entry:cntMap.entrySet()) {
+			if (entry.getKey()==null)
+				continue;
+			
+			float total = 0;
+			float spVal = 0;
+			for (TObjectFloatIterator<String> iter=entry.getValue().iterator(); iter.hasNext(); ) {
+				iter.advance();
+				if (headword.equals(iter.key())) {
+					if (discount) {
+						if (iter.value()<=1)
+							continue;
+						spVal+=(iter.value()-1)/(tCntMap.get(iter.key())-1);
+					} else {
+						spVal+=iter.value()/tCntMap.get(iter.key());
+					}
+					++total;
+					continue;
+				}
+				if (headwordSP==null)
+					continue;
+				float[] cntwordSP = spModelMap.get(iter.key());
+				if (cntwordSP==null)
+					continue;
+				float simScore = computeCosine(headwordSP, cntwordSP);
+				if (simScore!=0) {
+					spVal += iter.value()/tCntMap.get(iter.key())*simScore;
+					total+=simScore;
+				}
+			}
+			if (total!=0 && spVal!=0)
+				sp.put(entry.getKey(), spVal/total);
+		}
+			
+		return sp.isEmpty()?null:sp;
+	}
+	
+	
+	public static String getHighLabel(TObjectFloatMap<String> sp) {
+		if (sp==null)
+			return null;
+		String ret = null;
+		float highSPVal = Float.MIN_VALUE;
+		for (TObjectFloatIterator<String> iter=sp.iterator(); iter.hasNext(); ) {
+			iter.advance();
+			if (iter.value()>=highSPVal) {
+				highSPVal=iter.value();
+				ret = iter.key();
+			}		
+		}
+		return ret;
 	}
 	
 }

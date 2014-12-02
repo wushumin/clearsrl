@@ -132,7 +132,9 @@ public class TrainSRL {
         
         String dataFormat = props.getProperty("data.format", "default");
         
-        Map<String, Map<String, TObjectIntMap<String>>> trainHeadWordDB = null;
+        Map<String, Map<String, TObjectIntMap<String>>> trainPredCntMap = null;
+        Map<String, Map<String, TObjectIntMap<String>>> trainPPCntMap = null;
+        
         File headwordOutFile = null;
         {
         	String fName = props.getProperty("headwordDB");
@@ -140,7 +142,8 @@ public class TrainSRL {
         		headwordOutFile = new File(fName);
         }
         if (headwordOutFile!=null && !headwordOutFile.exists()) {
-        	trainHeadWordDB = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
+        	trainPredCntMap = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
+        	trainPPCntMap = new TreeMap<String, Map<String, TObjectIntMap<String>>>();
         }
 
         int tCount = 0;
@@ -208,7 +211,7 @@ public class TrainSRL {
                     }
                     for (int w=0; w<weight; ++w) {
                         model.addTrainingSentence(sent, THRESHOLD);
-                        if (trainHeadWordDB!=null)
+                        if (trainPredCntMap!=null)
                         	for (PBInstance pb:sent.propPB) {
                         		SRInstance instance = new SRInstance(pb);                        		
                         		String predKey = instance.getRolesetId();
@@ -218,18 +221,30 @@ public class TrainSRL {
                         			predKey+="-n";
                         		else if (langUtil.isAdjective(instance.getPredicateNode().getPOS()))
                         			predKey+="-j";
-                        		Map<String, TObjectIntMap<String>> labelMap = trainHeadWordDB.get(predKey);
+                        		Map<String, TObjectIntMap<String>> labelMap = trainPredCntMap.get(predKey);
                         		if (labelMap==null)
-                        			trainHeadWordDB.put(predKey, labelMap=new TreeMap<String, TObjectIntMap<String>>());
+                        			trainPredCntMap.put(predKey, labelMap=new TreeMap<String, TObjectIntMap<String>>());
                         		for (SRArg arg:instance.getArgs()) {
                         			if (arg.getLabel().equals("rel"))
-                        				continue;
+                        				continue;                        			
                         			TBNode headNode = SRLSelPref.getHeadNode(arg.node);
                         			if (!langUtil.isNoun(headNode.getPOS()))
                         				continue;
-                        			TObjectIntMap<String> wordMap = labelMap.get(langUtil.convertPBLabelTrain(arg.label));
+                        			
+                        			Map<String, TObjectIntMap<String>> currLabelMap = labelMap;
+                        			
+                        			if (arg.node.getPOS().equals("PP")) {
+                        				TBNode pNode = headNode.getHeadOfHead();
+                        				if (pNode.getConstituentByHead()!=arg.node || pNode.getWord()==null)
+                        					continue;
+                        				String preposition = "PP-"+pNode.getWord().toLowerCase();
+                        				currLabelMap = trainPPCntMap.get(preposition);
+                        				if (currLabelMap==null)
+                        					trainPPCntMap.put(preposition, currLabelMap = new TreeMap<String, TObjectIntMap<String>>());
+                        			} 
+                        			TObjectIntMap<String> wordMap = currLabelMap.get(langUtil.convertPBLabelTrain(arg.label));
                         			if (wordMap==null)
-                        				labelMap.put(langUtil.convertPBLabelTrain(arg.label), wordMap=new TObjectIntHashMap<String>());
+                        				currLabelMap.put(langUtil.convertPBLabelTrain(arg.label), wordMap=new TObjectIntHashMap<String>());
                         			wordMap.adjustOrPutValue(SRLVerbNetSP.getArgHeadword(headNode, langUtil), 1, 1);
                         		}
                         	}
@@ -258,9 +273,18 @@ public class TrainSRL {
         System.out.println("Reference arg instance count: "+gCount);
         System.out.println("Training arg instance count: "+tCount);
         System.out.printf("head word unique: %d/%d\n", hCnt, tCnt);
-        if (trainHeadWordDB!=null)
+        if (trainPredCntMap!=null)
 	        try (PrintStream writer = new PrintStream(new FileOutputStream(headwordOutFile), false, "UTF-8")){
-	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainHeadWordDB.entrySet())
+	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainPredCntMap.entrySet())
+	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
+	        			writer.printf("%s %s", e1.getKey(), e2.getKey());
+	        			String[] headwords = e2.getValue().keys(new String[e2.getValue().size()]);
+	        			Arrays.sort(headwords);
+	        			for (String label:headwords)
+	        				writer.printf(" %s:%d", label, e2.getValue().get(label));
+	        			writer.print('\n');
+	        		}
+	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainPPCntMap.entrySet())
 	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
 	        			writer.printf("%s %s", e1.getKey(), e2.getKey());
 	        			String[] headwords = e2.getValue().keys(new String[e2.getValue().size()]);

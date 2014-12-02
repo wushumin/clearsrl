@@ -49,7 +49,7 @@ public class PBFrame {
         }
         
         public Set<String> getClasses() {
-        	return Collections.unmodifiableSet(classes);
+        	return classes==null?null:Collections.unmodifiableSet(classes);
         }
  
         public String toString() {

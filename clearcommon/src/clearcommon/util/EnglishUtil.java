@@ -128,8 +128,8 @@ public class EnglishUtil extends LanguageUtil {
             if (localName.equals("roleset")) {
             	Set<String> classes = null;
             	
-            	String vncls = atts.getValue("id");
-            	if (vncls != null) {
+            	String vncls = atts.getValue("vncls");
+            	if (vncls != null && !vncls.trim().isEmpty() && !vncls.trim().equals("-")) {
             		classes = new HashSet<String>();
             		for (String clsId:vncls.trim().split("\\s+"))
             			classes.add("vncls-"+clsId);
@@ -385,11 +385,17 @@ public class EnglishUtil extends LanguageUtil {
         return headRules;
     }
     
+    //@Override
+    //public String makePBFrameKey(TBNode node) {
+    //	String lemma = findStems(node).get(0);
+    //    String pos = isVerb(node.getPOS())?"-v":(isNoun(node.getPOS())?"-n":(isAdjective(node.getPOS())?"-j":""));
+    //    return lemma+pos;
+    //}
+    
     @Override
-    public String makePBFrameKey(TBNode node) {
-    	String lemma = findStems(node).get(0);
-        String pos = isVerb(node.getPOS())?"-v":(isNoun(node.getPOS())?"-n":(isAdjective(node.getPOS())?"-j":""));
-        return lemma+pos;
+    public String makePBFrameKey(String lemma, POS pos) {
+    	String suffix = pos==null?"":(pos.equals(POS.VERB)?"-v":(pos.equals(POS.NOUN)?"-n":(pos.equals(POS.ADJECTIVE)?"-j":"")));
+    	return lemma+suffix;
     }
     
     @Override
