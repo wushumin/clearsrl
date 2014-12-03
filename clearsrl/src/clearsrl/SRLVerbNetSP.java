@@ -53,9 +53,9 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
     protected Map<String, Map<String, float[]>> vnclsSP = null;
     protected Map<String, Map<String, float[]>> lemmaSP = null;
 
-    transient Map<String, Map<String, TObjectFloatMap<String>>> predCntMap;
-    transient Map<String, Map<String, TObjectFloatMap<String>>> ppCntMap;
-    transient Map<String, TObjectFloatMap<String>> roleCntMap;
+    protected Map<String, Map<String, TObjectFloatMap<String>>> predCntMap;
+    protected Map<String, Map<String, TObjectFloatMap<String>>> ppCntMap;
+    protected Map<String, TObjectFloatMap<String>> roleCntMap;
     
     protected boolean useRoleBackoff = false;
     
