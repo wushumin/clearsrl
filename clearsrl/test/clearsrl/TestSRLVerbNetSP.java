@@ -65,14 +65,8 @@ public class TestSRLVerbNetSP {
     	List<TObjectFloatMap<String>> spList = new ArrayList<TObjectFloatMap<String>>();
     	
     	TObjectFloatMap<String> topVal = new TObjectFloatHashMap<String>();
-    	
-    	String predKey = instance.getRolesetId();
-		if (sp.langUtil.isVerb(instance.getPredicateNode().getPOS()))
-			predKey+="-v";
-		else if (sp.langUtil.isNoun(instance.getPredicateNode().getPOS()))
-			predKey+="-n";
-		else if (sp.langUtil.isAdjective(instance.getPredicateNode().getPOS()))
-			predKey+="-j";
+
+    	String predKey = sp.getPredicateKey(instance.predicateNode, instance.rolesetId);
 		
 		for (int i=0; i<args.size(); ++i) {
 			SRArg arg = args.get(i);

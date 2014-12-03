@@ -21,9 +21,11 @@ import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TObjectDoubleMap;
+import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import gnu.trove.map.hash.TObjectFloatHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.BufferedInputStream;
@@ -114,6 +116,8 @@ public class SRLModel implements Serializable {
         HEADWORDPOS,
         HEADWORDTOPICS,
         HEADWORDTOPICNUM,
+        HEADWORDSP,
+        
         HEADWORDDUPE,
         FIRSTWORD,
         FIRSTWORDPOS,
@@ -343,6 +347,8 @@ public class SRLModel implements Serializable {
     
     transient int                           trainingTreeCnt;
     transient Set<String>                   predicateOverrideKeySet = null;
+    
+    transient SRLVerbNetSP                  verbNetSP = null;
 
     /**
      * Constructor 
@@ -431,7 +437,16 @@ public class SRLModel implements Serializable {
         		sum += entry.getValue().size();
         	logger.info(String.format("topic words: %d, total topic count: %d", argTopicMap.size(), sum));
         }
-    
+        
+        if (argLabelFeatures.getFeaturesFlat().contains(Feature.HEADWORDSP)) {
+        	logger.info("Initializing VerbNet SP");
+        	verbNetSP = new SRLVerbNetSP();
+        	verbNetSP.setLangUtil(langUtil);
+        	verbNetSP.initialize(PropertyUtil.filterProperties(props, "selpref.", true));
+        	logger.info("Reading count Map");
+        	Map<String, Map<String, TObjectFloatMap<String>>> countDB = SRLSelPref.readTrainingCount(new File(props.getProperty("headwordDB")));
+        	verbNetSP.makeSP(countDB);
+        }
     }
     
     /**
@@ -440,6 +455,8 @@ public class SRLModel implements Serializable {
      */
     public void setLanguageUtil(LanguageUtil langUtil) {
         this.langUtil = langUtil;
+        if (verbNetSP!=null)
+        	verbNetSP.setLangUtil(langUtil);
     }
     
     public void setTrainGoldParse(boolean trainGoldParse) {
@@ -829,7 +846,7 @@ public class SRLModel implements Serializable {
         
         boolean isNominal = !langUtil.isVerb(useGoldPredicateSeparation?goldInstance.getPredicateNode().getPOS():sampleInstance.getPredicateNode().getPOS());
         
-        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, argNodes, sampleInstance.getRolesetId(), depEC, namedEntities);
+        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, sampleInstance.predicateNode, sampleInstance.getRolesetId(), argNodes, sampleInstance.getRolesetId(), depEC, namedEntities, true);
         
         for (TBNode node:argNodes) {
             if (candidateMap.get(node)==null)
@@ -894,7 +911,7 @@ public class SRLModel implements Serializable {
         }
     }
 
-    public EnumMap<Feature,Collection<String>> extractFeatureArgument(FeatureSet<Feature> featureSet, TBNode predicateNode, TBNode argNode, String[] namedEntities) {
+    public EnumMap<Feature,Collection<String>> extractFeatureArgument(FeatureSet<Feature> featureSet, TBNode predicateNode, TBNode argNode, String[] namedEntities, List<String> headwordSP) {
         EnumMap<Feature,Collection<String>> featureMap = new EnumMap<Feature,Collection<String>>(Feature.class);
         List<TBNode> tnodes = argNode.getTokenNodes();
         
@@ -1104,6 +1121,11 @@ public class SRLModel implements Serializable {
             		}
             	}
             	break;
+            case HEADWORDSP:
+            	if (headwordSP!=null) {
+            		featureMap.put(feature, headwordSP);
+            	}
+            	break;
             case FIRSTWORD:
                 featureMap.put(feature, Arrays.asList(tnodes.get(0).getWord().toLowerCase()));
                 break;
@@ -1157,14 +1179,63 @@ public class SRLModel implements Serializable {
         }
         return featureMap;
     }
+    
+    List<List<String>> getSPLabels(TBNode predicateNode, String rolesetId, List<TBNode> argNodes, boolean training) {
+	    String[] headwords = new String[argNodes.size()];
+	    Set<String> headwordSet = new HashSet<String>();
+	    for (int i=0; i<argNodes.size(); ++i) {
+	    	headwords[i] = verbNetSP.getSPHeadword(argNodes.get(i));
+	    	if (headwords[i]!=null)
+	    		headwordSet.add(headwords[i]);
+	    }
+	    if (headwordSet.isEmpty())
+	    	return null;
+	    
+	    String predKey = verbNetSP.getPredicateKey(predicateNode, rolesetId);
+	    
+    	List<String> uniqueHeadwords = new ArrayList<String>(headwordSet);
+    	List<TObjectFloatMap<String>> spList = verbNetSP.getSP(predKey, uniqueHeadwords, training);
+    	TObjectFloatMap<String> topVal = new TObjectFloatHashMap<String>();
+    	Map<String, List<String>> spMap = new HashMap<String, List<String>>();
+    	for (int i=0; i<spList.size(); ++i) {
+			if (spList.get(i)==null)
+				continue;
+			String label = SRLSelPref.getHighLabel(spList.get(i));
+			List<String> spLabels = new ArrayList<String>(2);
+			spLabels.add(label);
+			spMap.put(uniqueHeadwords.get(i), spLabels);
+			if (!topVal.containsKey(label) ||
+					topVal.get(label) < spList.get(i).get(label))
+				topVal.put(label, spList.get(i).get(label));
+		}
+    	for (int i=0; i<spList.size(); ++i) {
+    		List<String> labelList = spMap.get(uniqueHeadwords.get(i));
+    		if (labelList==null) 
+    			continue;
 
-    List<EnumMap<Feature,Collection<String>>> extractFeatureSRL(FeatureSet<Feature> featureSet, TBNode predicateNode, List<TBNode> argNodes, String frame, String[] depEC, String[] namedEntities) {   
+    		if (spList.get(i).get(labelList.get(0))!=topVal.get(labelList.get(0)) && labelList.get(0).matches("ARG\\d"))
+    			spMap.remove(uniqueHeadwords.get(i));
+    	}
+    	
+    	List<List<String>> retList = new ArrayList<List<String>>();
+    	for (int i=0; i<headwords.length; ++i)
+    		retList.add(spMap.get(headwords[i]));
+    	
+    	return retList;
+    }
+    
+    List<EnumMap<Feature,Collection<String>>> extractFeatureSRL(FeatureSet<Feature> featureSet, TBNode predicateNode, String rolesetId, List<TBNode> argNodes, String frame, String[] depEC, String[] namedEntities, boolean training) {   
         List<EnumMap<Feature,Collection<String>>> featureMapList = new ArrayList<EnumMap<Feature,Collection<String>>>();
         
         EnumMap<Feature,Collection<String>> defaultMap = extractFeaturePredicate(featureSet.getFeaturesFlat(), predicateNode, frame, depEC);
 
-        for (TBNode argNode:argNodes) {
-            EnumMap<Feature,Collection<String>> featureMap = extractFeatureArgument(featureSet, predicateNode, argNode, namedEntities);
+        List<List<String>> spLabels = null;
+        if (featureSet.getFeaturesFlat().contains(Feature.HEADWORDSP) && verbNetSP!=null)
+        	spLabels = getSPLabels(predicateNode, rolesetId, argNodes, training);
+
+        
+        for (int i=0; i<argNodes.size(); ++i) {
+            EnumMap<Feature,Collection<String>> featureMap = extractFeatureArgument(featureSet, predicateNode, argNodes.get(i), namedEntities, spLabels==null?null:spLabels.get(i));
             featureMap.putAll(defaultMap);
             featureMapList.add(featureMap);
         }
@@ -2108,7 +2179,7 @@ public class SRLModel implements Serializable {
     	boolean isNominal = !langUtil.isVerb(gold!=null&&useGoldPredicateSeparation?gold.getPredicateNode().getPOS():prediction.getPredicateNode().getPOS());
     	//boolean isNominal = gold==null?!langUtil.isVerb(prediction.getPredicateNode().getPOS()):!langUtil.isVerb(gold.getPredicateNode().getPOS());
     	
-        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, prediction.predicateNode, argNodes, prediction.getRolesetId(), null, namedEntities);
+        List<EnumMap<Feature,Collection<String>>> featureMapList = extractFeatureSRL(isNominal?nominalArgLabelFeatures:argLabelFeatures, prediction.predicateNode, prediction.rolesetId, argNodes, prediction.getRolesetId(), null, namedEntities, false);
         
         ArgSample[] fsamples = new ArgSample[featureMapList.size()];
         

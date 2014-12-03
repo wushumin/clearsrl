@@ -59,6 +59,10 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
     
     protected boolean useRoleBackoff = false;
     
+	public void setUseRoleBackoff(boolean useRoleBackoff) {
+		this.useRoleBackoff = useRoleBackoff;
+	}
+
 	static class IndexedMap implements Serializable{
 
 		/**
@@ -197,6 +201,8 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
     	readSP(new File(topDir), 
     			type.equals(Type.VN)||type.equals(Type.ALL), 
     			type.equals(Type.LEMMA)||type.equals(Type.ALL));
+    	
+    	useRoleBackoff = !props.getProperty("useRoleBackoff", "true").equals("false");
     }
 	
 	static boolean readRow(BufferedReader reader, SparseVec rowVec, int rowDim) throws IOException {
@@ -564,17 +570,36 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		return langUtil==null?head.getWord():langUtil.findStems(head).get(0);
 	
 	}
+	
+	public String getSPHeadword(TBNode node) {	
+		TBNode head = getHeadNode(node);
+    	if (head==null || head.getWord()==null)
+    		return null;
+    	
+    	TBNode headNode = getHeadNode(node);
+		if (!langUtil.isNoun(headNode.getPOS()))
+			return null;
+		String lemma = langUtil.findStems(headNode).get(0);
+		
+		if (node.getPOS().equals("PP")) {
+			TBNode pNode = headNode.getHeadOfHead();
+			if (pNode.getConstituentByHead()!=node || pNode.getWord()==null)
+				return null;
+			return "PP-"+pNode.getWord().toLowerCase()+' '+lemma;
+		}
+		return lemma;
+	}
 
 	@Override
 	public String getPredicateKey(TBNode predNode, String roleset) {
 		POS pos = langUtil.getPOS(predNode.getPOS());
-		String key = roleset==null?langUtil.findStems(predNode).get(0):roleset.substring(0, roleset.lastIndexOf('.'));
+		String key = roleset==null?langUtil.findStems(predNode).get(0):roleset;
 		
-		if (pos.equals(POS.VERB))
+		if (pos==POS.VERB)
 			key+="-v";
-		else if (pos.equals(POS.NOUN))
+		else if (pos==POS.NOUN)
 			key+="-n";
-		else if (pos.equals(POS.ADJECTIVE))
+		else if (pos==POS.ADJECTIVE)
 			key+="-j";
 		
 		return key;
@@ -653,25 +678,25 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 	}
 
 	public TObjectFloatMap<String> getSP(String predKey, TBNode argNode, boolean discount) {
-		
-		TBNode headNode = getHeadNode(argNode);
-		if (!langUtil.isNoun(headNode.getPOS()))
+		return getSP(predKey, getSPHeadword(argNode), discount);
+	}
+	
+	public TObjectFloatMap<String> getSP(String predKey, String headword, boolean discount) {
+		if (headword==null)
 			return null;
 		
-		if (argNode.getPOS().equals("PP")) {
-			TBNode pNode = headNode.getHeadOfHead();
-			if (pNode.getConstituentByHead()!=argNode || pNode.getWord()==null)
-				return null;
-			Map<String, TObjectFloatMap<String>> wordCntMap = ppCntMap.get(pNode.getWord().toLowerCase());
+		if (headword.startsWith("PP-")) {
+			String pp = headword.substring(3,headword.indexOf(' '));
+			headword = headword.substring(headword.indexOf(' ')+1);
+
+			Map<String, TObjectFloatMap<String>> wordCntMap = ppCntMap.get(pp);
 			if (wordCntMap==null) {
 				if (useRoleBackoff)
-					return getSP(getArgHeadword(headNode), roleSP, roleCntMap, discount);
+					return getSP(headword, roleSP, roleCntMap, discount);
 				return null;
 			}
-			return getSP(headNode.getWord(), roleSP, wordCntMap, discount);
+			return getSP(headword, roleSP, wordCntMap, discount);
 		}
-		
-		String headword = headNode.getWord();
 		
 		Map<String, TObjectFloatMap<String>> localRoleCntMap = predCntMap.get(predKey);
 		if (localRoleCntMap==null) {
@@ -701,6 +726,8 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 			scale(ret, 1f/foundClasses.size());
 		return ret;
 	}
+	
+	
 	
 	@Override
 	public void makeSP(Map<String, Map<String, TObjectFloatMap<String>>> inputCntMap) {

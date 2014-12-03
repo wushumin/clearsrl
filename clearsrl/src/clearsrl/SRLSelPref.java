@@ -30,7 +30,7 @@ public abstract class SRLSelPref implements Serializable{
     
 	protected SRLSelPref() {
 	}
-	
+
 	public abstract void initialize(Properties props) throws IOException; 
 	
 	public void setLangUtil(LanguageUtil langUtil) {
@@ -133,6 +133,8 @@ public abstract class SRLSelPref implements Serializable{
 	
 	static float computeCosine(float[] lhs, float[] rhs) {
 
+		//return 0;
+		///*
 		if (lhs.length!=rhs.length || lhs[lhs.length-1]==0 || rhs[rhs.length-1]==0)
 			return 0f;
 		double val = 0;
