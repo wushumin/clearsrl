@@ -53,6 +53,10 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
     protected Map<String, Map<String, float[]>> vnclsSP = null;
     protected Map<String, Map<String, float[]>> lemmaSP = null;
 
+    transient Map<String, Map<String, TObjectFloatMap<String>>> predCntMap;
+    transient Map<String, Map<String, TObjectFloatMap<String>>> ppCntMap;
+    transient Map<String, TObjectFloatMap<String>> roleCntMap;
+    
     protected boolean useRoleBackoff = false;
     
 	static class IndexedMap implements Serializable{
@@ -612,13 +616,14 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 	
 	public List<TObjectFloatMap<String>> getSP(String predKey, List<String> headwords, boolean discount) {
 		
-		Map<String, TObjectFloatMap<String>> localRoleCntMap = predCntMap.get(predKey);
+		boolean isPredPP = predKey.startsWith("PP-");			
+		Map<String, TObjectFloatMap<String>> localRoleCntMap = isPredPP?ppCntMap.get(predKey.substring(3)):predCntMap.get(predKey);
 		if (localRoleCntMap==null) {
 			if (useRoleBackoff)
 				return getSP(headwords, roleSP, roleCntMap, discount);
 			return makeDummySP(headwords.size());
-		}
-
+		} else if (isPredPP)
+			return getSP(headwords, roleSP, localRoleCntMap, discount);
 		Set<String> foundClasses = getVNClasses(predKey, vnclsSP==null?null:vnclsSP.keySet());
 		if (foundClasses==null) {
 			if (vnclsSP==null || useRoleBackoff)
@@ -646,11 +651,62 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		
 		return retList;
 	}
+
+	public TObjectFloatMap<String> getSP(String predKey, TBNode argNode, boolean discount) {
+		
+		TBNode headNode = getHeadNode(argNode);
+		if (!langUtil.isNoun(headNode.getPOS()))
+			return null;
+		
+		if (argNode.getPOS().equals("PP")) {
+			TBNode pNode = headNode.getHeadOfHead();
+			if (pNode.getConstituentByHead()!=argNode || pNode.getWord()==null)
+				return null;
+			Map<String, TObjectFloatMap<String>> wordCntMap = ppCntMap.get(pNode.getWord().toLowerCase());
+			if (wordCntMap==null) {
+				if (useRoleBackoff)
+					return getSP(getArgHeadword(headNode), roleSP, roleCntMap, discount);
+				return null;
+			}
+			return getSP(headNode.getWord(), roleSP, wordCntMap, discount);
+		}
+		
+		String headword = headNode.getWord();
+		
+		Map<String, TObjectFloatMap<String>> localRoleCntMap = predCntMap.get(predKey);
+		if (localRoleCntMap==null) {
+			if (useRoleBackoff)
+				return getSP(headword, roleSP, roleCntMap, discount);
+			return null;
+		}
+		
+		Set<String> foundClasses = getVNClasses(predKey, vnclsSP==null?null:vnclsSP.keySet());
+		if (foundClasses==null) {
+			if (vnclsSP==null || useRoleBackoff)
+				return getSP(headword, roleSP, localRoleCntMap, discount);
+			return null;
+		}
+		
+		TObjectFloatMap<String> ret = null;
+		for (String vncls:foundClasses) {
+			TObjectFloatMap<String> clsSP = getSP(headword, vnclsSP.get(vncls), localRoleCntMap, discount);
+			if (ret==null) {
+				ret=clsSP;
+				continue;
+			}
+			if (clsSP!=null)
+				merge(ret, clsSP, 1f);
+		}
+		if (foundClasses.size()>1 && ret !=null)
+			scale(ret, 1f/foundClasses.size());
+		return ret;
+	}
 	
-	
+	@Override
 	public void makeSP(Map<String, Map<String, TObjectFloatMap<String>>> inputCntMap) {
 		
 		predCntMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
+		ppCntMap = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
 		roleCntMap = new HashMap<String, TObjectFloatMap<String>>();
 
 		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> ec:inputCntMap.entrySet()) {
@@ -658,7 +714,11 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 			
 			Map<String, TObjectFloatMap<String>> newMap = new HashMap<String, TObjectFloatMap<String>>();
 			merge(newMap, ec.getValue(), 1f);
-			predCntMap.put(ec.getKey(), newMap);
+			
+			if (ec.getKey().startsWith("PP-"))
+				ppCntMap.put(ec.getKey().substring(3), newMap);
+			else
+				predCntMap.put(ec.getKey(), newMap);
 			
 			/*
 			Set<String> foundClasses = getVNClasses(ec.getKey(), vnclsSP.keySet());
@@ -675,6 +735,12 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		
 		//if (predCntMap!=null)
 		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> entry:predCntMap.entrySet()) {
+			TObjectFloatMap<String> tCntMap = new TObjectFloatHashMap<String>();
+			for (Map.Entry<String, TObjectFloatMap<String>> e2:entry.getValue().entrySet())
+				merge(tCntMap, e2.getValue(), 1f);
+			entry.getValue().put(null, tCntMap);
+		}
+		for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> entry:ppCntMap.entrySet()) {
 			TObjectFloatMap<String> tCntMap = new TObjectFloatHashMap<String>();
 			for (Map.Entry<String, TObjectFloatMap<String>> e2:entry.getValue().entrySet())
 				merge(tCntMap, e2.getValue(), 1f);

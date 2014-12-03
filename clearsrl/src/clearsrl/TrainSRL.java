@@ -224,7 +224,7 @@ public class TrainSRL {
                         		Map<String, TObjectIntMap<String>> labelMap = trainPredCntMap.get(predKey);
                         		if (labelMap==null)
                         			trainPredCntMap.put(predKey, labelMap=new TreeMap<String, TObjectIntMap<String>>());
-                        		for (SRArg arg:instance.getArgs()) {
+                        		for (SRArg arg:instance.getScoringArgs()) {
                         			if (arg.getLabel().equals("rel"))
                         				continue;                        			
                         			TBNode headNode = SRLSelPref.getHeadNode(arg.node);

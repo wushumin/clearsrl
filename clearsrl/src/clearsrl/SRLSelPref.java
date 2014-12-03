@@ -25,8 +25,7 @@ public abstract class SRLSelPref implements Serializable{
 	 */
     private static final long serialVersionUID = 1L;
     
-    transient Map<String, Map<String, TObjectFloatMap<String>>> predCntMap;
-    transient Map<String, TObjectFloatMap<String>> roleCntMap;
+
     transient LanguageUtil langUtil;
     
 	protected SRLSelPref() {
@@ -130,35 +129,30 @@ public abstract class SRLSelPref implements Serializable{
 		return db;
 	}
 	
-	public void setCountMap(Map<String, Map<String, TObjectFloatMap<String>>> countMap, LanguageUtil langUtil) {
-		this.predCntMap = countMap;
-		this.langUtil = langUtil;
-	}
+	public abstract void makeSP(Map<String, Map<String, TObjectFloatMap<String>>> inputCntMap);
 	
 	static float computeCosine(float[] lhs, float[] rhs) {
+
 		if (lhs.length!=rhs.length || lhs[lhs.length-1]==0 || rhs[rhs.length-1]==0)
 			return 0f;
 		double val = 0;
 		
-		
 		for (int i=0; i<lhs.length-1; ++i)
 			val+=lhs[i]*rhs[i];
-		val = Math.pow(val, 200);
+		return (float)Math.pow(val, 200);
 		/*
 		for (int i=0; i<lhs.length-1; ++i) {
 			float tmp=lhs[i]-rhs[i];
 			val+=tmp*tmp;
 		}
-		val = Math.exp(1000*(val-1));*/
-		
-		
-		return (float)val;
+		return (float)Math.exp(1000*(val-1));*/
 	}
 
-	/*
 	protected TObjectFloatMap<String> getSP(String headword, Map<String, float[]> spModelMap, Map<String, TObjectFloatMap<String>> cntMap, boolean discount) {
 		TObjectFloatMap<String> sp = new TObjectFloatHashMap<String>();
 		float[] headwordSP = spModelMap.get(headword);
+		if (headwordSP==null)
+			headwordSP = spModelMap.get(headword.toLowerCase());
 		
 		TObjectFloatMap<String> tCntMap = cntMap.get(null);
 		
@@ -197,8 +191,8 @@ public abstract class SRLSelPref implements Serializable{
 			
 		return sp.isEmpty()?null:sp;
 	}
-	*/
 	
+	/*
 	protected TObjectFloatMap<String> getSP(String headword, Map<String, float[]> spModelMap, Map<String, TObjectFloatMap<String>> cntMap, boolean discount) {
 		TObjectFloatMap<String> sp = new TObjectFloatHashMap<String>();
 		float[] headwordSP = spModelMap.get(headword);
@@ -241,7 +235,7 @@ public abstract class SRLSelPref implements Serializable{
 			
 		return sp.isEmpty()?null:sp;
 	}
-	
+*/	
 	
 	public static String getHighLabel(TObjectFloatMap<String> sp) {
 		if (sp==null)

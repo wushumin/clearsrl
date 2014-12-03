@@ -2,13 +2,16 @@ package clearsrl;
 
 import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.map.TObjectFloatMap;
+import gnu.trove.map.hash.TObjectFloatHashMap;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,9 +24,12 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import clearcommon.propbank.PBInstance;
+import clearcommon.treebank.TBNode;
 import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 import clearsrl.SRLVerbNetSP.Type;
+import clearsrl.Sentence.Source;
 
 public class TestSRLVerbNetSP {
 
@@ -53,16 +59,58 @@ public class TestSRLVerbNetSP {
     @Option(name="-h",usage="help message")
     transient private boolean help = false;
     
-    static void validate(SRLVerbNetSP sp, Map<String, Map<String, TObjectFloatMap<String>>> countDB, boolean coreOnly, boolean discount) {
+    static List<String> predictLabels(SRLVerbNetSP sp, SRInstance instance, List<SRArg> args) {
+    	List<String> prediction = new ArrayList<String>();
+    	
+    	List<TObjectFloatMap<String>> spList = new ArrayList<TObjectFloatMap<String>>();
+    	
+    	TObjectFloatMap<String> topVal = new TObjectFloatHashMap<String>();
+    	
+    	String predKey = instance.getRolesetId();
+		if (sp.langUtil.isVerb(instance.getPredicateNode().getPOS()))
+			predKey+="-v";
+		else if (sp.langUtil.isNoun(instance.getPredicateNode().getPOS()))
+			predKey+="-n";
+		else if (sp.langUtil.isAdjective(instance.getPredicateNode().getPOS()))
+			predKey+="-j";
+		
+		for (int i=0; i<args.size(); ++i) {
+			SRArg arg = args.get(i);
+			spList.add(sp.getSP(predKey, arg.node, false));
+		}
+		for (int i=0; i<spList.size(); ++i) {
+			if (spList.get(i)==null)
+				prediction.add(null);
+			else {
+				String label = SRLSelPref.getHighLabel(spList.get(i));
+				prediction.add(label);
+				if (!topVal.containsKey(label) ||
+						topVal.get(label) < spList.get(i).get(label))
+					topVal.put(label, spList.get(i).get(label));
+			}
+		}
+		/*
+		for (int i=0; i<prediction.size(); ++i)
+			if (prediction.get(i)!=null && prediction.get(i).matches("ARG\\d") && 
+					spList.get(i).get(prediction.get(i))!=topVal.get(prediction.get(i)))
+				prediction.set(i, null);*/
+		
+    	return prediction;
+    }
+    
+    
+    static void validate(SRLVerbNetSP sp, Map<String, Map<String, TObjectFloatMap<String>>> countDB, boolean coreOnly, boolean discount, String[] scoringLabels) {
     	float cCntG = 0;
         float pTotalG = 0;
         float rTotalG = 0;
     	float cCnt = 0;
         float pTotal = 0;
         float rTotal = 0;
+        
+        SRLScore score = new SRLScore(Arrays.asList(scoringLabels));
+        
         for (Map.Entry<String, Map<String, TObjectFloatMap<String>>> entry:countDB.entrySet()) {
 
-        	
         	Set<String> vocabSet = new HashSet<String>();
         	for (Map.Entry<String, TObjectFloatMap<String>> e2:entry.getValue().entrySet())
         		vocabSet.addAll(e2.getValue().keySet());
@@ -87,6 +135,8 @@ public class TestSRLVerbNetSP {
         				pTotal+=iter.value();
         			if (e2.getKey().equals(label) && (!coreOnly || e2.getKey().matches("ARG\\d")))
         				cCnt+=iter.value();
+        			for (int i=0; i<iter.value();++i)
+        				score.addResult(label, e2.getKey());
         		}
             float p = pTotal==0?0:cCnt/pTotal;
             float r = rTotal==0?0:cCnt/rTotal;
@@ -96,7 +146,6 @@ public class TestSRLVerbNetSP {
             cCntG+=cCnt;
             pTotalG+=pTotal;
             rTotalG+=rTotal;
-            
         }
 
         float p = pTotalG==0?0:cCntG/pTotalG;
@@ -104,7 +153,7 @@ public class TestSRLVerbNetSP {
         float f = p==0?0:(r==0?0:2*p*r/(p+r));
         
         System.out.printf("final F-score %f(%d/%d) %f(%d/%d) %f\n", p, (int)cCntG, (int)pTotalG, r, (int)cCntG, (int)rTotalG, f); 
-        
+        System.out.println(score.toString());
     }
     
     
@@ -156,21 +205,76 @@ public class TestSRLVerbNetSP {
         sp.makeSP(countDB);
         
         sp.useRoleBackoff = options.backoff;
-        boolean coreOnly = true;
+
+        String[] scoringLabels = PropertyUtil.filterProperties(props, "score.", true).getProperty("labels").trim().split(",");
+        
+        for (int i=0; i< scoringLabels.length; ++i)
+        	scoringLabels[i] = scoringLabels[i].trim();
+        
+        boolean coreOnly = false;
         //System.out.println("Train: ");
         //validate(sp, countDB, coreOnly, true);
-        
+        /*
         if (options.devFile!=null) {
         	System.out.println("Dev: ");
         	countDB = SRLSelPref.readTrainingCount(options.devFile);
-        	validate(sp, countDB, coreOnly, false);
+        	validate(sp, countDB, coreOnly, false, scoringLabels);
         }
         
         if (options.testFile!=null) {
         	System.out.println("Test: ");
         	countDB = SRLSelPref.readTrainingCount(options.testFile);
-        	validate(sp, countDB, coreOnly, false);
+        	validate(sp, countDB, coreOnly, false, scoringLabels);
+        }*/
+        
+
+        EnumSet<Source> srcSet = Sentence.readSources(props.getProperty("dev.corpus.source"));
+        Source srcTreeType = Source.TREEBANK;
+        
+        String sourceList = props.getProperty("dev.corpus","");
+        String[] sources = sourceList.trim().split("\\s*,\\s*");
+
+        Map<String, Sentence[]> sentenceMap = null;
+
+        for (String source:sources) {
+            System.out.println("Processing corpus "+source);
+            Properties srcProps = source.isEmpty()?props:PropertyUtil.filterProperties(props, source+".", true);
+            
+            Map<String, Sentence[]> corpusMap = Sentence.readCorpus(srcProps, srcTreeType, srcSet, langUtil);
+            
+            if (sentenceMap==null) sentenceMap = corpusMap;
+            else sentenceMap.putAll(corpusMap);
         }
+
+        System.out.printf("%d files read\n",sentenceMap.size());
+        
+       
+        
+        SRLScore score = new SRLScore(Arrays.asList(scoringLabels));
+        
+        for (Map.Entry<String, Sentence[]> entry: sentenceMap.entrySet()) {
+            logger.info("Processing "+entry.getKey());
+            for (Sentence sent:entry.getValue()) {                        
+                logger.fine("Processing tree "+(sent.parse==null?sent.treeTB.getIndex():sent.parse.getIndex()));
+                if (sent.parse!=null && sent.treeTB!=null && sent.parse.getTokenCount()!=sent.treeTB.getTokenCount()) {
+                	logger.warning("tree "+entry.getKey()+":"+sent.parse.getIndex()+" inconsistent, skipping");
+                	continue;
+                }
+                for (PBInstance pb:sent.propPB) {
+            		SRInstance instance = new SRInstance(pb);
+            		List<SRArg> argList = instance.getScoringArgs();
+            		
+            		List<String> predictedLabels = predictLabels(sp, instance, argList);
+            		
+            		for (int i=0; i<argList.size(); ++i)
+            			score.addResult(predictedLabels.get(i), argList.get(i).getLabel());
+            	}
+            }
+        }
+        
+        System.out.println(score.toString());
+
+        
         
 /*
 		if (options.modelFile!=null && !options.modelFile.exists()) {
