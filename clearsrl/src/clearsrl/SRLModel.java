@@ -329,6 +329,8 @@ public class SRLModel implements Serializable {
     LDAModel                                topicModel = null;
     
     boolean                                 lemmatizeTopicWord = false;
+
+    SRLVerbNetSP                            verbNetSP = null;
     
     transient LanguageUtil                  langUtil;
     
@@ -347,8 +349,7 @@ public class SRLModel implements Serializable {
     
     transient int                           trainingTreeCnt;
     transient Set<String>                   predicateOverrideKeySet = null;
-    
-    transient SRLVerbNetSP                  verbNetSP = null;
+
 
     /**
      * Constructor 
