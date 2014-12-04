@@ -143,8 +143,8 @@ public class SRLScore {
         return labelMap.get(systemLabel)==labelMap.get(goldLabel);
     }
     
-    public boolean addResult(SRInstance systemSRL, SRInstance goldSRL, Type type) {
-    	boolean same = true;
+    public int[] addResult(SRInstance systemSRL, SRInstance goldSRL, Type type) {
+    	int[] counts = new int[3];
     	
     	boolean headOnly = type.equals(Type.HEAD) || type.equals(Type.DEPHEAD) || type.equals(Type.NODEPHEAD);
     	
@@ -165,41 +165,54 @@ public class SRLScore {
 
         for (int i=0, j=0; i<sysArgs.size() || j<goldArgs.size();) {
             if (i>=sysArgs.size()) {
-            	same = false;
-                macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+            	int goldLabel = labelMap.get(goldArgs.get(j).label);
+            	if (goldLabel!=0)
+            		++counts[2];
+                macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
                 ++j;
                 continue;
             }
             if (j>=goldArgs.size()) {
-            	same = false;
-                macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
+            	int sysLabel = labelMap.get(sysArgs.get(i).label);
+            	if (sysLabel!=0)
+            		++counts[1];
+                macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
                 ++i;
                 continue;
             }
             
             int compare = compare(sysArgs.get(i), goldArgs.get(j), headOnly);
             if (compare<0) {
-            	same = false;
-                macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
+            	int sysLabel = labelMap.get(sysArgs.get(i).label);
+            	if (sysLabel!=0)
+            		++counts[1];
+                macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
                 ++i;
             } else if (compare>0) {
-            	same = false;
-                macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+            	int goldLabel = labelMap.get(goldArgs.get(j).label);
+            	if (goldLabel!=0)
+            		++counts[2];
+                macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
                 ++j;
             } else {
+            	int sysLabel = labelMap.get(sysArgs.get(i).label);
+            	int goldLabel = labelMap.get(goldArgs.get(j).label);
                 if (headOnly || sysArgs.get(i).tokenSet.equals(goldArgs.get(j).tokenSet)) {
-                	macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(goldArgs.get(j).label)]++;
-                    if (labelMap.get(sysArgs.get(i).label)!=labelMap.get(goldArgs.get(j).label))
-                    	same = false;
+                	macroCount[sysLabel][goldLabel]++;
+                	if (sysLabel!=0 && sysLabel==goldLabel)
+                		++counts[0];
                 } else {
-                	same = false;
-                    macroCount[labelMap.get(sysArgs.get(i).label)][labelMap.get(SRLModel.NOT_ARG)]++;
-                    macroCount[labelMap.get(SRLModel.NOT_ARG)][labelMap.get(goldArgs.get(j).label)]++;
+                    macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
+                    macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
                 }
+                if (sysLabel!=0)
+            		++counts[1];
+                if (goldLabel!=0)
+            		++counts[2];
                 ++i; ++j;
             }   
         }
-        return same;
+        return counts;
     }
     
     void filter(SRInstance instance, List<SRArg> args,  Type type) {

@@ -94,14 +94,13 @@ public abstract class LanguageUtil {
     }
     
     public String makePBFrameKey(TBNode node) {
-    	return makePBFrameKey(findStems(node).get(0), getPOS(node.getPOS()));
+    	return findStems(node).get(0);
     }
     
-    public String makePBFrameKey(String roleSetId, POS pos) {
-    	return roleSetId.substring(0, roleSetId.lastIndexOf('.'));
+    public String makePBFrameKey(String lemma, POS pos) {
+    	return lemma;
     }
-    
-    
+
     static final Pattern ARG_PATTERN = Pattern.compile("(([RC]-)?(A[A-Z]*\\d))(\\-[A-Za-z]+)?");
     public static String removePBLabelModifier(String label) {
         Matcher matcher = ARG_PATTERN.matcher(label);

@@ -116,6 +116,8 @@ public class ScoreSRL {
             parser.printUsage(System.err);
             System.exit(0);
         }
+        
+        int[] tCounts = new int[3];
     	
         Properties props = new Properties();
         FileInputStream in = new FileInputStream(options.propFile);
@@ -269,7 +271,13 @@ public class ScoreSRL {
                     for (int i=0; i<scores.length;++i) {
                     	if (options.verbose==Verbose.EC)
                     		printARGDiff(sysInstances.get(i), goldInstance);
-                        boolean match = scores[i].addResult(sysInstances.get(i), goldInstance, options.type);
+                        int[] counts = scores[i].addResult(sysInstances.get(i), goldInstance, options.type);
+                        System.out.printf("COUNTS: %d %d %d\n", counts[0], counts[1], counts[2]);
+                        tCounts[0]+=counts[0];
+                        tCounts[1]+=counts[1];
+                        tCounts[2]+=counts[2];
+                        
+                        boolean match = counts[0]==counts[1] && counts[1]==counts[2];
                         if (!match && options.verbose!=Verbose.NONE && (options.verbose==Verbose.ALL ||
                         			options.verbose==Verbose.VERB && goldInstance.getPredicateNode().getPOS().startsWith("V") ||
                         			options.verbose==Verbose.NOUN && !goldInstance.getPredicateNode().getPOS().startsWith("V"))) { 
@@ -355,6 +363,7 @@ public class ScoreSRL {
             System.out.println(goldArgCnt+" "+sysArgCnt);
         }
         */
+        System.out.printf("COUNTT: %d %d %d\n", tCounts[0], tCounts[1], tCounts[2]);
         for (int i=0; i<scores.length; ++i)
         {
             //System.out.println(systems[i]+":");
@@ -381,6 +390,7 @@ public class ScoreSRL {
             
             System.out.println("union:");
             System.out.println(uScore);
-        } 
+        }
+
     }
 }
