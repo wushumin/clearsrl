@@ -272,7 +272,7 @@ public class ScoreSRL {
                     	if (options.verbose==Verbose.EC)
                     		printARGDiff(sysInstances.get(i), goldInstance);
                         int[] counts = scores[i].addResult(sysInstances.get(i), goldInstance, options.type);
-                        System.out.printf("COUNTS: %d %d %d\n", counts[0], counts[1], counts[2]);
+                        System.out.printf("COUNTS-%c: %d %d %d\n", langUtil.isVerb(goldInstance.getPredicateNode().getPOS())?'v':'n', counts[0], counts[1], counts[2]);
                         tCounts[0]+=counts[0];
                         tCounts[1]+=counts[1];
                         tCounts[2]+=counts[2];
