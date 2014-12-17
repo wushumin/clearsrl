@@ -149,12 +149,12 @@ public class Scorer {
     
     public static void main(String[] args) throws IOException
     {
-        TLongObjectMap<Set<String>> systemLabel = Scorer.readScore(args[0]);
-        TLongObjectMap<Set<String>> goldLabel = Scorer.readScore(args[1]);
+        TLongObjectMap<Set<String>> goldLabel = Scorer.readScore(args[0]);
+        TLongObjectMap<Set<String>> systemLabel = Scorer.readScore(args[1]);
         float[] p = Scorer.score(systemLabel, goldLabel);
         float[] r = Scorer.score(goldLabel, systemLabel);
-        System.out.printf("predicate precision: %.3f, recall: %.3f, f-score: %.3f\n", p[0], r[0], 2*p[0]*r[0]/(p[0]+r[0]));
-        System.out.printf("argument precision: %.3f, recall: %.3f, f-score: %.3f\n", p[1], r[1], 2*p[1]*r[1]/(p[1]+r[1]));
-        System.out.printf("core argument precision: %.3f, recall: %.3f, f-score: %.3f\n", p[2], r[2], 2*p[2]*r[2]/(p[2]+r[2]));
+        System.out.printf("predicate precision: %.2f, recall: %.2f, f-score: %.2f\n", p[0]*100, r[0]*100, 2*p[0]*r[0]/(p[0]+r[0])*100);
+        System.out.printf("core argument precision: %.2f, recall: %.2f, f-score: %.2f\n", p[2]*100, r[2]*100, 2*p[2]*r[2]/(p[2]+r[2])*100);
+        System.out.printf("all argument precision: %.2f, recall: %.2f, f-score: %.2f\n", p[1]*100, r[1]*100, 2*p[1]*r[1]/(p[1]+r[1])*100);
     }
 }

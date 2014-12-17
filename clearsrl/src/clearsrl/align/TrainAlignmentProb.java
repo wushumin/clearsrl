@@ -23,6 +23,11 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -48,7 +53,7 @@ public class TrainAlignmentProb {
 	
 	private static Logger logger = Logger.getLogger("clearsrl");
 	
-	static final float ARG_INCREMENT = 0.2f;
+	static final float ARG_INCREMENT = 0.1f;
 	
 	@Option(name="-prop",usage="properties file")
 	private File propFile = null; 
@@ -61,6 +66,12 @@ public class TrainAlignmentProb {
 
     @Option(name="-model",usage="output probability model")
     private File modelFile = null; 
+    
+    @Option(name="-fmeasure",usage="use fmeasure of alignment & prob")
+    private boolean fMeasure = false;
+    
+    @Option(name="-round",usage="number of rounds")
+    private int round = 5;
     
     @Option(name="-overWrite",usage="overwrite object stream file if it exists")
     private boolean overWrite = false;
@@ -138,6 +149,34 @@ public class TrainAlignmentProb {
 				return this.val>rhs.val?-1:1;
 	        return this.key.compareTo(rhs.key);
         }
+	}
+	
+	class AlignJob implements Runnable{
+		SentencePair sp;
+		int idx;
+		Aligner[] aligners;
+		double[] tScores;
+		int[] aCnts;
+		
+		public AlignJob(SentencePair sp, int idx, Aligner[] aligners, double[] tScores, int[] aCnts) {
+			this.sp = sp;
+			this.idx = idx;
+			this.aligners = aligners;
+			this.tScores = tScores;
+			this.aCnts = aCnts;
+		}
+
+		@Override
+        public void run() {
+	        // TODO Auto-generated method stub
+			Alignment[] al = aligners[idx].align(sp);
+			synchronized (aligners[idx]) {
+				for (Alignment alignment:al) 
+					tScores[idx]+=alignment.getCompositeScore();
+				aCnts[idx]+=al.length;
+			}
+        }
+		
 	}
 	
 	void printMap(SortedMap<String, CountProb<String>> probMap, PrintStream out, String formatString, int maxCnt) {
@@ -252,8 +291,96 @@ public class TrainAlignmentProb {
 		}
 	}
 	
+	int findBestAligner(List<SentencePair> spPairs, Aligner[] aligners){
+		double[] tScores = new double[aligners.length];
+		int[] aCnts = new int[aligners.length];
+
+		for (SentencePair sp:spPairs) {
+        	//filterProps(sp.src);
+        	//filterProps(sp.dst);
+        	
+        	for (int i=0; i<aligners.length; ++i) {
+        		Alignment[] al = aligners[i].align(sp);
+				for (Alignment alignment:al) 
+					tScores[i]+=alignment.getCompositeScore();
+				aCnts[i]+=al.length;
+        	}
+		}
+        
+		double highScore = Double.MIN_VALUE;
+		int bestIdx = -1;
+		
+		for (int i=0; i<tScores.length; i++) {
+			if (tScores[i]>highScore) {
+				highScore = tScores[i];
+				bestIdx = i;
+			}
+			System.out.printf("alpha = %f, beta = %f, cnt = %d, score = %f\n", aligners[i].predProbWeight, aligners[i].argProbWeight, aCnts[i], tScores[i]);
+		}
+		
+		System.out.printf("best result: alpha = %f, beta = %f, cnt = %d, score = %f\n", aligners[bestIdx].predProbWeight, aligners[bestIdx].argProbWeight, aCnts[bestIdx], tScores[bestIdx]);
+		
+		return bestIdx;
+	}
 	
-	
+
+	int findBestAligner(File objFile, Aligner[] aligners)  throws IOException {
+		double[] tScores = new double[aligners.length];
+		int[] aCnts = new int[aligners.length];
+		
+		int cpus = Runtime.getRuntime().availableProcessors();
+        // more than 4 processors is probably hyper-thread cores
+        if (cpus>4) 
+        	cpus = cpus/2;
+		
+		ExecutorService executor = //Executors.newFixedThreadPool(cpus-1);
+				new ThreadPoolExecutor(cpus-1, cpus-1, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(1000), new ThreadPoolExecutor.CallerRunsPolicy());
+		
+		ObjectInputStream inStream = new ObjectInputStream(new BufferedInputStream(new GZIPInputStream(new FileInputStream(objFile),GZIP_BUFFER),GZIP_BUFFER*4));
+
+		int cnt = 0;
+		while (true)
+			try {
+				SentencePair sp = (SentencePair) inStream.readObject();
+            	filterProps(sp.src);
+            	filterProps(sp.dst);
+            	
+            	for (int i=0; i<aligners.length; ++i) {
+            		executor.execute(new AlignJob(sp, i, aligners, tScores, aCnts));
+            	}
+        		if (++cnt%10000==0)
+        			logger.info(String.format("read %d sentences", cnt));
+			} catch (Exception e) {
+				if (!(e instanceof EOFException))
+					e.printStackTrace();
+				break;
+			}
+		inStream.close();
+		
+		executor.shutdown();
+        
+        while (true)
+            try {
+                if (executor.awaitTermination(1, TimeUnit.MINUTES)) break;
+            } catch (InterruptedException e) {
+                logger.severe(e.getMessage());
+            }
+		
+		double highScore = Double.MIN_VALUE;
+		int bestIdx = -1;
+		
+		for (int i=0; i<tScores.length; i++) {
+			if (tScores[i]>highScore) {
+				highScore = tScores[i];
+				bestIdx = i;
+			}
+			System.out.printf("alpha = %f, beta = %f, cnt = %d, score = %f\n", aligners[i].predProbWeight, aligners[i].argProbWeight, aCnts[i], tScores[i]);
+		}
+		
+		System.out.printf("best result:\nalpha = %f, beta = %f, cnt = %d, score = %f\n", aligners[bestIdx].predProbWeight, aligners[bestIdx].argProbWeight, aCnts[bestIdx], tScores[bestIdx]);
+		
+		return bestIdx;
+	}
 	
 	AlignmentProb processCorpus(File objFile, Aligner aligner, Aligner oldAligner) throws IOException {
 		double tScore = 0;
@@ -340,7 +467,7 @@ public class TrainAlignmentProb {
         }
         props = PropertyUtil.resolveEnvironmentVariables(props);
         
-        Aligner aligner = new Aligner(0.05f, null, 0, 0);
+        Aligner aligner = new Aligner(0.05f, null, 0, 0, options.fMeasure);
         
         LanguageUtil chUtil = (LanguageUtil) Class.forName(props.getProperty("chinese.util-class")).newInstance();
         if (!chUtil.init(PropertyUtil.filterProperties(props,"chinese."))) {
@@ -355,9 +482,13 @@ public class TrainAlignmentProb {
         }
        
         List<SentencePair> bcSentences = readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
-        List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil); 
-        List<SentencePair> nwpartSentences = readSentencePairs(props, "nwpart.", "auto.", chUtil, enUtil); 
-        List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil); 
+        List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
+        List<SentencePair> bcGWASentences = readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
+        //List<SentencePair> nwGWASentences = readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
+        List<SentencePair> bcBerkSentences = readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
+        List<SentencePair> nwtestBerkSentences = readSentencePairs(props, "nwtest.", "berk.", chUtil, enUtil); 
+        List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
+        List<SentencePair> nwtestGWASentences = readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil); 
         
         AlignmentProb probMap = null;
         if (options.objFile!=null && options.objFile.exists() && ! options.overWrite)
@@ -376,36 +507,70 @@ public class TrainAlignmentProb {
         	objStream.close();
         }
 
-        float increment = ARG_INCREMENT;
-        int rounds = 5;
+
+        float[] alphaList = {0.15f, 0.175f, 0.2f, 0.225f, 0.25f, 0.3f, 0.35f};
+        float[] betaList = {0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f};
         
-        for (int r=0; r<rounds; ++r) {
+        float bestAlpha = 0.2f;
+        float bestBeta = 0.1f;
+
+        float increment = ARG_INCREMENT;
+        
+        Aligner[] aligners = new Aligner[alphaList.length*betaList.length];
+        
+        aligner.alignThreshold = 0.2f*(1-0.8f*bestBeta);
+        
+        for (int r=0; r<options.round; ++r) {
         
         	AlignmentProb oldProbMap = probMap;
- 	        Aligner oldAligner = aligner;
- 	        aligner = new Aligner(0.05f, oldProbMap, increment, increment);
-        	
-        	writeAlignments(props, "bc.", "auto.", bcSentences, aligner, r);
-        	writeAlignments(props, "nw.", "auto.", nwSentences, aligner, r);
-        	writeAlignments(props, "nwpart.", "auto.", nwpartSentences, aligner, r);
-        	writeAlignments(props, "nwtest.", "auto.", nwtestSentences, aligner, r);
-        	
-        	if (r+1==rounds) break;
+ 	        Aligner oldAligner = aligner; 	        
  	        
-        	aligner.alignThreshold = 0.05f;
+ 	        aligner = new Aligner(oldAligner.alignThreshold, oldProbMap, bestAlpha, bestBeta, options.fMeasure);
+ 	        
+        	int idx = 0;
+ 	        for (float alpha:alphaList)
+	        	for (float beta:betaList)
+	        		aligners[idx++] = new Aligner(0.2f*(1-0.8f*beta), aligner.probMap, alpha, beta, options.fMeasure);
+ 	        
+ 	        //aligner.alignThreshold = 0.18f*(1+increment)*(r+1);
         	
-	        if (options.objFile!=null && options.objFile.exists())
-	        	probMap = options.processCorpus(options.objFile, aligner, oldAligner);
-	        else
-	        	probMap = options.readCorpus(options.inFileList, options.objFile, props, chUtil, enUtil, aligner);
-	        
-	        aligner.alignThreshold = 0.05f;
+ 	        writeAlignments(props, "bc.", "auto.", bcSentences, aligner, r);
+ 	        writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligner, r);
+ 	        
+ 	        writeAlignments(props, "nwtest.", "auto.", nwtestSentences, aligner, r);
+ 	        writeAlignments(props, "nwtest.", "berk.", nwtestBerkSentences, aligner, r);
+ 	        
+ 	        aligner.alignThreshold *= 2;
+ 	        writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligner, r);
+ 	        writeAlignments(props, "nwtest.", "gwa.", nwtestGWASentences, aligner, r);
+        	//System.out.print("bc.auto "); writeAlignments(props, "bc.", "auto.", bcSentences, aligners[options.findBestAligner(bcSentences, aligners)], r);
+        	//System.out.print("bc.gwa  "); writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligners[options.findBestAligner(bcGWASentences, aligners)], r);
+        	//System.out.print("bc.berk "); writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligners[options.findBestAligner(bcBerkSentences, aligners)], r);
+        	//System.out.print("nw.auto "); writeAlignments(props, "nw.", "auto.", nwSentences, aligners[options.findBestAligner(nwSentences, aligners)], r);
+        	//System.out.print("nw.gwa  "); writeAlignments(props, "nw.", "gwa.", nwGWASentences, aligners[options.findBestAligner(nwGWASentences, aligners)], r);
+        	//System.out.print("nw.berk "); writeAlignments(props, "nw.", "berk.", nwBerkSentences, aligners[options.findBestAligner(nwBerkSentences, aligners)], r);
+        	//System.out.print("nwtest.auto "); writeAlignments(props, "nwtest.", "auto.", nwtestSentences, aligners[options.findBestAligner(nwtestSentences, aligners)], r);
+        	
+        	if (r+1==options.round) break;
+        	
+        	//aligner.alignThreshold = 0.05f;
+ 
+ 	        aligner = aligners[options.findBestAligner(options.objFile, aligners)];
+ 	        bestAlpha = aligner.predProbWeight;
+ 	        bestBeta = aligner.argProbWeight;
+        	probMap = options.processCorpus(options.objFile, aligner, oldAligner);
+
+	        //aligner.alignThreshold = 0.05f;
 	        
 	        options.processSentences(probMap, aligner, bcSentences);
 	        options.processSentences(probMap, aligner, nwSentences);
 	        probMap.makeProb();
 	        
-	        increment = 1-(1-ARG_INCREMENT)*(1-increment);
+	        
+	        /*if (options.fMeasure)
+	        	increment += ARG_INCREMENT;
+	        else 
+	        	increment = 1-(1-ARG_INCREMENT)*(1-increment);*/
 	        
         }
         

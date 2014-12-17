@@ -206,9 +206,9 @@ public class TestSRLVerbNetSP {
         	scoringLabels[i] = scoringLabels[i].trim();
         
         boolean coreOnly = false;
-        //System.out.println("Train: ");
-        //validate(sp, countDB, coreOnly, true);
-        /*
+        System.out.println("Train: ");
+        validate(sp, countDB, coreOnly, false, scoringLabels);
+        
         if (options.devFile!=null) {
         	System.out.println("Dev: ");
         	countDB = SRLSelPref.readTrainingCount(options.devFile);
@@ -219,13 +219,13 @@ public class TestSRLVerbNetSP {
         	System.out.println("Test: ");
         	countDB = SRLSelPref.readTrainingCount(options.testFile);
         	validate(sp, countDB, coreOnly, false, scoringLabels);
-        }*/
+        }
         
 
         EnumSet<Source> srcSet = Sentence.readSources(props.getProperty("dev.corpus.source"));
         Source srcTreeType = Source.TREEBANK;
         
-        String sourceList = props.getProperty("dev.corpus","");
+        String sourceList = props.getProperty("test.corpus","");
         String[] sources = sourceList.trim().split("\\s*,\\s*");
 
         Map<String, Sentence[]> sentenceMap = null;
@@ -260,8 +260,10 @@ public class TestSRLVerbNetSP {
             		
             		List<String> predictedLabels = predictLabels(sp, instance, argList);
             		
-            		for (int i=0; i<argList.size(); ++i)
+            		for (int i=0; i<argList.size(); ++i) {
+            			if (sp.getSPHeadword(argList.get(i).node)!=null)
             			score.addResult(predictedLabels.get(i), argList.get(i).getLabel());
+            		}
             	}
             }
         }

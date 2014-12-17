@@ -41,6 +41,7 @@ public class Aligner {
     AlignmentProb probMap;
     float         predProbWeight;
     float         argProbWeight;
+    boolean       useFMeasure;
     
     public enum Method {
         DEFAULT,
@@ -52,15 +53,15 @@ public class Aligner {
         this(0.05f);
     }
     
-    public Aligner(AlignmentProb probMap, float predProbWeight, float argProbWeight){
-        this(0.05f, probMap, predProbWeight, argProbWeight);
-    }
+    //public Aligner(AlignmentProb probMap, float predProbWeight, float argProbWeight){
+    //    this(0.05f, probMap, predProbWeight, argProbWeight);
+    //}
     
     public Aligner(float threshold){
-        this(threshold, null, 0, 0);
+        this(threshold, null, 0, 0, false);
     }
     
-    public Aligner(float threshold, AlignmentProb probMap, float predProbWeight, float argProbWeight){
+    public Aligner(float threshold, AlignmentProb probMap, float predProbWeight, float argProbWeight, boolean useFMeasure){
         this.probMap = probMap;
         this.alignThreshold = threshold;
         this.predProbWeight = predProbWeight;
@@ -78,7 +79,7 @@ public class Aligner {
         for (int i=0; i<alignMatrix.length; ++i)
             for (int j=0; j<alignMatrix[i].length; ++j)
             {
-                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight);
+                alignMatrix[i][j] = new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight, useFMeasure);
                 alignMatrix[i][j].computeSymmetricAlignment();
             }
         
@@ -158,7 +159,7 @@ public class Aligner {
                 if (Arrays.binarySearch(indices, dstIdx)>=0)
                 {
                     //System.out.printf("%s => %s\n", srcInstance.predicateNode.word, dstInstance.predicateNode.word);
-                    alignment.add(new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight));
+                    alignment.add(new Alignment(sentence, i, j, BETA_SQR, probMap, predProbWeight, argProbWeight, useFMeasure));
                     break;
                 }
             }

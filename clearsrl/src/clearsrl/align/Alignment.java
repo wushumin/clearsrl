@@ -15,7 +15,7 @@ import clearcommon.treebank.TBNode;
 
 public class Alignment implements Comparable<Alignment>{
 
-    private static final float ARGNUMFACTOR = 1.5f;
+    private static final float COREARGFACTOR = 1.5f;
     private static final float ARGFACTOR = 1.0f;
     private static final float PREDICATEFACTOR = 2.0f;
     
@@ -39,8 +39,9 @@ public class Alignment implements Comparable<Alignment>{
     AlignmentProb       probMap;
     float               predProbWeight;
     float               argProbWeight;
+    boolean             useFMeasure;
     
-    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float predProbWeight, float argProbWeight) 
+    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float predProbWeight, float argProbWeight, boolean useFMeasure) 
     {
         this.sentence = sentence;
         this.srcPBIdx = srcPBIdx;
@@ -50,6 +51,7 @@ public class Alignment implements Comparable<Alignment>{
         this.probMap = probMap;
         this.predProbWeight = predProbWeight;
         this.argProbWeight = argProbWeight;
+        this.useFMeasure = useFMeasure;
     }
     
     static float getFScore(float lhs, float rhs, float bias)
@@ -122,25 +124,25 @@ public class Alignment implements Comparable<Alignment>{
         float predicateFactor = 0.0f;
         float predicateWeight = 0.0f;
         float argWeight       = 0.0f;
-        float argNumFactor    = 1.0f;
-        float argNumWeight    = 0.0f;
-        float argMFactor      = 1/ARGNUMFACTOR;
-        float argMWeight      = 0.0f;
+        float coreArgFactor    = 1.0f;
+        float coreArgWeight    = 0.0f;
+        float modArgFactor      = 1/COREARGFACTOR;
+        float modArgWeight      = 0.0f;
         
         for (ArgAlignment argAlignment:argAlignments)
         {
             if (argAlignment.getSrcArg().getLabel().equals("rel"))
                 predicateWeight += argAlignment.weight;
             else if (argAlignment.getSrcArg().getLabel().matches(".*ARG\\d"))
-                argNumWeight += argAlignment.weight;
+                coreArgWeight += argAlignment.weight;
             else
-                argMWeight += argAlignment.weight;
+                modArgWeight += argAlignment.weight;
         }
         
-        if (argNumWeight>0 && argNumWeight<argMWeight)
-            argMFactor = argNumWeight/argMWeight*argMFactor;
+        if (coreArgWeight>0 && coreArgWeight<modArgWeight)
+            modArgFactor = coreArgWeight/modArgWeight*modArgFactor;
         
-        argWeight = argNumFactor*argNumWeight+argMFactor*argMWeight;
+        argWeight = coreArgFactor*coreArgWeight+modArgFactor*modArgWeight;
         
         if (predicateWeight>0 && argWeight>predicateWeight*ARGFACTOR)
             predicateFactor = argWeight/ARGFACTOR/predicateWeight;
@@ -150,17 +152,17 @@ public class Alignment implements Comparable<Alignment>{
         float denom = predicateFactor*predicateWeight+argWeight;
         
         predicateFactor/=denom;
-        argNumFactor/=denom;
-        argMFactor/=denom;
+        coreArgFactor/=denom;
+        modArgFactor/=denom;
         
         for (ArgAlignment argAlignment:argAlignments)
         {
             if (argAlignment.getSrcArg().getLabel().equals("rel"))
                 argAlignment.factor = predicateFactor;
             else if (argAlignment.getSrcArg().getLabel().matches(".*ARG\\d"))
-                argAlignment.factor = argNumFactor;
+                argAlignment.factor = coreArgFactor;
             else
-                argAlignment.factor = argMFactor;
+                argAlignment.factor = modArgFactor;
         }
         
         return argAlignments;
@@ -256,8 +258,15 @@ public class Alignment implements Comparable<Alignment>{
                 dstSrcScore[j][i] /= dstSrcAlignment[j].weight;
                 
                 if (argProbWeight!=0 && srcDstProb!=null && dstSrcProb!=null) {
-                	srcDstScore[i][j] *= (float)(1-argProbWeight+argProbWeight*srcDstProb[i][j]);
-                	dstSrcScore[j][i] *= (float)(1-argProbWeight+argProbWeight*dstSrcProb[j][i]);
+                	if (useFMeasure) {
+                		srcDstScore[i][j] = getFScore(srcDstScore[i][j], (float)srcDstProb[i][j], argProbWeight);
+                		dstSrcScore[i][j] = getFScore(dstSrcScore[i][j], (float)dstSrcProb[i][j], argProbWeight);
+                	} else {
+                    	srcDstScore[i][j] *= (float)(1-argProbWeight+argProbWeight*srcDstProb[i][j]);
+                    	dstSrcScore[j][i] *= (float)(1-argProbWeight+argProbWeight*dstSrcProb[j][i]);
+                		//srcDstScore[i][j] = (float)((1-argProbWeight)*srcDstScore[i][j]+argProbWeight*srcDstProb[i][j]);
+                		//dstSrcScore[j][i] = (float)((1-argProbWeight)*dstSrcScore[j][i]+argProbWeight*dstSrcProb[j][i]);
+                	}
                 }
             }
         
@@ -273,14 +282,17 @@ public class Alignment implements Comparable<Alignment>{
             dstScore += argAlign.score*argAlign.getFactoredWeight();
         
         if (probMap!=null && predProbWeight != 0) {
-        	float predScore = probMap==null?1:(float)probMap.getPredProb(true, getSrcPBInstance(), getDstPBInstance(), true);
-        	srcScore *= (1-predProbWeight)+predProbWeight*predScore;
+        	float srcPredProb = probMap==null?1:(float)probMap.getPredProb(true, getSrcPBInstance(), getDstPBInstance(), true);
+        	float dstPredProb = probMap==null?1:(float)probMap.getPredProb(false, getDstPBInstance(), getSrcPBInstance(), true);
+//        	if (useFMeasure) {
+//        		srcScore = getFScore(srcScore, srcPredProb, predProbWeight);
+//        		dstScore = getFScore(dstScore, dstPredProb, predProbWeight);
+//        	} else {
+	        	srcScore *= (1-predProbWeight)+predProbWeight*srcPredProb;
+	        	dstScore *= (1-predProbWeight)+predProbWeight*dstPredProb;
+//        	}
         	
         	if (srcScore>1) srcScore = 1;
-        	
-        	predScore = probMap==null?1:(float)probMap.getPredProb(false, getDstPBInstance(), getSrcPBInstance(), true);
-        	dstScore *= (1-predProbWeight)+predProbWeight*predScore;
-        	
         	if (dstScore>1) dstScore = 1;
         }
     }

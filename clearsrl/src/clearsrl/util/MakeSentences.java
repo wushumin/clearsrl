@@ -79,18 +79,21 @@ public class MakeSentences {
         }
    
         readSentencePairs(props, "bc.", "gold.", chUtil, enUtil);
+        readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
         readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
         readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
         
-        readSentencePairs(props, "nw.", "gold.", chUtil, enUtil);
-        readSentencePairs(props, "nw.", "berk.", chUtil, enUtil);
-        readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
+        //readSentencePairs(props, "nw.", "gold.", chUtil, enUtil);
+        //readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
+        //readSentencePairs(props, "nw.", "berk.", chUtil, enUtil);
+        //readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
         
-        readSentencePairs(props, "nwpart.", "gold.", chUtil, enUtil);
-        readSentencePairs(props, "nwpart.", "berk.", chUtil, enUtil);
-        readSentencePairs(props, "nwpart.", "auto.", chUtil, enUtil);
+        //readSentencePairs(props, "nwpart.", "gold.", chUtil, enUtil);
+        //readSentencePairs(props, "nwpart.", "berk.", chUtil, enUtil);
+        //readSentencePairs(props, "nwpart.", "auto.", chUtil, enUtil);
         
         readSentencePairs(props, "nwtest.", "gold.", chUtil, enUtil);
+        readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil);
         readSentencePairs(props, "nwtest.", "berk.", chUtil, enUtil);
         readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
         

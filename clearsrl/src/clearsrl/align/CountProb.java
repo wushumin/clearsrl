@@ -53,8 +53,8 @@ public class CountProb<T> implements Serializable {
     	}
     	
     	if (rate<=0)
-    		rate = 1-0.9/(Math.log10(cntSum)+1);
-
+    		//rate = 1-0.9/(Math.log10(cntSum)+1);
+    		rate = 1-0.95/(Math.log1p(cntSum)+1);
     	TObjectDoubleMap<T> wholeProbMap = new TObjectDoubleHashMap<T>();
     	
     	for (TObjectDoubleIterator<T> iter=backoffProbMap.iterator(); iter.hasNext();) {
