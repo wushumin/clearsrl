@@ -9,6 +9,7 @@ import gnu.trove.map.TIntDoubleMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TDoubleDoubleHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.io.BufferedReader;
@@ -18,15 +19,19 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class Scorer {
 
-    public static TLongObjectMap<Set<String>> readScore(String filename) throws FileNotFoundException
+    public static SortedMap<Integer, SortedMap<Integer, Set<String>>> readScore(String filename) throws FileNotFoundException
     {
-        TLongObjectMap<Set<String>> scores = new TLongObjectHashMap<Set<String>>();
+    	SortedMap<Integer, SortedMap<Integer, Set<String>>> scores = new TreeMap<Integer, SortedMap<Integer, Set<String>>>();
+
         Scanner scanner = new Scanner(new BufferedReader(new FileReader(filename)));
         
-        long   sentenceId;
+        int   sentenceId;
         int    srcSRLId;
         int    dstSRLId;
         
@@ -43,10 +48,17 @@ public class Scorer {
         
             if (tokens.length<4) continue;
             try {
-                sentenceId = Long.parseLong(tokens[0].trim());
+                sentenceId = Integer.parseInt(tokens[0].trim());
                 srcSRLId = Short.parseShort(tokens[1].trim());
                 dstSRLId = Short.parseShort(tokens[2].trim());
-                scores.put((sentenceId<<32)|(srcSRLId<<16)|dstSRLId,argSet);
+                
+                int innerId = (srcSRLId<<16)|dstSRLId;
+                
+                SortedMap<Integer, Set<String>> innerMap = scores.get(sentenceId);
+                if (innerMap==null)
+                	scores.put(sentenceId, innerMap=new TreeMap<Integer, Set<String>>());
+                
+                innerMap.put(innerId, argSet);
             } 
             catch (NumberFormatException e)
             {
@@ -70,39 +82,68 @@ public class Scorer {
         return scores;
     }
     
-    public static float[] score(TLongObjectMap<Set<String>> lhs, TLongObjectMap<Set<String>> rhs)
+    public static float[][] score(SortedMap<Integer, SortedMap<Integer, Set<String>>> lhs, SortedMap<Integer, SortedMap<Integer, Set<String>>> rhs)
     {
-        float[] ret = new float[3];
-        float score=0, scoreArg=0, scoreCoreArg=0;
-        float cnt=0, cntArg=0, cntCoreArg=0;
-
-        for (TLongObjectIterator<Set<String>> iter=lhs.iterator(); iter.hasNext();)
-        {
-            iter.advance();
-            Set<String> lhsArgSet = iter.value();
-            Set<String> rhsArgSet = null;
-            
-            for (String s:lhsArgSet)
-                if (s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*")) 
-                	cntCoreArg++;
-            
-            if ((rhsArgSet=rhs.get(iter.key()))!=null)
-            {
-                score++;
-                for (String s:lhsArgSet)
-                    if (rhsArgSet.contains(s))
-                    {
-                        if (s.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*")) scoreCoreArg++;
-                        scoreArg++;
-                    }
-            }
-            cntArg+=lhsArgSet.size();
-            cnt++;
-        }
+        float[][] ret = new float[3][3];
         
-        ret[0] = cnt==0?0:score/cnt;
-        ret[1] = cntArg==0?0:scoreArg/cntArg;
-        ret[2] = cntCoreArg==0?0:scoreCoreArg/cntCoreArg;
+        TreeSet<Integer> sentenceIds = new TreeSet<Integer>(lhs.keySet());
+        sentenceIds.addAll(rhs.keySet());
+        
+        for (int s=1; s<=sentenceIds.last(); ++s) {
+        	int sentenceId = s;
+        	SortedMap<Integer, Set<String>> lhsMap = lhs.get(sentenceId);
+        	SortedMap<Integer, Set<String>> rhsMap = rhs.get(sentenceId);
+        	
+        	int[][] cnts = new int[3][3];
+
+        	if (lhsMap!=null) {
+        		cnts[0][1] = lhsMap.size();
+        		for (SortedMap.Entry<Integer, Set<String>> entry:lhsMap.entrySet()) {
+        			for (String label:entry.getValue())
+        				if (label.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*"))
+        					cnts[1][1]++;
+        			cnts[2][1]+=entry.getValue().size();
+        		}
+        	}
+        		
+        		
+        	if (rhsMap!=null) {
+        		cnts[0][2] = rhsMap.size();
+        		for (SortedMap.Entry<Integer, Set<String>> entry:rhsMap.entrySet()) {
+        			for (String label:entry.getValue())
+        				if (label.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*"))
+        					cnts[1][2]++;
+        			cnts[2][2]+=entry.getValue().size();
+        		}
+        	}
+        	
+        	if (lhsMap!=null && rhsMap!=null) {
+        		TreeSet<Integer> idMap = new TreeSet<Integer>(lhsMap.keySet());
+        		idMap.retainAll(rhsMap.keySet());
+        		cnts[0][0] = idMap.size();
+        		
+        		for (int id:idMap) {
+        			Set<String> lhsSet = lhsMap.get(id);
+        			Set<String> rhsSet = rhsMap.get(id);
+        			
+        			for (String label:lhsSet)
+        				if (rhsSet.contains(label)) {
+        					cnts[2][0]++;
+        					if (label.matches("ARG\\d(_\\d+)*<->ARG\\d(_\\d+)*"))
+        						cnts[1][0]++;
+        				}
+        		}
+        	}
+        	
+        	System.out.printf("PRED_COUNTS: %d %d %d\n", cnts[0][0], cnts[0][1], cnts[0][2]);
+        	System.out.printf("CORE_COUNTS: %d %d %d\n", cnts[1][0], cnts[1][1], cnts[1][2]);
+        	System.out.printf("ARGA_COUNTS: %d %d %d\n", cnts[2][0], cnts[2][1], cnts[2][2]);
+        	
+        	for (int i=0; i<cnts.length; ++i)
+        		for (int j=0; j<cnts[i].length; ++j)
+        			ret[i][j]+=cnts[i][j];
+        }
+
         return ret;
     }
 
@@ -149,12 +190,18 @@ public class Scorer {
     
     public static void main(String[] args) throws IOException
     {
-        TLongObjectMap<Set<String>> goldLabel = Scorer.readScore(args[0]);
-        TLongObjectMap<Set<String>> systemLabel = Scorer.readScore(args[1]);
-        float[] p = Scorer.score(systemLabel, goldLabel);
-        float[] r = Scorer.score(goldLabel, systemLabel);
-        System.out.printf("predicate precision: %.2f, recall: %.2f, f-score: %.2f\n", p[0]*100, r[0]*100, 2*p[0]*r[0]/(p[0]+r[0])*100);
-        System.out.printf("core argument precision: %.2f, recall: %.2f, f-score: %.2f\n", p[2]*100, r[2]*100, 2*p[2]*r[2]/(p[2]+r[2])*100);
-        System.out.printf("all argument precision: %.2f, recall: %.2f, f-score: %.2f\n", p[1]*100, r[1]*100, 2*p[1]*r[1]/(p[1]+r[1])*100);
+    	SortedMap<Integer, SortedMap<Integer, Set<String>>> goldLabel = Scorer.readScore(args[0]);
+    	SortedMap<Integer, SortedMap<Integer, Set<String>>> systemLabel = Scorer.readScore(args[1]);
+        float[][] cnts = Scorer.score(systemLabel, goldLabel);
+        
+        for (int i=0; i<cnts.length; ++i) {
+        	cnts[i][1] = cnts[i][0]/cnts[i][1];
+        	cnts[i][2] = cnts[i][0]/cnts[i][2];
+        	cnts[i][0] = 2*cnts[i][1]*cnts[i][2]/(cnts[i][1]+cnts[i][2]);
+        }
+        
+        System.out.printf("predicate precision: %.2f, recall: %.2f, f-score: %.2f\n", cnts[0][1]*100, cnts[0][2]*100, cnts[0][0]*100);
+        System.out.printf("core argument precision: %.2f, recall: %.2f, f-score: %.2f\n", cnts[1][1]*100, cnts[1][2]*100, cnts[1][0]*100);
+        System.out.printf("all argument precision: %.2f, recall: %.2f, f-score: %.2f\n", cnts[2][1]*100, cnts[2][2]*100, cnts[2][0]*100);
     }
 }
