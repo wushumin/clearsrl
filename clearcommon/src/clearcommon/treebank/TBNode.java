@@ -51,7 +51,7 @@ public class TBNode implements Serializable {
     public static final Pattern WORD_PATTERN = Pattern
             .compile("\\A([^-]+)(-\\d+)?\\z");
     public static final Pattern POS_PATTERN = Pattern
-            .compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-|-LSB-|-RSB-)((-[a-zA-Z]+)*)((-\\d+)*(\\=\\d+)?(-\\d+)*)\\z");
+            .compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-|-LSB-|-RSB-)((-[a-zA-Z][a-zA-Z0-9]*)*)((-\\d+)*(\\=\\d+)?(-\\d+)*)\\z");
 
     static final TBNode[] NO_CHILDREN = new TBNode[0];
 
