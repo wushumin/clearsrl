@@ -1508,7 +1508,7 @@ public class SRLModel implements Serializable {
                     sampleFlat.put(feature, langUtil.getConstructionTypes(predicateNode));
                 break;
             case SUBCATEGORIZATION: 
-                {
+                if (parent!=null) {
                     StringBuilder builder = new StringBuilder();
                     builder.append(parent.getPOS()+RIGHT_ARROW);
                     for (TBNode node:parent.getChildren())
