@@ -2070,10 +2070,10 @@ public class SRLModel implements Serializable {
                 } else if (predicateModel.predictValues(predFeatures, vals)==isPredVal) {
                 	makeProb(vals);
                     predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), vals[1])); 
-                } else if (langUtil.isVerb(node.getPOS()) && node.getConstituentByHead()!=node && langUtil.getFrame(node)!=null) {
+                } /*else if (langUtil.isVerb(node.getPOS()) && node.getConstituentByHead()!=node && langUtil.getFrame(node)!=null) {
                 	logger.fine("overrode classifying verb predicate "+node);
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
-                }
+                }*/
             }
         } else
             for (SRInstance goldSRL:goldSRLs) {
