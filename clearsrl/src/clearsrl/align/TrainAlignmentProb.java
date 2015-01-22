@@ -100,14 +100,28 @@ public class TrainAlignmentProb {
     static void writeAlignments(Properties props, String filter1, String filter2, List<SentencePair> sentList, Aligner aligner, int round) throws Exception {
     	props = PropertyUtil.filterProperties(props, filter1, true);
 		props = PropertyUtil.filterProperties(props, filter2, true);
-    	PrintStream out = new PrintStream(props.getProperty("output.txt")+".r"+round);
 		
+		String fName = props.getProperty("output.txt");		
+    	PrintStream out = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+".r"+round+"."+fName.substring(fName.lastIndexOf('.')+1));
+		
+    	
+    	PrintStream outhtml = null;
+    	fName = props.getProperty("output.html");		
+    	if (fName!=null) {
+    		outhtml = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+".r"+round+"."+fName.substring(fName.lastIndexOf('.')+1));
+    		Aligner.initAlignmentOutput(outhtml);
+    	}
+    	
     	for (SentencePair s:sentList) {
 			Alignment[] alignments = aligner.align(s);
 			for (Alignment alignment:alignments)
 				out.printf("%d,%s;[%s,%s]\n",s.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+			if (outhtml!=null)
+				Aligner.printAlignment(outhtml, s, alignments);
 		}
     	out.close();
+    	if (outhtml!=null)
+			Aligner.finalizeAlignmentOutput(outhtml);
     }
     
 	

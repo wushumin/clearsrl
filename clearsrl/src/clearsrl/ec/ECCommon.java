@@ -57,6 +57,7 @@ public final class ECCommon {
         
         H_VOICE,
 
+        
      // SRL feature
         SRL_LEMMA,              // lemma of the closest predicate to the right
         SRL_POS,                // part-of-speech of the closest predicate to the right
@@ -91,6 +92,14 @@ public final class ECCommon {
         D_SRL_BEHINDARG,          // positioned behind an argument
         D_SRL_INARG,              // positioned inside an argument of the predicate
 
+
+        D_IP_ISCHILD,             // for position left of verb, if the common ancestor has an IP
+        D_IP_LEFTSIB,             // POS of the left sibling under IP
+        D_IP_RIGHTSIB,            // POS of right sibling under IP
+        D_IP_INCP,                // if IP is in CP (for both left & right)
+        D_VP_ISCHILD,             // for position right of verb, if the common ancestor has an VP
+        D_VP_LEFTSIB,             // POS of the left sibling under VP
+        D_VP_RIGHTSIB,            // POS of right sibling under VP
         
         PARSE_FRAME,
         
@@ -199,6 +208,17 @@ public final class ECCommon {
             if (headConstituent.isTerminal())
                 continue;
             
+            if (!head.getPOS().startsWith("V")) {
+	        	TBNode constituent = head;
+	        	while (constituent!=headConstituent) {
+	        		if (constituent.getPOS().matches("[CIQ]P"))
+	        			break;
+	        		constituent = constituent.getParent();
+	        	}
+	        	if (!constituent.getPOS().matches("[CIQ]P"))
+	        		continue;
+	        }
+ 
             TBNode node = head;
             while (node!=headConstituent) {
                 node = node.getParent();
@@ -298,7 +318,8 @@ public final class ECCommon {
                 continue;
             }
         	if (terminal.getHeadOfHead()==null || !terminal.getHeadOfHead().isToken()) {
-        		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex());
+        		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex()+" "+terminal.getTerminalIndex());
+        		System.err.println(tree.toPrettyParse());
         		continue;
         	}
         	
@@ -320,8 +341,11 @@ public final class ECCommon {
                 break;
             }
             if (!ecType.equals(ECCommon.NOT_EC)) {
-            	if (labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]))
-            		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex());
+            	if (labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]!=null && !ECCommon.NOT_EC.equals(labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1])) {
+            		System.err.println("Weird head link "+tree.getFilename()+":"+tree.getIndex()+" "+terminal.getTerminalIndex());
+            		System.err.println(tree.toPrettyParse());
+            	}
+            	
                 labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]=(labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]==null||labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]==ECCommon.NOT_EC)?ecType:labels[terminal.getHeadOfHead().getTokenIndex()][tokenIdx+1]+' '+ecType;
             }
         }

@@ -1,9 +1,9 @@
 package clearsrl;
 
+import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.util.LanguageUtil;
-
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -458,5 +458,56 @@ public class SRLUtil {
                 index = i;
             }
         return index;
+    }
+
+    public static List<SRInstance> convertToSRInstance(List<PBInstance> props) {
+    	List<SRInstance> srls = new ArrayList<SRInstance>();
+    	if (props==null) return srls;
+        for (PBInstance instance:props)
+            srls.add(new SRInstance(instance));
+    	return srls;
+    }
+
+    /**
+     * Mapping arguments annotated on one parse (typically gold) to ones using another parse tree (typically automatic)
+     * @param instance src SRL instance
+     * @param parsedTree the parsed tree to perform SRL off of 
+     * @param candidateNodes argument candidate nodes    
+     * @return map of nodes of parse tree to arguments from the src instance
+     */
+    public static Map<TBNode, SRArg> mapArguments(SRInstance instance, TBTree parsedTree, List<TBNode> candidateNodes) {
+        Map<TBNode, SRArg> candidateMap = new HashMap<TBNode, SRArg>();
+        
+        Map<BitSet, TBNode> tokenSetMap = new HashMap<BitSet, TBNode>();
+        for (TBNode node:candidateNodes) {
+            BitSet tokenSet = node.getTokenSet();
+            if (!tokenSetMap.containsKey(tokenSet) || tokenSetMap.get(tokenSet).isDecendentOf(node))
+                tokenSetMap.put(tokenSet, node);
+        }
+        
+        Set<TBNode> candidateNodeSet = new HashSet<TBNode>(tokenSetMap.values());
+        
+        // find a good match between parse candidates and argument boundary of src SRL
+        for (SRArg arg:instance.getArgs()) {
+            if (arg.isPredicate()) continue;
+            BitSet argBitSet = arg.getTokenSet();
+            if (argBitSet.isEmpty()) continue;
+            
+            if (tokenSetMap.containsKey(argBitSet))
+                candidateMap.put(tokenSetMap.get(argBitSet), arg);
+            else {
+                TBNode constituent = parsedTree.getNodeByTokenIndex(arg.node.getHead().getTokenIndex()).getConstituentByHead();
+                BitSet cSet = constituent.getTokenSet();
+                
+                if (!cSet.get(instance.predicateNode.getTokenIndex()) && candidateNodeSet.contains(constituent))
+                    candidateMap.put(constituent, arg);
+            }
+        }
+        
+        for (TBNode node:candidateNodeSet)
+            if (!candidateMap.containsKey(node))
+                candidateMap.put(node, null);
+        
+        return candidateMap;
     }
 }

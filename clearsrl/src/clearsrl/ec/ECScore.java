@@ -78,6 +78,29 @@ public class ECScore {
         return builder.toString();
     }
         
+    String getLabeledMatrix() {
+    	StringBuilder builder = new StringBuilder();
+    	
+    	for (String label: labelSet)
+    		builder.append("\t"+label);
+    	builder.append("\n");
+    	
+    	for (String label: labelSet) {
+    		if (label.equals(ECCommon.NOT_EC)) continue;
+    		builder.append(label);
+    		
+            int idx = labelMap.get(label);
+            
+    		for (int i=0; i<countMatrix.length; ++i) {
+    			builder.append("\t"+countMatrix[i][idx]);
+    		}
+    		builder.append("\n");
+    	}
+    	
+    	return builder.toString();
+    	
+    }
+    
     String toString(int[][] count, boolean labeled)  {
         StringBuilder builder = new StringBuilder();
         int pTotal=0, rTotal=0, fpTotal=0, frTotal=0;

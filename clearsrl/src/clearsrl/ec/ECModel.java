@@ -65,6 +65,11 @@ public class ECModel implements Serializable {
 
     transient ChineseUtil chLangUtil = null;
 
+    transient int tCount = 0;
+    transient int count = 0;
+    transient int hCount = 0;
+    transient int thCount = 0;
+    
     public LabelType getLabelType() {
         return labelType;
     }

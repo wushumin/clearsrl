@@ -116,7 +116,10 @@ public class SerialTBFileReader extends TBFileReader
             		childNodeStack.peek().remove(childNodeStack.peek().size()-1);
             		curr = curr.getParent();  
             		curr.terminalIndex = terminalIndex++;
-                    if (!curr.isEC())   curr.tokenIndex = tokenIndex++;
+                    if (curr.isEC())
+                    	curr.tokenIndex = -tokenIndex-1;
+                    else
+                    	curr.tokenIndex = tokenIndex++;
                     logger.fine(fileName+" "+treeCount+": fixed node: "+curr.toParse());
             	} else { 
             		if (curr.children.length!=0 && curr.getWord()!=null)
@@ -148,7 +151,10 @@ public class SerialTBFileReader extends TBFileReader
                 }
                 curr.word = str;                        // str = word
                 curr.terminalIndex = terminalIndex++;
-                if (!curr.isEC())   curr.tokenIndex = tokenIndex++;
+                if (curr.isEC())
+                	curr.tokenIndex = -tokenIndex-1;
+                else
+                	curr.tokenIndex = tokenIndex++;
             }
         }
         while (!childNodeStack.isEmpty());

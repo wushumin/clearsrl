@@ -630,48 +630,7 @@ public class SRLModel implements Serializable {
         logger.info("Second pass argument processing completed.");
     }
     
-    /**
-     * Mapping arguments annotated on one parse (typically gold) to ones using another parse tree (typically automatic)
-     * @param instance src SRL instance
-     * @param parsedTree the parsed tree to perform SRL off of 
-     * @param candidateNodes argument candidate nodes    
-     * @return map of nodes of parse tree to arguments from the src instance
-     */
-    Map<TBNode, SRArg> mapArguments(SRInstance instance, TBTree parsedTree, List<TBNode> candidateNodes) {
-        Map<TBNode, SRArg> candidateMap = new HashMap<TBNode, SRArg>();
-        
-        Map<BitSet, TBNode> tokenSetMap = new HashMap<BitSet, TBNode>();
-        for (TBNode node:candidateNodes) {
-            BitSet tokenSet = node.getTokenSet();
-            if (!tokenSetMap.containsKey(tokenSet) || tokenSetMap.get(tokenSet).isDecendentOf(node))
-                tokenSetMap.put(tokenSet, node);
-        }
-        
-        Set<TBNode> candidateNodeSet = new HashSet<TBNode>(tokenSetMap.values());
-        
-        // find a good match between parse candidates and argument boundary of src SRL
-        for (SRArg arg:instance.getArgs()) {
-            if (arg.isPredicate()) continue;
-            BitSet argBitSet = arg.getTokenSet();
-            if (argBitSet.isEmpty()) continue;
-            
-            if (tokenSetMap.containsKey(argBitSet))
-                candidateMap.put(tokenSetMap.get(argBitSet), arg);
-            else {
-                TBNode constituent = parsedTree.getNodeByTokenIndex(arg.node.getHead().getTokenIndex()).getConstituentByHead();
-                BitSet cSet = constituent.getTokenSet();
-                
-                if (!cSet.get(instance.predicateNode.getTokenIndex()) && candidateNodeSet.contains(constituent))
-                    candidateMap.put(constituent, arg);
-            }
-        }
-        
-        for (TBNode node:candidateNodeSet)
-            if (!candidateMap.containsKey(node))
-                candidateMap.put(node, null);
-        
-        return candidateMap;
-    }
+
     
     /**
      * add training sentences to the model
@@ -689,15 +648,7 @@ public class SRLModel implements Serializable {
     	addTrainingPredicates(sentence, threshold, true);
         addTrainingArguments(sentence, threshold, null, true);
     }
-    
-    static List<SRInstance> convertToSRInstance(List<PBInstance> props) {
-    	List<SRInstance> srls = new ArrayList<SRInstance>();
-    	if (props==null) return srls;
-        for (PBInstance instance:props)
-            srls.add(new SRInstance(instance));
-    	return srls;
-    }
-    
+
     void addTrainingPredicates(Sentence sent, float threshold, boolean buildDictionary) {
     	TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
 
@@ -756,7 +707,7 @@ public class SRLModel implements Serializable {
     
     SRLSample[] addTrainingArguments(Sentence sent, float threshold, TObjectIntMap<String> rolesetCntMap, boolean buildDictionary) {
     	TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
-    	List<SRInstance> goldInstances = convertToSRInstance(sent.propPB);
+    	List<SRInstance> goldInstances = SRLUtil.convertToSRInstance(sent.propPB);
     	for (Iterator<SRInstance> iter=goldInstances.iterator(); iter.hasNext();) {
     		SRInstance instance = iter.next();
     		if (!trainNominal && !langUtil.isVerb(instance.getPredicateNode().getPOS()))
@@ -806,7 +757,7 @@ public class SRLModel implements Serializable {
                             							  filterArgs,
                                                           supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
                                                           langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
-                    Map<TBNode, SRArg> candidateMap = mapArguments(goldInstances.get(i), tree, candidateNodes);
+                    Map<TBNode, SRArg> candidateMap = SRLUtil.mapArguments(goldInstances.get(i), tree, candidateNodes);
                     srlSamples[i] = addTrainingSRL(trainInstances.get(i), candidateMap, 
                                                       supportIds[i]<0?null:trainInstances.get(supportIds[i]), 
                                                       supportIds[i]<0?null:srlSamples[supportIds[i]], 
@@ -2041,7 +1992,7 @@ public class SRLModel implements Serializable {
     
     public List<SRInstance> predict(TBTree parseTree, List<PBInstance> propPB, String[][] depEC, String[] namedEntities) {
     	
-    	List<SRInstance> goldSRLs = propPB==null?null:convertToSRInstance(propPB);
+    	List<SRInstance> goldSRLs = propPB==null?null:SRLUtil.convertToSRInstance(propPB);
     	    	
         ArrayList<SRInstance> predictions = new ArrayList<SRInstance>();
         
@@ -2159,7 +2110,7 @@ public class SRLModel implements Serializable {
     	List<TBNode> argNodes = SRLUtil.getArgumentCandidates(prediction.predicateNode, filterArgs, support, langUtil, argCandidateLevelDown, argCandidateAllHeadPhrases);
         List<SRArg> goldArgs=null;
         if (gold!=null) {
-            Map<TBNode, SRArg> candidateMap = mapArguments(gold, prediction.getTree(), argNodes);
+            Map<TBNode, SRArg> candidateMap = SRLUtil.mapArguments(gold, prediction.getTree(), argNodes);
             
             argNodes = new ArrayList<TBNode>(candidateMap.size());
             goldArgs = new ArrayList<SRArg>(candidateMap.size());

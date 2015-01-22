@@ -31,6 +31,7 @@ import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
 import clearcommon.util.PBFrame;
+import clearcommon.util.PBFrame.Roleset;
 
 public class ECDepModel extends ECModel implements Serializable {
     /**
@@ -154,6 +155,8 @@ public class ECDepModel extends ECModel implements Serializable {
             
             TBNode token = tokens[t];
             TBNode head = tokens[t];
+            
+
             /*
             if (head.getPOS().matches("BA|LB|SB")) {
                 List<TBNode> nodes = head.getDependentNodes();
@@ -171,6 +174,11 @@ public class ECDepModel extends ECModel implements Serializable {
             }*/
             int h = head.getTokenIndex();
             PBInstance prop = props[t] = props[h];
+            
+            //if (chLangUtil.isVerb(head.getPOS()) && prop==null) {
+            //  System.err.println("Missing prop for "+head.getWord());
+            //	System.err.println(head.getConstituentByHead().toPrettyParse(0));
+            //}
             
             EnumMap<Feature,List<String>> sample = new EnumMap<Feature,List<String>>(Feature.class);
             for (Feature feature:features.getFeaturesFlat())
@@ -283,6 +291,25 @@ public class ECDepModel extends ECModel implements Serializable {
                 	break;
                 case SRL_FRAMEFILE:
                 	if (prop!= null) {
+                		Roleset roleSet = chLangUtil.getRoleSet(prop.getPredicate(), prop.getRoleset());
+                		if (roleSet!=null) {
+                			Set<String> roles = new HashSet<String>(roleSet.getRoles());
+                			Set<String> foundRoles = new HashSet<String>();
+                			for (PBArg arg:prop.getAllArgs())
+                				if (roles.contains(arg.getLabel().toLowerCase())) {
+                					foundRoles.add(arg.getLabel().toLowerCase());
+                					roles.remove(arg.getLabel().toLowerCase());
+                				}
+                			List<String> featVals = new ArrayList<String>(roles.size()+foundRoles.size());
+                			for (String role:roles)
+                				featVals.add("m-"+role);
+                			for (String role:foundRoles)
+                				featVals.add("f-"+role);
+                			if (!featVals.isEmpty())
+                				sample.put(feature, featVals);
+                		}
+                		
+                		/*
                 		PBFrame frame = chLangUtil.frameMap.get(prop.getPredicate().getWord()+"-v");
                 		if (frame!=null && frame.getRolesets().size()==1) {
                 			Set<String> roles = new HashSet<String>(frame.getRolesets().values().iterator().next().getRoles());
@@ -299,11 +326,31 @@ public class ECDepModel extends ECModel implements Serializable {
                 				featVals.add("f-"+role);
                 			if (!featVals.isEmpty())
                 				sample.put(feature, featVals);
-                		}
+                		}*/
                 	}
                 	break;
                 case SRL_FRAMEFILE_LOCAL:
                 	if (prop!= null) {
+                		Roleset roleSet = chLangUtil.getRoleSet(prop.getPredicate(), prop.getRoleset());
+                		if (roleSet!=null) {
+                			Set<String> roles = new HashSet<String>(roleSet.getRoles());
+                			Set<String> foundRoles = new HashSet<String>();
+                			
+                			TBNode hConst = head.getConstituentByHead();
+                			for (PBArg arg:prop.getAllArgs())
+                				if (arg.getNode().isDecendentOf(hConst) && roles.contains(arg.getLabel().toLowerCase())) {
+                					foundRoles.add(arg.getLabel().toLowerCase());
+                					roles.remove(arg.getLabel().toLowerCase());
+                				}
+                			List<String> featVals = new ArrayList<String>(roles.size()+foundRoles.size());
+                			for (String role:roles)
+                				featVals.add("m-"+role);
+                			for (String role:foundRoles)
+                				featVals.add("f-"+role);
+                			if (!featVals.isEmpty())
+                				sample.put(feature, featVals);
+                		}
+                		/*
                 		PBFrame frame = chLangUtil.frameMap.get(prop.getPredicate().getWord()+"-v");
                 		if (frame!=null && frame.getRolesets().size()==1) {
                 			Set<String> roles = new HashSet<String>(frame.getRolesets().values().iterator().next().getRoles());
@@ -322,7 +369,7 @@ public class ECDepModel extends ECModel implements Serializable {
                 				featVals.add("f-"+role);
                 			if (!featVals.isEmpty())
                 				sample.put(feature, featVals);
-                		}
+                		}*/
                 	}
                 	break;
                 case SRL_NOARG0:             // predicate has no ARG0
@@ -564,15 +611,59 @@ public class ECDepModel extends ECModel implements Serializable {
             positionSamples.add(sample);
         }
         
-        // dependency args
+        // dependency & other head+token features
         for (int h=0; h<tokens.length; ++h) {
             PBInstance prop = props[h];
             TBNode head = tokens[h];
+            
+            TBNode headIP=null;
+            TBNode headVP= null;
+            int headVPChildIdx=0;
+            int headIPChildIdx=0;
+            
+            if (chLangUtil.isVerb(head.getPOS())) {
+            	TBNode headConstituent = head.getConstituentByHead();
+            	TBNode node = head;
+            	while (node!=headConstituent) {
+            		if (node.getParent().getPOS().equals("IP")) {
+            			headIP = node.getParent();
+            			headIPChildIdx = node.getChildIndex();
+            			break;
+            		}
+            		if ((headVP==null || node.getPOS().equals("VP")) && node.getParent().getPOS().equals("VP")) {
+            			headVP = node.getParent();
+            			headVPChildIdx = node.getChildIndex();
+            		}
+            		node = node.getParent();
+            	}
+            }
+            
             for (int t=headMasks[h].nextSetBit(0); t>=0; t=headMasks[h].nextSetBit(t+1)) {
                 TBNode token = t<tokens.length?tokens[t]:null;
                 EnumMap<Feature,Collection<String>> sample = new EnumMap<Feature,Collection<String>>(Feature.class);
                 sample.putAll(headSamples.get(h));
                 sample.putAll(positionSamples.get(t));
+
+                int childIPIdx=-1;
+                int childVPIdx=-1;
+
+                if (t<=h && headIP!=null && tokens[t].isDecendentOf(headIP) && 
+                		(t==0 || !tokens[t-1].isDecendentOf(headIP) || headIP==tokens[t-1].getLowestCommonAncestor(tokens[t]))) {                    
+                	TBNode node = tokens[t];
+                	while (node.getParent()!=headIP)
+                		node = node.getParent();
+                	childIPIdx = node.getChildIndex();
+                }
+                
+                if (t>h & headVP!=null && tokens[t-1].isDecendentOf(headVP) && 
+                		(t==tokens.length || !tokens[t].isDecendentOf(headVP) || headVP==tokens[t-1].getLowestCommonAncestor(tokens[t]))) {
+                	TBNode node = tokens[t-1];
+                	while (node.getParent()!=headVP)
+                		node = node.getParent();
+                	childIPIdx = node.getChildIndex();
+                	
+                }
+                
                 for (Feature feature:features.getFeaturesFlat())
                     switch (feature) {
                     case D_POSITION:
@@ -660,6 +751,34 @@ public class ECDepModel extends ECModel implements Serializable {
                                 }
                         }
                         break;
+                    case D_IP_ISCHILD:  // for position left of verb, if the common ancestor has an IP
+                    	if (t<=h && childIPIdx>=0)
+                    		sample.put(feature, Arrays.asList(Boolean.TRUE.toString()));
+                    	break;
+                    case D_IP_LEFTSIB:  // POS of the left sibling under IP
+                    	if (t<=h && childIPIdx>0)
+                    		sample.put(feature, Arrays.asList(headIP.getChildren()[childIPIdx-1].getPOS()));
+                    	break;
+                    case D_IP_RIGHTSIB: // POS of right sibling under IP
+                    	if (t<=h && childIPIdx>=0 && childIPIdx<headIP.getChildren().length)
+                    		sample.put(feature, Arrays.asList(headIP.getChildren()[childIPIdx].getPOS()));
+                    	break;
+                    case D_IP_INCP:     // if IP is in CP (for both left & right)
+                    	if (headIP!=null && headIP.getParent()!=null && headIP.getParent().getPOS().equals("CP"))
+                    		sample.put(feature, Arrays.asList("IP_UNDER_CP"));
+                    	break;
+                    case D_VP_ISCHILD:  // for position right of verb, if the common ancestor has an VP
+                    	if (t>h && childVPIdx>=0)
+                    		sample.put(feature, Arrays.asList(Boolean.TRUE.toString()));
+                    	break;
+                    case D_VP_LEFTSIB:  // POS of the left sibling under VP
+                    	if (t>h && childVPIdx>0)
+                    		sample.put(feature, Arrays.asList(headVP.getChildren()[childVPIdx-1].getPOS()));
+                    	break;
+                    case D_VP_RIGHTSIB: // POS of right sibling under VP
+                    	if (t>h && childVPIdx>=0 && childVPIdx<headVP.getChildren().length)
+                    		sample.put(feature, Arrays.asList(headVP.getChildren()[childVPIdx].getPOS()));
+                    	break;
                     default:
                         break;
                     }
@@ -883,13 +1002,141 @@ public class ECDepModel extends ECModel implements Serializable {
         }
         return featureMap;
     }
-    
+
     public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
         parsedTree = parsedTree==null?goldTree:parsedTree;
         
         BitSet[] headCandidates = ECCommon.getECCandidates(parsedTree);
+        
+        if (buildDictionary) {
+        
+	        thCount += parsedTree.getTokenCount();
+	        BitSet headAll = new BitSet();
+	        
+	        for (int i=0; i<headCandidates.length; ++i)
+	        	if (headCandidates[i].cardinality()>0)
+	        		headAll.set(i);
+	        /*
+	        for (TBNode node:parsedTree.getTokenNodes()) {
+	        	if (node.getPOS().startsWith("V")) {
+	        		headAll.set(node.getTokenIndex());
+	        		continue;
+	        	}
+	        	TBNode headConst = 	node.getConstituentByHead();
+	        	TBNode constituent = node;
+	        	while (constituent!=headConst) {
+	        		if (constituent.getPOS().matches("[CIQ]P"))
+	        			break;
+	        		constituent = constituent.getParent();
+	        	}
+	        	if (constituent.getPOS().matches("[CIQ]P"))
+	        		headAll.set(node.getTokenIndex());
+	        }*/
+	         
+	        
+	        /*
+	        for (TBNode node:goldTree.getTerminalNodes()) {
+	            if (node.isToken())
+	                continue;
+	            //++tCount;
+	            TBNode head = node.getHeadOfHead();
+	            if (head==null)
+	            	continue;
+
+	            TBNode parsedHead = parsedTree.getNodeByTokenIndex(head.getTokenIndex());
+	            
+	            if (parsedHead!=null && !parsedHead.getPOS().startsWith("V")) {
+	            	TBNode headConst = 	parsedHead.getConstituentByHead();
+		            TBNode lca = parsedTree.getNodeByTokenIndex(node.getTerminalIndex()<head.getTerminalIndex()?-node.getTokenIndex()-1:-node.getTokenIndex());
+		            lca = parsedHead.getLowestCommonAncestor(lca);
+		            
+		            if (headConst == headConst.getLowestCommonAncestor(lca)) {
+			            while(lca!=headConst) {
+		        			if (lca.getPOS().matches("[CIQ]P"))
+		            			break;
+		        			lca = lca.getParent();
+		        		}
+		        		if (lca.getPOS().matches("[CIQ]P")) {
+		        			headAll.set(parsedHead.getTokenIndex());
+		        			break;
+		        		}
+		            }
+
+	            	//System.out.println(head.getConstituentByHead().toPrettyParse(0));
+	            	//System.out.println(parsedHead.getConstituentByHead().toPrettyParse(0));
+	            	//System.out.printf("%d/%d\n",++count,tCount);
+	            } else if (parsedHead!=null)
+	            	headAll.set(parsedHead.getTokenIndex());
+	        }*/
+	        
+	        
+	        hCount+=headAll.cardinality();
+	        
+	        for (TBNode node:goldTree.getTerminalNodes()) {
+	            if (node.isToken())
+	                continue;
+	            TBNode head = node.getHeadOfHead();
+	            if (head==null || head.isEC())
+	            	continue;
+	            if (headAll.get(head.getTokenIndex())) count++;
+	            tCount++;   
+	        }
+	        //System.out.printf("%d/%d %d/%d\n",count,tCount, hCount, thCount);
+        }
+        
+        
         // TODO: test whether this is better?
         //ECCommon.addGoldCandidates(goldTree, headCandidates);
+        
+        for (TBNode node:goldTree.getTerminalNodes()) {
+            if (node.isToken())
+                continue;
+            //++tCount;
+            TBNode head = node.getHeadOfHead();
+            if (head==null)
+            	continue;
+
+            TBNode parsedHead = parsedTree.getNodeByTokenIndex(head.getTokenIndex());
+            /*
+            if (parsedHead!=null && !parsedHead.getPOS().startsWith("V")) {
+            	TBNode headConst = 	parsedHead.getConstituentByHead();
+	            TBNode lca = parsedTree.getNodeByTokenIndex(node.getTerminalIndex()<head.getTerminalIndex()?-node.getTokenIndex():-node.getTokenIndex()-1);
+	            lca = parsedHead.getLowestCommonAncestor(lca);
+	            
+	            if (headConst == headConst.getLowestCommonAncestor(lca)) {
+		            while(lca!=headConst) {
+	        			if (lca.getPOS().matches("[CIQ]P"))
+	            			break;
+	        			lca = lca.getParent();
+	        		}
+	        		if (lca.getPOS().matches("[CIQ]P"))
+	        			break;
+	            }
+
+            	//System.out.println(head.getConstituentByHead().toPrettyParse(0));
+            	//System.out.println(parsedHead.getConstituentByHead().toPrettyParse(0));
+            	System.out.printf("%d/%d\n",++count,tCount);
+            }*/
+	            
+            
+            if (head!=null && head.isToken() && !head.getPOS().startsWith("V")) {
+            	TBNode headConst = 	head.getConstituentByHead();
+            	TBNode lca = head.getLowestCommonAncestor(node);
+
+        		while(lca!=headConst) {
+        			if (lca.getPOS().matches("[CIQ]P"))
+            			break;
+        			lca = lca.getParent();
+        		}
+        		if (lca.getPOS().matches("[CIQ]P"))
+        			break;
+
+            	//System.out.println(head.getConstituentByHead().toPrettyParse(0));
+            	//System.out.println(parsedHead.getConstituentByHead().toPrettyParse(0));
+        		//System.out.printf("%d/%d\n",++count,tCount);
+            }
+        }
+        
         
         String[] labels = ECCommon.makeECDepLabels(goldTree, headCandidates);
         

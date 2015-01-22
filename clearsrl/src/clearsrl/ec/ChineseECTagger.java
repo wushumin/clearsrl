@@ -4,6 +4,7 @@ import clearsrl.Sentence;
 import clearsrl.Sentence.Source;
 import clearsrl.ec.ECCommon.Feature;
 import clearcommon.alg.FeatureSet;
+import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.util.ChineseUtil;
 import clearcommon.util.PropertyUtil;
@@ -20,6 +21,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
@@ -133,20 +135,26 @@ public class ChineseECTagger {
         ECScore dScore = null;
         ECScore dScore2 = null;
 
+        ECScore hScore = null;
+        ECScore hScore2 = null;
+
         if (model instanceof ECDepModel) {
         	dScore = new ECScore(labelSet);
         	dScore2 = new ECScore(labelSet);
+        	
+        	hScore = new ECScore(labelSet);
+        	hScore2 = new ECScore(labelSet);
         }
         
         String corpus = props.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
        
-        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL, Source.TREEBANK, Source.TB_HEAD), null);
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
+        		EnumSet.of(Source.PARSE_HEAD, Source.SRL, Source.TB_HEAD), langUtil);
 
         int ecCount=0;
         int ecDepCount=0;
-
+        
         for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet()) {
             logger.info("Validating: "+entry.getKey());
             for (Sentence sent: entry.getValue()) {
@@ -173,7 +181,18 @@ public class ChineseECTagger {
                 					ecDepCount+=tokens.length;
                 				}
                 		}
-                	
+
+                	for (int h=0; h<depLabels.length; ++h) {
+                		String headLabel = null;
+                		String goldHeadLabel = null;
+                		for (int t=0; t<depLabels[h].length;++t) {
+                			if (depLabels[h][t]!=null && !ECCommon.NOT_EC.equals(depLabels[h][t]))
+                				headLabel = headLabel==null?depLabels[h][t]:headLabel+' '+depLabels[h][t];
+            				if (goldDepLabels[h][t]!=null && !ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
+                				goldHeadLabel = goldHeadLabel==null?goldDepLabels[h][t]:goldHeadLabel+' '+goldDepLabels[h][t];
+                		}
+                		hScore.addResult(headLabel==null?ECCommon.NOT_EC:headLabel, goldHeadLabel==null?ECCommon.NOT_EC:goldHeadLabel);
+                	}
                 } else 
                 	labels = model.predict(sent.parse, sent.props);
                 
@@ -194,11 +213,24 @@ public class ChineseECTagger {
                 					goldDepLabels[h][t]!=null&&!ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
                 				dScore2.addResult(depLabels[h][t]==null?ECCommon.NOT_EC:depLabels[h][t],
                 						goldDepLabels[h][t]==null?ECCommon.NOT_EC:goldDepLabels[h][t]);
+                	
+                	for (int h=0; h<depLabels.length; ++h) {
+                		String headLabel = null;
+                		String goldHeadLabel = null;
+                		for (int t=0; t<depLabels[h].length;++t) {
+                			if (depLabels[h][t]!=null && !ECCommon.NOT_EC.equals(depLabels[h][t]))
+                				headLabel = headLabel==null?depLabels[h][t]:headLabel+' '+depLabels[h][t];
+            				if (goldDepLabels[h][t]!=null && !ECCommon.NOT_EC.equals(goldDepLabels[h][t]))
+                				goldHeadLabel = goldHeadLabel==null?goldDepLabels[h][t]:goldHeadLabel+' '+goldDepLabels[h][t];
+                		}
+                		hScore2.addResult(headLabel==null?ECCommon.NOT_EC:headLabel, goldHeadLabel==null?ECCommon.NOT_EC:goldHeadLabel);
+                	}
+                	
                 } 
                 
                 boolean same=true;
                 
-                if (labels2!=null) {
+                //if (labels2!=null) {
 	                for (int l=0; l<labels2.length; ++l) {
 	                    score2.addResult(labels2[l], goldLabels[l]);
 	                    if (goldLabels[l]!=null&&!ECCommon.NOT_EC.equals(goldLabels[l]))
@@ -211,21 +243,21 @@ public class ChineseECTagger {
 	                		same = false;
 	                		break;
 	                	}
-                }
+                //}
                 if (!same) {
-                	/*
-                	System.out.println(tbTrees[i].toPrettyParse());
-                	System.out.println(parseTrees[i].toPrettyParse());
-	                TBNode[] tokens = tbTrees[i].getTokenNodes();
+                	System.out.println(sent.treeTB.getFilename()+" "+sent.treeTB.getIndex());
+                	System.out.println(sent.treeTB.toPrettyParse());
+                	System.out.println(sent.parse.toPrettyParse());
+	                TBNode[] tokens = sent.treeTB.getTokenNodes();
 	                printEC(tokens, goldLabels);
 	                printEC(tokens, labels);
 	                printEC(tokens, labels2);
-	                if (pbInstances!=null) 
-	                	for (PBInstance prop:propList)
+	                if (sent.props!=null) 
+	                	for (PBInstance prop:sent.props)
 	                		System.out.println(prop.toText());
-	                System.out.println(score.toString(score.countMatrix, true));
-	                System.out.println(score2.toString(score2.countMatrix, true));	                
-	                System.out.println("");*/
+	                //System.out.println(score.toString(score.countMatrix, true));
+	                //System.out.println(score2.toString(score2.countMatrix, true));	                
+	                System.out.println("");
                 }
                 /*
                 for (int l=0; l<labels.length; ++l)
@@ -234,13 +266,33 @@ public class ChineseECTagger {
                 
             }
         }
+        System.out.println("linear");
         System.out.println(score.toString());
         if (model instanceof ECDepModel && ((ECDepModel)model).stage2Classifier!=null)
         	System.out.println(score2.toString());
-        if (dScore!=null)
+        
+        if (dScore!=null) {
+        	System.out.println("dependency");
         	System.out.println(dScore.toString());
-        if (dScore2!=null && ((ECDepModel)model).stage2Classifier!=null)
-        	System.out.println(dScore2.toString());
+	        if (dScore2!=null && ((ECDepModel)model).stage2Classifier!=null)
+	        	System.out.println(dScore2.toString());
+        }
+        
+        if (hScore!=null) {
+        	System.out.println("head");
+        	System.out.println(hScore.toString());
+        	if (hScore2!=null && ((ECDepModel)model).stage2Classifier!=null)
+             	System.out.println(hScore2.toString());
+        }
+
+        System.out.println("dependency confusion matrix");
+        if (dScore!=null) {
+        	System.out.println(dScore.getLabeledMatrix());
+        }
+        
+        if (dScore2!=null) {
+        	System.out.println(dScore2.getLabeledMatrix());
+        }
         
         System.out.printf("EC count: %d, dep count: %d\n", ecCount, ecDepCount);
         
@@ -255,6 +307,58 @@ public class ChineseECTagger {
     	System.out.println(ECCommon.NOT_EC.equals(labels[nodes.length])?"":labels[nodes.length]);
     }
     
+    static Set<EnumSet<Feature>> makeTypedBigramFeatures(Set<EnumSet<Feature>> features, String[] lprefixes, String[] rprefixes) {
+    	Set<EnumSet<Feature>> ret = new HashSet<EnumSet<Feature>>(features);
+    	Map<String, Set<Feature>> fSSetMap = new HashMap<String, Set<Feature>>();
+    	
+    	for (EnumSet<Feature> fSet:features)
+    		for (Feature fVal:fSet) {
+    			String prefix=fVal.toString();
+    			if (prefix.indexOf('_')>0)
+    				prefix = prefix.substring(0, prefix.indexOf('_'));
+    			Set<Feature> fSSet = fSSetMap.get(prefix);
+    			if (fSSet==null)
+    				fSSetMap.put(prefix, fSSet=new HashSet<Feature>());
+    			fSSet.add(fVal);
+    		}
+    			
+    	String[] prefixes = fSSetMap.keySet().toArray(new String[fSSetMap.size()]);
+    	
+    	if (lprefixes==null || rprefixes==null) {
+    		int len = prefixes.length*(prefixes.length-1)/2;
+    		lprefixes = new String[len];
+    		rprefixes = new String[len];
+    		len=0;
+    		for (int i=0; i<prefixes.length; ++i)
+    			for (int j=1+i; j<prefixes.length; ++j) {
+    				lprefixes[len] = prefixes[i];
+    				rprefixes[len++] = prefixes[j];
+    			}
+    	}
+    	
+    	for (int i=0; i<lprefixes.length; ++i) {
+    		Set<Feature> lhs = fSSetMap.get(lprefixes[i]);
+    		Set<Feature> rhs = fSSetMap.get(rprefixes[i]);
+    		for (Feature lf:lhs)
+				for (Feature rf:rhs)
+					ret.add(EnumSet.of(lf, rf));
+    	}
+    		
+    	
+    	/*
+    	for (int i=0; i<prefixes.length; ++i) {
+    		Set<Feature> lhs = fSSetMap.get(prefixes[i]);
+    		for (int j=1+i; j<prefixes.length; ++j) {
+    			Set<Feature> rhs = fSSetMap.get(prefixes[j]);
+    			for (Feature lf:lhs)
+    				for (Feature rf:rhs)
+    					ret.add(EnumSet.of(lf, rf));
+    		}
+    	}*/
+    	return ret;
+    }
+    
+    
     static void train(Properties inProps, ChineseUtil langUtil) throws IOException, ClassNotFoundException {  
         Properties props = PropertyUtil.filterProperties(inProps, "train.", true);
         Set<EnumSet<Feature>> features = new HashSet<EnumSet<Feature>>();
@@ -267,7 +371,12 @@ public class ChineseECTagger {
                     System.err.println(e);
                 }
         }
-        features = FeatureSet.getBigramSet(features);
+        //String[] lhs = {"D","D","D",  "H","H"};
+        //String[] rhs = {"H","T","SRL","T","SRL"};
+        //features = makeTypedBigramFeatures(features, lhs, rhs);
+        
+        features = makeTypedBigramFeatures(features, null, null);
+        //features = FeatureSet.getBigramSet(features);
         
         logger.info("features: "+features);
         
@@ -279,8 +388,8 @@ public class ChineseECTagger {
         String corpus = props.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
         
-        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL, Source.TREEBANK, Source.TB_HEAD), null);
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
+        		EnumSet.of(Source.PARSE_HEAD, Source.SRL, Source.TB_HEAD), langUtil);
 
         for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
             for (Sentence sent:entry.getValue()) {
@@ -305,6 +414,7 @@ public class ChineseECTagger {
                 */
             }
 
+        System.out.printf("%d/%d %d/%d\n",model.count,model.tCount, model.hCount, model.thCount);
         model.finalizeDictionary(Integer.parseInt(props.getProperty("dictionary.cutoff", "5")));
         
         for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
@@ -337,8 +447,8 @@ public class ChineseECTagger {
         String corpus = props.getProperty("corpus");
         corpus=corpus==null?"":corpus+"."; 
         
-        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE, 
-        		EnumSet.of(Source.PARSE, Source.PARSE_HEAD, Source.SRL), null);
+        Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
+        		EnumSet.of(Source.PARSE_HEAD, Source.SRL), langUtil);
 
         File outputDir = new File(props.getProperty(corpus+"ecdep.dir"));
         
@@ -355,7 +465,7 @@ public class ChineseECTagger {
                 if (model instanceof ECDepModel) {
                 	((ECDepModel)model).setQuickClassify(true);
                 	String[][] depLabels = ((ECDepModel)model).predictDep(sent.parse, sent.props);
-                	labels = ECDepModel.makeLinearLabel(sent.parse, depLabels);           
+                	//labels = ECDepModel.makeLinearLabel(sent.parse, depLabels);           
                 	ECCommon.writeDepEC(writer, sent.parse, depLabels);
                 } else 
                 	labels = model.predict(sent.parse, sent.props);

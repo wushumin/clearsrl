@@ -51,7 +51,7 @@ public class TBNode implements Serializable {
     public static final Pattern WORD_PATTERN = Pattern
             .compile("\\A([^-]+)(-\\d+)?\\z");
     public static final Pattern POS_PATTERN = Pattern
-            .compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-|-LSB-|-RSB-)((-[a-zA-Z][a-zA-Z0-9]*)*)((-\\d+)*(\\=\\d+)?(-\\d+)*)\\z");
+            .compile("\\A([^-\\=\\)]+|-NONE-|-LRB-|-RRB-|-LSB-|-RSB-)(((-([a-zA-Z]\\w*|\\d+))*)(\\=\\d+)?((-([a-zA-Z]\\w*|\\d+))*))\\z");
 
     static final TBNode[] NO_CHILDREN = new TBNode[0];
 
@@ -103,7 +103,8 @@ public class TBNode implements Serializable {
         if (fTags.length > 1) {
             functionTags = new TreeSet<String>();
             for (int i = 1; i < fTags.length; ++i)
-                functionTags.add(fTags[i].intern());
+            	if (fTags[i].charAt(0)>='A')
+            		functionTags.add(fTags[i].intern());
         }
         if (children == null)
             return;
@@ -132,11 +133,12 @@ public class TBNode implements Serializable {
     TBNode findIndexedNode(int idx) {
         Matcher matcher = POS_PATTERN.matcher(pos);
         matcher.matches();
-        String idxStr = matcher.group(4);
+        String idxStr = matcher.group(2);
         if (idxStr != null) {
             String[] indices = idxStr.split("(?=[-\\=])");
             for (String index : indices)
-                if (!index.isEmpty() && index.charAt(0) == '-'
+                if (!index.isEmpty() && index.charAt(0) == '-' 
+                		&& index.charAt(1)>='0' && index.charAt(1)<='9'
                         && Integer.parseInt(index.substring(1)) == idx)
                     return this;
         }
@@ -545,7 +547,7 @@ public class TBNode implements Serializable {
 
     /** Returns true if the node is an empty category. */
     public boolean isEC() {
-        return isPos(TBLib.POS_EC);
+        return this.pos.startsWith(TBLib.POS_EC);
     }
 
     /** Returns true if the pos-tag of the node is <code>pos</code>. */
@@ -664,11 +666,18 @@ public class TBNode implements Serializable {
 			return head = this;
 
 		TBNode headChild = null;
-		for (TBNode child:children)
-			if (child.hasFunctionTag("HEAD")) {
-				headChild = child;
-				break;
+		if (children.length==1)
+			headChild = children[0];
+		else 
+			for (TBNode child:children) {
+				if (child.hasFunctionTag("HEAD")) {
+					headChild = child;
+					break;
+				} 
+				if (child.hasFunctionTag("CONJUNCT1")||child.hasFunctionTag("SUBORD"))
+					headChild = child;
 			}
+
 		// sentence not head annotated
 		if (headChild==null) return null;
 		for (TBNode child:children)
