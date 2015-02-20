@@ -6,16 +6,21 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
@@ -164,15 +169,33 @@ public class EnglishUtil extends LanguageUtil {
             return;
         }
         
-        List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
-        logger.info(""+fileNames.size()+" frame files found");
-        for (String fileName:fileNames)
-            readFrameFile(parser, new File(dir, fileName));
+        File zippedFrames = new File(dir, "allframes.zip");
+        if (zippedFrames.exists()) {
+        	try (ZipFile zipIn = new ZipFile(zippedFrames)) {
+        		logger.info(""+zipIn.size()+" frame files found");
+        		for (Enumeration<? extends ZipEntry> e = zipIn.entries(); e.hasMoreElements();) {
+        			ZipEntry entry = e.nextElement();
+        			readFrameFile(parser, entry.getName(), new InputSource(zipIn.getInputStream(entry)));
+        		}
+            } catch (IOException e) {
+	            e.printStackTrace();
+            }
+        } else {
+        	List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
+            logger.info(""+fileNames.size()+" frame files found");
+            for (String fileName:fileNames)
+	            try {
+	                readFrameFile(parser, fileName, new InputSource(new InputStreamReader(new FileInputStream(new File(dir, fileName)), "UTF8")));
+                } catch (IOException e) {
+	                // TODO Auto-generated catch block
+	                e.printStackTrace();
+                }
+        }
         logger.info(""+frameMap.size()+" frames read");
     }
     
-    void readFrameFile(XMLReader parser, File file) {
-        String key = file.getName();
+    void readFrameFile(XMLReader parser, String fName, InputSource source) {
+        String key = fName;
         key = key.substring(0, key.length()-4);
        
         String predicate = key;
@@ -186,7 +209,7 @@ public class EnglishUtil extends LanguageUtil {
         PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
-            parser.parse(new InputSource(new InputStreamReader(new FileInputStream(file), "UTF8")));
+            parser.parse(source);
             frameMap.put(key, frame);
         } catch (IOException e) {
             // TODO Auto-generated catch block
