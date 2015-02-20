@@ -189,7 +189,7 @@ public class RunSRL {
 	            pipedWriter = new PipedWriter();
 	            parseIn = new PipedReader(pipedWriter);
 	            
-	            parser.parse(reader, pipedWriter);
+	            parser.parse(reader, pipedWriter, true);
 	            
 	            if (outputParse)
 	            {
@@ -765,7 +765,7 @@ public class RunSRL {
             
         }       
         */
-        logger.info("Constituents predicted: "+pCount);
+        //logger.info("Constituents predicted: "+pCount);
         
         //System.out.printf("%d/%d %.2f%%\n", count, y.length, count*100.0/y.length);
         

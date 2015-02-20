@@ -193,11 +193,13 @@ public class ParseCorpus {
     
     public class SentenceWriter extends Thread {
         Writer outputData;
+        boolean closeWriter;
         
-        public SentenceWriter(Writer outputData) {
+        public SentenceWriter(Writer outputData, boolean closeWriter) {
             this.outputData = outputData;
+            this.closeWriter = closeWriter;
         }
-
+        
         public void run() {
             while (true) {
             	Future<String> future;
@@ -230,6 +232,13 @@ public class ParseCorpus {
                     break;
                 }
             }
+            if (closeWriter)
+	            try {
+	                outputData.close();
+                } catch (IOException e) {
+	                // TODO Auto-generated catch block
+	                e.printStackTrace();
+                }
         }
     }
 
@@ -292,10 +301,10 @@ public class ParseCorpus {
         return buffer.toString();
     }
     
-    public SentenceWriter parse(Reader reader, Writer writer) throws IOException {
+    public SentenceWriter parse(Reader reader, Writer writer, boolean closeWriter) throws IOException {
         BufferedReader inputData = new BufferedReader(reader);
 
-        SentenceWriter sentWriter = new SentenceWriter(writer);
+        SentenceWriter sentWriter = new SentenceWriter(writer, closeWriter);
         sentWriter.start();
         
         String line;
@@ -420,17 +429,13 @@ public class ParseCorpus {
             outputFile.getParentFile().mkdirs();
             
             System.out.println("Parsing: "+fileName);
-            Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8");
-            Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8");
             
-            try{
-                SentenceWriter sWriter = parser.parse(reader, writer);
+            try (Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8"); 
+            		Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8")) {
+                SentenceWriter sWriter = parser.parse(reader, writer, false);
                 sWriter.join();
             } catch (Exception ex) {
                 ex.printStackTrace();
-            } finally {
-                reader.close();
-                writer.close();
             }
         }
 
