@@ -1,4 +1,7 @@
 <project>
+    <presetdef name="javac">
+        <javac includeantruntime="false" />
+    </presetdef>
     <target name="jar" depends="clearcommon, clearsrl"/>
 
     <target name="clearcommon">
