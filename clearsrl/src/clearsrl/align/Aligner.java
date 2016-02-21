@@ -5,6 +5,7 @@ import clearcommon.propbank.PBArg;
 import clearcommon.propbank.PBInstance;
 import clearcommon.treebank.TBNode;
 import clearcommon.treebank.TBTree;
+import clearcommon.util.LanguageUtil;
 import gnu.trove.map.TIntDoubleMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntDoubleHashMap;
@@ -42,6 +43,10 @@ public class Aligner {
     float         predProbWeight;
     float         argProbWeight;
     boolean       useFMeasure;
+    boolean       alignSrcNominal;
+    boolean       alignDstNominal;
+    LanguageUtil  srcLangUtil;
+    LanguageUtil  dstLangUtil;
     
     public enum Method {
         DEFAULT,
@@ -58,14 +63,19 @@ public class Aligner {
     //}
     
     public Aligner(float threshold){
-        this(threshold, null, 0, 0, false);
+        this(threshold, true, true, null, null, null, 0, 0, false);
     }
     
-    public Aligner(float threshold, AlignmentProb probMap, float predProbWeight, float argProbWeight, boolean useFMeasure){
-        this.probMap = probMap;
+    public Aligner(float threshold, boolean alignSrcNominal, boolean alignDstNominal, LanguageUtil srcLangUtil, LanguageUtil dstLangUtil, AlignmentProb probMap, float predProbWeight, float argProbWeight, boolean useFMeasure){
         this.alignThreshold = threshold;
+        this.alignSrcNominal = alignSrcNominal;
+        this.alignDstNominal = alignDstNominal;
+        this.srcLangUtil = srcLangUtil;
+        this.dstLangUtil = dstLangUtil;
+    	this.probMap = probMap;
         this.predProbWeight = predProbWeight;
         this.argProbWeight = argProbWeight;
+        this.useFMeasure = useFMeasure;
     }
     
     /**
@@ -98,26 +108,39 @@ public class Aligner {
         if (alignMatrix.length==0)
             return new Alignment[0];
         
+        float [][]scoreMatrix = new float[srcInstances.length>dstInstances.length?srcInstances.length:dstInstances.length][];
         float [][]costMatrix = new float[srcInstances.length>dstInstances.length?srcInstances.length:dstInstances.length][];
-        for (int i=0; i<costMatrix.length; ++i)
+        for (int i=0; i<costMatrix.length; ++i) {
             costMatrix[i] = new float[costMatrix.length];
+            scoreMatrix[i] = new float[costMatrix.length];
+        }
             
+        boolean[] isSrcNominal = new boolean[srcInstances.length];
+        boolean[] isDstNominal = new boolean[dstInstances.length];
+        for (int i=0; i<isSrcNominal.length;++i)
+        	if (srcLangUtil!=null)
+        		isSrcNominal[i] = !srcLangUtil.isVerb(srcInstances[i].getPredicate().getPOS());
+        for (int j=0; j<isDstNominal.length;++j)
+        	if (dstLangUtil!=null)
+        		isDstNominal[j] = !dstLangUtil.isVerb(dstInstances[j].getPredicate().getPOS());
+        
         float maxScore = 0;
         for (int i=0; i<alignMatrix.length; ++i)
             for (int j=0; j<alignMatrix[i].length; ++j) {
-                costMatrix[i][j] = alignMatrix[i][j].getCompositeScore();
+                scoreMatrix[i][j] = alignMatrix[i][j].getCompositeScore();
                 
                 // don't align predicate only prop unless it's to another predicate only prop
-                if (srcInstances[i].getArgs().length==1 ^ dstInstances[j].getArgs().length==1)
-                    costMatrix[i][j] = 0;
+                if (!alignSrcNominal && isSrcNominal[i] || !alignDstNominal && isDstNominal[j] || 
+                		(srcInstances[i].getArgs().length==1 ^ dstInstances[j].getArgs().length==1))
+                	scoreMatrix[i][j] = 0;
                 
-                if (costMatrix[i][j]>maxScore)
-                	maxScore = costMatrix[i][j];
+                if (scoreMatrix[i][j]>maxScore)
+                	maxScore = scoreMatrix[i][j];
             }
         
         for (int i=0; i<alignMatrix.length; ++i)
             for (int j=0; j<alignMatrix[i].length; ++j)
-                costMatrix[i][j] = maxScore-alignMatrix[i][j].getCompositeScore();
+                costMatrix[i][j] = maxScore-scoreMatrix[i][j];
 
         int[][] alignIdx = HungarianAlgorithm.computeAssignments(costMatrix);
         
@@ -127,7 +150,7 @@ public class Aligner {
         
         for (; i<dstInstances.length; ++i)
         {
-            if (alignIdx[i][0]<alignMatrix.length && alignMatrix[alignIdx[i][0]][i].getCompositeScore()>=alignThreshold)
+            if (alignIdx[i][0]<alignMatrix.length && scoreMatrix[alignIdx[i][0]][i]>=alignThreshold)
                 alignments.add(alignMatrix[alignIdx[i][0]][i]);
         }
         

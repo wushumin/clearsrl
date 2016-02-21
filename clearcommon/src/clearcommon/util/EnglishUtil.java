@@ -59,7 +59,7 @@ public class EnglishUtil extends LanguageUtil {
         abbreviations.put("'ve VBP", "have");
         abbreviations.put("'d VBD", "had");
         abbreviations.put("em PRP", "them");
-        abbreviations.put("n't", "not");
+        abbreviations.put("n't RB", "not");
         abbreviations.put("'til IN", "until");
         abbreviations.put("'til RB", "until");
     }
@@ -102,9 +102,11 @@ public class EnglishUtil extends LanguageUtil {
     
     @Override
     public List<String> findStems(TBNode node) {
+    	String word = abbreviations.get(node.getWord()+' '+node.getPOS());
+    	word = word==null?node.getWord():word;
         edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
-        List<String> stems  = pos==null?null:stemmer.findStems(node.getWord(), pos);        
-        return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(node.getWord()):stems;
+        List<String> stems  = pos==null?null:stemmer.findStems(word, pos);        
+        return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
     }
     
     edu.mit.jwi.item.POS convertPOS(String input) {
@@ -271,7 +273,7 @@ public class EnglishUtil extends LanguageUtil {
                     // find auxiliary verb if verb, if not, stop
                     if (children[i].getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children[i].getWord(), POS.VERB);
+                        List<String> stems = findStems(children[i]);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 1;
                         else
@@ -299,7 +301,7 @@ public class EnglishUtil extends LanguageUtil {
                     // find auxiliary verb if verb, if not, stop
                     if (children[i].getPOS().matches("V.*|AUX.*"))
                     {
-                        List<String> stems = findStems(children[i].getWord(), POS.VERB);
+                        List<String> stems = findStems(children[i]);
                         if (!stems.isEmpty() && (stems.get(0).matches("be|get")))
                             return 2;
                         else

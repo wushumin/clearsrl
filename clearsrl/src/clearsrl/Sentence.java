@@ -9,11 +9,13 @@ import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Logger;
@@ -45,6 +47,7 @@ public class Sentence implements Serializable{
 		TREEBANK("tb", true),
 		TB_HEAD("tb.headed", true),
 		PROPBANK("pb"),
+		PREDICATE_LIST("pred"),
 		PARSE("parse", true),
 		PARSE_HEAD("parse.headed", true),
 		PARSE_DEP("parse.dep"),
@@ -68,17 +71,22 @@ public class Sentence implements Serializable{
 	public TBTree treeTB;
 	public List<PBInstance> propPB;
 	
+	public BitSet predicates;
+
 	public TBTree parse;
 	public List<PBInstance> props;
 	public String[][] depEC;
 
 	public String[] namedEntities;
 	
-	public Sentence(TBTree treeTB, List<PBInstance> propPB, TBTree parse, List<PBInstance> props, String[][] depEC, String[] namedEntities) {
+	public Set<String> annotatedNominals = null;
+	
+	public Sentence(TBTree treeTB, List<PBInstance> propPB, TBTree parse, List<PBInstance> props, BitSet predicates, String[][] depEC, String[] namedEntities) {
 		this.treeTB = treeTB;
 		this.propPB = propPB;
 		this.parse = parse;
 		this.props = props;
+		this.predicates = predicates;
 		this.depEC = depEC;
 		this.namedEntities = namedEntities;
 	}
@@ -140,7 +148,7 @@ public class Sentence implements Serializable{
 		
 		List<String> fileList = FileUtil.getFiles(new File(neDir), neRegex, false);
 		for (String fName:fileList) {
-			String key = fName.endsWith(".ner")?fName.substring(0,fName.length()-4):fName;
+			String key = fName.endsWith(".ner")?fName.substring(0,fName.length()-4)+".parse":fName;
 			
 			if (treeMap!=null && !treeMap.containsKey(key)) continue;
 
@@ -148,6 +156,42 @@ public class Sentence implements Serializable{
 		}
 		return neMap;
 	}
+	
+	static Map<String, List<BitSet>> readPredicates(Properties props, String prefix, Map<String, TBTree[]> treeMap) {
+		Map<String, List<BitSet>> predMap = new HashMap<String, List<BitSet>>();
+		String predDir = props.getProperty(prefix+".dir");
+		String predRegex = props.getProperty(prefix+".regex");
+		
+		List<String> fileList = FileUtil.getFiles(new File(predDir), predRegex, false);
+		for (String fName:fileList) {
+			String key = fName.endsWith(".pred")?fName.substring(0,fName.length()-5)+".parse":fName;
+			
+			System.out.println("reading predicates from "+fName+" "+key);
+			System.out.println(treeMap.keySet());
+			if (treeMap!=null && !treeMap.containsKey(key)) continue;
+			
+			System.out.println("reading predicates from "+key);
+
+			List<BitSet> predList = new ArrayList<BitSet>();
+			
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(predDir, fName))))) {
+				String line;
+				while ((line=reader.readLine())!=null) {
+					BitSet predicates = new BitSet();
+					line = line.trim();
+					if (!line.isEmpty())
+						for (String token:line.split("\\s+"))
+							predicates.set(Integer.parseInt(token));
+					predList.add(predicates);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			predMap.put(key, predList);
+		}
+		return predMap;
+	}
+	
 	
 	static Map<String, SortedMap<Integer, List<PBInstance>>> readProps(Properties props, String prefix, Map<String, TBTree[]> treeMap) {
 		String propDir = props.getProperty(prefix+".dir");
@@ -214,10 +258,14 @@ public class Sentence implements Serializable{
 		Map<String, Map<Integer, String[][]>> ecDepMap=null;
 		if (sources.contains(Source.EC_DEP) && parseMap!=null)
 			ecDepMap = ECCommon.readDepEC(new File(props.getProperty(Source.EC_DEP.prefix+".dir")), parseMap);
-		
+	
 		Map<String, String[][]> neMap=null;
 		if (sources.contains(Source.NAMED_ENTITY))
 			neMap = readNamedEntities(props, Source.NAMED_ENTITY.prefix, parseMap);
+		
+		Map<String, List<BitSet>> predMap=null;
+		if (sources.contains(Source.PREDICATE_LIST))
+			predMap = readPredicates(props, Source.PREDICATE_LIST.prefix, parseMap);
 		
 		for (Map.Entry<String, TBTree[]> entry:sourceMap.entrySet()) {
 			Sentence[] sentences = new Sentence[entry.getValue().length];
@@ -232,11 +280,14 @@ public class Sentence implements Serializable{
 	
 			String[][] namedEntities = neMap==null?null:neMap.get(entry.getKey());
 			
+			List<BitSet> predList = predMap==null?null:predMap.get(entry.getKey());
+			
 			for (int i=0; i<entry.getValue().length; ++i)
 				sentences[i] = new Sentence(trees==null?null:trees[i], 
 											!sources.contains(Source.PROPBANK)?null:(propPBs==null?new ArrayList<PBInstance>():(propPBs.get(i)==null?new ArrayList<PBInstance>():propPBs.get(i))), 
 								            parses==null?null:parses[i], 
 										    srls==null?null:srls.get(i), 
+										    predList==null?null:predList.get(i),
 									        ecDeps==null?null:ecDeps.get(i), 
 									        namedEntities==null?null:namedEntities[i]);
 		}	

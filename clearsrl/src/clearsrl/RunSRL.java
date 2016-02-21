@@ -121,7 +121,7 @@ public class RunSRL {
 			if (sent==null) 
 				return null;
 			TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
-            return new Output(tree, model.predict(tree, sent.propPB, sent.depEC, sent.namedEntities));
+            return new Output(tree, model.predict(tree, sent.propPB, sent.predicates, sent.depEC, sent.namedEntities));
 		}
     }
     
@@ -211,7 +211,7 @@ public class RunSRL {
 	        	else
 	        		TBUtil.addDependency(tree, TBUtil.readCoNLLTree(depReader, 6, 7));
 	        	
-	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null)));
+	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null, null)));
 	            while(true)
 	    	        try {
 	    	        	srlQueue.put(future);

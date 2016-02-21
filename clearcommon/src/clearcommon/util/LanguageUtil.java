@@ -94,7 +94,7 @@ public abstract class LanguageUtil {
     }
     
     public String makePBFrameKey(TBNode node) {
-    	return findStems(node).get(0);
+    	return makePBFrameKey(findStems(node).get(0), getPOS(node.getPOS()));
     }
     
     public String makePBFrameKey(String lemma, POS pos) {

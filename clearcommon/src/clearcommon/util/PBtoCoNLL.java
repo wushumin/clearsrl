@@ -65,13 +65,14 @@ public class PBtoCoNLL {
         for (Map.Entry<String, TBTree[]>entry:treeBank.entrySet()) {
         	System.out.println("processing "+entry.getKey());
         	
-        	SortedMap<Integer, List<PBInstance>> propMap = propBank.get(entry.getKey());
-        	
-        	File outFile = new File(options.outDir, entry.getKey());
+        	String fName = entry.getKey();
+        	if (fName.endsWith(".parse"))
+        		fName = fName.substring(0,fName.length()-6)+".prop";
+        	File outFile = new File(options.outDir, fName);
         	outFile.getParentFile().mkdirs();
         	
         	PrintWriter writer = new PrintWriter(outFile);
-        	
+        	SortedMap<Integer, List<PBInstance>> propMap = propBank.get(entry.getKey());
         	for (TBTree tree:entry.getValue()) {
         		List<PBInstance> props = propMap==null?null:propMap.get(tree.getIndex());
         		writer.print(PBUtil.toCoNLLformat(tree, props));
