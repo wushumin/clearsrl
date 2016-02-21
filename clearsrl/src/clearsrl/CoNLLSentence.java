@@ -20,10 +20,29 @@ import java.util.StringTokenizer;
 
 public class CoNLLSentence {
     
+	/*
+	 * Columns :
+	 * 1    Document ID
+     * 2    Part number
+     * 3    Word number
+     * 4    Word itself   
+     * 5    Part-of-Speech
+     * 6    Parse bit
+     * 7    Predicate lemma
+     * 8    Predicate Frameset ID
+     * 9    Word sense
+     * 10   Speaker/Author 
+     * 11   Named Entities 
+     * 12:N Predicate Arguments
+     * N    Coreference
+	 * 
+	 */
+	
+	final static int SRL_IDX = 11; 
+	
     TBTree       parse;
     String[]     namedEntities;
     SRInstance[] srls;
-    
     
     public static String toDepString(TBTree parse, SRInstance[] predictedSRLs) {
     	boolean outputPOS = true;
@@ -85,22 +104,35 @@ public class CoNLLSentence {
         }
         return buffer.toString();
     }
-    
-    
-    public static String toString(TBTree parse, SRInstance[] predictedSRLs)
-    {
+
+    public static String toString(TBTree parse, SRInstance[] predictedSRLs) {
         StringBuilder buffer = new StringBuilder();
-        String[][] outStr = new String[parse.getTokenCount()][predictedSRLs.length+1];
+        String[][] outStr = new String[parse.getTokenCount()][predictedSRLs.length+12];
+
+        TBNode[] nodes = parse.getTokenNodes();
         
-        for (int i=0; i<outStr.length; ++i)
-            outStr[i][0] = "-";
-        for (int j=0; j<predictedSRLs.length; ++j)
-        {
-            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][0] = predictedSRLs[j].rolesetId;
+        for (int i=0; i<outStr.length; ++i) {
+            outStr[i][0] = parse.getFilename();
+            outStr[i][1] = "0";
+            outStr[i][2] = Integer.toString(i);
+            outStr[i][3] = nodes[i].getWord();
+            outStr[i][4] = nodes[i].getPOS();
+            outStr[i][5] = "*"; // TODO: output parse
+            outStr[i][6] = "-"; // will change to predicate
+            outStr[i][7] = "-"; // will change to roleset
+            outStr[i][8] = "-";
+            outStr[i][9] = "-";
+            outStr[i][outStr[i].length-1] = "-";
+        }
+        
+        for (int j=0; j<predictedSRLs.length; ++j) {
+            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][6] = predictedSRLs[j].rolesetId.substring(0, predictedSRLs[j].rolesetId.indexOf('.'));
+            outStr[predictedSRLs[j].getPredicateNode().getTokenIndex()][7] = predictedSRLs[j].rolesetId.substring(predictedSRLs[j].rolesetId.indexOf('.')+1);
+          
             //System.out.println(predictedSRLs[j].toCONLLString());
             String[] vals = predictedSRLs[j].toCONLLString().trim().split(" ");
             for (int i=0; i<outStr.length; ++i)
-                outStr[i][j+1] = vals[i];
+                outStr[i][j+SRL_IDX] = vals[i];
         }
         /*
         

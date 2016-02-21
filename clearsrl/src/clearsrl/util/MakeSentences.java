@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -20,39 +21,79 @@ public class MakeSentences {
    
 	private static Logger logger = Logger.getLogger("clearsrl");
 	
+	public static void writeAlignment(SentencePair s, PrintStream out,  PrintStream outhtml, Aligner aligner,LanguageUtil chUtil, LanguageUtil enUtil) throws Exception {
+		
+		Alignment[] alignments = aligner.align(s);
+		for (Alignment alignment:alignments) {
+			out.printf("%d,%s;[%s,%s];[%s,%s]\n",s.id+1, alignment.toString(), 
+					alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset(),
+					chUtil.isVerb(alignment.getSrcPBInstance().getPredicate().getPOS())?"VERB":"NOUN",
+					enUtil.isVerb(alignment.getDstPBInstance().getPredicate().getPOS())?"VERB":"NOUN");
+		}
+		if (outhtml!=null)
+			Aligner.printAlignment(outhtml, s, alignments);
+	}
+	
+	
 	static void readSentencePairs(Properties props, String filter1, String filter2, LanguageUtil chUtil, LanguageUtil enUtil) throws Exception {
 	
 		props = PropertyUtil.filterProperties(props, filter1, true);
 		props = PropertyUtil.filterProperties(props, filter2, true);
 		
-		Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold")));
-		
-		PrintStream out = new PrintStream(props.getProperty("output.txt"));
-		
-		PrintStream outhtml = null;
-		String htmlOutFile = props.getProperty("output.html");
-		if (htmlOutFile!=null)
-			outhtml = new PrintStream(htmlOutFile);
-		
+		logger.info("Processing "+filter1+"."+filter2);
 		SentencePairReader reader = new DefaultSentencePairReader(props);
 		reader.initialize();
+		
+		String[] subTypes = {"",".dstVerb",".srcVerb",".allVerbs"};
+
+		float threshhold = Float.parseFloat(props.getProperty("threshold"));
+		
+		Aligner aligners[] = new Aligner[]{new Aligner(threshhold, true, true, chUtil, enUtil, null, 0, 0, false),
+				new Aligner(threshhold, true, false, chUtil, enUtil, null, 0, 0, false),
+				new Aligner(threshhold, false, true, chUtil, enUtil, null, 0, 0, false),
+				new Aligner(threshhold, false, false, chUtil, enUtil, null, 0, 0, false),};
+		
+		//(Float.parseFloat(props.getProperty("threshold")));
+		
+		String outName = props.getProperty("output.txt");
+		PrintStream[] outs = new PrintStream[]{new PrintStream(outName),
+				new PrintStream(outName.substring(0, outName.lastIndexOf('.'))+subTypes[1]+outName.substring(outName.lastIndexOf('.'))),
+				new PrintStream(outName.substring(0, outName.lastIndexOf('.'))+subTypes[2]+outName.substring(outName.lastIndexOf('.'))),
+				new PrintStream(outName.substring(0, outName.lastIndexOf('.'))+subTypes[3]+outName.substring(outName.lastIndexOf('.')))};
+		
+		//new PrintStream(props.getProperty("output.txt"));
+		
+		PrintStream[] outhtmls = null;
+		String htmlOutFile = props.getProperty("output.html");
+		if (htmlOutFile!=null) {
+			outhtmls = new PrintStream[4];
+			outhtmls[0] = new PrintStream(htmlOutFile);
+			outhtmls[1] = new PrintStream(htmlOutFile.substring(0, htmlOutFile.lastIndexOf('.'))+subTypes[1]+htmlOutFile.substring(htmlOutFile.lastIndexOf('.')));
+			outhtmls[2] = new PrintStream(htmlOutFile.substring(0, htmlOutFile.lastIndexOf('.'))+subTypes[2]+htmlOutFile.substring(htmlOutFile.lastIndexOf('.')));
+			outhtmls[3] = new PrintStream(htmlOutFile.substring(0, htmlOutFile.lastIndexOf('.'))+subTypes[3]+htmlOutFile.substring(htmlOutFile.lastIndexOf('.')));
+		}
+		
 		SentencePair s = null;
-		if (outhtml!=null)
-			Aligner.initAlignmentOutput(outhtml);
+		if (outhtmls!=null) {
+			for (PrintStream outhtml:outhtmls)
+				Aligner.initAlignmentOutput(outhtml);
+		}
+			
 		while ((s = reader.nextPair())!=null) {
 			
+			logger.info("processing "+s.src.tbFile+" "+s.id);
+			//logger.info(s.toString());
+
+			for (int i=0; i<4;++i)
+				writeAlignment(s, outs[i], outhtmls==null?null:outhtmls[i],aligners[i], chUtil, enUtil);
 			
-			Alignment[] alignments = aligner.align(s);
-			for (Alignment alignment:alignments) {
-				out.printf("%d,%s;[%s,%s]\n",s.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
-			}
-			if (outhtml!=null)
-				Aligner.printAlignment(outhtml, s, alignments);
 		}
 		reader.close();
-		out.close();
-		if (outhtml!=null)
-			Aligner.finalizeAlignmentOutput(outhtml);
+		for (PrintStream out:outs)
+			out.close();
+		if (outhtmls!=null)
+			for (PrintStream outhtml:outhtmls)
+				Aligner.finalizeAlignmentOutput(outhtml);
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -77,25 +118,25 @@ public class MakeSentences {
             logger.severe(String.format("Language utility (%s) initialization failed",props.getProperty("english.util-class")));
             System.exit(-1);
         }
+        
+        readSentencePairs(props, "nw.", "gold.", chUtil, enUtil);
+        readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
+        readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
+        readSentencePairs(props, "nw.", "berk.", chUtil, enUtil);
    
         readSentencePairs(props, "bc.", "gold.", chUtil, enUtil);
         readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
         readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
         readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
         
-        //readSentencePairs(props, "nw.", "gold.", chUtil, enUtil);
-        //readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
-        //readSentencePairs(props, "nw.", "berk.", chUtil, enUtil);
-        //readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
-        
         //readSentencePairs(props, "nwpart.", "gold.", chUtil, enUtil);
         //readSentencePairs(props, "nwpart.", "berk.", chUtil, enUtil);
         //readSentencePairs(props, "nwpart.", "auto.", chUtil, enUtil);
         
-        readSentencePairs(props, "nwtest.", "gold.", chUtil, enUtil);
-        readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil);
-        readSentencePairs(props, "nwtest.", "berk.", chUtil, enUtil);
-        readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
+        //readSentencePairs(props, "nwtest.", "gold.", chUtil, enUtil);
+        //readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil);
+        //readSentencePairs(props, "nwtest.", "berk.", chUtil, enUtil);
+        //readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
         
     }
 }

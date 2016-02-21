@@ -160,6 +160,7 @@ public class PBArg implements Comparable<PBArg>, Serializable {
             for (TBNode aNode:mainNodes)
                 if (aNode.getPOS().startsWith("WH")) {
                     node = aNode;
+                    allNodes = new TBNode[]{node};
                     break;
                 }
             if (node==null) {

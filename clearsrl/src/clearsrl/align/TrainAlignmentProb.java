@@ -46,6 +46,7 @@ import clearcommon.util.LanguageUtil;
 import clearcommon.util.PropertyUtil;
 import clearsrl.align.SentencePair.BadInstanceException;
 import clearsrl.util.MakeAlignedLDASamples;
+import clearsrl.util.MakeSentences;
 
 public class TrainAlignmentProb {
 	
@@ -97,31 +98,72 @@ public class TrainAlignmentProb {
 		return sentList;
 	}
     
-    static void writeAlignments(Properties props, String filter1, String filter2, List<SentencePair> sentList, Aligner aligner, int round) throws Exception {
+    static void writeAlignments(Properties props, String filter1, String filter2, List<SentencePair> sentList, Aligner aligner, LanguageUtil chUtil, LanguageUtil enUtil, int round) throws Exception {
     	props = PropertyUtil.filterProperties(props, filter1, true);
 		props = PropertyUtil.filterProperties(props, filter2, true);
 		
-		String fName = props.getProperty("output.txt");		
-    	PrintStream out = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+".r"+round+"."+fName.substring(fName.lastIndexOf('.')+1));
 		
-    	
-    	PrintStream outhtml = null;
+		
+		String[] subTypes = {"",".dstVerb",".srcVerb",".allVerbs"};
+		
+		
+		for (int i=0; i<subTypes.length; ++i)
+			subTypes[i] = subTypes[i]+".r"+round;
+		
+		String fName = props.getProperty("output.txt");
+		PrintStream[] outs = new PrintStream[]{new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[0]+fName.substring(fName.lastIndexOf('.'))),
+				new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[1]+fName.substring(fName.lastIndexOf('.'))),
+				new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[2]+fName.substring(fName.lastIndexOf('.'))),
+				new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[3]+fName.substring(fName.lastIndexOf('.')))};
+
+    	PrintStream[] outhtmls = null;
     	fName = props.getProperty("output.html");		
     	if (fName!=null) {
-    		outhtml = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+".r"+round+"."+fName.substring(fName.lastIndexOf('.')+1));
-    		Aligner.initAlignmentOutput(outhtml);
+    		outhtmls = new PrintStream[4];
+    		for (int i=0; i<subTypes.length; ++i) {
+				outhtmls[i] = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[i]+fName.substring(fName.lastIndexOf('.')));
+				Aligner.initAlignmentOutput(outhtmls[i]);
+    		}
     	}
     	
     	for (SentencePair s:sentList) {
-			Alignment[] alignments = aligner.align(s);
-			for (Alignment alignment:alignments)
-				out.printf("%d,%s;[%s,%s]\n",s.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
-			if (outhtml!=null)
-				Aligner.printAlignment(outhtml, s, alignments);
+    		for (int i=0; i<subTypes.length; ++i) {
+    			switch (i) {
+    			case 0:
+    				aligner.alignSrcNominal = true;
+    				aligner.alignDstNominal = true;
+    				break;
+    			case 1:
+    				aligner.alignSrcNominal = true;
+    				aligner.alignDstNominal = false;
+    				break;
+    			case 2:
+    				aligner.alignSrcNominal = false;
+    				aligner.alignDstNominal = true;
+    				break;
+    			case 3:
+    				aligner.alignSrcNominal = false;
+    				aligner.alignDstNominal = false;
+    				break;
+    			default:
+    				break;
+    			}
+    			
+    			MakeSentences.writeAlignment(s, outs[i], outhtmls==null?null:outhtmls[i], aligner, chUtil, enUtil);
+    			
+    			/*
+				Alignment[] alignments = aligner.align(s);
+				for (Alignment alignment:alignments)
+					outs[i].printf("%d,%s;[%s,%s]\n",s.id+1, alignment.toString(), alignment.getSrcPBInstance().getRoleset(),alignment.getDstPBInstance().getRoleset());
+				if (outhtmls!=null)
+					Aligner.printAlignment(outhtmls[i], s, alignments);*/
+    		}
 		}
-    	out.close();
-    	if (outhtml!=null)
-			Aligner.finalizeAlignmentOutput(outhtml);
+    	for (int i=0; i<subTypes.length; ++i)
+    		outs[i].close();
+    	if (outhtmls!=null)
+    		for (int i=0; i<subTypes.length; ++i)
+    			Aligner.finalizeAlignmentOutput(outhtmls[i]);
     }
     
 	
@@ -480,8 +522,7 @@ public class TrainAlignmentProb {
             in.close();
         }
         props = PropertyUtil.resolveEnvironmentVariables(props);
-        
-        Aligner aligner = new Aligner(0.05f, null, 0, 0, options.fMeasure);
+
         
         LanguageUtil chUtil = (LanguageUtil) Class.forName(props.getProperty("chinese.util-class")).newInstance();
         if (!chUtil.init(PropertyUtil.filterProperties(props,"chinese."))) {
@@ -494,15 +535,20 @@ public class TrainAlignmentProb {
             logger.severe(String.format("Language utility (%s) initialization failed",props.getProperty("english.util-class")));
             System.exit(-1);
         }
+        
+        boolean chAlignNominal = true;
+        boolean enAlignNominal = true;
+        
+        Aligner aligner = new Aligner(0.05f, chAlignNominal, enAlignNominal, chUtil, enUtil, null, 0, 0, options.fMeasure);
        
         List<SentencePair> bcSentences = readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
         List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
         List<SentencePair> bcGWASentences = readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
-        //List<SentencePair> nwGWASentences = readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
+        List<SentencePair> nwGWASentences = readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
         List<SentencePair> bcBerkSentences = readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
-        List<SentencePair> nwtestBerkSentences = readSentencePairs(props, "nwtest.", "berk.", chUtil, enUtil); 
-        List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
-        List<SentencePair> nwtestGWASentences = readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil); 
+        List<SentencePair> nwBerkSentences = readSentencePairs(props, "nw.", "berk.", chUtil, enUtil); 
+        //List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
+        //List<SentencePair> nwtestGWASentences = readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil); 
         
         AlignmentProb probMap = null;
         if (options.objFile!=null && options.objFile.exists() && ! options.overWrite)
@@ -539,24 +585,25 @@ public class TrainAlignmentProb {
         	AlignmentProb oldProbMap = probMap;
  	        Aligner oldAligner = aligner; 	        
  	        
- 	        aligner = new Aligner(oldAligner.alignThreshold, oldProbMap, bestAlpha, bestBeta, options.fMeasure);
+ 	        aligner = new Aligner(oldAligner.alignThreshold, chAlignNominal, enAlignNominal, chUtil, enUtil, oldProbMap, bestAlpha, bestBeta, options.fMeasure);
  	        
         	int idx = 0;
  	        for (float alpha:alphaList)
 	        	for (float beta:betaList)
-	        		aligners[idx++] = new Aligner(0.2f*(1-0.8f*beta), aligner.probMap, alpha, beta, options.fMeasure);
+	        		aligners[idx++] = new Aligner(0.2f*(1-0.8f*beta), chAlignNominal, enAlignNominal, chUtil, enUtil, aligner.probMap, alpha, beta, options.fMeasure);
  	        
  	        //aligner.alignThreshold = 0.18f*(1+increment)*(r+1);
         	
- 	        writeAlignments(props, "bc.", "auto.", bcSentences, aligner, r);
- 	        writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligner, r);
+ 	        writeAlignments(props, "bc.", "auto.", bcSentences, aligner, chUtil, enUtil, r);
+ 	        writeAlignments(props, "nw.", "auto.", nwSentences, aligner, chUtil, enUtil, r);
+ 	       
+ 	        aligner.alignThreshold *= 1.5;
  	        
- 	        writeAlignments(props, "nwtest.", "auto.", nwtestSentences, aligner, r);
- 	        writeAlignments(props, "nwtest.", "berk.", nwtestBerkSentences, aligner, r);
- 	        
- 	        aligner.alignThreshold *= 2;
- 	        writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligner, r);
- 	        writeAlignments(props, "nwtest.", "gwa.", nwtestGWASentences, aligner, r);
+ 	        writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligner, chUtil, enUtil, r);
+ 	        writeAlignments(props, "nw.", "berk.", nwBerkSentences, aligner, chUtil, enUtil, r);
+ 	       
+ 	        writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligner, chUtil, enUtil, r);
+ 	        writeAlignments(props, "nw.", "gwa.", nwGWASentences, aligner, chUtil, enUtil, r);
         	//System.out.print("bc.auto "); writeAlignments(props, "bc.", "auto.", bcSentences, aligners[options.findBestAligner(bcSentences, aligners)], r);
         	//System.out.print("bc.gwa  "); writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligners[options.findBestAligner(bcGWASentences, aligners)], r);
         	//System.out.print("bc.berk "); writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligners[options.findBestAligner(bcBerkSentences, aligners)], r);

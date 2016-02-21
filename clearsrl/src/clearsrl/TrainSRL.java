@@ -152,7 +152,7 @@ public class TrainSRL {
         int hCnt = 0;
         int tCnt = 0;
         
-        boolean modelPredicate = !props.getProperty("model_predicate", "false").equals("false");
+        boolean partialNominalAnnotation = !props.getProperty("partialNominalAnnotation", "false").equals("false");
     
         TObjectIntMap<String> rolesetEmpty = new TObjectIntHashMap<String>();
         TObjectIntMap<String> rolesetArg = new TObjectIntHashMap<String>();
@@ -190,7 +190,19 @@ public class TrainSRL {
                 weight = weight==0?1:weight;
                 
                 logger.info("Processing "+entry.getKey());
-                for (Sentence sent:entry.getValue()) {                        
+                
+                Set<String> annotatedNominals = null;
+                if (partialNominalAnnotation) {
+	                annotatedNominals = new HashSet<String>();
+	                for (Sentence sent:entry.getValue()) 
+	                	 if (sent.propPB!=null)
+	                		 for (PBInstance instance:sent.propPB)
+	                			 if (!langUtil.isVerb(instance.getPredicate().getPOS()))
+	                				annotatedNominals.add(langUtil.makePBFrameKey(instance.getPredicate()));
+                }
+                
+                for (Sentence sent:entry.getValue()) {   
+                	sent.annotatedNominals = annotatedNominals;
                     logger.fine("Processing tree "+(sent.parse==null?sent.treeTB.getIndex():sent.parse.getIndex()));
                     if (sent.parse!=null && sent.treeTB!=null && sent.parse.getTokenCount()!=sent.treeTB.getTokenCount()) {
                     	logger.warning("tree "+entry.getKey()+":"+sent.parse.getIndex()+" inconsistent, skipping");
@@ -251,6 +263,7 @@ public class TrainSRL {
                     }
                 }
             }
+            System.out.println("Nominal predicate training counts: "+model.nomPositiveCnt+"/"+model.nomNegativeCnt);
             System.out.println("***************************************************");
             for (TObjectIntIterator<String> iter=rolesetEmpty.iterator();iter.hasNext();) {
                 iter.advance();

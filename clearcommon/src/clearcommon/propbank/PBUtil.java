@@ -186,22 +186,118 @@ public final class PBUtil {
     	return sList;
     }
     
+	/*
+	 * Columns :
+	 * 1    Document ID
+     * 2    Part number
+     * 3    Word number
+     * 4    Word itself   
+     * 5    Part-of-Speech
+     * 6    Parse bit
+     * 7    Predicate lemma
+     * 8    Predicate Frameset ID
+     * 9    Word sense
+     * 10   Speaker/Author 
+     * 11   Named Entities 
+     * 12:N Predicate Arguments
+     * N    Coreference
+	 * 
+	 */
+    
+	final static int SRL_IDX = 11; 
+    
+	static String getParsePrefix(TBNode node) {
+		String prefix = "";
+		
+		while (node.getParent()!=null) {
+			boolean firstToken = true;
+			for (int i=0; i<node.getChildIndex(); ++i)
+				if (node.getParent().getChildren()[i].hasTokens()) {
+					firstToken = false;
+					break;
+				}
+			if (!firstToken)
+				break;
+			prefix = "("+node.getParent().getPOS()+prefix;
+
+			node = node.getParent();
+		}
+		if (node.getParent()==null)
+			prefix = "(TOP"+prefix;
+		
+		return prefix;
+	}
+	
+	static String getParseSuffix(TBNode node) {
+		String suffix = "";
+		
+		while (node.getParent()!=null) {
+			boolean lastToken = true;
+			for (int i=node.getChildIndex()+1; i<node.getParent().getChildren().length; ++i)
+				if (node.getParent().getChildren()[i].hasTokens()) {
+					lastToken = false;
+					break;
+				}
+			if (!lastToken)
+				break;
+			suffix +=")";
+			
+			node = node.getParent();
+		}
+		if (node.getParent()==null)
+			suffix += ")";
+		return suffix;
+	}
+	
+	static void alignAnchor(String[] values, char anchor) {
+		int maxIdx = 0;
+		
+		for (String value:values) {
+			int anchorIdx = value.indexOf(anchor);
+			if (maxIdx<anchorIdx)
+				maxIdx = anchorIdx;
+		}
+		
+		for (int i=0; i<values.length; ++i) {
+			int anchorIdx = values[i].indexOf(anchor);
+			for (int j=anchorIdx; j<maxIdx; ++j)
+				values[i]=" "+values[i];
+		}
+	}
+	
     static public String toCoNLLformat(TBTree tree, List<PBInstance> instances) {
     	StringBuilder buffer = new StringBuilder();
-    	String[][] outStr = new String[instances==null?2:instances.size()+2][tree.getTokenCount()];
+    	
+    	String[][] outStr = new String[instances==null?SRL_IDX+1:instances.size()+SRL_IDX+1][tree.getTokenCount()];
     	
     	if (instances!=null)
     		Collections.sort(instances);
     	
     	TBNode[] nodes = tree.getTokenNodes();
-    	for (int i=0; i<outStr[0].length; ++i)
-    		outStr[0][i] = nodes[i].getWord(); 
+    	for (int i=0; i<outStr[0].length; ++i) {
+    		outStr[0][i] = tree.getFilename();
+            outStr[1][i] = "0";
+            outStr[2][i] = Integer.toString(i);
+            outStr[3][i] = nodes[i].getWord();
+            outStr[4][i] = nodes[i].getPOS();
+            outStr[5][i] = getParsePrefix(nodes[i])+"*"+getParseSuffix(nodes[i]); // TODO: output parse
+            outStr[6][i] = "-"; // will change to predicate
+            outStr[7][i] = "-"; // will change to roleset
+            outStr[8][i] = "-";
+            outStr[9][i] = "-";
+            outStr[10][i] = "-";
+            for (int j=SRL_IDX; j<outStr.length-1;++j)
+            	outStr[j][i] = "*";
+            outStr[outStr.length-1][i] = "-";
+    	}
     	
-    	Arrays.fill(outStr[1], "-");
+    	alignAnchor(outStr[5],'*');
     	
-    	for (int i=2; i<outStr.length; ++i) {
-    		outStr[i] = makeCoNLL(instances.get(i-2));
-    		outStr[1][instances.get(i-2).getPredicate().getTokenIndex()] = instances.get(i-2).getRoleset();
+    	for (int i=SRL_IDX; i<outStr.length-1; ++i) {
+    		outStr[i] = makeCoNLL(instances.get(i-SRL_IDX));
+    		alignAnchor(outStr[i],'*');
+    		outStr[6][instances.get(i-SRL_IDX).getPredicate().getTokenIndex()] = instances.get(i-SRL_IDX).getRoleset().substring(0,instances.get(i-SRL_IDX).getRoleset().indexOf('.'));
+    		outStr[7][instances.get(i-SRL_IDX).getPredicate().getTokenIndex()] = instances.get(i-SRL_IDX).getRoleset().substring(instances.get(i-SRL_IDX).getRoleset().indexOf('.')+1);
     	}
     		
     	int[] maxlength = new int[outStr.length];

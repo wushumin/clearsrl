@@ -648,7 +648,10 @@ public class SRLModel implements Serializable {
     	addTrainingPredicates(sentence, threshold, true);
         addTrainingArguments(sentence, threshold, null, true);
     }
-
+    // debug
+    transient int nomPositiveCnt = 0;
+    transient int nomNegativeCnt = 0;
+    
     void addTrainingPredicates(Sentence sent, float threshold, boolean buildDictionary) {
     	TBTree tree = sent.parse==null?sent.treeTB:sent.parse;
 
@@ -668,7 +671,10 @@ public class SRLModel implements Serializable {
         // add predicate training samples
         for (TBNode node: nodes) {
         	boolean trainPredicate = langUtil.isPredicateCandidate(node.getPOS()) && 
-            		(trainNominal || langUtil.isVerb(node.getPOS()));
+        			(langUtil.isVerb(node.getPOS()) || 
+        					(trainNominal && 
+        							(sent.annotatedNominals==null || 
+        							sent.annotatedNominals.contains(langUtil.makePBFrameKey(node)))));
         	
             if (goldSRLs[node.getTokenIndex()]==null && !trainPredicate)
                 continue;
@@ -678,6 +684,14 @@ public class SRLModel implements Serializable {
             if (trainPredicate)
             	predicateModel.addTrainingSample(sample, goldSRLs[node.getTokenIndex()]!=null?IS_PRED:NOT_PRED, buildDictionary);
 
+            // debug
+            if (trainPredicate && !langUtil.isVerb(node.getPOS()))
+            	if (goldSRLs[node.getTokenIndex()]!=null)
+            		nomPositiveCnt++;
+            	else
+            		nomNegativeCnt++;
+            	
+            
             if (goldSRLs[node.getTokenIndex()]==null)
                 continue;
             
@@ -1990,7 +2004,7 @@ public class SRLModel implements Serializable {
         //return langUtil.findStems(node).get(0)+".XX";
     }
     
-    public List<SRInstance> predict(TBTree parseTree, List<PBInstance> propPB, String[][] depEC, String[] namedEntities) {
+    public List<SRInstance> predict(TBTree parseTree, List<PBInstance> propPB, BitSet predicates, String[][] depEC, String[] namedEntities) {
     	
     	List<SRInstance> goldSRLs = propPB==null?null:SRLUtil.convertToSRInstance(propPB);
     	    	
@@ -2009,11 +2023,24 @@ public class SRLModel implements Serializable {
                 System.exit(1);
             }
 
-        if (goldSRLs==null) {
+        if (goldSRLs!=null) {
+            for (SRInstance goldSRL:goldSRLs) {
+            	if (!trainNominal && !langUtil.isVerb(goldSRL.getPredicateNode().getPOS())) continue;
+                TBNode node = parseTree.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex());
+                predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()])), 1.0));
+            }
+        } else if (predicates!=null) {
+        	System.out.println(""+parseTree.getIndex()+" "+predicates);
+        	for (int i=predicates.nextSetBit(0); i>=0; i=predicates.nextSetBit(i+1)) {
+        		TBNode node = parseTree.getNodeByTokenIndex(i);
+        		predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()])), 1.0));	
+        	}        	
+        } else {
         	int isPredVal = predicateModel.getLabelStringMap().get(IS_PRED);
             double[] vals = new double[2];
             for (TBNode node: nodes) {
-                if (!(langUtil.isPredicateCandidate(node.getPOS())&&(trainNominal || langUtil.isVerb(node.getPOS())))) continue;
+                if (!langUtil.isPredicateCandidate(node.getPOS()) || !langUtil.isVerb(node.getPOS()) && (!trainNominal || langUtil.getFrame(node)==null)) continue;
+                
                 EnumMap<Feature,Collection<String>> predFeatures = extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()]);
                 if (predicateOverrideKeySet!=null && predicateOverrideKeySet.contains(langUtil.makePBFrameKey(node))) {
                 	logger.fine("overrode classifying predicate "+langUtil.makePBFrameKey(node));
@@ -2026,12 +2053,7 @@ public class SRLModel implements Serializable {
                 	predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, predFeatures), 1f)); 
                 }*/
             }
-        } else
-            for (SRInstance goldSRL:goldSRLs) {
-            	if (!trainNominal && !langUtil.isVerb(goldSRL.getPredicateNode().getPOS())) continue;
-                TBNode node = parseTree.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex());
-                predictions.add(new SRInstance(node, parseTree, predictRoleSet(node, extractFeaturePredicate(predicateModel.getFeaturesFlat(), node, null, depEC==null?null:depEC[node.getTokenIndex()])), 1.0));
-            }
+        }
         int[] supportIds = SRLUtil.findSupportPredicates(predictions, useGoldPredicateSeparation?goldSRLs:null, langUtil, SRLUtil.SupportType.VERB, false);
         
         BitSet predicted = new BitSet(supportIds.length);

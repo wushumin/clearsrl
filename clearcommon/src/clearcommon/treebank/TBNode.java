@@ -550,6 +550,15 @@ public class TBNode implements Serializable {
         return this.pos.startsWith(TBLib.POS_EC);
     }
 
+    public boolean hasTokens() {
+    	if (isTerminal())
+    		return isToken();
+    	for (TBNode child:children)
+    		if (child.hasTokens())
+    			return true;
+    	return false;
+    }
+    
     /** Returns true if the pos-tag of the node is <code>pos</code>. */
     public boolean isPos(String pos) {
         return this.pos.equals(pos);
