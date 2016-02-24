@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
-import clearcommon.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFileReader;
 
 public class TBReader {
     

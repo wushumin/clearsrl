@@ -1,17 +1,12 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TDoubleDoubleIterator;
 import gnu.trove.iterator.TIntDoubleIterator;
 import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.map.TDoubleDoubleMap;
 import gnu.trove.map.TIntDoubleMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TDoubleDoubleHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;

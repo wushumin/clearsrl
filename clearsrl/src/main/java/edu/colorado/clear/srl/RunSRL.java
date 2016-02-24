@@ -1,18 +1,16 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.treebank.TBUtil.Dependency;
-import clearcommon.util.FileUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.ParseCorpus;
-import clearcommon.util.PropertyUtil;
-import clearcommon.util.LanguageUtil.POS;
-import clearsrl.SRInstance.OutputFormat;
-import clearsrl.Sentence.Source;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.FileUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.ParseCorpus;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.SRInstance.OutputFormat;
+import edu.colorado.clear.srl.Sentence.Source;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -134,7 +132,8 @@ public class RunSRL {
             this.langUtil  = langUtil;
         }
         
-        public void run() {
+        @Override
+		public void run() {
             while (true) {
             	Future<Output> future;
             	try {

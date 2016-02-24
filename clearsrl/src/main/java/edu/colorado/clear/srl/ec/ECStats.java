@@ -1,15 +1,13 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.ChineseUtil;
-import clearcommon.util.PropertyUtil;
-
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.ChineseUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -21,10 +19,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeSet;
-
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -193,7 +188,7 @@ public class ECStats {
         }
         
         for (Object obj:traceMap.keys())
-            System.out.println(obj+" "+traceMap.get((String)obj));
+            System.out.println(obj+" "+traceMap.get(obj));
         
         System.out.print("\n\n");
         

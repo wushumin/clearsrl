@@ -21,11 +21,7 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.propbank;
-
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.ParseException;
+package edu.colorado.clear.common.propbank;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -41,6 +37,10 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
+
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
 
 
 /**

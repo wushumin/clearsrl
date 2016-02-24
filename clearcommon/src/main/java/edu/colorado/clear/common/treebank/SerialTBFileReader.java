@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,13 +17,13 @@ import java.util.StringTokenizer;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
-import clearcommon.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFileReader;
 
 public class SerialTBFileReader extends TBFileReader
 {
     private static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
 
-    private static String WHITESPACE = " \t\n\r\f";
+    //private static String WHITESPACE = " \t\n\r\f";
     
     BufferedReader reader;
     Deque<String>  tokenQueue;

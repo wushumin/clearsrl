@@ -1,6 +1,6 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
-import clearcommon.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class ECTreeSample {
     TBTree goldTree;

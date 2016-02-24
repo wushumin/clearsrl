@@ -21,14 +21,14 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.alg;
-
-import clearcommon.util.JArrays;
+package edu.colorado.clear.common.alg;
 
 import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import edu.colorado.clear.common.util.JArrays;
 
 /**
  * Trains one-vs-all RRM classifiers.
@@ -113,7 +113,8 @@ public class AdaBoostTrainer extends SuperTrainer
             curr_label = currLabel;
         }
         
-        public void run()
+        @Override
+		public void run()
         {
             double[] gWeight = new double[D];
             double   gAlpha  = 0;

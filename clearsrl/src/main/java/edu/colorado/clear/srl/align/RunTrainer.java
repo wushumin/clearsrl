@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectIntMap;
@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
 
 public class RunTrainer {
     

@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.io.FilenameFilter;

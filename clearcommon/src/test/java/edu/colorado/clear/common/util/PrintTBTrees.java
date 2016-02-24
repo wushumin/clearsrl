@@ -1,11 +1,11 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.InputStreamReader;
 
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class PrintTBTrees {
     public static void main(String[] argv) {

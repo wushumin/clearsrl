@@ -1,4 +1,4 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,8 +13,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
-import clearcommon.treebank.TBNode;
-import clearcommon.util.LanguageUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.LanguageUtil;
 
 public class Topics {
     public static String getTopicHeadword(TBNode node, LanguageUtil langUtil) {

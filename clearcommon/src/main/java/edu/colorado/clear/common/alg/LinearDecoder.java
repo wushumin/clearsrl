@@ -21,9 +21,7 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.alg;
-
-import clearcommon.util.tuple.JIntDoubleTuple;
+package edu.colorado.clear.common.alg;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -31,6 +29,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
+
+import edu.colorado.clear.common.util.tuple.JIntDoubleTuple;
 
 /**
  * Decoder for linear classifiers.

@@ -21,7 +21,7 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.util.tuple;
+package edu.colorado.clear.common.util.tuple;
 
 public class JIntDoubleTuple
 {

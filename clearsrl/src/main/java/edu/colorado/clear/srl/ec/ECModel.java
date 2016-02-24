@@ -1,26 +1,13 @@
-package clearsrl.ec;
-
-import clearcommon.alg.Classifier;
-import clearcommon.alg.CrossValidator;
-import clearcommon.alg.FeatureSet;
-import clearcommon.alg.PairWiseClassifier;
-import clearcommon.alg.Classifier.InstanceFormat;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.ChineseUtil;
+package edu.colorado.clear.srl.ec;
 
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.TIntList;
-import gnu.trove.list.TShortList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,8 +25,17 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
-import clearsrl.ec.ECCommon.Feature;
-import clearsrl.ec.ECCommon.LabelType;
+import edu.colorado.clear.common.alg.Classifier;
+import edu.colorado.clear.common.alg.CrossValidator;
+import edu.colorado.clear.common.alg.FeatureSet;
+import edu.colorado.clear.common.alg.PairWiseClassifier;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.ChineseUtil;
+import edu.colorado.clear.srl.ec.ECCommon.Feature;
+import edu.colorado.clear.srl.ec.ECCommon.LabelType;
 
 public class ECModel implements Serializable {
     /**

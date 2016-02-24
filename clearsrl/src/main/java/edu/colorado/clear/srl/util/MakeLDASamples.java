@@ -1,16 +1,10 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import gnu.trove.iterator.TObjectFloatIterator;
-import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectFloatMap;
-import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectFloatHashMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
-
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -24,8 +18,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -35,19 +27,15 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBTokenizer;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBHeadRules;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.FileUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.FileUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
 
 public class MakeLDASamples {
 	
@@ -361,7 +349,7 @@ public class MakeLDASamples {
             System.exit(0);
         }
     	
-        options.langUtilMap = new HashMap<Long, LanguageUtil>();
+        MakeLDASamples.langUtilMap = new HashMap<Long, LanguageUtil>();
 
         Properties props = new Properties();
         Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
@@ -376,7 +364,7 @@ public class MakeLDASamples {
             System.exit(-1);
         }
         
-        options.langProps = langProps;
+        MakeLDASamples.langProps = langProps;
         
         if (!options.outDir.exists())
         	options.outDir.mkdirs();

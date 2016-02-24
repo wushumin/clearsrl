@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

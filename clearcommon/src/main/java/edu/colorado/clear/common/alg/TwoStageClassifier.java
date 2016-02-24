@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TObjectIntMap;
@@ -22,7 +22,8 @@ public class TwoStageClassifier extends Classifier implements Serializable {
     TwoStageClassifier() {
     }
     
-    public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
+    @Override
+	public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         super.initialize(labelMap, prop);
         this.cutoff = Double.parseDouble(prop.getProperty("TwoStageClassifier.cutoff"));
     }

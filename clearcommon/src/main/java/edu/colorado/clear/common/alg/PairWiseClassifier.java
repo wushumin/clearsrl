@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TObjectIntMap;
@@ -94,7 +94,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
     public PairWiseClassifier(){
     }
     
-    public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
+    @Override
+	public void initialize(TObjectIntMap<String> labelMap, Properties prop) {
         super.initialize(labelMap, prop);
 
         classifiers = new Classifier[labelMap.size()][labelMap.size()];
@@ -315,7 +316,8 @@ public class PairWiseClassifier extends Classifier implements Serializable {
         }
     }
     
-    public BitSet getFeatureMask() {
+    @Override
+	public BitSet getFeatureMask() {
     	BitSet mask = new BitSet();
     	for (int i=0; i<labelMap.size()-1; ++i)
             for (int j=i+1; j<labelMap.size(); ++j)

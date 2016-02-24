@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.list.TIntList;
 import gnu.trove.list.TLongList;
@@ -17,11 +17,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.FileUtil;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.FileUtil;
 
 
 public class TestLDC09SentencePairReader {

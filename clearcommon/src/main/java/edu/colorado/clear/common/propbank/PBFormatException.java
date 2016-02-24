@@ -1,4 +1,4 @@
-package clearcommon.propbank;
+package edu.colorado.clear.common.propbank;
 
 public class PBFormatException extends Exception {
 

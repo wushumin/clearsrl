@@ -1,10 +1,10 @@
-package clearcommon.propbank;
+package edu.colorado.clear.common.propbank;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import clearcommon.treebank.*;
+import edu.colorado.clear.common.treebank.*;
 
 public class PBInstance implements Comparable<PBInstance>, Serializable
 {

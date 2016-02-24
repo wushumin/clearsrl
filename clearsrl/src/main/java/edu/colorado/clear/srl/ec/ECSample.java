@@ -1,10 +1,8 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.List;
-
-import clearsrl.ec.ECCommon.Feature;
+import edu.colorado.clear.srl.ec.ECCommon.Feature;
 
 public class ECSample {
     public ECSample(EnumMap<Feature,Collection<String>> features, String label) {

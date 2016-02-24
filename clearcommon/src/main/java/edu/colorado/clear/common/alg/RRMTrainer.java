@@ -21,15 +21,15 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.alg;
-
-import clearcommon.alg.Classifier.InstanceFormat;
+package edu.colorado.clear.common.alg;
 
 import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import edu.colorado.clear.common.alg.Classifier.InstanceFormat;
 
 /**
  * Trains one-vs-all RRM classifiers.
@@ -149,7 +149,8 @@ public class RRMTrainer extends SuperTrainer
             curr_label = currLabel;
         }
         
-        public void run()
+        @Override
+		public void run()
         {
             double[] pWeight = new double[D];   Arrays.fill(pWeight, mu);
             double[] nWeight = new double[D];   Arrays.fill(nWeight, mu);

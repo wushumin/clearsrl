@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.list.TIntList;
@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public  class SentencePair implements Serializable {
 
@@ -455,7 +455,8 @@ public  class SentencePair implements Serializable {
         return builder.toString();
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
         return src+"\n"+dst+"\n"+toAlignmentString();
     }
 

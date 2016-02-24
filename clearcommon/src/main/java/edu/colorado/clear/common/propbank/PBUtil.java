@@ -1,10 +1,10 @@
-package clearcommon.propbank;
+package edu.colorado.clear.common.propbank;
 
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.FileUtil;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -10,11 +10,11 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
 
 /**
  * Converts PropBank to (unofficial) CoNLL format

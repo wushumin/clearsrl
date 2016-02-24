@@ -1,10 +1,10 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class ECDependent {
 
@@ -79,7 +79,8 @@ public class ECDependent {
         return getDependents(getECCandidates(tree));
     }
 
-    public String toString() {
+    @Override
+	public String toString() {
         StringBuilder builder = new StringBuilder();
         if (subject!=null)
             builder.append("sbj-"+subject.getECType()+" ");

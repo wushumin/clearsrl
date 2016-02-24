@@ -1,9 +1,9 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.set.TIntSet;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class ArgAlignment {
 

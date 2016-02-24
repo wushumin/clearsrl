@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class Alignment implements Comparable<Alignment>{
 
@@ -370,7 +370,8 @@ public class Alignment implements Comparable<Alignment>{
         
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
     	return toString(false);
     }
     

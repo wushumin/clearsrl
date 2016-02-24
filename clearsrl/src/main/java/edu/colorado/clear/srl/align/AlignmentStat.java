@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.array.TFloatArrayList;

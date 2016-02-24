@@ -1,8 +1,7 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -52,7 +51,8 @@ public class PBFrame {
         	return classes==null?null:Collections.unmodifiableSet(classes);
         }
  
-        public String toString() {
+        @Override
+		public String toString() {
             return id+' '+roleMap;
         }
     }
@@ -83,7 +83,8 @@ public class PBFrame {
         rolesets.put(roleset.id, roleset);
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
         StringBuilder builder = new StringBuilder();
         char pos = this.pos.equals(LanguageUtil.POS.NOUN)?'n':(this.pos.equals(LanguageUtil.POS.VERB)?'v':'j');
         

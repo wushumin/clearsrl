@@ -1,8 +1,10 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+
+import edu.colorado.clear.common.util.FileUtil;
 
 public class CleanUPParses {
     public static void main(String[] argv) {

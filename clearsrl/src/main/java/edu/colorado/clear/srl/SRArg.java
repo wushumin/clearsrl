@@ -1,11 +1,11 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import gnu.trove.map.TObjectIntMap;
 
 import java.io.Serializable;
 import java.util.BitSet;
 
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class SRArg implements Comparable<SRArg>, Serializable{
     /**

@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import gnu.trove.map.TObjectIntMap;
 
@@ -19,7 +19,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
@@ -29,8 +28,8 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import clearcommon.treebank.TBHeadRules;
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBHeadRules;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class ChineseUtil extends LanguageUtil {
 

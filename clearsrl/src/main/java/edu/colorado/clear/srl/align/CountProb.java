@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -6,9 +6,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
-
-import clearsrl.util.SimpleGoodTuring;
+import edu.colorado.clear.srl.util.SimpleGoodTuring;
 import gnu.trove.iterator.TObjectDoubleIterator;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TIntDoubleMap;
@@ -144,7 +142,7 @@ public class CountProb<T> implements Serializable {
     	keyedProbMap.clear();
     	for(TObjectIntIterator<T> iter=keyedCntMap.iterator(); iter.hasNext(); ) {
     		iter.advance();
-    		keyedProbMap.put(iter.key(), probMap.get((int)iter.value()));
+    		keyedProbMap.put(iter.key(), probMap.get(iter.value()));
     	}
 
     	return unseenCnt>0?unseenProb:0;
@@ -320,7 +318,8 @@ public class CountProb<T> implements Serializable {
 		}*/
 	}
     
-    public String toString() {
+    @Override
+	public String toString() {
     	if (probMap!=null)
     		return probMap.toString();
     	return cntMap.toString();

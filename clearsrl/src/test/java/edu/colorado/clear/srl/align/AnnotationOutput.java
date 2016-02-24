@@ -1,7 +1,6 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -10,7 +9,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 
-import clearcommon.alg.CrossValidator;
+import edu.colorado.clear.common.alg.CrossValidator;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.RunTrainer;
+import edu.colorado.clear.srl.align.SentencePair;
+import edu.colorado.clear.srl.align.SentencePairReader;
 
 public class AnnotationOutput {
     

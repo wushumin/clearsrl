@@ -1,19 +1,17 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.PBFileReader;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.ParseException;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.ThreadedTBFileReader;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.ThreadedTBFileReader;
 
 public class AlignedSentenceReader extends SentenceReader {
     

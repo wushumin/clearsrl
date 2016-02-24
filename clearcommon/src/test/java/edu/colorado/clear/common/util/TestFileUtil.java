@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 
 import java.io.File;
@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import edu.colorado.clear.common.util.FileUtil;
 
 
 public class TestFileUtil {

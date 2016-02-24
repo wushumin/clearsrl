@@ -1,15 +1,12 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,17 +17,16 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeSet;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.OntoNotesTokenizer;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBTokenizer;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.SRLScore.Type;
-import clearsrl.util.Topics;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.OntoNotesTokenizer;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBTokenizer;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.SRLScore.Type;
+import edu.colorado.clear.srl.util.Topics;
 
 public class ScoreSRLFreq {
 	

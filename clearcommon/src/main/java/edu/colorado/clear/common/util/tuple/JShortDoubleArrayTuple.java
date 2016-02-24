@@ -1,4 +1,4 @@
-package clearcommon.util.tuple;
+package edu.colorado.clear.common.util.tuple;
 
 public class JShortDoubleArrayTuple
 {

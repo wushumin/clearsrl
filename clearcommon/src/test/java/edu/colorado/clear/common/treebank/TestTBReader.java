@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 
 import static org.junit.Assert.*;
@@ -9,6 +9,12 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class TestTBReader {
 

@@ -1,4 +1,4 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -66,7 +66,8 @@ public class ECScore {
         }
     }
         
-    public String toString() {
+    @Override
+	public String toString() {
         StringBuilder builder = new StringBuilder();
         
         builder.append("\n********** unlabeled EC Results **********");

@@ -1,5 +1,14 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.EnglishUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.common.util.LanguageUtil.POS;
 import edu.mit.jwi.item.IIndexWord;
 import edu.mit.jwi.item.ISynset;
 import edu.mit.jwi.item.ISynsetID;
@@ -29,16 +38,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.EnglishUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearcommon.util.LanguageUtil.POS;
 
 public class RunProMatcher {
     
@@ -71,7 +70,8 @@ public class RunProMatcher {
             this.score = score;
         }
 
-        public int compareTo(ProAlignment o) {
+        @Override
+		public int compareTo(ProAlignment o) {
             if (src!=o.src)
                 return src-o.src;
             double diff = score-o.score;
@@ -88,10 +88,11 @@ public class RunProMatcher {
         
         public long toLong()
         {
-            return ((long)src)<<32|(long)dst;
+            return ((long)src)<<32|dst;
         }
         
-        public String toString()
+        @Override
+		public String toString()
         {
             if (dst<=0)
                 return String.format("%d::%s", src, type.toString().toLowerCase());

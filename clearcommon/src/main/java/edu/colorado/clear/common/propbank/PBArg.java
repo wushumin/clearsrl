@@ -1,4 +1,4 @@
-package clearcommon.propbank;
+package edu.colorado.clear.common.propbank;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-import clearcommon.treebank.*;
+import edu.colorado.clear.common.treebank.*;
 
 public class PBArg implements Comparable<PBArg>, Serializable {
     /**
@@ -123,8 +123,8 @@ public class PBArg implements Comparable<PBArg>, Serializable {
     			List<TBNode> extraNodes = new ArrayList<TBNode>();
     			extraNodes.add(rNode);
 
-    			TBNode[] tmp = new TBNode[allNodes.length-1];
-    			int cnt = 0;
+    			//TBNode[] tmp = new TBNode[allNodes.length-1];
+    			//int cnt = 0;
     			
     			boolean removed = false;
     			do {
