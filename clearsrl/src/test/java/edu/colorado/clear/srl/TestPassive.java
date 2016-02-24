@@ -1,16 +1,4 @@
-package clearsrl;
-
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.OntoNotesTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBHeadRules;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.treebank.ParseException;
-import clearcommon.util.LanguageUtil;
+package edu.colorado.clear.srl;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,7 +13,20 @@ import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 
-import clearsrl.SRLModel.Feature;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.OntoNotesTokenizer;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBHeadRules;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.srl.CoNLLSentence;
+import edu.colorado.clear.srl.SRInstance;
+import edu.colorado.clear.srl.SRLModel.Feature;
 
 public class TestPassive {
     static final float THRESHOLD=0.8f;

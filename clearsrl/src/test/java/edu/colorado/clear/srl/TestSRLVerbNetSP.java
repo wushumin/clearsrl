@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.map.TObjectFloatMap;
@@ -24,12 +24,17 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.SRLVerbNetSP.Type;
-import clearsrl.Sentence.Source;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.SRArg;
+import edu.colorado.clear.srl.SRInstance;
+import edu.colorado.clear.srl.SRLScore;
+import edu.colorado.clear.srl.SRLSelPref;
+import edu.colorado.clear.srl.SRLVerbNetSP;
+import edu.colorado.clear.srl.Sentence;
+import edu.colorado.clear.srl.SRLVerbNetSP.Type;
+import edu.colorado.clear.srl.Sentence.Source;
 
 public class TestSRLVerbNetSP {
 

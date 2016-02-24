@@ -1,14 +1,13 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Scanner;
 
-import clearcommon.util.PropertyUtil;
-import clearsrl.align.SentencePair.BadInstanceException;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.SentencePair.BadInstanceException;
 
 public class DefaultSentencePairReader extends SentencePairReader{
     

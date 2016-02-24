@@ -1,9 +1,8 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 import gnu.trove.list.array.TLongArrayList;
 
 import java.io.Serializable;
@@ -258,7 +257,8 @@ public class Sentence implements Serializable{
         return builder.toString();
     }
     
-    public String toString()
+    @Override
+	public String toString()
     {
         StringBuilder builder = new StringBuilder();
         builder.append(tbFile+":");

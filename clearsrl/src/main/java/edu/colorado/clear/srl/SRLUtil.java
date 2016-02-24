@@ -1,9 +1,9 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.LanguageUtil;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.LanguageUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class SRLUtil {
 

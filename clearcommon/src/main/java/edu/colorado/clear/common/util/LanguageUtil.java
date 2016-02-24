@@ -1,9 +1,9 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
-import clearcommon.propbank.PBFileReader;
-import clearcommon.treebank.TBHeadRules;
-import clearcommon.treebank.TBNode;
-import clearcommon.util.PBFrame.Roleset;
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.treebank.TBHeadRules;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.PBFrame.Roleset;
 import gnu.trove.map.TObjectIntMap;
 
 import java.util.Arrays;

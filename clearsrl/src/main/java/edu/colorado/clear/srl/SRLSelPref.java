@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import clearcommon.treebank.TBNode;
-import clearcommon.util.LanguageUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.LanguageUtil;
 import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.hash.TObjectFloatHashMap;

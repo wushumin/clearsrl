@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.list.TIntList;
 import gnu.trove.list.TLongList;
@@ -21,15 +21,15 @@ import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.OntoNotesTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.FileUtil;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.OntoNotesTokenizer;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.FileUtil;
 
 public class LDC09SentencePairReader extends SentencePairReader {
     

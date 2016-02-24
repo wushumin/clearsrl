@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -25,7 +24,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -36,17 +34,17 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.align.SentencePair.BadInstanceException;
-import clearsrl.util.MakeAlignedLDASamples;
-import clearsrl.util.MakeSentences;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.SentencePair.BadInstanceException;
+import edu.colorado.clear.srl.util.MakeAlignedLDASamples;
+import edu.colorado.clear.srl.util.MakeSentences;
 
 public class TrainAlignmentProb {
 	

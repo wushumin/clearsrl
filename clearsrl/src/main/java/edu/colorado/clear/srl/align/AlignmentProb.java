@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TObjectDoubleIterator;
 import gnu.trove.map.TIntDoubleMap;
@@ -18,9 +18,9 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearsrl.util.SimpleGoodTuring;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.srl.util.SimpleGoodTuring;
 
 public class AlignmentProb implements Serializable{
     /**

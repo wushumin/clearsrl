@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -10,10 +10,10 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class SRInstance implements Comparable<SRInstance>, Serializable {
 

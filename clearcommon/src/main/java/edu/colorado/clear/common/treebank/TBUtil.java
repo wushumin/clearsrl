@@ -1,7 +1,7 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
-import clearcommon.propbank.PBFileReader;
-import clearcommon.util.FileUtil;
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.util.FileUtil;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -291,6 +291,7 @@ public final class TBUtil {
 			this.index = index;
 			this.label = label;
 		}
+		@Override
 		public String toString() {
 			return ""+index+"/"+label;
 		}

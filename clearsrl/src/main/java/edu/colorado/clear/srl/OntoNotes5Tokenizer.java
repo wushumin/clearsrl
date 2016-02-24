@@ -1,8 +1,8 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import java.util.Arrays;
 
-import clearcommon.propbank.PBTokenizer;
+import edu.colorado.clear.common.propbank.PBTokenizer;
 
 public class OntoNotes5Tokenizer implements PBTokenizer {
 

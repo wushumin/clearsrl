@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import clearcommon.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class SRLScore {
     
@@ -40,7 +40,8 @@ public class SRLScore {
             this.fCount = fCount;
         }
         
-        public String toString() {
+        @Override
+		public String toString() {
             return String.format("%s(%d,%d,%d): precision: %f recall: %f f-measure: %f", label, fCount, pCount, rCount, p*100, r*100, f*100);
         }
         
@@ -240,7 +241,8 @@ public class SRLScore {
     	return lhs.compareTo(rhs);
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
         StringBuilder builder = new StringBuilder();
         int sum = 0;
         for (int[] row:microCount)

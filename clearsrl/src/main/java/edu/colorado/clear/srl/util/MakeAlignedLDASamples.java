@@ -1,4 +1,4 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.hash.TObjectFloatHashMap;
@@ -27,24 +27,24 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PBFrame;
-import clearcommon.util.PBFrame.Roleset;
-import clearcommon.util.PropertyUtil;
-import clearsrl.align.Aligner;
-import clearsrl.align.Alignment;
-import clearsrl.align.ArgAlignmentPair;
-import clearsrl.align.Sentence;
-import clearsrl.align.SentencePair;
-import clearsrl.align.SentencePair.BadInstanceException;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PBFrame;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.common.util.PBFrame.Roleset;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.ArgAlignmentPair;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentencePair;
+import edu.colorado.clear.srl.align.SentencePair.BadInstanceException;
 
 public class MakeAlignedLDASamples {
 	
@@ -91,7 +91,8 @@ public class MakeAlignedLDASamples {
     		this.weight = weight;
     	}
     	
-    	public String toString() {
+    	@Override
+		public String toString() {
     		return label+' '+head+' '+weight;
     	}
     	

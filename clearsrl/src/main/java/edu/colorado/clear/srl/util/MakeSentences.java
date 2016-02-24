@@ -1,21 +1,19 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.align.Aligner;
-import clearsrl.align.Alignment;
-import clearsrl.align.DefaultSentencePairReader;
-import clearsrl.align.SentencePair;
-import clearsrl.align.SentencePairReader;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.DefaultSentencePairReader;
+import edu.colorado.clear.srl.align.SentencePair;
+import edu.colorado.clear.srl.align.SentencePairReader;
 
 public class MakeSentences {
    

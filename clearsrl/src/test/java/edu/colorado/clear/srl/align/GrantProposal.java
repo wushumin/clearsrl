@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TObjectDoubleIterator;
 import gnu.trove.iterator.TObjectIntIterator;
@@ -17,7 +17,6 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -29,11 +28,21 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.AlignmentStat;
+import edu.colorado.clear.srl.align.ArgAlignmentPair;
+import edu.colorado.clear.srl.align.DefaultSentencePairReader;
+import edu.colorado.clear.srl.align.LDC09SentencePairReader;
+import edu.colorado.clear.srl.align.LDCSentencePairReader;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentencePair;
+import edu.colorado.clear.srl.align.SentencePairReader;
 
 public class GrantProposal {
 

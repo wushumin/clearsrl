@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

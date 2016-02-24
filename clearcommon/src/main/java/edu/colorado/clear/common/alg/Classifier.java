@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectIntMap;

@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -8,8 +8,8 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
 
 public class ExtractCorpusText {
     @Option(name="-in",usage="input parse directory")

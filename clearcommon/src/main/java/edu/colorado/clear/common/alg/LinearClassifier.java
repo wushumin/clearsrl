@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.map.TObjectIntMap;
 
@@ -7,8 +7,8 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Properties;
 
-import liblinearbinary.Linear;
-import liblinearbinary.SolverType;
+import edu.colorado.clear.liblinearbinary.Linear;
+import edu.colorado.clear.liblinearbinary.SolverType;
 
 public class LinearClassifier extends Classifier implements Serializable {
     /**
@@ -20,7 +20,7 @@ public class LinearClassifier extends Classifier implements Serializable {
     double C;
     double eps = 1e-3;
     double bias = -1;
-    liblinearbinary.Model model;
+    edu.colorado.clear.liblinearbinary.Model model;
     int[] mLabelIdx;
     
     public LinearClassifier() {
@@ -88,16 +88,17 @@ public class LinearClassifier extends Classifier implements Serializable {
         return label;
     }
 
-    public void train (liblinearbinary.Problem problem)
+    public void train (edu.colorado.clear.liblinearbinary.Problem problem)
     {
-        liblinearbinary.Parameter param = new liblinearbinary.Parameter(solverType,C,eps);
+        edu.colorado.clear.liblinearbinary.Parameter param = new edu.colorado.clear.liblinearbinary.Parameter(solverType,C,eps);
         
         model = Linear.train(problem, param);
         mLabelIdx = model.getLabels();
     }
     
     
-    public BitSet getFeatureMask() {
+    @Override
+	public BitSet getFeatureMask() {
     	BitSet mask = new BitSet();
     	double[] w = model.getFeatureWeights();
     	for (int i=0; i<w.length; ++i) {
@@ -107,7 +108,8 @@ public class LinearClassifier extends Classifier implements Serializable {
     	return mask;
     }
     
-    public Object getNativeFormat(int[] x) {
+    @Override
+	public Object getNativeFormat(int[] x) {
     	if (bias<=0)
     		return x;
     	int[] xMod = Arrays.copyOf(x, x.length+1);
@@ -138,8 +140,8 @@ public class LinearClassifier extends Classifier implements Serializable {
     }
     */
     
-    public static liblinearbinary.Problem convertToProblem(Object[] X, int[] Y, double[] weightY, double bias, int dimension) {
-        liblinearbinary.Problem problem = new liblinearbinary.Problem();
+    public static edu.colorado.clear.liblinearbinary.Problem convertToProblem(Object[] X, int[] Y, double[] weightY, double bias, int dimension) {
+        edu.colorado.clear.liblinearbinary.Problem problem = new edu.colorado.clear.liblinearbinary.Problem();
         
         problem.bias = bias>0?1:-1;
         problem.l = X.length;

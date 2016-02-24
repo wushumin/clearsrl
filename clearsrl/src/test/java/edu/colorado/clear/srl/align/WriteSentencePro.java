@@ -1,8 +1,7 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Reader;
@@ -13,13 +12,16 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.ChineseUtil;
-import clearcommon.util.ECDependent;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.ChineseUtil;
+import edu.colorado.clear.common.util.ECDependent;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentenceReader;
+import edu.colorado.clear.srl.align.TokenedSentenceReader;
 
 public class WriteSentencePro {
     @Option(name="-prop",usage="properties file")

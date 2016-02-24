@@ -1,4 +1,4 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,17 +17,17 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
-import clearcommon.propbank.DefaultPBTokenizer;
-import clearcommon.propbank.PBInstance;
-import clearcommon.propbank.PBUtil;
-import clearcommon.treebank.TBReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.align.Aligner;
-import clearsrl.align.Alignment;
-import clearsrl.align.Sentence;
-import clearsrl.align.SentencePair;
+import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentencePair;
 
 public class AlignCorpus {
 	private static Logger logger = Logger.getLogger("clearsrl");

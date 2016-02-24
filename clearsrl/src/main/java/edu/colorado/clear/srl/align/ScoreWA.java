@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;
@@ -65,7 +65,7 @@ public class ScoreWA {
         {
             int s = Integer.parseInt(token.substring(0, token.indexOf('-')));
             int d = Integer.parseInt(token.substring(token.indexOf('-')+1));
-            aSet.add(((long)(s))<<32|((long)d));
+            aSet.add(((long)(s))<<32|(d));
         }
         
         return aSet.toArray();

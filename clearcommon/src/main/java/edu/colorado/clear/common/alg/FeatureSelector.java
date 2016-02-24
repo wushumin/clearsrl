@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;

@@ -1,4 +1,4 @@
-package clearcommon.propbank;
+package edu.colorado.clear.common.propbank;
 
 import static org.junit.Assert.*;
 
@@ -9,7 +9,13 @@ import java.util.List;
 
 import org.junit.Test;
 
-import clearcommon.treebank.*;
+import edu.colorado.clear.common.propbank.OntoNotesTokenizer;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFormatException;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBReader;
+import edu.colorado.clear.common.treebank.*;
 
 public class TestPBInstance {
     @Test

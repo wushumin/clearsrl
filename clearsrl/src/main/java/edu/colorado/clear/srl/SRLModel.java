@@ -1,21 +1,21 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
-import clearcommon.alg.Classifier;
-import clearcommon.alg.CrossValidator;
-import clearcommon.alg.FeatureSet;
-import clearcommon.alg.SimpleModel;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.EnglishUtil;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PBFrame;
-import clearcommon.util.PBFrame.Roleset;
-import clearcommon.util.PropertyUtil;
-import clearsrl.ec.ECCommon;
-import clearsrl.util.LDAModel;
-import clearsrl.util.Topics;
-import clearsrl.util.LDAModel.SparseCount;
+import edu.colorado.clear.common.alg.Classifier;
+import edu.colorado.clear.common.alg.CrossValidator;
+import edu.colorado.clear.common.alg.FeatureSet;
+import edu.colorado.clear.common.alg.SimpleModel;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.EnglishUtil;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PBFrame;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.common.util.PBFrame.Roleset;
+import edu.colorado.clear.srl.ec.ECCommon;
+import edu.colorado.clear.srl.util.LDAModel;
+import edu.colorado.clear.srl.util.Topics;
+import edu.colorado.clear.srl.util.LDAModel.SparseCount;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TIntArrayList;
@@ -216,7 +216,8 @@ public class SRLModel implements Serializable {
             this.labelProb = null;
         }
         
-        public String toString() {
+        @Override
+		public String toString() {
             if (label.equals(NOT_ARG))
                 return node.toText();
             return "["+label+" "+node.toText()+"]";
@@ -468,7 +469,8 @@ public class SRLModel implements Serializable {
     	predicateOverrideKeySet = keySet;
     }
 
-    protected void finalize() {
+    @Override
+	protected void finalize() {
         if (trainingSampleFile!=null)
             trainingSampleFile.delete();
         trainingSampleFile = null;

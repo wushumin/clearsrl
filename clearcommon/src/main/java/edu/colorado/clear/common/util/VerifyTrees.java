@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.util.List;
@@ -7,7 +7,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
 
 public class VerifyTrees {
     

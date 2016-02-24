@@ -1,4 +1,4 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -8,16 +8,14 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearsrl.SRLModel.Feature;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.TObjectIntMap;

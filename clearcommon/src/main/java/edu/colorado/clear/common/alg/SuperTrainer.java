@@ -21,12 +21,11 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 * POSSIBILITY OF SUCH DAMAGE.
 */
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
-import clearcommon.alg.Classifier.InstanceFormat;
-import clearcommon.util.JArrays;
-import clearcommon.util.tuple.JShortDoubleArrayTuple;
-
+import edu.colorado.clear.common.alg.Classifier.InstanceFormat;
+import edu.colorado.clear.common.util.JArrays;
+import edu.colorado.clear.common.util.tuple.JShortDoubleArrayTuple;
 import gnu.trove.list.array.TShortArrayList;
 import gnu.trove.set.TShortSet;
 import gnu.trove.set.hash.TShortHashSet;

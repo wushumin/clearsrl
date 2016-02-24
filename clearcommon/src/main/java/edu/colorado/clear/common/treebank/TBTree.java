@@ -21,13 +21,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 import java.io.Serializable;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 
-import clearcommon.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFileReader;
 
 /**
  * Penn Treebank tree

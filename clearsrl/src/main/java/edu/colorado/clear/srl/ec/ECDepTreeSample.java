@@ -1,7 +1,7 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 import java.util.BitSet;
 
-import clearcommon.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class ECDepTreeSample extends ECTreeSample {
     BitSet[] headMasks;

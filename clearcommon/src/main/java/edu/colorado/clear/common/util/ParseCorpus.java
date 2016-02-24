@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser;
 import edu.berkeley.nlp.PCFGLA.CoarseToFineNBestParser;
@@ -9,9 +9,9 @@ import edu.berkeley.nlp.PCFGLA.ParserData;
 import edu.berkeley.nlp.io.PTBLineLexer;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
-import clearcommon.propbank.PBFileReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.TBUtil;
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.treebank.TBUtil;
 
 import java.util.List;
 import java.io.BufferedReader;
@@ -200,7 +200,8 @@ public class ParseCorpus {
             this.closeWriter = closeWriter;
         }
         
-        public void run() {
+        @Override
+		public void run() {
             while (true) {
             	Future<String> future;
                 try {

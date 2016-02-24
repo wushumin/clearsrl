@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -7,7 +7,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
-import clearcommon.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFileReader;
 
 public class ThreadedTBFileReader extends TBFileReader implements Runnable {
     
@@ -65,7 +65,8 @@ public class ThreadedTBFileReader extends TBFileReader implements Runnable {
         }
     }
     
-    public void run() {
+    @Override
+	public void run() {
         TBTree tree=null;
         while (keepRunning.get())
         {

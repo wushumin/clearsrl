@@ -1,13 +1,13 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
-import clearsrl.Sentence;
-import clearsrl.Sentence.Source;
-import clearsrl.ec.ECCommon.Feature;
-import clearcommon.alg.FeatureSet;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.util.ChineseUtil;
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.alg.FeatureSet;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.ChineseUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.Sentence;
+import edu.colorado.clear.srl.Sentence.Source;
+import edu.colorado.clear.srl.ec.ECCommon.Feature;
 
 import java.io.File;
 import java.io.FileInputStream;

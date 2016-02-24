@@ -1,4 +1,4 @@
-package clearsrl;
+package edu.colorado.clear.srl;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,10 +26,10 @@ import gnu.trove.map.TObjectFloatMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectFloatHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
-import clearcommon.treebank.TBNode;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PBFrame.Roleset;
-import clearcommon.util.LanguageUtil.POS;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.LanguageUtil.POS;
+import edu.colorado.clear.common.util.PBFrame.Roleset;
 
 public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 
@@ -112,7 +112,8 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
         	return size;
         }
         
-        public String toString() {
+        @Override
+		public String toString() {
 			StringBuilder builder = new StringBuilder();
 			builder.append('[');
 			
@@ -172,6 +173,7 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		}
 		
 		
+		@Override
 		public String toString() {
 			StringBuilder builder = new StringBuilder();
 			builder.append('[');
@@ -194,6 +196,7 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		super();
 	}
 
+	@Override
 	public void initialize(Properties props) throws IOException {
 		String topDir = props.getProperty("indir");
 		Type type = Type.valueOf(props.getProperty("type", Type.ROLE.toString()));
@@ -639,6 +642,7 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		return retList;
 	}
 	
+	@Override
 	public List<TObjectFloatMap<String>> getSP(String predKey, List<String> headwords, boolean discount) {
 		
 		boolean isPredPP = predKey.startsWith("PP-");			

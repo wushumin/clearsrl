@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 public class ParseException extends Exception {
     /**

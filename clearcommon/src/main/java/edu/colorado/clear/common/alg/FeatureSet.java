@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.iterator.TObjectFloatIterator;
 import gnu.trove.map.TObjectFloatMap;
@@ -65,7 +65,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
             String[] fArray = featureStr.trim().split("-");
             List<T> fList = new ArrayList<T>(fArray.length);
             for (String fStr:fArray)
-                fList.add(T.valueOf(cType,fStr));
+                fList.add(Enum.valueOf(cType,fStr));
             features.add(EnumSet.copyOf(fList));
         }
     }
@@ -97,7 +97,7 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
         String[] fArray = fString.trim().split("-");
         List<T> fList = new ArrayList<T>(fArray.length);
         for (String fStr:fArray)
-            fList.add(T.valueOf(cType,fStr));
+            fList.add(Enum.valueOf(cType,fStr));
         return EnumSet.copyOf(fList);
     }
     
@@ -350,7 +350,8 @@ public class FeatureSet<T extends Enum<T>> implements Serializable {
                 featureMap.remove(key);
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
         return toString(features);
     }
     

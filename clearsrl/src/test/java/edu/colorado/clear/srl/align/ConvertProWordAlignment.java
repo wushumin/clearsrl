@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
@@ -14,7 +14,10 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Properties;
 
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentenceReader;
+import edu.colorado.clear.srl.align.TokenedSentenceReader;
 
 public class ConvertProWordAlignment {
 

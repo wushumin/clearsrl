@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import gnu.trove.iterator.TObjectDoubleIterator;
 import gnu.trove.iterator.TObjectIntIterator;
@@ -35,10 +35,20 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Aligner;
+import edu.colorado.clear.srl.align.Alignment;
+import edu.colorado.clear.srl.align.AlignmentStat;
+import edu.colorado.clear.srl.align.ArgAlignmentPair;
+import edu.colorado.clear.srl.align.DefaultSentencePairReader;
+import edu.colorado.clear.srl.align.LDC09SentencePairReader;
+import edu.colorado.clear.srl.align.LDCSentencePairReader;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentencePair;
+import edu.colorado.clear.srl.align.SentencePairReader;
 
 public class MachineReading {
     

@@ -1,10 +1,4 @@
-package clearsrl;
-
-import clearcommon.treebank.SerialTBFileReader;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBFileReader;
-import clearcommon.treebank.TBTree;
-import clearcommon.treebank.ParseException;
+package edu.colorado.clear.srl;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -13,10 +7,13 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.StringTokenizer;
+
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
+import edu.colorado.clear.common.treebank.TBFileReader;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
 
 public class CoNLLSentence {
     

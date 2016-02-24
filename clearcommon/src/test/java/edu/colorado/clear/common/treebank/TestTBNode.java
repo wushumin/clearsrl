@@ -1,4 +1,4 @@
-package clearcommon.treebank;
+package edu.colorado.clear.common.treebank;
 
 import static org.junit.Assert.*;
 
@@ -9,6 +9,8 @@ import java.util.regex.Matcher;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import edu.colorado.clear.common.treebank.TBNode;
 
 public class TestTBNode {
 

@@ -1,10 +1,17 @@
-package clearsrl.ec;
+package edu.colorado.clear.srl.ec;
 
-import clearsrl.ec.ECCommon.Feature;
-import clearsrl.ec.ECCommon.LabelType;
+import edu.colorado.clear.common.alg.Classifier;
+import edu.colorado.clear.common.alg.CrossValidator;
+import edu.colorado.clear.common.alg.LinearClassifier;
+import edu.colorado.clear.common.propbank.PBArg;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBTree;
+import edu.colorado.clear.common.util.PBFrame.Roleset;
+import edu.colorado.clear.srl.ec.ECCommon.Feature;
+import edu.colorado.clear.srl.ec.ECCommon.LabelType;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 
 import java.io.Serializable;
@@ -22,16 +29,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
-
-import clearcommon.alg.Classifier;
-import clearcommon.alg.CrossValidator;
-import clearcommon.alg.LinearClassifier;
-import clearcommon.propbank.PBArg;
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.treebank.TBTree;
-import clearcommon.util.PBFrame;
-import clearcommon.util.PBFrame.Roleset;
 
 public class ECDepModel extends ECModel implements Serializable {
     /**
@@ -1003,7 +1000,8 @@ public class ECDepModel extends ECModel implements Serializable {
         return featureMap;
     }
 
-    public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
+    @Override
+	public void addTrainingSentence(TBTree goldTree, TBTree parsedTree, List<PBInstance> props, boolean buildDictionary) {
         parsedTree = parsedTree==null?goldTree:parsedTree;
         
         BitSet[] headCandidates = ECCommon.getECCandidates(parsedTree);
@@ -1299,7 +1297,7 @@ public class ECDepModel extends ECModel implements Serializable {
     public static String[] makeLinearLabel(TBTree tree, String[][] depLabels) {
        
         @SuppressWarnings("unchecked")
-        List<DepLabel>[] depLabelList =(List<DepLabel>[]) new List[tree.getTokenCount()+1];
+        List<DepLabel>[] depLabelList =new List[tree.getTokenCount()+1];
         TBNode[] tokens = tree.getTokenNodes();
         
         int i=0;
@@ -1437,11 +1435,13 @@ public class ECDepModel extends ECModel implements Serializable {
          return addOPLabels(tree,applyConstraints(ECDepTreeSample.makeDepLabels(headMasks, new Prediction[headMasks.length][headMasks.length+1], prediction)));    
     }
     
-    public String[] predict(TBTree tree, List<PBInstance> props) {
+    @Override
+	public String[] predict(TBTree tree, List<PBInstance> props) {
     	return makeLinearLabel(tree, predictDep(tree, props));
     }
     
-    public void train(Properties prop) {
+    @Override
+	public void train(Properties prop) {
         System.out.printf("pro score %d/%d\n", propCnt, propTotal);
         System.out.printf("elipsis score %d/%d\n", elipsisCnt, elipsisTotal);
         int folds = Integer.parseInt(prop.getProperty("crossvalidation.folds","5"));

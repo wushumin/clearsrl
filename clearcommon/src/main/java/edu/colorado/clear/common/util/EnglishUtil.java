@@ -1,4 +1,4 @@
-package clearcommon.util;
+package edu.colorado.clear.common.util;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -20,7 +19,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
@@ -30,14 +28,14 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import edu.colorado.clear.common.treebank.TBHeadRules;
+import edu.colorado.clear.common.treebank.TBNode;
 import edu.mit.jwi.Dictionary;
 import edu.mit.jwi.item.IIndexWord;
 import edu.mit.jwi.item.IWord;
 import edu.mit.jwi.item.IWordID;
 import edu.mit.jwi.item.Pointer;
 import edu.mit.jwi.morph.WordnetStemmer;
-import clearcommon.treebank.TBHeadRules;
-import clearcommon.treebank.TBNode;
 
 public class EnglishUtil extends LanguageUtil {
 
@@ -80,7 +78,10 @@ public class EnglishUtil extends LanguageUtil {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return false;
-        }
+        } catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         frameMap = new HashMap<String, PBFrame>();
         String frameDir = props.getProperty("frame_dir");

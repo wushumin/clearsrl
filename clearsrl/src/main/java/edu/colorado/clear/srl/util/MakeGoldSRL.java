@@ -1,4 +1,4 @@
-package clearsrl.util;
+package edu.colorado.clear.srl.util;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,15 +17,15 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import clearcommon.propbank.PBInstance;
-import clearcommon.treebank.TBNode;
-import clearcommon.util.LanguageUtil;
-import clearcommon.util.PropertyUtil;
-import clearsrl.SRArg;
-import clearsrl.SRInstance;
-import clearsrl.SRLUtil;
-import clearsrl.Sentence;
-import clearsrl.Sentence.Source;
+import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.SRArg;
+import edu.colorado.clear.srl.SRInstance;
+import edu.colorado.clear.srl.SRLUtil;
+import edu.colorado.clear.srl.Sentence;
+import edu.colorado.clear.srl.Sentence.Source;
 
 public class MakeGoldSRL {
 	

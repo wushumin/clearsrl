@@ -1,4 +1,4 @@
-package clearsrl.align;
+package edu.colorado.clear.srl.align;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -8,7 +8,10 @@ import java.nio.charset.Charset;
 
 import java.util.Properties;
 
-import clearcommon.util.PropertyUtil;
+import edu.colorado.clear.common.util.PropertyUtil;
+import edu.colorado.clear.srl.align.Sentence;
+import edu.colorado.clear.srl.align.SentenceReader;
+import edu.colorado.clear.srl.align.TokenedSentenceReader;
 
 
 public class ConvertProSentence {

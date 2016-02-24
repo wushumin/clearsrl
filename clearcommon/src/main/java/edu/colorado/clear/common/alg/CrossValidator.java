@@ -1,4 +1,4 @@
-package clearcommon.alg;
+package edu.colorado.clear.common.alg;
 
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.set.TIntSet;
