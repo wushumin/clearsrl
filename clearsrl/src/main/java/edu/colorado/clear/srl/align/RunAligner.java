@@ -112,7 +112,7 @@ public class RunAligner {
         else
             sentencePairReader = new DefaultSentencePairReader(props, options.reWrite);
         
-        boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
+        //boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
         
         Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold", "0.5")));
         

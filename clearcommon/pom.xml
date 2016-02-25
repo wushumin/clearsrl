@@ -49,6 +49,7 @@
 		</dependency>
 	</dependencies>
 	<build>
+		<finalName>clearcommon-${version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

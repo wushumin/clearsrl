@@ -47,7 +47,6 @@ public class ConvertProSentence {
         
     }
     
-    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
     {           
         Properties props = new Properties();

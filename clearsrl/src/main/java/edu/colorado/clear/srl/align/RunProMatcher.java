@@ -531,7 +531,6 @@ public class RunProMatcher {
             longSet.add(new ProAlignment(srcPos+1, dstPos+1, type, score));
     }
     
-    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException
     {           
         Properties props = new Properties();

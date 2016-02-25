@@ -364,8 +364,6 @@ public  class SentencePair implements Serializable {
     {
         Map<BitSet, BitSet> alignSet1 = new HashMap<BitSet, BitSet>();
         
-        long[] alignArray = getWordAlignment(type);
-        
         for (long a:getWordAlignment(type))
         {
             int src = (int)(a>>>32);

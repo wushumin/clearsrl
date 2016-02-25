@@ -218,7 +218,7 @@ public class MachineReading {
         else
             sentencePairReader = new DefaultSentencePairReader(props, false);
         
-        boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
+        //boolean alignPro = !props.getProperty("alignPro", "false").equals("false");
         
         Aligner aligner = new Aligner(Float.parseFloat(props.getProperty("threshold", "0.5")));
         
