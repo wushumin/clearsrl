@@ -13,6 +13,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<jar.finalName>clearsrl-${project.version}</jar.finalName>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -28,7 +29,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>clearsrl-${version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

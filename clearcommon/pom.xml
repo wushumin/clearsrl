@@ -14,6 +14,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<jar.finalName>clearcommon-${project.version}</jar.finalName>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -49,7 +50,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>clearcommon-${version}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
