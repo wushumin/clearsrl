@@ -41,7 +41,7 @@ public class EnglishUtil extends LanguageUtil {
 
     public Dictionary dict;
     public WordnetStemmer stemmer;
-    public Map<String, PBFrame> frameMap;
+
     TBHeadRules headRules;
     
     static Map<String, String> abbreviations = new HashMap<String, String>();
@@ -83,10 +83,12 @@ public class EnglishUtil extends LanguageUtil {
 			e.printStackTrace();
 		}
         
-        frameMap = new HashMap<String, PBFrame>();
-        String frameDir = props.getProperty("frame_dir");
-        if (frameDir != null)
-            readFrameFiles(new File(frameDir));
+        if (frameMap==null) {
+	        frameMap = new HashMap<String, PBFrame>();
+	        String frameDir = props.getProperty("frame_dir");
+	        if (frameDir != null)
+	            readFrameFiles(new File(frameDir));
+        }
         
         return true;
     }
@@ -106,7 +108,7 @@ public class EnglishUtil extends LanguageUtil {
     	String word = abbreviations.get(node.getWord()+' '+node.getPOS());
     	word = word==null?node.getWord():word;
         edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
-        List<String> stems  = pos==null?null:stemmer.findStems(word, pos);        
+        List<String> stems = pos==null?null:stemmer.findStems(word, pos);
         return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
     }
     

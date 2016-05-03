@@ -7,7 +7,9 @@ import edu.colorado.clear.common.util.PBFrame.Roleset;
 import gnu.trove.map.TObjectIntMap;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -17,6 +19,8 @@ public abstract class LanguageUtil {
 	
 	protected static Logger logger = Logger.getLogger(PBFileReader.class.getPackage().getName());
     
+    Map<String, PBFrame> frameMap;
+	
     public enum POS {
         NOUN,
         VERB,
@@ -25,6 +29,11 @@ public abstract class LanguageUtil {
     }
     
     public abstract boolean init(Properties props);
+    
+    public boolean init(Properties props, Map<String, PBFrame> frameMap) {
+    	this.frameMap = frameMap;
+    	return init(props);
+    }
     
     public List<String> findStems(String word, POS pos) {
         return Arrays.asList(word);
@@ -69,6 +78,10 @@ public abstract class LanguageUtil {
     
     public PBFrame getFrame(TBNode node) {
         return getFrame(makePBFrameKey(node));
+    }
+    
+    public Map<String, PBFrame> getFrameMap() {
+    	return Collections.unmodifiableMap(frameMap);
     }
     
     public Roleset getRoleSet(TBNode node, String roleSetId) {

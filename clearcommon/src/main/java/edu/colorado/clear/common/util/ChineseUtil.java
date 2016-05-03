@@ -32,8 +32,6 @@ import edu.colorado.clear.common.treebank.TBHeadRules;
 import edu.colorado.clear.common.treebank.TBNode;
 
 public class ChineseUtil extends LanguageUtil {
-
-    public Map<String, PBFrame> frameMap;
 	
     static final Set<String> NOUN_POS = new HashSet<String>();
     static {
@@ -61,10 +59,12 @@ public class ChineseUtil extends LanguageUtil {
             return false;
         }
         
-        frameMap = new HashMap<String, PBFrame>();
-        String frameDir = props.getProperty("frame_dir");
-        if (frameDir != null)
-            readFrameFiles(new File(frameDir));
+        if (frameMap==null) {
+	        frameMap = new HashMap<String, PBFrame>();
+	        String frameDir = props.getProperty("frame_dir");
+	        if (frameDir != null)
+	            readFrameFiles(new File(frameDir));
+        }
         
         return true;
     }

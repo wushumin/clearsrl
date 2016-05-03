@@ -74,6 +74,11 @@ public class TrainSRL {
 		        ch.setLevel(Level.parse(logLevel));
 		        logger.addHandler(ch);
 		        logger.setLevel(Level.parse(logLevel));
+		        
+		        ConsoleHandler ch1 = new ConsoleHandler();
+		        ch1.setLevel(Level.parse(logLevel));
+		        Logger.getLogger("clearcommon").addHandler(ch1);
+		        Logger.getLogger("clearcommon").setLevel(Level.parse(logLevel));
 	        }
         }
         
@@ -311,6 +316,8 @@ public class TrainSRL {
         model.train(props);
         
         ObjectOutputStream mOut = new ObjectOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("model_file"))));
+        mOut.writeObject(langUtil.getClass().getName());
+        mOut.writeObject(langUtil.getFrameMap());
         mOut.writeObject(model);
         mOut.close();
         

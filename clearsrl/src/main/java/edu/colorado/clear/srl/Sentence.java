@@ -285,7 +285,7 @@ public class Sentence implements Serializable{
 											!sources.contains(Source.PROPBANK)?null:(propPBs==null?new ArrayList<PBInstance>():(propPBs.get(i)==null?new ArrayList<PBInstance>():propPBs.get(i))), 
 								            parses==null?null:parses[i], 
 										    srls==null?null:srls.get(i), 
-										    predList==null?null:predList.get(i),
+										    predList==null?null:i<predList.size()?predList.get(i):new BitSet(),
 									        ecDeps==null?null:ecDeps.get(i), 
 									        namedEntities==null?null:namedEntities[i]);
 		}	

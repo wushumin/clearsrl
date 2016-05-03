@@ -1,5 +1,6 @@
 package edu.colorado.clear.common.util;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -7,9 +8,18 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class PBFrame {
-    public class Roleset {
-        String id;
+public class PBFrame implements Serializable{
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public class Roleset implements Serializable{
+        /**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		String id;
         private Map<String, String> roleMap;
         private Set<String> classes;
         

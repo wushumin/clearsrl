@@ -7,6 +7,7 @@ import edu.colorado.clear.common.treebank.TBTree;
 import edu.colorado.clear.common.treebank.TBUtil;
 import edu.colorado.clear.common.util.FileUtil;
 import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PBFrame;
 import edu.colorado.clear.common.util.ParseCorpus;
 import edu.colorado.clear.common.util.PropertyUtil;
 import edu.colorado.clear.srl.SRInstance.OutputFormat;
@@ -249,7 +250,8 @@ public class RunSRL {
         writerThread.join();
     }
     
-    public static void main(String[] args) throws Exception
+	@SuppressWarnings("unchecked")
+	public static void main(String[] args) throws Exception
     {   
         RunSRL options = new RunSRL();
         CmdLineParser parser = new CmdLineParser(options);
@@ -292,23 +294,36 @@ public class RunSRL {
         if (options.outFile!=null) runSRLProps.setProperty("output.dir", options.outFile.getAbsolutePath());
 
         Properties langProps = PropertyUtil.filterProperties(runSRLProps, runSRLProps.getProperty("language").trim()+'.', true);
-        options.langUtil = (LanguageUtil) Class.forName(langProps.getProperty("util-class")).newInstance();
-        if (!options.langUtil.init(langProps)) {
-            logger.severe(String.format("Language utility (%s) initialization failed",runSRLProps.getProperty("language.util-class")));
-            System.exit(-1);
-        }
-        
+        String langUtilClassName = langProps.getProperty("util-class");
+        Map<String, PBFrame> frameMap = null;
+
         if (options.modelFName!=null)
         	runSRLProps.setProperty("model_file", options.modelFName);
         
         logger.info("Loading model "+runSRLProps.getProperty("model_file"));
         
         ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(runSRLProps.getProperty("model_file"))));
-        options.model = (SRLModel)mIn.readObject();
+        
+        Object obj = mIn.readObject();
+        if (obj instanceof String) {
+        	langUtilClassName = (String) obj;
+        	obj = mIn.readObject();
+        }
+        if (obj instanceof Map) {
+        	frameMap = (Map<String, PBFrame>)obj;
+        	obj = mIn.readObject();
+        }
+        options.model = (SRLModel)obj;
         mIn.close();
-       
+        
         logger.info("model loaded");
         
+        options.langUtil = (LanguageUtil) Class.forName(langUtilClassName).newInstance();
+        if (!options.langUtil.init(langProps, frameMap)) {
+            logger.severe(String.format("Language utility (%s) initialization failed",runSRLProps.getProperty("language.util-class")));
+            System.exit(-1);
+        }
+  
         if (runSRLProps.getProperty("predicateOverride")!=null) {
         	Set<String> overrideSet = new HashSet<String>();
         	try (BufferedReader reader = new BufferedReader(new FileReader(runSRLProps.getProperty("predicateOverride")))) {
