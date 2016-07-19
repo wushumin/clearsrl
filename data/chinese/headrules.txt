@@ -1,0 +1,26 @@
+ADJP	r ADJP|JJ;r AD|NN|CS;r .*
+ADVP	r ADVP|AD;r .*
+CLP	r CLP|M;r .*
+CP	r DEC|SP;l ADVP|CS;r CP|IP;r .*
+DNP	r DNP|DEG;r DEC;r .*
+DP	l DP|DT;l .*
+DVP	r DVP|DEV;r .*
+FRAG	r VV|NR|NN;r .*
+INTJ	r INTJ|IJ;r .*
+IP	r IP|VP;r VV;r .*
+LCP	r LCP|LC;r .*
+LST	l LST|CD|OD;l .*
+NP	r NP|NN|NT|NR|QP;r .*
+PP	l PP|P;l .*
+PRN	r NP|IP|VP|NT|NR|NN;r .*
+QP	r QP|CLP|CD|OD;r .*
+UCP	r .*
+VCD	l VCD|VV|VA|VC|VE;l .*
+VCP	l VCP|VV|VA|VC|VE;l .*
+VNV	l VNV|VV|VA|VC|VE;l .*
+VP	l VP|VA|VC|VE|VV|BA|LB|VCD|VSB|VRD|VNV|VCP;l .*
+VPT	l VNV|VV|VA|VC|VE;l .*
+VRD	l VRD|VV|VA|VC|VE;l .*
+VSB	r VSB|VV|VA|VC|VE;r .*
+WHNP	r WHNP|NP|NN|NT|NR|QP;r .*
+WHPP	l WHPP|PP|P;l .*

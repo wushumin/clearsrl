@@ -1,0 +1,64 @@
+1. Set up the environment variable CLEARSRL_HOME to the directory of this README file
+
+2. configure the properties file for Chinese/English (prop/chinese-srl.properties & prop/english-srl.properties)
+
+Note: the system will parse environment variables (enclose with ${ENV_VAR}) in the properties file values
+
+English: install WordNet 3.0 (not included) and set srl.wordnet_dic
+
+common:
+
+parser.threads: more threads will speed up phrase parsing on multi-core systems
+
+srl.run.regex: acts as a file filter when performing SRL on a directory of files
+
+srl.output.format: either PROPBANK or TEXT, the TEXT format looks like "[ARG0 John] [rel loves] [ARG1 Mary]"
+
+3. ./runsrl.sh -prop PROPERTIES_FILE -in input_file -out output_file
+
+-in input file or directory (if directory, set srl.run.regex)
+
+-out output file or directory
+
+if -out is omitted, the system will output to STDOUT (you can filter out debugging w/ STDERR redirect) 
+
+-parsed: if activated means the input are parse files in treebank format
+-outputParse: if activated outputs the berkeley parse (output .parse files in the output directory or output a parse file with .parse extension)
+-format format of SRL output, TEXT or PROPBANK (the aligner needs both the parse output and the PROPBANK format SRL output)
+
+NOTE: the standard English & Chinese SRL model provided require ~6GB of memory to run
+      the smaller (presumably less accurate) models require <1GB of memory
+      adjust the heap size options appropriately in runsrl.sh
+
+Running the SRL aligner requires 5 inputs:
+1) src language parse
+2) src language SRL (in PROPBANK format)
+3) translation language parse
+4) translation language SRL (in PROPBANK format)
+5) word alignment file (assumed to be birectional and zero indexed, can be changed in the properties file)
+
+With the sample texts provided, do these steps:
+
+./runsrl.sh -prop prop/chinese-srl.properties -in ch-sample.txt -outputParse -out ch-sample.prop -format TEXT
+./runsrl.sh -prop prop/english-srl.properties -in en-sample.txt -outputParse -out en-sample.prop -format TEXT
+
+this will generate parse trees and human readable SRL outputs
+
+./runsrl.sh -prop prop/chinese-srl.properties -in ch-sample.parse -parsed -out ch-sample.pb.prop -format PROPBANK
+./runsrl.sh -prop prop/english-srl.properties -in en-sample.parse -parsed -out en-sample.pb.prop -format PROPBANK
+
+this will generate SRLs again in PROPBANK format directly from the parse trees
+
+./runaligner.sh -prop prop/aligner.properties -st ch-sample.parse -sp ch-sample.pb.prop -dt en-sample.parse -dp en-sample.pb.prop -wa wa-sample.txt -t 0.2 -out aligner.out
+
+this will run the SRL aligner and output to the 'aligner.out' file (outputs to stdout if not specified)
+
+The alignment format is:
+
+sentence_id,src_prop_id,dst_prop_id,overall_score;SRC_ARG,DST_ARG,score;...;[unaligned_src_args][unaligned_dst_args];[src_roleset,dst_roleset]
+
+sentence_id is 1-indexed
+src_prop_id is 1-indexed (count the entries in the SRL output for that sentence)
+dst_prop_id is 1-indexed (count the entries in the SRL output for that sentence)
+overall_score is what the threshold parameter cutoff is based on
+
