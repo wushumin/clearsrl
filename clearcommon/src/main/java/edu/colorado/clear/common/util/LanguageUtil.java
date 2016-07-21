@@ -6,14 +6,31 @@ import edu.colorado.clear.common.treebank.TBNode;
 import edu.colorado.clear.common.util.PBFrame.Roleset;
 import gnu.trove.map.TObjectIntMap;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.XMLReaderFactory;
 
 public abstract class LanguageUtil {
 	
@@ -133,6 +150,75 @@ public abstract class LanguageUtil {
     public boolean isExplicitSupport(String label) {
     	return false;
     }
+    
+    protected abstract void readFrameFile(XMLReader parser, String fName, InputSource source);
+    
+    protected void readFrameFiles(final File dir) {
+    	logger.info("Reading frame files from "+dir.getPath());
+    	ZipFile tmpZipIn=null;
+    	if (dir.isFile() && dir.getName().endsWith(".zip"))
+    		try {
+    			tmpZipIn = new ZipFile(dir);
+    		} catch (IOException e) {
+	            e.printStackTrace();
+            }
+    	
+    	final ZipFile zipIn = tmpZipIn;
+
+        XMLReader parser=null;
+        try {
+            parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
+            parser.setEntityResolver(new EntityResolver() {
+                @Override
+                public InputSource resolveEntity(String publicId, String systemId)
+                        throws SAXException, IOException {
+                	
+                	if (zipIn!=null) {
+                		File file = new File(systemId);
+                		
+                		ZipEntry entry = zipIn.getEntry(file.getName());
+                		if (entry!=null)
+                			return new InputSource(new InputStreamReader(zipIn.getInputStream(entry), StandardCharsets.UTF_8));
+                	} else {
+	                	File dtdFile = new File(systemId);
+	                    if (dtdFile.isFile())
+	                        return new InputSource(new InputStreamReader(new FileInputStream(dtdFile), StandardCharsets.UTF_8));
+                	}
+
+                    return null;
+
+                }
+            });
+        } catch (SAXException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        if (zipIn!=null) {
+        	for (Enumeration<? extends ZipEntry> e = zipIn.entries(); e.hasMoreElements();) {
+    			ZipEntry entry = e.nextElement();
+    			if (entry.getName().endsWith(".xml"))
+					try {
+						readFrameFile(parser, entry.getName(), new InputSource(new InputStreamReader(zipIn.getInputStream(entry), StandardCharsets.UTF_8)));
+					} catch (IOException ex) {
+						logger.log(Level.WARNING, "Error reading frame file "+entry.getName(), ex);
+					}
+    		}
+        } else {
+        	List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
+            logger.info(""+fileNames.size()+" frame files found");
+            for (String fileName:fileNames)
+				try {
+					readFrameFile(parser, fileName, new InputSource(new InputStreamReader(new FileInputStream(new File(dir, fileName)), StandardCharsets.UTF_8)));
+				} catch (IOException e) {
+					logger.log(Level.WARNING, "Error reading frame file "+fileName, e);
+				}
+        }
+        
+        logger.info(Integer.toString(frameMap.size())+" frames read");
+        
+    }
+    
     
     public abstract boolean isAdjective(String POS);
     

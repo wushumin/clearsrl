@@ -60,7 +60,7 @@ public class SRLScore {
         
         int count=0;
         for (String argType:labelSet) {
-            if (SRLModel.NOT_ARG.equals(argType))
+            if (SRArg.NOT_ARG.equals(argType))
                 continue;
             labelMap.put(argType, ++count);
         }
@@ -70,7 +70,7 @@ public class SRLScore {
     
     String[] getLabels(List<SRArg> args, int tokenCount) {
         String[] strs = new String[tokenCount];
-        Arrays.fill(strs, SRLModel.NOT_ARG);
+        Arrays.fill(strs, SRArg.NOT_ARG);
         for (SRArg arg:args)
             for (int i=arg.tokenSet.nextSetBit(0); i>=0; i=arg.tokenSet.nextSetBit(i+1))
                 strs[i] = arg.label;
@@ -83,7 +83,7 @@ public class SRLScore {
                 lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
             return null;
         
-        SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree);
+        SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree, null);
         
         List<SRArg> lhsargs = lhs.args;
         List<SRArg> rhsargs = rhs.args;
@@ -111,7 +111,7 @@ public class SRLScore {
                 lhs.predicateNode.getTerminalIndex() != rhs.predicateNode.getTerminalIndex())
                         return null;
                 
-        SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree);
+        SRInstance instance = new SRInstance(lhs.predicateNode, lhs.tree, null);
         
         List<SRArg> lhsargs = lhs.args;
         List<SRArg> rhsargs = rhs.args;
@@ -159,7 +159,7 @@ public class SRLScore {
         String[] goldStr = getLabels(goldArgs, goldSRL.tree.getTokenCount());
         
         for (int i=0; i<sysStr.length; ++i) {
-            if (sysStr[i]==SRLModel.NOT_ARG && goldStr[i]==SRLModel.NOT_ARG)
+            if (sysStr[i]==SRArg.NOT_ARG && goldStr[i]==SRArg.NOT_ARG)
                 continue;
             microCount[labelMap.get(sysStr[i])][labelMap.get(goldStr[i])]++;
         }
@@ -169,7 +169,7 @@ public class SRLScore {
             	int goldLabel = labelMap.get(goldArgs.get(j).label);
             	if (goldLabel!=0)
             		++counts[2];
-                macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
+                macroCount[labelMap.get(SRArg.NOT_ARG)][goldLabel]++;
                 ++j;
                 continue;
             }
@@ -177,7 +177,7 @@ public class SRLScore {
             	int sysLabel = labelMap.get(sysArgs.get(i).label);
             	if (sysLabel!=0)
             		++counts[1];
-                macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
+                macroCount[sysLabel][labelMap.get(SRArg.NOT_ARG)]++;
                 ++i;
                 continue;
             }
@@ -187,13 +187,13 @@ public class SRLScore {
             	int sysLabel = labelMap.get(sysArgs.get(i).label);
             	if (sysLabel!=0)
             		++counts[1];
-                macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
+                macroCount[sysLabel][labelMap.get(SRArg.NOT_ARG)]++;
                 ++i;
             } else if (compare>0) {
             	int goldLabel = labelMap.get(goldArgs.get(j).label);
             	if (goldLabel!=0)
             		++counts[2];
-                macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
+                macroCount[labelMap.get(SRArg.NOT_ARG)][goldLabel]++;
                 ++j;
             } else {
             	int sysLabel = labelMap.get(sysArgs.get(i).label);
@@ -203,8 +203,8 @@ public class SRLScore {
                 	if (sysLabel!=0 && sysLabel==goldLabel)
                 		++counts[0];
                 } else {
-                    macroCount[sysLabel][labelMap.get(SRLModel.NOT_ARG)]++;
-                    macroCount[labelMap.get(SRLModel.NOT_ARG)][goldLabel]++;
+                    macroCount[sysLabel][labelMap.get(SRArg.NOT_ARG)]++;
+                    macroCount[labelMap.get(SRArg.NOT_ARG)][goldLabel]++;
                 }
                 if (sysLabel!=0)
             		++counts[1];
@@ -277,7 +277,7 @@ public class SRLScore {
         int pTotal=0, rTotal=0, fTotal=0;
         double p, r, f;
         for (String label: labelSet) {
-            if (label.equals(SRLModel.NOT_ARG)) continue;
+            if (label.equals(SRArg.NOT_ARG)) continue;
             
             int idx = labelMap.get(label);
             

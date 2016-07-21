@@ -130,20 +130,20 @@ public class ChineseUtil extends LanguageUtil {
         PBFrame frame;
         PBFrame.Roleset roleset;
         
-        boolean predicate;
+        boolean inPredicate;
         
         public FrameParseHandler(PBFrame frame) {
             this.frame = frame; 
-            predicate = false;
+            inPredicate = false;
         }
         
         @Override
         public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
         	if (localName.equals("id")) {
-        		predicate = true;
+        		inPredicate = true;
         	} else if (localName.equals("frameset")) {
         		String rolesetId = atts.getValue("id");
-        		rolesetId = frame.predicate+'.'+(rolesetId.length()==2?"0":"")+rolesetId.substring(1);
+        		rolesetId = frame.id+'.'+(rolesetId.length()==2?"0":"")+rolesetId.substring(1);
                 roleset = frame.new Roleset(rolesetId);
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
@@ -153,69 +153,23 @@ public class ChineseUtil extends LanguageUtil {
         
         @Override
         public void characters(char ch[], int start, int length) throws SAXException {
-            if (predicate) {
-                frame.predicate=new String(ch, start, length).replaceAll("[\\s「」]", "");
-                predicate = false;
+            if (inPredicate) {
+                frame.id=new String(ch, start, length).replaceAll("[\\s「」]", "");
+                inPredicate = false;
             }
         }
     }
     
-    void readFrameFiles(final File dir) {
-    	logger.info("Reading frame files from "+dir.getPath());
-        XMLReader parser=null;
-        try {
-            parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
-            parser.setEntityResolver(new EntityResolver() {
-                @Override
-                public InputSource resolveEntity(String publicId, String systemId)
-                        throws SAXException, IOException {
-                    if (systemId.contains("verb.dtd")) {
-                        return new InputSource(new FileReader(new File(dir, "verb.dtd")));
-                    } else {
-                        return null;
-                    }
-                }
-            });
-        } catch (SAXException e) {
-            e.printStackTrace();
-            return;
-        }
-        
-        File zippedFrames = new File(dir, "allframes.zip");
-        if (zippedFrames.exists()) {
-        	try (ZipFile zipIn = new ZipFile(zippedFrames)) {
-        		logger.info(""+zipIn.size()+" frame files found");
-        		for (Enumeration<? extends ZipEntry> e = zipIn.entries(); e.hasMoreElements();) {
-        			ZipEntry entry = e.nextElement();
-        			readFrameFile(parser, entry.getName(), new InputSource(zipIn.getInputStream(entry)));
-        		}
-            } catch (IOException e) {
-	            e.printStackTrace();
-            }
-        } else {
-        	List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
-            logger.info(""+fileNames.size()+" frame files found");
-            for (String fileName:fileNames)
-	            try {
-	                readFrameFile(parser, fileName, new InputSource(new InputStreamReader(new FileInputStream(new File(dir, fileName)), "UTF8")));
-                } catch (IOException e) {
-	                // TODO Auto-generated catch block
-	                e.printStackTrace();
-                }
-        }
-        logger.info(""+frameMap.size()+" frames read");
-    }
-    
-    void readFrameFile(XMLReader parser, String fName, InputSource source) {
+    protected void readFrameFile(XMLReader parser, String fName, InputSource source) {
         String key = fName;
         key = key.substring(0, key.length()-4);
         String predicate = key.substring(0, key.length()-2);
         //System.out.println(file.getName());
-        PBFrame frame = new PBFrame(predicate, LanguageUtil.POS.VERB);
+        PBFrame frame = new PBFrame(predicate);
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
             parser.parse(source);
-            frameMap.put(frame.getPredicate(), frame);
+            frameMap.put(frame.getId(), frame);
             //logger.info("Added "+frame.getPredicate()+key.substring(key.length()-2)+ " "+frameMap.size());
         } catch (IOException e) {
             e.printStackTrace();

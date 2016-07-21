@@ -107,9 +107,8 @@ public class EnglishUtil extends LanguageUtil {
     public List<String> findStems(TBNode node) {
     	String word = abbreviations.get(node.getWord()+' '+node.getPOS());
     	word = word==null?node.getWord():word;
-        edu.mit.jwi.item.POS pos = convertPOS(node.getPOS());
-        List<String> stems = pos==null?null:stemmer.findStems(word, pos);
-        return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+        
+        return findStems(word, convertPOS(node.getPOS()));
     }
     
     edu.mit.jwi.item.POS convertPOS(String input) {
@@ -119,11 +118,18 @@ public class EnglishUtil extends LanguageUtil {
         if (isAdverb(input)) return edu.mit.jwi.item.POS.ADVERB;
         return null;
     }
-    
-    
-    List<String> findStems(String word, edu.mit.jwi.item.POS pos) {
-        List<String> stems = stemmer.findStems(word, pos);
-        return (stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
+
+    List<String> findStems(String word, edu.mit.jwi.item.POS pos) {    	
+        List<String> stems = null;
+        try {
+        	synchronized (stemmer) {
+        		stems = stemmer.findStems(word, pos);
+        	}
+    	} catch (Exception e) {
+    	    System.err.println("Exception caught trying to find stem of "+word+"/"+pos);
+    	    e.printStackTrace();
+    	}
+        return (stems==null||stems.isEmpty()||stems.get(0).isEmpty())?Arrays.asList(word):stems;
     }
     
     class FrameParseHandler extends DefaultHandler {
@@ -133,74 +139,59 @@ public class EnglishUtil extends LanguageUtil {
             this.frame = frame; 
         }
         
+        String aliasPOS=null;
+        StringBuilder aliasBuilder=null; 
+        
         @Override
         public void startElement(String uri,  String localName, String qName, Attributes atts) throws SAXException {
             if (localName.equals("roleset")) {
-            	Set<String> classes = null;
-            	
-            	String vncls = atts.getValue("vncls");
-            	if (vncls != null && !vncls.trim().isEmpty() && !vncls.trim().equals("-")) {
-            		classes = new HashSet<String>();
-            		for (String clsId:vncls.trim().split("\\s+"))
-            			classes.add("vncls-"+clsId);
-            	}
-            	
-                roleset = frame.new Roleset(atts.getValue("id"), classes);
+            	roleset = frame.new Roleset(atts.getValue("id"));
+            	if (atts.getValue("vncls") != null) 
+            		for (String clsId:atts.getValue("vncls").trim().split("\\s+"))
+                		if (!clsId.isEmpty() && !clsId.equals("-"))
+                			roleset.addClass("vncls-"+clsId);
                 frame.rolesets.put(roleset.getId(), roleset);
             } else if (localName.equals("role")) {
             	roleset.addRole("arg"+atts.getValue("n").toLowerCase(), atts.getValue("f")==null?null:atts.getValue("f").toLowerCase());
+            } else if (localName.equals("vnrole")) {
+            	if (atts.getValue("vncls") != null) 
+            		for (String clsId:atts.getValue("vncls").trim().split("\\s+"))
+                		if (!clsId.isEmpty() && !clsId.equals("-"))
+                			roleset.addClass("vncls-"+clsId);
+            } else if (localName.equals("alias")) {
+            	aliasPOS = atts.getValue("pos");
+            	if (aliasBuilder==null)
+            		aliasBuilder = new StringBuilder();
+            	else
+            		aliasBuilder.setLength(0);
+            	if (atts.getValue("verbnet") != null)
+	            	for (String clsId:atts.getValue("verbnet").trim().split("\\s+"))
+	            		if (!clsId.isEmpty() && !clsId.equals("-"))
+	            			roleset.addClass("vncls-"+clsId);
             }
-        }
-    }
-    
-    void readFrameFiles(final File dir) {
-    	logger.info("Reading frame files from "+dir.getPath());
-        XMLReader parser=null;
-        try {
-            parser = XMLReaderFactory.createXMLReader("org.apache.xerces.parsers.SAXParser");
-            parser.setEntityResolver(new EntityResolver() {
-                @Override
-                public InputSource resolveEntity(String publicId, String systemId)
-                        throws SAXException, IOException {
-                    if (systemId.contains("frameset.dtd")) {
-                        return new InputSource(new FileReader(new File(dir, "frameset.dtd")));
-                    } else {
-                        return null;
-                    }
-                }
-            });
-        } catch (SAXException e) {
-            e.printStackTrace();
-            return;
         }
         
-        File zippedFrames = new File(dir, "allframes.zip");
-        if (zippedFrames.exists()) {
-        	try (ZipFile zipIn = new ZipFile(zippedFrames)) {
-        		logger.info(""+zipIn.size()+" frame files found");
-        		for (Enumeration<? extends ZipEntry> e = zipIn.entries(); e.hasMoreElements();) {
-        			ZipEntry entry = e.nextElement();
-        			readFrameFile(parser, entry.getName(), new InputSource(zipIn.getInputStream(entry)));
-        		}
-            } catch (IOException e) {
-	            e.printStackTrace();
+        @Override
+        public void characters(char[] ch, int start, int length) {
+            if (aliasPOS!=null) {
+            	aliasBuilder.append(ch, start, length);
             }
-        } else {
-        	List<String> fileNames = FileUtil.getFiles(dir, ".+\\.xml");
-            logger.info(""+fileNames.size()+" frame files found");
-            for (String fileName:fileNames)
-	            try {
-	                readFrameFile(parser, fileName, new InputSource(new InputStreamReader(new FileInputStream(new File(dir, fileName)), "UTF8")));
-                } catch (IOException e) {
-	                // TODO Auto-generated catch block
-	                e.printStackTrace();
-                }
         }
-        logger.info(""+frameMap.size()+" frames read");
+        
+        @Override
+        public void endElement(String uri, String localName, String qName) {
+            if (localName.equals("alias")) {
+            	roleset.addAlias(aliasBuilder.toString().trim()+'-'+aliasPOS);
+                aliasPOS = null;
+            }
+        }
+        
     }
     
-    void readFrameFile(XMLReader parser, String fName, InputSource source) {
-        String key = fName;
+    protected void readFrameFile(XMLReader parser, String fName, InputSource source) {
+        String key = fName.substring(0, fName.lastIndexOf('.'));
+        
+        /*
         key = key.substring(0, key.length()-4);
        
         String predicate = key;
@@ -209,18 +200,30 @@ public class EnglishUtil extends LanguageUtil {
         	predicate = key.substring(0, key.length()-2);
         	type = key.charAt(key.length()-1);
         }
-        key = predicate+'-'+type;
-        
-        PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
+        key = predicate+'-'+type;*/
+        //PBFrame frame = new PBFrame(predicate, type=='n'?LanguageUtil.POS.NOUN:(type=='v'?LanguageUtil.POS.VERB:LanguageUtil.POS.ADJECTIVE));
+        PBFrame frame = new PBFrame(key);
         try {
             parser.setContentHandler(new FrameParseHandler(frame));
             parser.parse(source);
-            frameMap.put(key, frame);
+            
+            Set<String> aliases = new HashSet<String>();
+            if (frame.rolesets!=null)
+            	for (PBFrame.Roleset role:frame.rolesets.values())
+            		if (role.getAliases()!=null)
+            			aliases.addAll(role.getAliases());
+            if (aliases.isEmpty())
+            	frameMap.put(key, frame);
+            else
+            	for (String alias:aliases)
+            		frameMap.put(alias, frame);
         } catch (IOException e) {
             // TODO Auto-generated catch block
+        	System.err.println("Exception reading: "+fName);
             e.printStackTrace();
         } catch (SAXException e) {
             // TODO Auto-generated catch block
+        	System.err.println("Exception reading: "+fName);
             e.printStackTrace();
         }
     }
@@ -461,5 +464,4 @@ public class EnglishUtil extends LanguageUtil {
 	    int passive = getPassive(predicateNode);
 	    return passive==0?Arrays.asList("active"):(passive>3?Arrays.asList("reduced_passive", "passive"):Arrays.asList("passive"));
     }
-
 }

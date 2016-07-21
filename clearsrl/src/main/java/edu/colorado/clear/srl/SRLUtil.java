@@ -1,22 +1,36 @@
 package edu.colorado.clear.srl;
 
+import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.propbank.PBFormatException;
 import edu.colorado.clear.common.propbank.PBInstance;
+import edu.colorado.clear.common.propbank.PBTokenizer;
+import edu.colorado.clear.common.treebank.ParseException;
 import edu.colorado.clear.common.treebank.TBNode;
+import edu.colorado.clear.common.treebank.TBReader;
 import edu.colorado.clear.common.treebank.TBTree;
 import edu.colorado.clear.common.util.LanguageUtil;
+import edu.colorado.clear.common.util.PBFrame;
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.procedure.TObjectIntProcedure;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
 
 public class SRLUtil {
 
@@ -116,12 +130,10 @@ public class SRLUtil {
                     while (node.getParent()!=null && !node.getPOS().equals("VP") && !langUtil.isClause(node.getPOS()))
                         node = node.getParent();
                     for (SRArg sarg:instances.get(supports[i]).getArgs()) {
-                        if (sarg.getLabel().equals(SRLModel.NOT_ARG)) continue;
                         BitSet tokenSet = sarg.getTokenSet();
                         tokenSet.or(node.getTokenSet());
                         if (tokenSet.get(instance.getPredicateNode().getTokenIndex())) {
                             for (SRArg arg:instance.getArgs()) {
-                                if (arg.getLabel().equals(SRLModel.NOT_ARG)) continue;
                                 if (!tokenSet.intersects(arg.getTokenSet())) {
                                     nonlocalArg=true;
                                     break;
@@ -236,7 +248,6 @@ public class SRLUtil {
             int levelUp = 0;            
             SRArg foundArg = null;
             for (SRArg arg:support.getArgs()) {
-                if (arg.getLabel().equals(SRLModel.NOT_ARG)) continue;
                 if (arg.tokenSet.get(predicate.getTokenIndex())) {
                     foundArg = arg;
                     TBNode node = predicate;
@@ -251,7 +262,7 @@ public class SRLUtil {
                 candidates.addAll(getNodes(predicate, levelUp, levelDown, allHeadPhrases));
                 if (!isVerb) {
                     for (SRArg arg:support.getArgs())
-                        if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.tokenSet.get(predicate.getTokenIndex()))
+                        if (arg!=foundArg && !arg.tokenSet.get(predicate.getTokenIndex()))
                             candidates.add(arg.node);
                 } else {
                     TBNode argNode = foundArg.node;
@@ -274,7 +285,7 @@ public class SRLUtil {
                     if (levelUp>0)
                         candidates.addAll(getNodes(foundArg.node, levelUp, levelDown-1, allHeadPhrases));
                     for (SRArg arg:support.getArgs())
-                        if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.tokenSet.get(predicate.getTokenIndex())) {
+                        if (arg!=foundArg && !arg.tokenSet.get(predicate.getTokenIndex())) {
                             boolean foundCandidate = false;
                             for (TBNode node:candidates)
                                 if (arg.node==node) {
@@ -297,7 +308,7 @@ public class SRLUtil {
                         candidates.addAll(getNodes(ancestor, levelUp, levelDown-1, allHeadPhrases));
                     }
                     for (SRArg arg:support.getArgs())
-                        if (arg!=foundArg && !arg.getLabel().equals(SRLModel.NOT_ARG) && !arg.getLabel().equals("rel")) {
+                        if (arg!=foundArg && !arg.getLabel().equals("rel")) {
                             boolean foundCandidate = false;
                             for (TBNode node:candidates)
                                 if (arg.node==node) {
@@ -508,4 +519,46 @@ public class SRLUtil {
         
         return candidateMap;
     }
+    
+    @SuppressWarnings("unchecked")
+	public static Map<String, SortedMap<Integer, List<SRInstance>>> readSRInstanceDir(List<String> files, TObjectIntMap<String> argLabelStringMap) {   
+
+        Map<String, SortedMap<Integer, List<SRInstance>>> srlMap = new TreeMap<String, SortedMap<Integer, List<SRInstance>>>();
+        SortedMap<Integer, List<SRInstance>> instances;
+        
+        argLabelStringMap.clear();
+        
+        for (String filename: files) {
+        	try (ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(filename)))) {
+        		//TODO: do something about it
+        		TObjectIntMap<String> map=null;
+        		Object obj = mIn.readObject();
+                if (obj instanceof TObjectIntMap) {
+                	map = (TObjectIntMap<String>) obj;
+                	argLabelStringMap.putAll(map);
+                }
+                while ((obj = mIn.readObject())!=null) {
+           		 
+                	SRInstance instance = (SRInstance) obj;
+                	
+                	instances = srlMap.get(instance.tree.getFilename());
+                    if (instances == null) {
+                        instances = new TreeMap<Integer, List<SRInstance>>();
+                        srlMap.put(instance.tree.getFilename(), instances);
+                    }
+                    
+                    List<SRInstance> instanceList = instances.get(instance.tree.getIndex());
+                    if (instanceList == null) {
+                        instanceList = new ArrayList<SRInstance>();
+                        instances.put(instance.tree.getIndex(), instanceList);
+                    }
+                    instanceList.add(instance);
+                }
+        	} catch (Exception e) {
+        		e.printStackTrace();
+            }
+        }
+        return srlMap;       
+    }
+    
 }

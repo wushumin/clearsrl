@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -38,11 +39,11 @@ public class SerialTBFileReader extends TBFileReader
      * @throws IOException 
      */
     public SerialTBFileReader(String fileName) throws IOException {
-        this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(fileName)):new FileInputStream(fileName), "UTF-8"), fileName);
+        this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(fileName)):new FileInputStream(fileName), StandardCharsets.UTF_8), fileName);
     }
     
     public SerialTBFileReader(String dirName, String fileName) throws IOException {
-    	this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(new File(dirName, fileName))):new FileInputStream(new File(dirName, fileName)), "UTF-8"), fileName);
+    	this(new InputStreamReader(fileName.endsWith(".gz")?new GZIPInputStream(new FileInputStream(new File(dirName, fileName))):new FileInputStream(new File(dirName, fileName)), StandardCharsets.UTF_8), fileName);
     }
 
     public SerialTBFileReader(Reader reader) {

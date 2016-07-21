@@ -98,6 +98,10 @@ public class TBTree implements Serializable {
         return rootNode;
     }
 
+    public void setRootNode(TBNode node) {
+    	rootNode = node;
+    }
+    
     public int getTerminalCount() {
         return terminalCount;
     }

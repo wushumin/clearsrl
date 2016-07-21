@@ -124,6 +124,12 @@ public final class PBUtil {
 		    	BitSet predMask = new BitSet();
 		    	for (Iterator<PBInstance> iter=e2.getValue().iterator();iter.hasNext();) {
 		    		PBInstance instance = iter.next();
+		    		if (instance.getPredicate().getTokenIndex()<0) {
+		    			System.err.println(instance.tree.getFilename());
+		    			System.err.println(instance.getPredicate().getTokenIndex());
+		    			System.err.println(instance);
+		    		}
+		    		
 		    		if (predMask.get(instance.getPredicate().getTokenIndex())) {
 		    			logger.warning(String.format("%s %d %d: deleting duplicate props: \n%s",
 		    					entry.getKey(), e2.getKey(), instance.getPredicate().getTerminalIndex(), e2.getValue().toString()));

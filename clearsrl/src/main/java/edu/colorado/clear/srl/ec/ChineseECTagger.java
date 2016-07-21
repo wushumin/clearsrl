@@ -18,6 +18,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -150,7 +151,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
        
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
-        		EnumSet.of(Source.PARSE_HEAD, Source.SRL, Source.TB_HEAD), langUtil);
+        		EnumSet.of(Source.PARSE_HEAD, Source.AUTOPROP, Source.TB_HEAD), langUtil);
 
         int ecCount=0;
         int ecDepCount=0;
@@ -389,7 +390,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
         
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
-        		EnumSet.of(Source.PARSE_HEAD, Source.SRL, Source.TB_HEAD), langUtil);
+        		EnumSet.of(Source.PARSE_HEAD, Source.AUTOPROP, Source.TB_HEAD), langUtil);
 
         for (Map.Entry<String, Sentence[]> entry : sentenceMap.entrySet())
             for (Sentence sent:entry.getValue()) {
@@ -448,7 +449,7 @@ public class ChineseECTagger {
         corpus=corpus==null?"":corpus+"."; 
         
         Map<String, Sentence[]> sentenceMap = Sentence.readCorpus(PropertyUtil.filterProperties(props, corpus, true), Source.PARSE_HEAD, 
-        		EnumSet.of(Source.PARSE_HEAD, Source.SRL), langUtil);
+        		EnumSet.of(Source.PARSE_HEAD, Source.AUTOPROP), langUtil);
 
         File outputDir = new File(props.getProperty(corpus+"ecdep.dir"));
         
@@ -497,7 +498,7 @@ public class ChineseECTagger {
             logger.setLevel(Level.FINE);
         
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(options.propFile), StandardCharsets.UTF_8);
         props.load(in);
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);

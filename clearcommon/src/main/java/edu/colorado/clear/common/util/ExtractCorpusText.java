@@ -1,7 +1,11 @@
 package edu.colorado.clear.common.util;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.kohsuke.args4j.CmdLineException;
@@ -61,9 +65,9 @@ public class ExtractCorpusText {
             File file = new File(options.txtDir, fName);
             file.getParentFile().mkdirs();
             
-            PrintStream pStream = new PrintStream(file, "UTF-8");
-            TBUtil.extractText(pStream, trees);
-            pStream.close();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8));
+            TBUtil.extractText(writer, trees);
+            writer.close();
         }
     } 
 }

@@ -10,6 +10,7 @@ import gnu.trove.map.TIntDoubleMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntDoubleHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.hash.TIntHashSet;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -494,6 +495,22 @@ public class Aligner {
                 "    document.getElementById(id).style.display = \"block\";\n"+
                 "  }\n"+
                 "}\n"+
+                "function highlight(ids)\n"+
+                "{\n"+
+                "  if (ids.length==1) {\n"+
+                "    document.getElementById(ids[0]).style.backgroundColor=\"gray\";\n"+
+                "  } else {\n"+
+                "    for (i=0; i<ids.length; ++i) {\n"+
+                "      document.getElementById(ids[i]).style.backgroundColor=\"yellow\";\n"+
+                "    }\n"+
+                "  }\n"+
+                "}\n"+
+                "function clearhl(ids)\n"+
+                "{\n"+
+                "  for (i=0; i<ids.length; ++i) {\n"+
+                "    document.getElementById(ids[i]).style.backgroundColor=\"transparent\";\n"+
+                "  }\n"+
+                "}\n"+
                 "</script>\n</head>\n"+
                 "<body><font size=\"+1\">\n");
         
@@ -517,6 +534,19 @@ public class Aligner {
     public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments, boolean printEC)
     {
         printAlignment(stream, sentencePair, alignments, printEC, new long[0]);
+    }
+    
+    static void printWA(PrintStream stream, int sentId, int alignmentId, TIntHashSet alignedSet, String word) {
+    	String wordListStr = null;
+    	StringBuilder builder = new StringBuilder();
+    	for (int idx:alignedSet.toArray()) {
+    		if (builder.length()!=0)
+    			builder.append(",");
+    		builder.append(String.format("\'w%d.%d\'", sentId,idx));
+    	}
+    	wordListStr = builder.toString();
+        stream.printf(" <span id=w%d.%d onmouseover=\"highlight([%s]);\" onmouseout=\"clearhl([%s]);\">%s</span>", 
+        		sentId, alignmentId, wordListStr, wordListStr, word);
     }
     
     public static void printAlignment(PrintStream stream, SentencePair sentencePair, Alignment[] alignments, boolean printEC, long[] proAlignments)
@@ -549,14 +579,19 @@ public class Aligner {
                 srcHighLight2.set(srcBit-1);
         }
         
+        TIntObjectHashMap<TIntHashSet> alignmentMap = sentencePair.getAlignmentIdxMap();
+        
+        
         TBNode[] nodes = printEC?sentencePair.src.terminals:sentencePair.src.tokens;
         for (int i=0; i<nodes.length; ++i)
             if (srcHighLight.get(i))
                 stream.print(" <font style=\"BACKGROUND:FFFF00\">"+nodes[i].getWord()+"</font>");
             else if (srcHighLight2.get(i))
                 stream.print(" <font style=\"BACKGROUND:FF0000\">"+nodes[i].getWord()+"</font>");
-            else
-                stream.print(" "+nodes[i].getWord());
+            else {
+            	int alignmentId = printEC?sentencePair.src.terminalToTokenMap[i]:i;
+            	printWA(stream, sentencePair.id, alignmentId, alignmentMap.get(alignmentId), nodes[i].getWord());                	
+            }
 
         stream.println(" <input type=\"button\" value=\"parse\" onclick=\"toggleDiv("+(sentencePair.id*3+3)+")\">\n"+
                 "<div id="+(sentencePair.id*3+3)+" style=\"display:none;\">\n");
@@ -572,8 +607,10 @@ public class Aligner {
         for (int i=0; i<nodes.length; ++i)
             if (dstHighLight.get(i))
                 stream.print(" <font style=\"BACKGROUND:FFFF00\">"+nodes[i].getWord()+"</font>");
-            else
-                stream.print(" "+nodes[i].getWord());
+            else {
+            	int alignmentId = printEC?-sentencePair.dst.terminalToTokenMap[i]-1:-i-1;
+            	printWA(stream, sentencePair.id, alignmentId, alignmentMap.get(alignmentId), nodes[i].getWord());      
+            }
         
         stream.println(" <input type=\"button\" value=\"parse\" onclick=\"toggleDiv("+(sentencePair.id*3+4)+")\">\n"+
                 "<div id="+(sentencePair.id*3+4)+" style=\"display:none;\">\n");

@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.EnumSet;
@@ -19,18 +21,21 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import edu.colorado.clear.common.propbank.DefaultPBTokenizer;
 import edu.colorado.clear.common.propbank.OntoNotesTokenizer;
 import edu.colorado.clear.common.propbank.PBInstance;
 import edu.colorado.clear.common.propbank.PBTokenizer;
 import edu.colorado.clear.common.propbank.PBUtil;
+import edu.colorado.clear.common.treebank.TBNode;
 import edu.colorado.clear.common.treebank.TBReader;
 import edu.colorado.clear.common.treebank.TBTree;
 import edu.colorado.clear.common.treebank.TBUtil;
 import edu.colorado.clear.common.util.FileUtil;
 import edu.colorado.clear.common.util.LanguageUtil;
 import edu.colorado.clear.srl.ec.ECCommon;
+import gnu.trove.map.TObjectIntMap;
 
 public class Sentence implements Serializable{
 	
@@ -42,6 +47,7 @@ public class Sentence implements Serializable{
     static Logger logger = Logger.getLogger("clearsrl");
     
 	public enum Source {
+		TEXT("txt", false),
 		TREEBANK("tb", true),
 		TB_HEAD("tb.headed", true),
 		PROPBANK("pb"),
@@ -49,7 +55,8 @@ public class Sentence implements Serializable{
 		PARSE("parse", true),
 		PARSE_HEAD("parse.headed", true),
 		PARSE_DEP("parse.dep"),
-		SRL("prop"),
+		AUTOPROP("prop"),
+		SRL("srl"),
 		EC_DEP("ecdep"),
 		NAMED_ENTITY("ne");
 		
@@ -66,12 +73,15 @@ public class Sentence implements Serializable{
 		public boolean isTree;
 	}
 
+	public String[] tokens;
+	
 	public TBTree treeTB;
 	public List<PBInstance> propPB;
 	
 	public BitSet predicates;
 
 	public TBTree parse;
+	public List<SRInstance> srls;
 	public List<PBInstance> props;
 	public String[][] depEC;
 
@@ -79,10 +89,12 @@ public class Sentence implements Serializable{
 	
 	public Set<String> annotatedNominals = null;
 	
-	public Sentence(TBTree treeTB, List<PBInstance> propPB, TBTree parse, List<PBInstance> props, BitSet predicates, String[][] depEC, String[] namedEntities) {
+	public Sentence(String[] tokens, TBTree treeTB, List<PBInstance> propPB, TBTree parse, List<SRInstance> srls, List<PBInstance> props, BitSet predicates, String[][] depEC, String[] namedEntities) {
+		this.tokens = tokens;
 		this.treeTB = treeTB;
 		this.propPB = propPB;
 		this.parse = parse;
+		this.srls = srls;
 		this.props = props;
 		this.predicates = predicates;
 		this.depEC = depEC;
@@ -100,7 +112,7 @@ public class Sentence implements Serializable{
 	static String[][] readNE(File file, TBTree[] trees) {
 		List<String[]> neList = new ArrayList<String[]>();
 		logger.info("Reading NE from "+file.getPath());
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 			String line;
 			while ((line=reader.readLine())!=null) {
 				String[] tokens = line.trim().split(" +");
@@ -164,8 +176,8 @@ public class Sentence implements Serializable{
 		for (String fName:fileList) {
 			String key = fName.endsWith(".pred")?fName.substring(0,fName.length()-5)+".parse":fName;
 			
-			System.out.println("reading predicates from "+fName+" "+key);
-			System.out.println(treeMap.keySet());
+			//System.out.println("reading predicates from "+fName+" "+key);
+			//System.out.println(treeMap.keySet());
 			if (treeMap!=null && !treeMap.containsKey(key)) continue;
 			
 			System.out.println("reading predicates from "+key);
@@ -210,23 +222,74 @@ public class Sentence implements Serializable{
         }
 		return PBUtil.readPBDir(fileList, new TBReader(treeMap), tokenzier);
 	}
+	
+	static Map<String, SortedMap<Integer, List<SRInstance>>> readSRLs(Properties props, String prefix, Map<String, TBTree[]> treeMap) {
+		String propDir = props.getProperty(prefix+".dir");
+		String filename = props.getProperty(prefix+".filelist");
+		String propRegex = props.getProperty(prefix+".regex");
+		
+		List<String> fileList = filename==null?FileUtil.getFiles(new File(propDir), propRegex, true)
+                :FileUtil.getFileList(new File(propDir), new File(filename), true);
+		
+		Map<String, SortedMap<Integer, List<SRInstance>>> srlMap = new HashMap<String, SortedMap<Integer, List<SRInstance>>>();
+	
+		for (String fName: fileList) {
+        	try (ObjectInputStream mIn = new ObjectInputStream(new GZIPInputStream(new FileInputStream(fName)))) {
+        		Object obj;
+                while ((obj = mIn.readObject())!=null) {
+           		 
+                	SRInstance instance = (SRInstance) obj;
+                	
+                	SortedMap<Integer, List<SRInstance>> instances = srlMap.get(instance.tree.getFilename());
+                    if (instances == null) {
+                        instances = new TreeMap<Integer, List<SRInstance>>();
+                        srlMap.put(instance.tree.getFilename(), instances);
+                    }
+                    
+                    List<SRInstance> instanceList = instances.get(instance.tree.getIndex());
+                    if (instanceList == null) {
+                        instanceList = new ArrayList<SRInstance>();
+                        instances.put(instance.tree.getIndex(), instanceList);
+                    }
+                    instanceList.add(instance);
+                }
+        	} catch (Exception e) {
+        		e.printStackTrace();
+            }
+        }
+
+		for (Map.Entry<String, SortedMap<Integer, List<SRInstance>>> entry:srlMap.entrySet()) {
+			TBTree[] trees = treeMap.get(entry.getKey());
+			if (trees==null) continue;
+			int lastId = -1;
+			for (SortedMap.Entry<Integer, List<SRInstance>> treeEntry:entry.getValue().entrySet()) {
+				if (treeEntry.getKey().intValue()==lastId)
+					continue;
+				lastId = treeEntry.getKey().intValue();
+				
+				trees[lastId].setRootNode(treeEntry.getValue().get(0).getTree().getRootNode());
+			}
+		}
+		
+		return null; //PBUtil.readPBDir(fileList, new TBReader(treeMap), tokenzier);
+	}
 			
 	public static Map<String, Sentence[]> readCorpus(Properties props, Source headSource, EnumSet<Source> sources, LanguageUtil langUtil) {
 		Map<String, Sentence[]> sentenceMap = new TreeMap<String, Sentence[]>();
 
-		if (!headSource.isTree) {
-			Logger.getLogger("clearsrl").warning("head source is not a tree source!!!");
+		if (headSource!=Source.TEXT && !headSource.isTree) {
+			Logger.getLogger("clearsrl").warning("head source is not a text or tree source!!!");
 			return null;
 		}
 		
-		String treeDir = props.getProperty(headSource.prefix+".dir");
+		String sourceDir = props.getProperty(headSource.prefix+".dir");
 		String filename = props.getProperty(headSource.prefix+".filelist");
-		String treeRegex = props.getProperty(headSource.prefix+".regex");
+		String sourceRegex = props.getProperty(headSource.prefix+".regex");
 		
-		List<String> fileList = filename==null?FileUtil.getFiles(new File(treeDir), treeRegex, false)
-                 :FileUtil.getFileList(new File(treeDir), new File(filename), false);
+		List<String> fileList = filename==null?FileUtil.getFiles(new File(sourceDir), sourceRegex, false)
+                 :FileUtil.getFileList(new File(sourceDir), new File(filename), false);
 		
-		Map<String, TBTree[]> sourceMap = TBUtil.readTBDir(treeDir, fileList, headSource.equals(Source.PARSE)||headSource.equals(Source.TREEBANK)?langUtil.getHeadRules():null);
+		Map<String, TBTree[]> sourceMap = TBUtil.readTBDir(sourceDir, fileList, headSource.equals(Source.PARSE)||headSource.equals(Source.TREEBANK)?langUtil.getHeadRules():null);
 
 		Map<String, TBTree[]> treeMap=null;
 		if (sources.contains(Source.TREEBANK))
@@ -249,9 +312,13 @@ public class Sentence implements Serializable{
 					Integer.parseInt(props.getProperty(Source.PARSE_DEP.prefix+".idxcol", "6")), 
 					Integer.parseInt(props.getProperty(Source.PARSE_DEP.prefix+".labelcol", "7")));
 		
-		Map<String, SortedMap<Integer, List<PBInstance>>> srlMap=null;
+		Map<String, SortedMap<Integer, List<SRInstance>>> srlMap=null;
 		if (sources.contains(Source.SRL) && parseMap!=null)
-			srlMap = readProps(props, Source.SRL.prefix, parseMap);
+			srlMap = readSRLs(props, Source.SRL.prefix, parseMap);
+		
+		Map<String, SortedMap<Integer, List<PBInstance>>> propMap=null;
+		if (sources.contains(Source.AUTOPROP) && parseMap!=null)
+			propMap = readProps(props, Source.AUTOPROP.prefix, parseMap);
 		
 		Map<String, Map<Integer, String[][]>> ecDepMap=null;
 		if (sources.contains(Source.EC_DEP) && parseMap!=null)
@@ -273,7 +340,8 @@ public class Sentence implements Serializable{
 			Map<Integer, List<PBInstance>> propPBs = pbMap==null?null:pbMap.get(entry.getKey());
 			
 			TBTree[] parses = parseMap==null?null:parseMap.get(entry.getKey());
-			Map<Integer, List<PBInstance>> srls = srlMap==null?null:srlMap.get(entry.getKey());
+			Map<Integer, List<SRInstance>> srls = srlMap==null?null:srlMap.get(entry.getKey());
+			Map<Integer, List<PBInstance>> autoProps = propMap==null?null:propMap.get(entry.getKey());
 			Map<Integer, String[][]> ecDeps = ecDepMap==null?null:ecDepMap.get(entry.getKey());
 	
 			String[][] namedEntities = neMap==null?null:neMap.get(entry.getKey());
@@ -281,13 +349,15 @@ public class Sentence implements Serializable{
 			List<BitSet> predList = predMap==null?null:predMap.get(entry.getKey());
 			
 			for (int i=0; i<entry.getValue().length; ++i)
-				sentences[i] = new Sentence(trees==null?null:trees[i], 
-											!sources.contains(Source.PROPBANK)?null:(propPBs==null?new ArrayList<PBInstance>():(propPBs.get(i)==null?new ArrayList<PBInstance>():propPBs.get(i))), 
-								            parses==null?null:parses[i], 
-										    srls==null?null:srls.get(i), 
-										    predList==null?null:i<predList.size()?predList.get(i):new BitSet(),
-									        ecDeps==null?null:ecDeps.get(i), 
-									        namedEntities==null?null:namedEntities[i]);
+				sentences[i] = new Sentence(null,
+						trees==null?null:trees[i], 
+						!sources.contains(Source.PROPBANK)?null:(propPBs==null?new ArrayList<PBInstance>():(propPBs.get(i)==null?new ArrayList<PBInstance>():propPBs.get(i))), 
+			            parses==null?null:parses[i], 
+			            srls==null?null:srls.get(i),
+					    autoProps==null?null:autoProps.get(i), 
+					    predList==null?null:i<predList.size()?predList.get(i):new BitSet(),
+				        ecDeps==null?null:ecDeps.get(i), 
+				        namedEntities==null?null:namedEntities[i]);
 		}	
 		return sentenceMap;
 	}

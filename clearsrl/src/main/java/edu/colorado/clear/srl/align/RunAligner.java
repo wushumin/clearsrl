@@ -10,6 +10,7 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
@@ -78,7 +79,7 @@ public class RunAligner {
         Properties props = new Properties();
         {
             FileInputStream in = new FileInputStream(options.propFile);
-            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
+            InputStreamReader iReader = new InputStreamReader(in, StandardCharsets.UTF_8);
             props.load(iReader);
             iReader.close();
             in.close();

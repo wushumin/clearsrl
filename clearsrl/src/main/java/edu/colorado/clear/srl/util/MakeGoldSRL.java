@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -80,7 +81,7 @@ public class MakeGoldSRL {
             if (outFile.getParentFile()!=null)
                 outFile.getParentFile().mkdirs();
         	
-        	PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outFile), "UTF-8"));
+        	PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8));
         	
             for (Sentence sent:entry.getValue()) {                        
                 logger.fine("Processing tree "+(sent.parse==null?sent.treeTB.getIndex():sent.parse.getIndex()));
@@ -105,7 +106,7 @@ public class MakeGoldSRL {
                 	ArrayList<SRInstance> predictions = new ArrayList<SRInstance>();
                 	for (SRInstance goldSRL:goldSRLs) {
                         TBNode node = sent.parse.getNodeByTokenIndex(goldSRL.getPredicateNode().getTokenIndex());
-                        predictions.add(new SRInstance(node, sent.parse, goldSRL.getRolesetId(), 1.0));
+                        predictions.add(new SRInstance(node, sent.parse, null, goldSRL.getRolesetId(), 1.0));
 
                     }
                 	int[] supportIds = SRLUtil.findSupportPredicates(predictions, goldSRLs, langUtil, SRLUtil.SupportType.VERB, false);

@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -101,7 +102,7 @@ public abstract class SRLSelPref implements Serializable{
 	
 	public static Map<String, Map<String, TObjectFloatMap<String>>> readTrainingCount(File file) {
 		Map<String, Map<String, TObjectFloatMap<String>>> db = new HashMap<String, Map<String, TObjectFloatMap<String>>>();
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))){
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))){
 			String line = null;
 			Map<String, TObjectFloatMap<String>> innerMap=null;
 			String predKey = null;

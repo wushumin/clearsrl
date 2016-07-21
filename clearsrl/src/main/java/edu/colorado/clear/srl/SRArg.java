@@ -1,7 +1,5 @@
 package edu.colorado.clear.srl;
 
-import gnu.trove.map.TObjectIntMap;
-
 import java.io.Serializable;
 import java.util.BitSet;
 
@@ -12,6 +10,8 @@ public class SRArg implements Comparable<SRArg>, Serializable{
      * 
      */
     private static final long serialVersionUID = -6336607317441187664L;
+    
+    public static final String NOT_ARG="!ARG";
     
     boolean flat;
     TBNode node;
@@ -30,27 +30,20 @@ public class SRArg implements Comparable<SRArg>, Serializable{
     }
 
     public SRArg(String label, TBNode node) {
-        this(label, node, 0);
+        this(label, node, 1);
     }
     
-    
     public SRArg(String label, TBNode node, double score) {
+    	this(label, node, score, null);
+    }
+    
+    public SRArg(String label, TBNode node, double score, double[] scores) {
         this.node = node;
         tokenSet = new BitSet();
         for (TBNode aNode:node.getTokenNodes())
             tokenSet.set(aNode.getTokenIndex());
         this.label = label;
         this.score = score;
-        this.scores = null;
-    }
-    
-    public SRArg(String label, TBNode node, double[] scores, TObjectIntMap<String> labelMap) {
-        this.node = node;
-        tokenSet = new BitSet();
-        for (TBNode aNode:node.getTokenNodes())
-            tokenSet.set(aNode.getTokenIndex());
-        this.label = label;
-        this.score = scores[labelMap.get(label)-1];
         this.scores = scores;
     }
     
@@ -60,6 +53,10 @@ public class SRArg implements Comparable<SRArg>, Serializable{
         this.tokenSet = (BitSet)tokenSet.clone();
         this.label = label;
         this.score = 0;
+    }
+    
+    public boolean isLabelArg() {
+    	return !NOT_ARG.equals(label);
     }
     
     public String getLabel() {

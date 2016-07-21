@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -344,7 +345,7 @@ public class MakeAlignedLDASamples {
         }
 
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(options.propFile), StandardCharsets.UTF_8);
         props.load(in);
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props); 

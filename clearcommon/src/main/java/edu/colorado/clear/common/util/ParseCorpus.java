@@ -10,6 +10,8 @@ import edu.berkeley.nlp.io.PTBLineLexer;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.colorado.clear.common.propbank.PBFileReader;
+import edu.colorado.clear.common.treebank.ParseException;
+import edu.colorado.clear.common.treebank.SerialTBFileReader;
 import edu.colorado.clear.common.treebank.TBTree;
 import edu.colorado.clear.common.treebank.TBUtil;
 
@@ -23,7 +25,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -59,7 +63,7 @@ public class ParseCorpus {
     @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
     private String inFileList = null; 
     
-    @Option(name="-txtdir",usage="list of files in the input directory to process (overwrites regex)")
+    @Option(name="-txtout",usage="output file/directory of extracted text (assume input is parse)")
     private String txtDir = null; 
     
     @Option(name="-conll", usage="use conll POS format")
@@ -70,6 +74,9 @@ public class ParseCorpus {
     
     @Option(name="-out",usage="output file/directory")
     private String outDir = null;
+    
+    @Option(name="-pretty",usage="pretty print the parse (also verifies the parse)")
+    private boolean prettyPrint = false; 
     
     @Option(name="-lower",usage="convert to lowercase")
     private boolean toLowerCase = false; 
@@ -225,7 +232,17 @@ public class ParseCorpus {
             	if (parse==null) break;
             	
             	try {
-                    outputData.write(parse);
+            		if (!prettyPrint)
+            			outputData.write(parse);
+            		else {
+            			String outParse = parse;
+            			try {
+            				outParse = new SerialTBFileReader(new StringReader(parse)).nextTree().toPrettyParse()+"\n";
+						} catch (ParseException e) {
+							e.printStackTrace();
+						}
+            			outputData.write(outParse);
+            		}
                     if (flushOutput)
                     	outputData.flush();
                 } catch (IOException e) {
@@ -260,7 +277,10 @@ public class ParseCorpus {
                 logger.info("Chinese parsing features enabled.");
                 Corpus.myTreebank = Corpus.TreeBankType.CHINESE;
             }
-            parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
+
+            parser = new CoarseToFineMaxRuleParser(grammar, lexicon, threshold,-1, false, false, false, false, false, true, true);
+            
+            //parser = new CoarseToFineNBestParser(grammar, lexicon, 1,threshold,-1, false, false, false, false, false, false, true);;
             parser.binarization = pData.getBinarization();
             synchronized (parserMap) {
             	parserMap.put(Thread.currentThread().getId(), parser);
@@ -381,7 +401,7 @@ public class ParseCorpus {
         }
 
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(parser.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(parser.propFile), StandardCharsets.UTF_8);
         props.load(in);
         props = PropertyUtil.resolveEnvironmentVariables(props);
         in.close();
@@ -431,8 +451,8 @@ public class ParseCorpus {
             
             System.out.println("Parsing: "+fileName);
             
-            try (Reader reader = new InputStreamReader(new FileInputStream(inputFile), "UTF-8"); 
-            		Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8")) {
+            try (Reader reader = new InputStreamReader(new FileInputStream(inputFile), StandardCharsets.UTF_8); 
+            		Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
                 SentenceWriter sWriter = parser.parse(reader, writer, false);
                 sWriter.join();
             } catch (Exception ex) {

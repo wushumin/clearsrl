@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -352,7 +353,7 @@ public class MakeLDASamples {
         MakeLDASamples.langUtilMap = new HashMap<Long, LanguageUtil>();
 
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(options.propFile), StandardCharsets.UTF_8);
         props.load(in);
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);

@@ -157,6 +157,81 @@ public  class SentencePair implements Serializable {
         return getAlignmentString(dstAlignment, dst.tokens, src.tokens);
     }
     
+    /*
+    void addToAlignmentMap(int idx1, int idx2, TIntObjectHashMap<TIntHashSet> alignmentMap) {
+    	TIntHashSet alignmentSet1 = alignmentMap.get(idx1);
+    	TIntHashSet alignmentSet2 = alignmentMap.get(idx2);
+    	
+    	if (alignmentSet1==null && alignmentSet2==null) {
+    		alignmentSet1 = new TIntHashSet();
+    		alignmentSet1.add(idx1);
+    		alignmentSet1.add(idx2);
+    		alignmentMap.put(idx1, alignmentSet1);
+    		alignmentMap.put(idx2, alignmentSet1);
+    	} else if (alignmentSet1==null) {
+    		alignmentSet2.add(idx1);
+    		alignmentMap.put(idx1, alignmentSet2);
+    	} else if (alignmentSet2==null) {
+    		alignmentSet1.add(idx2);
+    		alignmentMap.put(idx2, alignmentSet1);
+    	} else if (alignmentSet1!=alignmentSet2) {
+    		// need to merge the sets
+    		if (alignmentSet1.size()<alignmentSet2.size()) {
+    			for (int idx:alignmentSet1.toArray())
+    				alignmentMap.put(idx, alignmentSet2);
+    			alignmentSet2.addAll(alignmentSet1);
+    		} else {
+    			for (int idx:alignmentSet2.toArray())
+    				alignmentMap.put(idx, alignmentSet1);
+    			alignmentSet1.addAll(alignmentSet2);
+    		}
+    	}
+    }*/
+    
+    void addToAlignmentMap(int[] indices, TIntObjectHashMap<TIntHashSet> alignmentMap) {
+    	TIntHashSet alignmentSet = null;
+    	
+    	for (int idx:indices) {
+    		TIntHashSet currentSet = alignmentMap.get(idx);
+    		if (alignmentSet==null)
+    			alignmentSet = currentSet;
+    		
+    		if (alignmentSet==null || currentSet==null) {
+    			if (alignmentSet==null)
+    				alignmentSet = new TIntHashSet();
+    			alignmentSet.add(idx);
+    			alignmentMap.put(idx, alignmentSet);
+    		} else if (alignmentSet!=currentSet) {
+    			for (int idx1:currentSet.toArray())
+    				alignmentMap.put(idx1, alignmentSet);
+    			alignmentSet.addAll(currentSet);
+    		}
+    	}
+    }
+    
+    public TIntObjectHashMap<TIntHashSet> getAlignmentIdxMap() {
+    	TIntObjectHashMap<TIntHashSet> alignmentMap = new TIntObjectHashMap<TIntHashSet>();
+    	
+    	int idx = 0;
+    	for (SortedMap.Entry<Long, int[]> entry:srcAlignment.entrySet()) {
+    		int[] indices = new int[entry.getValue()==null?1:entry.getValue().length+1];
+    		for (int i=0; i<entry.getValue().length; ++i)
+    			indices[i] = -1-entry.getValue()[i];
+    		indices[indices.length-1] = idx++;
+    		addToAlignmentMap(indices, alignmentMap);
+    	}
+
+    	idx=0;
+    	for (SortedMap.Entry<Long, int[]> entry:dstAlignment.entrySet()) {
+    		int[] indices = entry.getValue()==null?new int[1]:Arrays.copyOf(entry.getValue(), entry.getValue().length+1);
+    		indices[indices.length-1] = --idx;
+    		addToAlignmentMap(indices, alignmentMap);
+    	}
+    	
+    	return alignmentMap;
+ 
+    }
+    
     private String getAlignmentString(SortedMap<Long, int[]> alignment, TBNode[] src, TBNode[] dst)
     {
         StringBuilder ret = new StringBuilder();

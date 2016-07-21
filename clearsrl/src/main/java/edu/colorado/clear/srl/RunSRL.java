@@ -22,14 +22,20 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PipedReader;
 import java.io.PipedWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +69,9 @@ public class RunSRL {
     
     @Option(name="-depIn",usage="dependency input file/directory")
     private File depInFile = null; 
+    
+    @Option(name="-inCorpus",usage="input corpus directory (overwrites everyrthing else about the input)")
+    private String inCorpus = null;
     
     @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
     private File inFileList = null; 
@@ -125,12 +134,22 @@ public class RunSRL {
     }
     
     class SRLWriter extends Thread {
-        PrintWriter writer;
-        LanguageUtil langUtil;
-
-        public SRLWriter(PrintWriter writer, LanguageUtil langUtil) {
-            this.writer    = writer;
-            this.langUtil  = langUtil;
+    	ObjectOutputStream objOut;
+    	GZIPOutputStream gzipOut;
+    	PrintWriter writer;
+    	int objCount=0;
+    	
+        public SRLWriter(OutputStream out) {
+        	if (outputFormat==SRInstance.OutputFormat.BINARY) {
+        		try {
+        			gzipOut = new GZIPOutputStream(out);
+					objOut = new ObjectOutputStream(gzipOut);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	} else
+        		writer = new PrintWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         }
         
         @Override
@@ -157,25 +176,60 @@ public class RunSRL {
 
             	if (output==null) break;
             	
-            	if (outputFormat.equals(OutputFormat.CONLL))
-                    writer.println(CoNLLSentence.toString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
-            	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
-                    writer.println(CoNLLSentence.toDepString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
-                else
-                    for (SRInstance instance:output.srls)
-                        writer.println(instance.toString(outputFormat));
+            	if (writer!=null) {
+	            	if (outputFormat.equals(OutputFormat.CONLL))
+	                    writer.println(CoNLLSentence.toString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
+	            	else if (outputFormat.equals(OutputFormat.CONLL_DEP))
+	                    writer.println(CoNLLSentence.toDepString(output.tree, output.srls.toArray(new SRInstance[output.srls.size()])));
+	                else
+	                    for (SRInstance instance:output.srls)
+	                        writer.println(instance.toString(outputFormat));
+            	} else if (objOut!=null) {
+            		for (SRInstance instance:output.srls)
+						try {
+							objOut.writeObject(instance);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+            		objCount += output.srls.size();
+            		if (objCount>10000) {
+						try {
+							objOut.reset();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						objCount=0;
+            		}
+            	}
             	
             }
-            writer.flush();
+            if (writer!=null)
+            	writer.flush();
+            if (objOut!=null)
+				try {
+					objOut.flush();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+            if (gzipOut!=null)
+				try {
+					gzipOut.finish();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             logger.info("done");
         }
     }
     
-    void processInput(Reader reader, BufferedReader depReader, String inName, PrintWriter writer, String outName, ParseCorpus parser, Sentence[]  sentences, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
+    void processInput(Reader reader, BufferedReader depReader, String inName, OutputStream out, String outName, ParseCorpus parser, Sentence[]  sentences, LanguageUtil langUtil) throws IOException, ParseException, InterruptedException
     {
         logger.info("Processing "+(inName==null?"stdin":inName)+", outputing to "+(outName==null?"stdout":outName));
         
-        Thread writerThread = new SRLWriter(writer, langUtil);
+        Thread writerThread = new SRLWriter(out);
         writerThread.start();
         
         Reader parseIn = null;
@@ -197,7 +251,7 @@ public class RunSRL {
 	                    inName = "stdout.parse";
 	                else
 	                    inName = (outName.endsWith(".prop") ? outName.substring(0, outName.length()-5) : outName) + ".parse";
-	                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(inName), "UTF-8"));
+	                parseOut = new PrintWriter(new OutputStreamWriter(new FileOutputStream(inName), StandardCharsets.UTF_8));
 	            }
 	        }
 	        
@@ -211,7 +265,7 @@ public class RunSRL {
 	        	else
 	        		TBUtil.addDependency(tree, TBUtil.readCoNLLTree(depReader, 6, 7));
 	        	
-	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(tree, null, null, null, null, null, null)));
+	        	Future<Output> future = executor.submit(new RunnableSentence(new Sentence(null, tree, null, null, null, null, null, null, null)));
 	            while(true)
 	    	        try {
 	    	        	srlQueue.put(future);
@@ -269,7 +323,7 @@ public class RunSRL {
         }
         
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(options.propFile), StandardCharsets.UTF_8);
         props.load(in);
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);
@@ -280,12 +334,11 @@ public class RunSRL {
         {
 	        String logLevel = runSRLProps.getProperty("logger.level");
 	        if (logLevel!=null) {
+	        	logger.setUseParentHandlers(false);
 		        ConsoleHandler ch = new ConsoleHandler();
 		        ch.setLevel(Level.parse(logLevel));
 		        logger.addHandler(ch);
 		        logger.setLevel(Level.parse(logLevel));
-		        Logger.getLogger("clearcommon").addHandler(ch);
-		        Logger.getLogger("clearcommon").setLevel(Level.parse(logLevel));
 	        }
         }
         
@@ -339,10 +392,8 @@ public class RunSRL {
         		options.model.setPredicateOverride(overrideSet);
         		logger.info("using "+overrideSet.size()+" predicate classification overrides");
         	}
-        } else {
-        	
         }
-        	
+
         
         BitSet mask1 = options.model.argLabelClassifier.getFeatureMask();
         BitSet mask2 = options.model.argLabelStage2Classifier==null?new BitSet():(options.model.argLabelStage2Classifier.getFeatureMask());
@@ -357,8 +408,7 @@ public class RunSRL {
         //for (EnumSet<SRLModel.Feature> feature:model.featureSet)
         //  logger.info(SRLModel.toString(feature));
         
-        if (options.model.predicateModel!=null)
-        {
+        if (options.model.predicateModel!=null) {
             logger.info("Predicate features: "+options.model.predicateModel.getFeatures());
             //for (EnumSet<SRLModel.PredFeature> feature:model.predicateFeatureSet)
             //  logger.info(SRLModel.toString(feature));
@@ -388,92 +438,17 @@ public class RunSRL {
         options.executor = Executors.newFixedThreadPool(threads);
         options.srlQueue = new ArrayBlockingQueue<Future<Output>>(threads*20);
         
-        int pCount = 0;
         String dataFormat = runSRLProps.getProperty("data.format", "default");
-        if (!options.parsed) 
-        {
+        if (!options.parsed) {
             dataFormat = "default";
             runSRLProps.remove("pbdir");
         }
-        /*
-        if (dataFormat.equals("default"))
-        {       
-            String testRegex = props.getProperty("test.regex");
-            //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-            Map<String, TIntObjectHashMap<List<PBInstance>>>  propBank = PBUtil.readPBDir(props.getProperty("pbdir"), testRegex, props.getProperty("tbdir"), false);
-            Map<String, TBTree[]> parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), testRegex);
-            
-            for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-                for (TBTree tree: entry.getValue())
-                    TBUtil.findHeads(tree.getRootNode(), headrules);
-            
-            model.initScore();
-            for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
-                for (TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
-                {
-                    iter.advance();
-                    for (PBInstance pbInstance:iter.value())
-                    {
-                        ArrayList<TBNode> argNodes = new ArrayList<TBNode>();
-                        ArrayList<TObjectFloatHashMap<String>> labels = new ArrayList<TObjectFloatHashMap<String>>();
-                        if (pbInstance.tree.getTokenCount()== parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()].getTokenCount())
-                            SRLUtil.getSamplesFromParse(new SRInstance(pbInstance), parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()], 
-                                THRESHOLD, argNodes, labels);
-                        
-                        SRInstance trainInstance = new SRInstance(pbInstance.predicateNode, parsedTreeBank.get(entry.getKey())[pbInstance.tree.getTreeIndex()]);
-                        for (int i=0; i<labels.size(); ++i)
-                        {
-                            if (SRLUtil.getMaxLabel(labels.get(i)).equals(SRLModel.NOT_ARG)) continue;
-                            trainInstance.addArg(new SRArg(SRLUtil.getMaxLabel(labels.get(i)), argNodes.get(i)));
-                        }
-                        trainInstance.addArg(new SRArg("rel", pbInstance.predicateNode));
-                        
-                        model.score.addResult(SRLUtil.convertSRInstanceToTokenMap(trainInstance), SRLUtil.convertSRInstanceToTokenMap(new SRInstance(pbInstance)));
-                        String a = new SRInstance(pbInstance).toString().trim();
-                        String b = trainInstance.toString().trim();
-                        if (!a.equals(b))
-                        {
-                            System.out.println(a);
-                            System.out.println(b);
-                            for (SRArg arg: trainInstance.args)
-                                System.out.println(arg.node.toParse());
-                            System.out.print("\n");
-                        }
-                    }
-                }
-            model.score.printResults(System.out);
-
-            model.initScore();
-        
-            for (Map.Entry<String, TIntObjectHashMap<List<PBInstance>>> entry:propBank.entrySet())
-            {
-                TBTree[] trees = parsedTreeBank.get(entry.getKey());
-                for (TIntObjectIterator<List<PBInstance>> iter = entry.getValue().iterator(); iter.hasNext();)
-                {
-                    for (PBInstance pbInstance:iter.value())
-                    {
-                        iter.advance();
-                        SRInstance pInstance = null;
-                        if (pbInstance.tree.getTokenCount()==trees[pbInstance.tree.getTreeIndex()].getTokenCount())
-                            pInstance = new SRInstance(trees[pbInstance.tree.getTreeIndex()].getRootNode().getTokenNodes().get(pbInstance.predicateNode.tokenIndex), trees[pbInstance.tree.getTreeIndex()]);
-                        else
-                            pInstance = new SRInstance(pbInstance.predicateNode, trees[pbInstance.tree.getTreeIndex()]);
-                        SRInstance instance = new SRInstance(pbInstance);
-                        cCount += model.predict(pInstance, instance, null);
-                        pCount += pInstance.getArgs().size()-1;
-                        //System.out.println(instance);
-                        //System.out.println(pInstance+"\n");
-                    }
-                } 
-            }
-        }
-        */
+ 
         boolean predictPredicate = (runSRLProps.getProperty("predict_predicate")!=null && 
                 !runSRLProps.getProperty("predict_predicate").equals("false") &&
                 runSRLProps.getProperty("pbdir")!=null);
         
-        if (predictPredicate==true && options.model.predicateModel==null)
-        {
+        if (predictPredicate==true && options.model.predicateModel==null) {
             logger.severe("Predicate Classifier not trained!");
             System.exit(-1);
         }
@@ -481,15 +456,9 @@ public class RunSRL {
         if (options.outputFormat==null)
             options.outputFormat = SRInstance.OutputFormat.valueOf(runSRLProps.getProperty("output.format",SRInstance.OutputFormat.TEXT.toString()));
         
-        //File outputDir = null;
-        //{
-        //    String outputDirName = props.getProperty("output.dir");
-        //    if (outputDirName != null) outputDir = new File(outputDirName);
-        //}
 
         PrintStream output = null;
-        if (options.outFile!=null)
-        {
+        if (options.outFile!=null) {
             if (options.inFile!=null && !options.inFile.isDirectory())
                 try {
                     output = new PrintStream(options.outFile);
@@ -497,8 +466,7 @@ public class RunSRL {
                     logger.severe("Cannot create output file "+options.outFile.getAbsolutePath());
                     System.exit(1);
                 }
-            else if (!options.outFile.isDirectory() && !options.outFile.mkdirs())
-            {
+            else if (!options.outFile.isDirectory() && !options.outFile.mkdirs()) {
                 logger.severe("Cannot create output directory "+options.outFile.getAbsolutePath());
                 System.exit(1);
             }
@@ -508,23 +476,38 @@ public class RunSRL {
         
         //SRLScore score = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
         //SRLScore score2 = new SRLScore(new TreeSet<String>(Arrays.asList(model.labelStringMap.keys(new String[model.labelStringMap.size()]))));
-        if (!dataFormat.equals("conll")) {   
+ 
+        if (options.inCorpus!=null) {
+        	System.out.println("Processing corpus "+options.inCorpus);
+            Properties srcProps = PropertyUtil.filterProperties(props, options.inCorpus+".", true);
+            
+            EnumSet<Source> srcSet = Sentence.readSources(srcProps.getProperty("run.source"));
+            Source srcTreeType = srcSet.contains(Source.PARSE)?Source.PARSE:Source.TREEBANK;
+            srcTreeType = Source.valueOf(props.getProperty("corpus.tree", srcTreeType.toString()));
+            
+        	Map<String, Sentence[]>  sentenceMap = Sentence.readCorpus(srcProps, srcTreeType, srcSet, options.langUtil);
+        	
+        	for (Map.Entry<String, Sentence[]> entry: sentenceMap.entrySet()) {
+        		String foutName = entry.getKey().replaceAll("\\.\\w+\\z", ".prop");
+        		File outFile = new File(options.outFile, foutName);
+                if (outFile.getParentFile()!=null)
+                    outFile.getParentFile().mkdirs();
+                OutputStream out = options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile);
+                foutName = outFile.getPath();
+                options.processInput(null, null, entry.getKey(), out, foutName, null, entry.getValue(), options.langUtil);
+                out.close();
+        	}
+        } else if (!dataFormat.equals("conll")) {   
             Map<String, Sentence[]>  sentenceMap = null;
-            if (options.usePBCorpus!=null)
-            {
+            
+            if (options.usePBCorpus!=null) {
             	Properties srcProps = PropertyUtil.filterProperties(props, options.usePBCorpus+".", true);
+            	if (options.inFile!=null)
+            		srcProps.setProperty("parse.dir", options.inFile.getPath());
+            	if (options.inFileList!=null)
+            		srcProps.setProperty("parse.filelist", options.inFileList.getPath());
             	
-            	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources(runSRLProps.getProperty("corpus.source")), options.langUtil);            	
-            	/*
-                String treeRegex = runSRLProps.getProperty("tb.regex");
-                String propRegex = runSRLProps.getProperty("pb.regex");
-
-                treeBank = TBUtil.readTBDir(runSRLProps.getProperty("tbdir"), treeRegex, options.langUtil.getHeadRules());
-                //Map<String, TBTree[]> treeBank = TBUtil.readTBDir(props.getProperty("tbdir"), testRegex);
-                PBTokenizer tokenzier = runSRLProps.getProperty("pb.tokenizer")==null?(runSRLProps.getProperty("data.format", "default").equals("ontonotes")?new OntoNotesTokenizer():new DefaultPBTokenizer()):(PBTokenizer)Class.forName(runSRLProps.getProperty("pb.tokenizer")).newInstance();
-
-                //propBank = PBUtil.readPBDir(runSRLProps.getProperty("pbdir"), propRegex, 
-                //                    new TBReader(treeBank),tokenzier);*/
+            	sentenceMap = Sentence.readCorpus(srcProps, Source.PARSE, Sentence.readSources((options.inFile==null?"":"PARSE,")+runSRLProps.getProperty("corpus.source")), options.langUtil);
             }
             
             ParseCorpus phraseParser = null;
@@ -535,7 +518,7 @@ public class RunSRL {
                 phraseParser.initialize(PropertyUtil.filterProperties(props, "parser."));
             }   
             if (options.inFile==null && sentenceMap==null)
-                options.processInput(new InputStreamReader(System.in), null, null, new PrintWriter(System.out), null, phraseParser, null, options.langUtil);
+                options.processInput(new InputStreamReader(System.in), null, null, System.out, null, phraseParser, null, options.langUtil);
             else {
                 List<String> fileList = null;
                 
@@ -553,29 +536,28 @@ public class RunSRL {
                     if (sentenceMap==null) {
                     	File file = options.inFile.isFile()?options.inFile:new File(options.inFile, fName);
                     	logger.info("Opening "+file.getPath());
-                    	reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), "UTF-8");
+                    	reader = new InputStreamReader(file.getName().endsWith(".gz")?new GZIPInputStream(new FileInputStream(file)):new FileInputStream(file), StandardCharsets.UTF_8);
                     	
                     	if (phraseParser==null && options.depInFile!=null) {
                     		File depFile = new File(options.depInFile, fName+".dep");
                     		if (depFile.exists()) {
                     			logger.info("Opening "+depFile.getPath());
-                    			depReader = new BufferedReader(new InputStreamReader(new FileInputStream(depFile),"UTF-8"));
+                    			depReader = new BufferedReader(new InputStreamReader(new FileInputStream(depFile), StandardCharsets.UTF_8));
                     		}
                     	}	
                     } else
                     	sentences = sentenceMap.get(fName);
-                    
 
                     String foutName=null;
-                    PrintWriter writer=null;
-                    if (options.outFile==null&&sentenceMap==null)
-                        writer = new PrintWriter(System.out);
-                    else
-                    {
+                    OutputStream out=System.out;
+                    if (options.outFile!=null||sentenceMap!=null) {
                         foutName = fName.endsWith(".gz")?fName.substring(0, fName.length()-3):fName;
                         foutName = foutName.replaceAll("\\.\\w+\\z", ".prop");
 
-                        if (options.compressOutput) foutName=foutName+".gz";
+                        if (options.outputFormat==OutputFormat.BINARY)
+                        	foutName+=".bin";
+                        else if (options.compressOutput) 
+                        	foutName+=".gz";
                         
                         if (options.inFile==null)
                         	
@@ -584,73 +566,18 @@ public class RunSRL {
                         File outFile = new File(options.inFile!=null&&options.inFile.isFile()?null:options.outFile, foutName);
                         if (outFile.getParentFile()!=null)
                             outFile.getParentFile().mkdirs();
-                        writer = new PrintWriter(new OutputStreamWriter(options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile), "UTF-8"));
+                        out = options.compressOutput?new GZIPOutputStream(new FileOutputStream(outFile)):new FileOutputStream(outFile);
                         foutName = outFile.getPath();
                     }
-                    options.processInput(reader, depReader, fName, writer, foutName, phraseParser, sentences, options.langUtil);
+                    options.processInput(reader, depReader, fName, out, foutName, phraseParser, sentences, options.langUtil);
                     if (reader!=null) reader.close();
                     if (depReader!=null) depReader.close();
-                    //writer.close();
+                    if (out!=System.out) out.close();
                 }
             }
-            
             if (phraseParser!=null) phraseParser.close();
-                
-               /* 
             
-            if (options.parsed)
-            {
-                Map<String, TBTree[]> parsedTreeBank = null;
-                
-                if (!props.getProperty("goldparse", "false").equals("false"))
-                    parsedTreeBank = treeBank!=null?treeBank:TBUtil.readTBDir(props.getProperty("tbdir"), props.getProperty("tb.regex"));
-                else
-                    parsedTreeBank = TBUtil.readTBDir(props.getProperty("parsedir"), props.getProperty("regex"));
-
-                for (Map.Entry<String, TBTree[]> entry: parsedTreeBank.entrySet())
-                {
-                    SortedMap<Integer, List<PBInstance>> pbFileMap = propBank==null?null:propBank.get(entry.getKey());
-                    TBTree[] trees = entry.getValue();
-                    
-                    logger.info("Processing "+entry.getKey());
-                    
-                    boolean closeStream = false;
-                    if (output==null && options.outFile.isDirectory())
-                    {
-                        String fName = entry.getKey();
-                        if (fName.endsWith("parse")) fName = fName.substring(0, fName.length()-5)+"prop";
-                        File propFile = new File(options.outFile, fName);
-                        propFile.getParentFile().mkdirs();
-                        closeStream = true;
-                        output = new PrintStream(propFile);
-                    }
-                        
-                    BlockingQueue<TBTree> queue = new ArrayBlockingQueue<TBTree>(100);
-                    
-                    //@TODO: figure out output file name
-                    Thread srlThread = new Thread(options.new Runner(queue, null, pbFileMap));
-                    srlThread.start();
-                    
-                    for (TBTree tree:trees) queue.put(tree);
-                    queue.put(new TBTree(null, 0, null, 0, 0));
-                    
-                    srlThread.join();  
-
-                    if (closeStream)
-                    {
-                        output.close();
-                        output = null;
-                    }
-                }
-            }
-            else // not parsed
-            {
-                
-            }
-            */
-        }       
-        else if (dataFormat.equals("conll"))
-        {
+        } else if (dataFormat.equals("conll")) {
             /*
             ArrayList<CoNLLSentence> testing = CoNLLSentence.read(new FileReader(runSRLProps.getProperty("test.input")), false);
             

@@ -31,6 +31,8 @@ public class AlignmentProb implements Serializable{
     private static final int COUNT_THRESHOLD=5;
     private static final int COUNT_THRESHOLD_2=25;
     
+    static final String KEY_SEPARATOR = ";";
+    
 	SortedMap<String, CountProb<String>> srcPredDstPredProbMap;
 	SortedMap<String, CountProb<String>> dstPredSrcPredProbMap;
     
@@ -149,12 +151,12 @@ public class AlignmentProb implements Serializable{
     		if (retStr==null)
     			retStr = arg;
     		else
-    			retStr = retStr+'_'+arg;
+    			retStr = retStr+KEY_SEPARATOR+arg;
     	return retStr;
     }
     
     String[] splitKeys(String key) {
-    	return key.split("_");
+    	return key.split(KEY_SEPARATOR);
     }
     
     //String makeKey(String pred1, String pred2, String arg) {
@@ -322,21 +324,34 @@ public class AlignmentProb implements Serializable{
     	return probs.getProb(innerKey, weighted);
     }
     
-    // return P(dst_a|src_p,dst_p,src_a) or P(src_a|src_p,dst_p,dst_a)
     public double[][] getArgProbs(boolean isSrc, PBInstance inst1, PBInstance inst2, boolean weighted) {
+    	String[] pred1ArgLabels = new String[inst1.getArgs().length];
+    	String[] pred2ArgLabels = new String[inst2.getArgs().length];
     	
-    	String pred1Key = makeKey(inst1);
-    	String pred2Key = makeKey(inst1);
+    	for (int i=0; i<pred1ArgLabels.length; ++i)
+    		pred1ArgLabels[i] = inst1.getArgs()[i].getLabel();
     	
-    	double[][] argProbs = new double[inst1.getArgs().length][inst2.getArgs().length];
+       	for (int i=0; i<pred2ArgLabels.length; ++i)
+    		pred2ArgLabels[i] = inst2.getArgs()[i].getLabel();
+
+       	
+       	
+    	return getArgProbs(isSrc, makeKey(inst1), makeKey(inst2), pred1ArgLabels, pred2ArgLabels, weighted);    	
+    }
+    
+    
+    // return P(dst_a|src_p,dst_p,src_a) or P(src_a|src_p,dst_p,dst_a)
+    public double[][] getArgProbs(boolean isSrc, String pred1, String pred2, String[] pred1ArgLabels, String[] pred2ArgLabels,  boolean weighted) {
     	
-    	for (int i=0; i<inst1.getArgs().length; ++i) {
-    		String arg1Key = makeKey(inst1.getArgs()[i]);
-    		String outerKey = makeKey(pred1Key, arg1Key, pred2Key);
+    	double[][] argProbs = new double[pred1ArgLabels.length][pred2ArgLabels.length];
+    	
+    	for (int i=0; i<pred1ArgLabels.length; ++i) {
+    		String arg1Key = makeKey(pred1ArgLabels[i]);
+    		String outerKey = makeKey(pred1, arg1Key, pred2);
     		CountProb<String> probs = isSrc?srcPredArgDstPredArgProbMap.get(outerKey):dstPredArgSrcPredArgProbMap.get(outerKey);
     		if (probs==null) {
-    			CountProb<String> prob1 = isSrc?srcPredArgDstArgProbMap.get(makeKey(pred1Key, arg1Key)):dstPredArgSrcArgProbMap.get(makeKey(pred1Key, arg1Key));
-    			CountProb<String> prob2 = isSrc?dstPredSrcArgDstArgProbMap.get(makeKey(pred2Key, arg1Key)):srcPredDstArgSrcArgProbMap.get(makeKey(pred2Key, arg1Key));
+    			CountProb<String> prob1 = isSrc?srcPredArgDstArgProbMap.get(makeKey(pred1, arg1Key)):dstPredArgSrcArgProbMap.get(makeKey(pred1, arg1Key));
+    			CountProb<String> prob2 = isSrc?dstPredSrcArgDstArgProbMap.get(makeKey(pred2, arg1Key)):srcPredDstArgSrcArgProbMap.get(makeKey(pred2, arg1Key));
     			CountProb<String> backoff = isSrc?srcArgDstArgProbMap.get(arg1Key):dstArgSrcArgProbMap.get(arg1Key);
     			
     			if (backoff==null)
@@ -358,7 +373,7 @@ public class AlignmentProb implements Serializable{
     		}
     		
     		for (int j=0; j<argProbs[i].length; ++j)
-    			argProbs[i][j] = probs.getProb(makeKey(inst2.getArgs()[j]), weighted);
+    			argProbs[i][j] = probs.getProb(makeKey(pred2ArgLabels[j]), weighted);
     	}
     	
     	return argProbs;

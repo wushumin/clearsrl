@@ -44,6 +44,9 @@ public class ScoreSRL {
 	@Option(name="-prop",usage="properties file")
     private File propFile = null;
 	
+	@Option(name="-c",usage="output count differences (for significance test)")
+    private boolean outputCount = false;
+	
 	@Option(name="-d",usage="directory")
     private String dirName = null;
 
@@ -52,6 +55,8 @@ public class ScoreSRL {
 	
 	@Option(name="-t",usage="types of scoring")
     private SRLScore.Type type = SRLScore.Type.ALL;
+	
+	
 	
 	@Option(name="-h",usage="help message")
     private boolean help = false;
@@ -180,7 +185,7 @@ public class ScoreSRL {
         List<Map<String, SortedMap<Integer, List<PBInstance>>>> systemPBs = new ArrayList<Map<String, SortedMap<Integer, List<PBInstance>>>>();
         
         for (String system:systems) {
-        	String propDir = options.dirName==null?props.getProperty(system+".pb.regex").trim():options.dirName;
+        	String propDir = options.dirName==null?props.getProperty(system+".pbdir").trim():options.dirName;
             systemPBs.add(PBUtil.readPBDir(propDir, 
                              props.getProperty(system+".pb.regex").trim(), 
                              props.getProperty(system+".tbdir"),
@@ -271,7 +276,8 @@ public class ScoreSRL {
                     	if (options.verbose==Verbose.EC)
                     		printARGDiff(sysInstances.get(i), goldInstance);
                         int[] counts = scores[i].addResult(sysInstances.get(i), goldInstance, options.type);
-                        System.out.printf("COUNTS-%c: %d %d %d\n", langUtil.isVerb(goldInstance.getPredicateNode().getPOS())?'v':'n', counts[0], counts[1], counts[2]);
+                        if (options.outputCount)
+                        	System.out.printf("COUNTS-%c: %d %d %d\n", langUtil.isVerb(goldInstance.getPredicateNode().getPOS())?'v':'n', counts[0], counts[1], counts[2]);
                         tCounts[0]+=counts[0];
                         tCounts[1]+=counts[1];
                         tCounts[2]+=counts[2];
@@ -362,10 +368,20 @@ public class ScoreSRL {
             System.out.println(goldArgCnt+" "+sysArgCnt);
         }
         */
-        System.out.printf("COUNTT: %d %d %d\n", tCounts[0], tCounts[1], tCounts[2]);
+        if (options.outputCount)
+        	System.out.printf("COUNTT: %d %d %d\n", tCounts[0], tCounts[1], tCounts[2]);
+        
+        if (scores.length>1)
+        {
+            System.out.println("intersection:");
+            System.out.println(iScore);
+            
+            System.out.println("union:");
+            System.out.println(uScore);
+        }
         for (int i=0; i<scores.length; ++i)
         {
-            //System.out.println(systems[i]+":");
+            System.out.println(systems[i]+":\n");
         	if (printNScore) {
         		System.out.println("All predicates:");
         		System.out.println(scores[i].toMacroString());
@@ -382,14 +398,7 @@ public class ScoreSRL {
             //System.out.println(noproScore[i]);
         }
         
-        if (scores.length>1)
-        {
-            System.out.println("intersection:");
-            System.out.println(iScore);
-            
-            System.out.println("union:");
-            System.out.println(uScore);
-        }
+
 
     }
 }

@@ -27,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,7 +95,7 @@ public class PBFileReader
     {
         this.tbReader       = tbReader;
         this.annotationFile = annotationFile;
-        scanner             = new Scanner(new BufferedReader(new InputStreamReader(new FileInputStream(annotationFile),"UTF-8")));
+        scanner             = new Scanner(new BufferedReader(new InputStreamReader(new FileInputStream(annotationFile), StandardCharsets.UTF_8)));
         this.tokenizer      = tokenizer;
         lastInstance        = null;
         closed              = false;

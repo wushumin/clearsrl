@@ -14,6 +14,7 @@ import edu.colorado.clear.common.propbank.PBArg;
 import edu.colorado.clear.common.propbank.PBInstance;
 import edu.colorado.clear.common.treebank.TBNode;
 import edu.colorado.clear.common.treebank.TBTree;
+import gnu.trove.map.TObjectIntMap;
 
 public class SRInstance implements Comparable<SRInstance>, Serializable {
 
@@ -27,42 +28,34 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         PROPBANK,
         PROPBANK_PROB,
         CONLL,
-        CONLL_DEP
+        CONLL_DEP,
+        BINARY
     };
     
     TBNode predicateNode;
     TBTree tree;
     ArrayList<SRArg> args;
+    ArrayList<SRArg> allArgs;
+    
+    TObjectIntMap<String> argLabelStringMap;
     
     String rolesetId;
     
-    public SRInstance(TBNode predicateNode, TBTree tree) {
+    public SRInstance(TBNode predicateNode, TBTree tree, TObjectIntMap<String> argLabelStringMap) {
         this.predicateNode = tree.getNodeByTokenIndex(predicateNode.getTokenIndex());
         this.tree = tree;
+        this.argLabelStringMap = argLabelStringMap;
         args = new ArrayList<SRArg>();
     }
     
-    public SRInstance(TBNode predicateNode, TBTree tree, String rolesetId, double score) {
-        this(predicateNode, tree);
+    public SRInstance(TBNode predicateNode, TBTree tree, TObjectIntMap<String> argLabelStringMap, String rolesetId, double score) {
+        this(predicateNode, tree, argLabelStringMap);
         this.rolesetId = rolesetId;
         args.add(new SRArg("rel",this.predicateNode, score));
     }
-    
-    /*
+
     public SRInstance(PBInstance instance) {
-        this(instance.predicateNode, instance.tree);
-        for (Entry<String, PBArg> entry : instance.getArgs().entrySet())
-        {
-            BitSet tokenSet = new BitSet(tree.getTokenCount());
-            for (TBNode node:entry.getValue().getTokenNodes())
-                if (node.tokenIndex>=0) tokenSet.set(node.tokenIndex);
-            if (tokenSet.isEmpty()) continue;
-            addArg(new SRArg(SRLUtil.removeArgModifier(entry.getKey()), tokenSet));
-        }
-    }
-    */
-    public SRInstance(PBInstance instance) {
-        this(instance.getPredicate(), instance.getTree(), instance.getRoleset(), 1.0);
+        this(instance.getPredicate(), instance.getTree(), null, instance.getRoleset(), 1.0);
         for (PBArg pbArg: instance.getArgs()) {
             if (pbArg.getLabel().equals("rel")) continue;
             if (!pbArg.getTokenSet().isEmpty())
@@ -76,8 +69,16 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     }
 
     public void addArg(SRArg arg) {
-        if (!arg.getTokenSet().isEmpty() && tree.getTokenCount() >= arg.getTokenSet().length())
-            args.add(arg);
+        if (!arg.getTokenSet().isEmpty() && tree.getTokenCount() >= arg.getTokenSet().length()) {
+        	if (!arg.isLabelArg()) {
+        		if (allArgs==null)
+        			allArgs = new ArrayList<SRArg>(args);
+        	} else
+        		args.add(arg);
+        	
+            if (allArgs!=null)
+            	allArgs.add(arg);
+        }
     }
     
     public TBNode getPredicateNode() {
@@ -89,7 +90,11 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     }
     
     public List<SRArg> getArgs() {
-        return args;
+        return Collections.unmodifiableList(args);
+    }
+    
+    public List<SRArg> getAllArgs() {
+        return Collections.unmodifiableList(allArgs==null?args:allArgs);
     }
     
     public String getRolesetId() {
@@ -98,53 +103,6 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
 
     public void setRolesetId(String rolesetId) {
         this.rolesetId = rolesetId;
-    }
-    
-    /*
-    public void removeOverlap()
-    {       
-        boolean overlapped = false;
-        
-        do {
-            overlapped = false;
-            for (int i=0; i<args.size();++i)
-            {
-                BitSet argi = args.get(i).tokenSet;
-                for (int j=i+1; j<args.size();++j)
-                {
-                    BitSet argj= args.get(j).tokenSet; 
-                    if (argj.intersects(argi))
-                    {
-                        //if (instance.args.get(i).label.equals(instance.args.get(j).label))
-                        {
-                            args.remove(argi.cardinality()<argj.cardinality()?i:j);
-                            overlapped = true;
-                            break;
-                        }
-                    }   
-                }
-                if (overlapped) break;
-            }
-        } while (overlapped);
-        
-        for (int i=0; i<args.size();++i)
-        {
-            BitSet argi = args.get(i).tokenSet;
-            for (int j=i+1; j<args.size();++j)
-            {
-                BitSet argj= args.get(j).tokenSet; 
-                if (argj.intersects(argi))
-                {
-                    //System.out.println(instance);
-                    return;
-                }
-            }
-        }
-    }
-*/
-    public void removeOverlap() {
-        //System.out.println(args);
-        removeOverlap(args);
     }
     
     static void removeOverlap(List<SRArg> args) {       
@@ -191,7 +149,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
     }   
 
     public void cleanUpArgs() {
-        removeOverlap();
+        removeOverlap(args);
 
         Collections.sort(args);
         
@@ -208,7 +166,6 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         cleanUpArgs();
 
         for (SRArg arg:args) {
-            if (arg.label.equals(SRLModel.NOT_ARG)) /*|| arg.label.equals("rel"))*/ continue;
             String label = arg.label.startsWith("C-")?arg.label.substring(2):arg.label;
             List<SRArg> argList;
             if ((argList = argMap.get(label))==null) {
@@ -254,8 +211,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         TreeMap<String, List<StringBuilder>> argMap = new TreeMap<String, List<StringBuilder>>();
         
         for (SRArg arg:args) {
-           if (arg.label.equals(SRLModel.NOT_ARG)) continue;
-           
+        	
            List<StringBuilder> argOut;
            
            String label = arg.label.startsWith("C-")?arg.label.substring(2):arg.label;
@@ -290,52 +246,6 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
 
         return buffer.toString();
     }
-    /*
-    public String toPropbankString()
-    {
-        StringBuilder buffer = new StringBuilder();
-        buffer.append(tree.getFilename()); buffer.append(' ');
-        buffer.append(tree.getIndex()); buffer.append(' ');
-        buffer.append(predicateNode.getTerminalIndex()); buffer.append(' ');
-        buffer.append("system "); buffer.append(predicateNode.getWord());
-        buffer.append(" ----- ");
-        
-        TreeMap<String, TreeSet<SRArg>> argMap = new TreeMap<String, TreeSet<SRArg>>();
-        
-        for (SRArg arg:args)
-        {
-           if (arg.label.equals(SRLModel.NOT_ARG)) continue;
-           TreeSet<SRArg> argSet;
-           if ((argSet = argMap.get(arg.label))==null)
-           {
-               argSet = new TreeSet<SRArg>();
-               argMap.put(arg.label, argSet);
-           }
-           argSet.add(arg);
-        }
-        
-        for (Map.Entry<String, TreeSet<SRArg>> entry:argMap.entrySet())
-        {
-            String argStr = "";
-            for (SRArg arg:entry.getValue())
-            {
-                int depth=0;
-                TBNode node = arg.node;
-                while (!node.isTerminal())
-                {
-                    ++depth;
-                    node=node.getChildren()[0];
-                }
-                argStr+=node.getTerminalIndex()+":"+depth+"*";
-            }
-            buffer.append(argStr.substring(0,argStr.length()-1));
-            buffer.append('-');
-            buffer.append(entry.getKey()); buffer.append(' ');   
-        }
-        
-        return buffer.toString();
-    }
-*/
     
     public String toCONLLDepString() {
     	StringBuilder buffer = new StringBuilder();
@@ -348,8 +258,6 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         String[] labels = new String[tree.getTokenCount()];
         
         for (SRArg arg:args) {
-            if (arg.label.equals(SRLModel.NOT_ARG)) continue;
-
             labels[arg.node.getHead().getTokenIndex()] = arg.label+(arg.auxLabel==null?"":"="+arg.auxLabel.toUpperCase());
         }
         
@@ -374,8 +282,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         return buffer.toString();
     }
     
-    public String toCONLLString()
-    {
+    public String toCONLLString() {
         StringBuilder buffer = new StringBuilder();
         
         List<TBNode> nodes = tree.getRootNode().getTokenNodes();
@@ -385,9 +292,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         
         String[] labels = new String[tree.getTokenCount()];
         
-        for (SRArg arg:args)
-        {
-            if (arg.label.equals(SRLModel.NOT_ARG)) continue;
+        for (SRArg arg:args) {
             BitSet bits = arg.getTokenSet();
             
             for (int i = bits.nextSetBit(0); i >= 0; i = bits.nextSetBit(i+1))
@@ -395,15 +300,13 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         }
         
         String previousLabel = null;
-        for (int i=0; i<labels.length; ++i)
-        {
+        for (int i=0; i<labels.length; ++i) {
             if (labels[i]!=null && labels[i].startsWith("C-") && labels[i].substring(2).equals(previousLabel))
                 labels[i] = labels[i].substring(2);
             previousLabel = labels[i];
         }
         
-        for (int i=0; i<labels.length; ++i)
-        {
+        for (int i=0; i<labels.length; ++i) {
             if (labels[i]==null) continue;
             if (labels[i].equals("rel"))
                 labels[i] = "V";
@@ -415,8 +318,7 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
                 labels[i] = "R-A"+labels[i].substring(5);
         }
         
-        for (int i=0; i<labels.length; ++i)
-        {   
+        for (int i=0; i<labels.length; ++i) {   
             if (labels[i]!=null && (i==0 || !labels[i].equals(labels[i-1])))
                 buffer.append('('+labels[i]);
             buffer.append('*');
@@ -455,34 +357,6 @@ public class SRInstance implements Comparable<SRInstance>, Serializable {
         }
         for (String token:tokens)
         	buffer.append(token+' ');
-        /*
-        String[] labels = new String[nodes.length];
-        
-        for (SRArg arg:args) {
-            if (arg.label.equals(SRLModel.NOT_ARG)) continue;
-            BitSet bits = arg.getTokenSet();
-            
-            for (int i = bits.nextSetBit(0); i >= 0 ; i = bits.nextSetBit(i+1))
-                labels[i] = arg.label;
-        }
-        
-        String previousLabel = null;
-        for (int i=0; i<tokens.length; ++i) {
-            if (labels[i]!=null && labels[i].startsWith("C-") && labels[i].substring(2).equals(previousLabel))
-                    labels[i] = labels[i].substring(2);
-            previousLabel = labels[i];
-        }
-
-        for (int i=0; i<tokens.length; ++i)
-        {
-            if (labels[i]!=null && (i==0 || !labels[i].equals(labels[i-1])))
-                buffer.append('['+labels[i]+' ');
-            buffer.append(tokens[i]);
-            if (labels[i]!=null && (i==tokens.length-1 || !labels[i].equals(labels[i+1])))
-                buffer.append(']');
-                    
-            buffer.append(' ');      
-        } */
         
         return buffer.toString();
     }

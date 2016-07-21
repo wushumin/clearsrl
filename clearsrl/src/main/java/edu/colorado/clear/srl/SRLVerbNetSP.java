@@ -552,7 +552,7 @@ public class SRLVerbNetSP extends SRLSelPref implements Serializable {
 		rolesetId = rolesetId.substring(0,rolesetId.length()-2);
 
 		Roleset roleset = langUtil.getRoleSet(rolesetId, pos);
-		if (roleset==null || roleset.getClasses()==null)
+		if (roleset==null || roleset.getClasses().isEmpty())
 			return null;
 		
 		Set<String> foundClasses = new HashSet<String>();

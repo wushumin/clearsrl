@@ -5,9 +5,13 @@ import edu.colorado.clear.common.util.FileUtil;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -240,19 +244,19 @@ public final class TBUtil {
         return tbMap;
     }
 
-    public static void extractText(PrintStream out, TBTree[] trees) {
+    public static void extractText(PrintWriter writer, TBTree[] trees) {
         for (TBTree tree:trees) {
             for (TBNode node: tree.getRootNode().getTokenNodes())
-                out.print(node.word+" ");
-            out.print('\n');
+            	writer.print(node.word+" ");
+            writer.print('\n');
         }
     }
 
-    public static void extractCoNLLText(PrintStream out, TBTree[] trees) {
+    public static void extractCoNLLText(PrintWriter writer, TBTree[] trees) {
         for (TBTree tree:trees) {
             for (TBNode node: tree.getRootNode().getTokenNodes())
-                out.println(node.word+" "+node.getPOS());
-            out.print('\n');
+            	writer.println(node.word+" "+node.getPOS());
+            writer.print('\n');
         }
     }
     
@@ -260,25 +264,22 @@ public final class TBUtil {
     	extractText(outputDir, trees, false);
     }
     
-    public static void extractText(String outputDir, Map<String, TBTree[]> trees, boolean isCoNLL)
-    {
+    public static void extractText(String outputDir, Map<String, TBTree[]> trees, boolean isCoNLL) {
         File dir = new File(outputDir);
-        if (!dir.isDirectory())
+        if (dir.exists() && !dir.isDirectory())
             return;
         
-        for (Map.Entry<String, TBTree[]> entry: trees.entrySet())
-        {
+        for (Map.Entry<String, TBTree[]> entry: trees.entrySet()) {
             try {
                 File file = new File(dir, entry.getKey());
                 file.getParentFile().mkdirs();
-                PrintStream pStream = new PrintStream(file, "UTF-8");
+                PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8));
                 if (isCoNLL)
-                	extractCoNLLText(pStream, entry.getValue());
+                	extractCoNLLText(writer, entry.getValue());
                 else
-                	extractText(pStream, entry.getValue());
-                pStream.close();
-            } catch (Exception e)
-            {
+                	extractText(writer, entry.getValue());
+                writer.close();
+            } catch (Exception e) {
                 logger.severe(e.getMessage());
             }
         }

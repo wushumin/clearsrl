@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Map;
@@ -135,7 +136,7 @@ public class ProAlignmentScorer {
         Properties props = new Properties();
         {
             FileInputStream in = new FileInputStream(args[0]);
-            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
+            InputStreamReader iReader = new InputStreamReader(in, StandardCharsets.UTF_8);
             props.load(iReader);
             iReader.close();
             in.close();

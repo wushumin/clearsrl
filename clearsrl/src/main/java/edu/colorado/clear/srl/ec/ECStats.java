@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class ECStats {
         }
         
         Properties props = new Properties();
-        Reader in = new InputStreamReader(new FileInputStream(options.propFile), "UTF-8");
+        Reader in = new InputStreamReader(new FileInputStream(options.propFile), StandardCharsets.UTF_8);
         props.load(in);
         in.close();
         props = PropertyUtil.resolveEnvironmentVariables(props);

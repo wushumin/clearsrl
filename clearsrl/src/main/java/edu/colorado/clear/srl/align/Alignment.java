@@ -41,8 +41,9 @@ public class Alignment implements Comparable<Alignment>{
     float               argProbWeight;
     boolean             useFMeasure;
     
-    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, float beta_sqr, AlignmentProb probMap, float predProbWeight, float argProbWeight, boolean useFMeasure) 
-    {
+    public Alignment(SentencePair sentence, int srcPBIdx, int dstPBIdx, 
+    		float beta_sqr, AlignmentProb probMap, float predProbWeight, 
+    		float argProbWeight, boolean useFMeasure) {
         this.sentence = sentence;
         this.srcPBIdx = srcPBIdx;
         this.dstPBIdx = dstPBIdx;
@@ -54,8 +55,7 @@ public class Alignment implements Comparable<Alignment>{
         this.useFMeasure = useFMeasure;
     }
     
-    static float getFScore(float lhs, float rhs, float bias)
-    {
+    static float getFScore(float lhs, float rhs, float bias) {
         float denom = bias*lhs + rhs;
         return denom==0?0:(1+bias)*lhs*rhs/denom;
     }
@@ -64,8 +64,7 @@ public class Alignment implements Comparable<Alignment>{
                               float[] lhsWeights, float[] rhsWeights, 
                               int lhsTreeIdx, int rhsTreeIdx, 
                               SortedMap<Long, int[]> wordAlignment, 
-                              Sentence rhsSentence) 
-    {           
+                              Sentence rhsSentence)  {           
         TBNode[] lhsNodes = lhs.getTokenNodes();
         
         float argScore = 0;
@@ -104,8 +103,7 @@ public class Alignment implements Comparable<Alignment>{
         return getFScore(srcScore, dstScore, beta_sqr);
     }
 
-    void computeArgWeight(PBArg arg, float[] weights)
-    {
+    void computeArgWeight(PBArg arg, float[] weights) {
         //TODO: better weight computation
         BitSet terminals = arg.getTerminalSet();
         for (int i=terminals.nextSetBit(0); i>=0; i=terminals.nextSetBit(i+1))

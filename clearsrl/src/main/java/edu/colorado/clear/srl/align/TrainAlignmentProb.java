@@ -14,14 +14,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -57,8 +60,12 @@ public class TrainAlignmentProb {
 	@Option(name="-prop",usage="properties file")
 	private File propFile = null; 
     
-    @Option(name="-inList",usage="list of files in the input directory to process (overwrites regex)")
+    @Option(name="-inList",usage="list of files in the input directory to build model from (overwrites regex)")
     private File inFileList = null; 
+    
+    @Option(name="-corporaList",usage="list of corpora to align")
+    private String corporaList = ""; 
+    
     
     @Option(name="-objFile",usage="object stream file to read from/write to")
     private File objFile = null; 
@@ -84,15 +91,56 @@ public class TrainAlignmentProb {
 		props = PropertyUtil.filterProperties(props, filter1, true);
 		props = PropertyUtil.filterProperties(props, filter2, true);
 		
+		logger.info("Reading corpus "+filter1+" "+filter2);
+		
 		List<SentencePair> sentList = new ArrayList<SentencePair>();
 		
-		SentencePairReader reader = new DefaultSentencePairReader(props);
-		reader.initialize();
-		SentencePair s = null;
-		while ((s = reader.nextPair())!=null) {
-			sentList.add(s);
+		if (props.getProperty("sentence_aligned", "false").equals("false")) {
+		
+			SentencePairReader reader = new DefaultSentencePairReader(props);
+			reader.initialize();
+			SentencePair s = null;
+			while ((s = reader.nextPair())!=null) {
+				sentList.add(s);
+			}
+			reader.close();
+		} else {
+			
+			File file = new File(props.getProperty("src.tbfile"));
+			
+			String chParseName = file.getName();
+		
+			TBTree[] chTrees = TBUtil.readTBFile(file.getParent(), chParseName, chUtil.getHeadRules());
+        	Map<String, TBTree[]> tb = new TreeMap<String, TBTree[]>();
+        	tb.put(chParseName, chTrees);
+        	SortedMap<Integer, List<PBInstance>> chProps = PBUtil.readPBDir(Arrays.asList(props.getProperty("src.pbfile")), new TBReader(tb),  new DefaultPBTokenizer()).values().iterator().next();
+        	
+        	file = new File(props.getProperty("dst.tbfile"));
+        	
+        	String enParseName = file.getName();
+        	
+        	TBTree[] enTrees = TBUtil.readTBFile(file.getParent(), enParseName, enUtil.getHeadRules());
+        	tb = new TreeMap<String, TBTree[]>();
+        	tb.put(enParseName, enTrees);
+        	SortedMap<Integer, List<PBInstance>> enProps = PBUtil.readPBDir(Arrays.asList(props.getProperty("dst.pbfile")), new TBReader(tb),  new DefaultPBTokenizer()).values().iterator().next();
+
+        	String[] wa = MakeAlignedLDASamples.readAlignment(new File(props.getProperty("token_alignment")));
+
+        	for (int i=0; i<chTrees.length; ++i) {
+        		try {
+        		
+        			SentencePair s = MakeAlignedLDASamples.makeSentencePair(i, chTrees[i], chProps.get(i), enTrees[i], enProps.get(i), wa[i], true);
+        			sentList.add(s);
+        		} catch (Exception e) {
+        			e.printStackTrace();
+        			logger.severe(""+i+" "+chTrees[i].getTokenCount()+" "+enTrees[i].getTokenCount());
+        			throw e;
+        		}
+        	}
 		}
-		reader.close();
+		
+		
+		logger.info(String.format("Read %d sentences", sentList.size()));
 		return sentList;
 	}
     
@@ -102,7 +150,7 @@ public class TrainAlignmentProb {
 		
 		
 		
-		String[] subTypes = {"",".dstVerb",".srcVerb",".allVerbs"};
+		String[] subTypes = {"",".srcNom",".dstNom",".onlyVerb"};
 		
 		
 		for (int i=0; i<subTypes.length; ++i)
@@ -116,15 +164,31 @@ public class TrainAlignmentProb {
 
     	PrintStream[] outhtmls = null;
     	fName = props.getProperty("output.html");		
-    	if (fName!=null) {
-    		outhtmls = new PrintStream[4];
-    		for (int i=0; i<subTypes.length; ++i) {
-				outhtmls[i] = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[i]+fName.substring(fName.lastIndexOf('.')));
-				Aligner.initAlignmentOutput(outhtmls[i]);
-    		}
-    	}
+    	
+    	int counter = 0;
     	
     	for (SentencePair s:sentList) {
+    		if (counter % 1000==0) {
+    			int htmlCount = counter/1000;
+    			if (fName!=null) {
+    	    		if (htmlCount==0)
+    	    			outhtmls = new PrintStream[4];
+    	    		else
+    	    			for (PrintStream outhtml:outhtmls) {
+    	    				Aligner.finalizeAlignmentOutput(outhtml);
+    	    				outhtml.close();
+    	    			}
+    	    		
+    	    		for (int i=0; i<subTypes.length; ++i) {
+    					outhtmls[i] = new PrintStream(fName.substring(0, fName.lastIndexOf('.'))+subTypes[i]+(sentList.size()>1000?String.format(".%3d", htmlCount).replace(' ', '0'):"")+fName.substring(fName.lastIndexOf('.')));
+    					Aligner.initAlignmentOutput(outhtmls[i]);
+    	    		}
+    	    	}
+    			
+    		}
+    		
+    		++counter;
+    		
     		for (int i=0; i<subTypes.length; ++i) {
     			switch (i) {
     			case 0:
@@ -157,11 +221,11 @@ public class TrainAlignmentProb {
 					Aligner.printAlignment(outhtmls[i], s, alignments);*/
     		}
 		}
-    	for (int i=0; i<subTypes.length; ++i)
-    		outs[i].close();
+    	for (PrintStream out:outs)
+    		out.close();
     	if (outhtmls!=null)
-    		for (int i=0; i<subTypes.length; ++i)
-    			Aligner.finalizeAlignmentOutput(outhtmls[i]);
+    		for (PrintStream outhtml:outhtmls)
+    			Aligner.finalizeAlignmentOutput(outhtml);
     }
     
 	
@@ -514,7 +578,7 @@ public class TrainAlignmentProb {
         Properties props = new Properties();
         {
             FileInputStream in = new FileInputStream(options.propFile);
-            InputStreamReader iReader = new InputStreamReader(in, Charset.forName("UTF-8"));
+            InputStreamReader iReader = new InputStreamReader(in, StandardCharsets.UTF_8);
             props.load(iReader);
             iReader.close();
             in.close();
@@ -539,12 +603,28 @@ public class TrainAlignmentProb {
         
         Aligner aligner = new Aligner(0.05f, chAlignNominal, enAlignNominal, chUtil, enUtil, null, 0, 0, options.fMeasure);
        
-        List<SentencePair> bcSentences = readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
-        List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
-        List<SentencePair> bcGWASentences = readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
-        List<SentencePair> nwGWASentences = readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
-        List<SentencePair> bcBerkSentences = readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
-        List<SentencePair> nwBerkSentences = readSentencePairs(props, "nw.", "berk.", chUtil, enUtil); 
+        Set<String> corporaNameSet = new TreeSet<String>();
+        Map<String, List<SentencePair>> corporaMap = new TreeMap<String, List<SentencePair>>();
+        
+        if (options.corporaList!=null) {
+        	String[] tokens = options.corporaList.trim().split(",");
+        	for (String token:tokens)
+        		if (!token.isEmpty())
+        			corporaNameSet.add(token);
+
+            for (String name:corporaNameSet) {
+            	int splitter = name.indexOf('.')+1;
+            	corporaMap.put(name, readSentencePairs(props, name.substring(0, splitter), name.substring(splitter), chUtil, enUtil));
+            }
+        }
+
+        
+        //List<SentencePair> bcSentences = readSentencePairs(props, "bc.", "auto.", chUtil, enUtil);
+        //List<SentencePair> nwSentences = readSentencePairs(props, "nw.", "auto.", chUtil, enUtil);
+        //List<SentencePair> bcGWASentences = readSentencePairs(props, "bc.", "gwa.", chUtil, enUtil);
+        //List<SentencePair> nwGWASentences = readSentencePairs(props, "nw.", "gwa.", chUtil, enUtil);
+        //List<SentencePair> bcBerkSentences = readSentencePairs(props, "bc.", "berk.", chUtil, enUtil);
+        //List<SentencePair> nwBerkSentences = readSentencePairs(props, "nw.", "berk.", chUtil, enUtil); 
         //List<SentencePair> nwtestSentences = readSentencePairs(props, "nwtest.", "auto.", chUtil, enUtil);
         //List<SentencePair> nwtestGWASentences = readSentencePairs(props, "nwtest.", "gwa.", chUtil, enUtil); 
         
@@ -553,9 +633,9 @@ public class TrainAlignmentProb {
         	probMap = options.processCorpus(options.objFile, aligner, null);
         else
         	probMap = options.readCorpus(options.inFileList, options.objFile, props, chUtil, enUtil, aligner);
-        
-        options.processSentences(probMap, aligner, bcSentences);
-        options.processSentences(probMap, aligner, nwSentences);
+
+        for (Map.Entry<String, List<SentencePair>> entry:corporaMap.entrySet()) 
+        	options.processSentences(probMap, aligner, entry.getValue());
         
         probMap.makeProb();
         
@@ -592,16 +672,23 @@ public class TrainAlignmentProb {
  	        
  	        //aligner.alignThreshold = 0.18f*(1+increment)*(r+1);
         	
- 	        writeAlignments(props, "bc.", "auto.", bcSentences, aligner, chUtil, enUtil, r);
- 	        writeAlignments(props, "nw.", "auto.", nwSentences, aligner, chUtil, enUtil, r);
- 	       
- 	        aligner.alignThreshold *= 1.5;
+ 	       for (Map.Entry<String, List<SentencePair>> entry:corporaMap.entrySet()) {
+ 	        	int splitter = entry.getKey().indexOf('.')+1;
+ 	        	//TODO: have threshold as set-able value
+ 	        	//aligner.alignThreshold *= 1.5;
+ 	        	
+ 	        	writeAlignments(props, entry.getKey().substring(0, splitter), entry.getKey().substring(splitter), entry.getValue(), aligner, chUtil, enUtil, r);
+ 	        }
  	        
- 	        writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligner, chUtil, enUtil, r);
- 	        writeAlignments(props, "nw.", "berk.", nwBerkSentences, aligner, chUtil, enUtil, r);
+ 	        
+ 	        //writeAlignments(props, "bc.", "auto.", bcSentences, aligner, chUtil, enUtil, r);
+ 	        //writeAlignments(props, "nw.", "auto.", nwSentences, aligner, chUtil, enUtil, r);
+ 	        
+ 	        //writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligner, chUtil, enUtil, r);
+ 	        //writeAlignments(props, "nw.", "berk.", nwBerkSentences, aligner, chUtil, enUtil, r);
  	       
- 	        writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligner, chUtil, enUtil, r);
- 	        writeAlignments(props, "nw.", "gwa.", nwGWASentences, aligner, chUtil, enUtil, r);
+ 	        //writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligner, chUtil, enUtil, r);
+ 	        //writeAlignments(props, "nw.", "gwa.", nwGWASentences, aligner, chUtil, enUtil, r);
         	//System.out.print("bc.auto "); writeAlignments(props, "bc.", "auto.", bcSentences, aligners[options.findBestAligner(bcSentences, aligners)], r);
         	//System.out.print("bc.gwa  "); writeAlignments(props, "bc.", "gwa.", bcGWASentences, aligners[options.findBestAligner(bcGWASentences, aligners)], r);
         	//System.out.print("bc.berk "); writeAlignments(props, "bc.", "berk.", bcBerkSentences, aligners[options.findBestAligner(bcBerkSentences, aligners)], r);
@@ -621,8 +708,9 @@ public class TrainAlignmentProb {
 
 	        //aligner.alignThreshold = 0.05f;
 	        
-	        options.processSentences(probMap, aligner, bcSentences);
-	        options.processSentences(probMap, aligner, nwSentences);
+        	for (Map.Entry<String, List<SentencePair>> entry:corporaMap.entrySet()) 
+            	options.processSentences(probMap, aligner, entry.getValue());
+        	
 	        probMap.makeProb();
 	        
 	        

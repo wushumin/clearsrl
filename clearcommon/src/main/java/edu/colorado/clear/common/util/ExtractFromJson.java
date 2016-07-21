@@ -50,10 +50,10 @@ public class ExtractFromJson {
 				
 				while (reader.hasNext()) {
 				
-					reader.beginObject();
 					String tree = null;
 					String prop = null;
-	
+					
+					reader.beginObject();
 					while (reader.hasNext()) {
 						String name = reader.nextName();
 						
@@ -65,6 +65,8 @@ public class ExtractFromJson {
 							reader.skipValue();
 						
 					}
+					reader.endObject();
+					
 					if (tree == null || prop == null)
 						continue;
 	
@@ -92,8 +94,6 @@ public class ExtractFromJson {
 					id|=predId;
 					
 					propMap.put(id, String.format("%s %d %d %s ----- %s", treeOutFilename, treeList.size()-1, predId, pred, argStr));
-					
-					reader.endObject();
 				}
 				reader.endArray();
 			}
@@ -121,6 +121,6 @@ public class ExtractFromJson {
 
 		String treeName = args[0];
 
-		processProp(new File("."), treeName, new File("."));
+		processProp(new File("."), treeName, new File(args[1]));
 	}
 }

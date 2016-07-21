@@ -9,7 +9,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
@@ -74,11 +77,6 @@ public class TrainSRL {
 		        ch.setLevel(Level.parse(logLevel));
 		        logger.addHandler(ch);
 		        logger.setLevel(Level.parse(logLevel));
-		        
-		        ConsoleHandler ch1 = new ConsoleHandler();
-		        ch1.setLevel(Level.parse(logLevel));
-		        Logger.getLogger("clearcommon").addHandler(ch1);
-		        Logger.getLogger("clearcommon").setLevel(Level.parse(logLevel));
 	        }
         }
         
@@ -287,7 +285,7 @@ public class TrainSRL {
         System.out.println("Training arg instance count: "+tCount);
         System.out.printf("head word unique: %d/%d\n", hCnt, tCnt);
         if (trainPredCntMap!=null)
-	        try (PrintStream writer = new PrintStream(new FileOutputStream(headwordOutFile), false, "UTF-8")){
+	        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(headwordOutFile), StandardCharsets.UTF_8))){
 	        	for (Map.Entry<String, Map<String, TObjectIntMap<String>>> e1:trainPredCntMap.entrySet())
 	        		for (Map.Entry<String, TObjectIntMap<String>> e2:e1.getValue().entrySet()) {
 	        			writer.printf("%s %s", e1.getKey(), e2.getKey());
@@ -317,7 +315,8 @@ public class TrainSRL {
         
         ObjectOutputStream mOut = new ObjectOutputStream(new GZIPOutputStream(new FileOutputStream(props.getProperty("model_file"))));
         mOut.writeObject(langUtil.getClass().getName());
-        mOut.writeObject(langUtil.getFrameMap());
+        if (!props.getProperty("saveFrameMap", "false").equals("false"))
+        	mOut.writeObject(langUtil.getFrameMap());
         mOut.writeObject(model);
         mOut.close();
         

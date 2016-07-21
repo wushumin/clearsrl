@@ -22,6 +22,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -268,7 +269,7 @@ public class LDAModel implements Serializable {
 
 	public static LDAModel readLDAModel(File modelFile) {
 		LDAModel model = null;
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(modelFile)),"UTF-8"))) {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(modelFile)),StandardCharsets.UTF_8))) {
 			int lineNum = 0;
 			model = new LDAModel();
 			TIntObjectMap<SparseCount> cntMap = new TIntObjectHashMap<SparseCount>();
